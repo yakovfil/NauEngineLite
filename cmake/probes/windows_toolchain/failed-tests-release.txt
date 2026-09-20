@@ -1,0 +1,6 @@
+TestSpinLock.MultipleSubsequentLockMustFail
+TestSpinLock.DestructWhileLockedMustFail
+TestRecursiveSpinLock.DestructWhileLockedMustFail
+TestAssetPath.ConstructFromInvalidString
+TestAssetPath.SetScheme
+TestAssetPath.SetContainerPath

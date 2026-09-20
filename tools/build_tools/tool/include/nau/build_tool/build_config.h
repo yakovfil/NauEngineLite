@@ -33,7 +33,7 @@ namespace nau
         bool compileSources;
         bool compileAssets;
         bool forceCopyBinaries;
-        std::string preset = "win_vs2022_x64_dll";
+        std::string preset = "win_vs2026_x64_dll";
     };
 
     enum class BUILD_TOOL_API BuildResult

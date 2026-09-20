@@ -6,13 +6,13 @@ Nau Engine is a C++20 game engine. `engine/core/kernel/` contains foundational A
 
 ## Build, Test, and Development Commands
 
-For the standard Windows build, install Visual Studio 2022 with C++ tools, Python, and CMake with preset version 5 support. Bootstrap vcpkg and set `VCPKG_ROOT` to its checkout.
+For the standard Windows build, install Visual Studio 2026 with C++ tools, Python, and CMake 4.2 or newer. Bootstrap vcpkg and set `VCPKG_ROOT` to its checkout.
 
 - `git submodule update --init --recursive`: initialize dependencies.
-- `cmake --preset win_vs2022_x64`: configure into `build/win_vs2022_x64/`.
+- `cmake --preset win_vs2026_x64`: configure into `build/win_vs2026_x64/`.
 - `cmake --build --preset "VS Debug"`: build the Debug configuration, including enabled tools, samples, and tests.
-- `ctest --test-dir build/win_vs2022_x64 -C Debug --output-on-failure`: run registered tests.
-- `cmake --install build/win_vs2022_x64 --config Debug`: install the SDK into `output/`.
+- `ctest --test-dir build/win_vs2026_x64 -C Debug --output-on-failure`: run registered tests.
+- `cmake --install build/win_vs2026_x64 --config Debug`: install the SDK into `output/`.
 
 Use the generated Visual Studio solution to select and launch a sample. The optional `win_ninja_clangcl-debug` preset supports Ninja with clang-cl.
 

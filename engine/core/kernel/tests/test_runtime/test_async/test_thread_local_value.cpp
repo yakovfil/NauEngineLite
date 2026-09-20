@@ -117,7 +117,11 @@ namespace nau::test
             threads.push_back(
                 std::thread([&]() 
                 { 
-                    ptrs.emplace( &value.value()); 
+                    auto* ptr = &value.value();
+                    {
+                        std::lock_guard lock(mutex);
+                        ptrs.emplace(ptr);
+                    }
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 })
             );
@@ -134,7 +138,11 @@ namespace nau::test
             threads.push_back(
                 std::thread([&]() 
                 { 
-                    ptrs.emplace( &value.value()); 
+                    auto* ptr = &value.value();
+                    {
+                        std::lock_guard lock(mutex);
+                        ptrs.emplace(ptr);
+                    }
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 })
             );

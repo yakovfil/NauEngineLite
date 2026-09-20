@@ -8,8 +8,8 @@ if exist output (
 
 del *.out 
 
-rem set preset=win_vs2022_x64
-set preset=win_vs2022_x64_dll
+rem set preset=win_vs2026_x64
+set preset=win_vs2026_x64_dll
 
 set config=Debug
 rem set config=Release

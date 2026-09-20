@@ -21,8 +21,8 @@ namespace nau
     namespace util
     {
         static const std::unordered_map<std::string, std::string> g_presetToFileExtLookup = {
-            {    "win_vs2022_x64", "sln"},
-            {"win_vs2022_x64_dll", "sln"}
+            {    "win_vs2026_x64", "sln"},
+            {"win_vs2026_x64_dll", "sln"}
         };
 
         std::string unescape(const std::string& input)

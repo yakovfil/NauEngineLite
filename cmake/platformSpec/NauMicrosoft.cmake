@@ -4,6 +4,8 @@
 # Compiler_ClangCl: clang-cl only
 # Compiler_Clang:   currently not supported
 
+include(${CMAKE_CURRENT_LIST_DIR}/NauWindowsToolchain.cmake)
+
 set(Platform_Windows ON)
 
 if(${Host_Arch} STREQUAL x64)

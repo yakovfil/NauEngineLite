@@ -60,7 +60,7 @@ namespace nau::test
             { "ProjectName",           "TEST"},
             { "Version",              "0.0.1"},
             {"TemplateName",          "empty"},
-            { "CMakePreset", "win_vs2022_x64"},
+            { "CMakePreset", "win_vs2026_x64"},
             { "ContentOnly",          "false"}
         };
 

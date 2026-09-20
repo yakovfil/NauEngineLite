@@ -6,13 +6,17 @@ the full framework. Link one framework variant per process.
 
 ## Native Windows build
 
-Install VS 2022 C++ tools with a Windows SDK and CMake supporting preset schema 5
-(3.24 or newer). Initialize the recorded bundled sources. No vcpkg, Qt, USD,
+Install VS 2026 C++ tools (v145) with a Windows SDK and CMake 4.2 or newer.
+Initialize the recorded bundled sources. No vcpkg, Qt, USD,
 Emscripten or Python generator packages are required by this runtime profile.
 Python is needed to run the graph audit below; bundled GoogleTest may discover it
 optionally during configuration.
 
 From `NauEngineLite` in PowerShell:
+
+Use fresh build directories after migrating from VS 2022. To retain old caches,
+configure with `-B build/native-minimal-vs2026-debug` (or `-release`) and use that
+path in `cmake --build` and CTest instead of the build presets below.
 
 ```powershell
 cmake --preset native-minimal-debug
@@ -72,7 +76,7 @@ Then run:
 python cmake/probes/test_minimal_runtime.py --minimal build/native-minimal-debug --minimal build/native-minimal-release --desktop build/desktop-platform-after
 ```
 
-The desktop directory is an existing `win_vs2022_x64` configuration with that
+For current reproduction, use a `win_vs2026_x64` desktop configuration with that
 file-API query enabled; it requires the normal desktop prerequisites. The audit
 also tests unsupported-module and missing-source diagnostics in separate fixtures
 without removing dependencies from the working checkout.

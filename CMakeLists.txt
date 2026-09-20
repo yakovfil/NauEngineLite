@@ -12,6 +12,8 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 project(NauEngine)
 
+include(cmake/platformSpec/NauWindowsToolchain.cmake)
+
 set(NAU_RUNTIME_PROFILE "desktop" CACHE STRING "Runtime profile: desktop, minimal or demo")
 set_property(CACHE NAU_RUNTIME_PROFILE PROPERTY STRINGS desktop minimal demo)
 if(NOT NAU_RUNTIME_PROFILE MATCHES "^(desktop|minimal|demo)$")

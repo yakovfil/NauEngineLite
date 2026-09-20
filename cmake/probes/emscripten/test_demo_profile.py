@@ -23,7 +23,7 @@ def main():
     summaries = {}
     for platform in ("web", "native"):
         for config in ("Debug", "Release"):
-            build = engine / f"build/{platform}-demo-cpu-{config.lower()}"
+            build = engine / f"build/{platform}-demo-cpu-{config.lower()}{'-vs2026' if platform == 'native' else ''}"
             query = build / ".cmake/api/v1/query/codemodel-v2"
             query.parent.mkdir(parents=True, exist_ok=True)
             query.touch()
@@ -33,7 +33,7 @@ def main():
                 command += ["-G", "Ninja", f"-DCMAKE_BUILD_TYPE={config}",
                             f"-DCMAKE_TOOLCHAIN_FILE={sdk}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"]
             else:
-                command += ["-G", "Visual Studio 17 2022", "-A", "x64"]
+                command += ["-G", "Visual Studio 18 2026", "-A", "x64", "-T", "v145,host=x64"]
             run(command, evidence / f"{platform}-{config}.log")
             reply = build / ".cmake/api/v1/reply"
             index = json.loads(max(reply.glob("index-*.json"), key=lambda p: p.stat().st_mtime).read_text())
@@ -80,9 +80,11 @@ def main():
     current = json.loads((engine / "CMakePresets.json").read_text())
     for group in ("configurePresets", "buildPresets", "testPresets"):
         by_name = {p["name"]: p for p in current.get(group, [])}
-        assert all(by_name[p["name"]] == p for p in previous.get(group, []))
+        assert all(by_name[p["name"]] == p for p in previous.get(group, [])
+                   if p["name"].startswith("web"))
+        assert not any("vs2022" in p["name"] for p in current.get(group, []))
     (evidence / "results.json").write_text(json.dumps(summaries, indent=2), encoding="utf-8")
-    print("PASS missing-source diagnostics and unchanged preset definitions")
+    print("PASS missing-source diagnostics and unchanged browser preset definitions")
 
 
 if __name__ == "__main__":

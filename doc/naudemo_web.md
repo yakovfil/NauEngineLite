@@ -90,7 +90,7 @@ build contains neither the pending test component nor its camera controls.
 The focused native/Node/Chrome scene suite is
 `python NauEngineLite/cmake/probes/demo_scene/run.py` from the parent checkout,
 with SDK setup active. Initialize the engine's googletest submodule first for
-this suite. Native testing also requires VS 2022 C++ Build Tools.
+this suite. Native testing also requires VS 2026 C++ tools (v145) and CMake 4.2+.
 
 ## Fresh-checkout walkthrough
 

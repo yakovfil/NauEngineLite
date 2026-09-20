@@ -26,7 +26,7 @@ Make sure to save all of your changes, and then run this command to clean the lo
 
 Configure with cmake presets:
 Windows
-`cmake --preset win_vs2022_x64`
+`cmake --preset win_vs2026_x64`
 or (optional)
 `cmake --preset win_ninja_clangcl-debug`
 or use ide that does supports cmake presets (VSCode)
@@ -34,7 +34,7 @@ or use ide that does supports cmake presets (VSCode)
 ## Build
 
 Build with IDE or 
-`cmake --build build\win_vs2022_x64 --config=Debug`
+`cmake --build build\win_vs2026_x64 --config=Debug`
 or (optional) any other build
 `cmake --build build\win_ninja_clangcl-debug`
 
@@ -42,6 +42,6 @@ or (optional) any other build
 ## Build mode / Install
 Install a previously built Engine in the `output` folder:
 
-`cmake --install build\win_vs2022_x64 --config=Debug`
+`cmake --install build\win_vs2026_x64 --config=Debug`
 
 In `output` folder, run Configure and Build using same presets

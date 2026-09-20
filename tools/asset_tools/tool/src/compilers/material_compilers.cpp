@@ -148,8 +148,8 @@ namespace nau
 
             static const std::map<std::type_index, std::function<RuntimeValue::Ptr(VtValue)>> vtToRv =
             {
-                { typeid(std::string),     [&value](VtValue value) {return makeValueCopy(value.Get<std::string>());} },
-                { typeid(SdfAssetPath),     [&value](VtValue value) -> RuntimeValue::Ptr
+                { typeid(std::string),     [](VtValue value) {return makeValueCopy(value.Get<std::string>());} },
+                { typeid(SdfAssetPath),     [](VtValue value) -> RuntimeValue::Ptr
                     {
                         auto assetPath = value.Get<SdfAssetPath>();
                         auto path = assetPath.GetAssetPath();
@@ -176,52 +176,52 @@ namespace nau
                     }
                 },
 
-                { typeid(float),    [&value](VtValue value) {return makeValueCopy(value.Get<float>());   } },
-                { typeid(double),   [&value](VtValue value) {return makeValueCopy(value.Get<double>());  } },
-                { typeid(int),      [&value](VtValue value) {return makeValueCopy(value.Get<int>());     } },
-                { typeid(bool),     [&value](VtValue value) {return makeValueCopy(value.Get<bool>());    } },
+                { typeid(float),    [](VtValue value) {return makeValueCopy(value.Get<float>());   } },
+                { typeid(double),   [](VtValue value) {return makeValueCopy(value.Get<double>());  } },
+                { typeid(int),      [](VtValue value) {return makeValueCopy(value.Get<int>());     } },
+                { typeid(bool),     [](VtValue value) {return makeValueCopy(value.Get<bool>());    } },
                 
-                { typeid(GfVec2f),  [&value](VtValue value) {
+                { typeid(GfVec2f),  [](VtValue value) {
                     auto& val = value.Get<GfVec2f>();
                     return makeValueCopy(Vector2(val[0], val[1]));
                 } },
-                { typeid(GfVec2d),  [&value](VtValue value) {
+                { typeid(GfVec2d),  [](VtValue value) {
                     auto& val = value.Get<GfVec2d>();
                     return makeValueCopy(Vector2(val[0], val[1])); // todo Vector2d 
                 } },
-                { typeid(GfVec2i),  [&value](VtValue value) {
+                { typeid(GfVec2i),  [](VtValue value) {
                     auto& val = value.Get<GfVec2i>();
                     return makeValueCopy(Vector2(val[0], val[1])); // todo makeValueCopy for IVector2
                 } },
 
-                { typeid(GfVec3f),  [&value](VtValue value) {
+                { typeid(GfVec3f),  [](VtValue value) {
                     auto& val = value.Get<GfVec3f>();
                     return makeValueCopy(Vector3(val[0], val[1], val[2]));
                 } },
-                { typeid(GfVec3d),  [&value](VtValue value) {
+                { typeid(GfVec3d),  [](VtValue value) {
                     auto& val = value.Get<GfVec3d>();
                     return makeValueCopy(Vector3d(val[0], val[1], val[2]));
                 } },
-                { typeid(GfVec3i),  [&value](VtValue value) {
+                { typeid(GfVec3i),  [](VtValue value) {
                     auto& val = value.Get<GfVec3i>();
                     return makeValueCopy(IVector3(val[0], val[1], val[2]));
                 } },
                 
-                { typeid(GfVec4f),  [&value](VtValue value) {
+                { typeid(GfVec4f),  [](VtValue value) {
                     auto& val = value.Get<GfVec4f>();
                     return makeValueCopy(Vector4(val[0], val[1], val[2], val[3]));
                 } },
-                { typeid(GfVec4d),  [&value](VtValue value) {
+                { typeid(GfVec4d),  [](VtValue value) {
                     auto& val = value.Get<GfVec4d>();
                     return makeValueCopy(Vector4d(val[0], val[1], val[2], val[3]));
                 } },
-                { typeid(GfVec4i),  [&value](VtValue value) {
+                { typeid(GfVec4i),  [](VtValue value) {
                     auto& val = value.Get<GfVec4i>();
                     return makeValueCopy(IVector4(val[0], val[1], val[2], val[3]));
                 } },
 
                 // todo makeValueCopy for Matrix2
-                { typeid(GfMatrix3f), [&value](VtValue value) {
+                { typeid(GfMatrix3f), [](VtValue value) {
                     auto& val = value.Get<GfMatrix3f>();
                     return makeValueCopy(Matrix3(    // todo makeValueCopy for Matrix3d
                         { val[0][0], val[1][0], val[2][0] },
@@ -229,7 +229,7 @@ namespace nau
                         { val[0][2], val[1][2], val[2][2] }
                         ));
                 } },
-                { typeid(GfMatrix3d), [&value](VtValue value) {
+                { typeid(GfMatrix3d), [](VtValue value) {
                     auto& val = value.Get<GfMatrix3d>();
                     return makeValueCopy(Matrix3(    // todo makeValueCopy for Matrix3d
                         { (float)val[0][0], (float)val[1][0], (float)val[2][0] },
@@ -238,7 +238,7 @@ namespace nau
                         ));
                 } },
 
-                { typeid(GfMatrix4d), [&value](VtValue value) {
+                { typeid(GfMatrix4d), [](VtValue value) {
                     auto& val = value.Get<GfMatrix4d>();
                     return makeValueCopy(Matrix4(    // todo makeValueCopy for Matrix4d
                         { (float)val[0][0], (float)val[1][0], (float)val[2][0], (float)val[3][0] },
@@ -247,7 +247,7 @@ namespace nau
                         { (float)val[0][3], (float)val[1][3], (float)val[2][3], (float)val[3][3] }
                         ));
                 } },
-                { typeid(GfMatrix4f), [&value](VtValue value) {
+                { typeid(GfMatrix4f), [](VtValue value) {
                     auto& val = value.Get<GfMatrix4f>();
                     return makeValueCopy(Matrix4(    // todo makeValueCopy for Matrix4d
                         { val[0][0], val[1][0], val[2][0], val[3][0] },

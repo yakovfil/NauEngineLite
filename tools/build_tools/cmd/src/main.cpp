@@ -40,7 +40,7 @@ namespace nau
             .required()
             .help("Target directory for building binaries and assets.");
         build.add_argument("--preset")
-            .default_value("win_vs2022_x64_dll")
+            .default_value("win_vs2026_x64_dll")
             .help("CMake preset name");
         build.add_argument("--openAfterBuild")
             .default_value(false)
@@ -68,7 +68,7 @@ namespace nau
             .default_value("Debug")
             .help("Config for building binaries (if none, Debug will be used).");
         compile.add_argument("--preset")
-            .default_value("win_vs2022_x64_dll")
+            .default_value("win_vs2026_x64_dll")
             .help("CMake preset name");
 
         programArgs.add_subparser(build);

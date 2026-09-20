@@ -134,15 +134,10 @@ namespace nau::math
 
     __m128 v_abs(__m128 a)
     {
-#if defined(__clang__)
-        return v_max(v_neg(a), a);
-#else
-        //for this code clang creates one instruction, but uses memory for it.
-        //if we think it is good tradeoff, we'd better allocate this constant once
+        // Clear the sign bit using the same SSE2 implementation on MSVC and clang-cl.
         __m128i absmask = _mm_castps_si128(a);
         absmask = _mm_srli_epi32(_mm_cmpeq_epi32(absmask, absmask), 1);
         return _mm_and_ps(_mm_castsi128_ps(absmask), a);
-#endif
     }
 
     __m128 v_is_unsafe_divisor(__m128 a)

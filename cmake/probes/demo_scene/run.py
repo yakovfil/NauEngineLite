@@ -38,13 +38,13 @@ def main():
         for platform in ("web", "native"):
             for config in ("Debug", "Release"):
                 name = f"{platform}-{config.lower()}"
-                build = engine / f"build/demo-scene-{name}"
+                build = engine / f"build/demo-scene-{name}{'-vs2026' if platform == 'native' else ''}"
                 command = ["cmake", "-S", str(source), "-B", str(build)]
                 if platform == "web":
                     command += ["-G", "Ninja", f"-DCMAKE_BUILD_TYPE={config}",
                                 f"-DCMAKE_TOOLCHAIN_FILE={sdk}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"]
                 else:
-                    command += ["-G", "Visual Studio 17 2022", "-A", "x64"]
+                    command += ["-G", "Visual Studio 18 2026", "-A", "x64", "-T", "v145,host=x64"]
                 run(command, f"{name}-configure")
                 run(["cmake", "--build", str(build), "--config", config,
                      "--target", "NauDemoSceneTests", "NauDemoMeshDecoder", "-j", "8"], f"{name}-build")

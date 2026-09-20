@@ -10,7 +10,8 @@ Use the recorded bundled sources, CMake 3.24+, Ninja and activated emsdk **6.0.9
 The validation entry selects the SDK's Node through `EMSDK_NODE`, not a system
 Node found on PATH. Python 3 runs diagnostic/audit helpers using only its standard
 library. No vcpkg, Qt, USD, generator packages or additional source downloads are
-needed. Native validation additionally needs VS 2022 C++ tools and a Windows SDK.
+needed. Native validation additionally needs VS 2026 C++ tools (v145), CMake 4.2+
+and a Windows SDK.
 See the parent repository's `prerequisites.md` for installation details.
 
 From `NauEngineLite`, in PowerShell:

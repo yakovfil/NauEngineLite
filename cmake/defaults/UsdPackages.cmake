@@ -17,6 +17,11 @@ set(MaterialX_DIR "${pxr_DIR}/lib/cmake/MaterialX")
 set(Imath_DIR "${pxr_DIR}/lib/cmake/Imath")
  
 find_package(pxr REQUIRED)
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  # The imported USD targets already name the producer's Boost libraries.
+  # Boost auto-link otherwise guesses nonexistent clangwXX package filenames.
+  set_property(TARGET tf APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS BOOST_ALL_NO_LIB)
+endif()
 set(PXR_LIB_DIR "${PXR_CMAKE_DIR}/lib")
 set(PXR_NODEFAULTLIBS /NODEFAULTLIB:boost_python310-vc143-mt-gd-x64-1_78.lib /NODEFAULTLIB:boost_python310-vc143-mt-x64-1_78.lib)
 set(PXR_ENV_PATHS "${PXR_CMAKE_DIR}/bin;${PXR_CMAKE_DIR}/lib;${PXR_CMAKE_DIR}/python;${PXR_CMAKE_DIR}/plugin/usd;$<$<CONFIG:DEBUG>:${_IMPORT_PREFIX}${PXR_CMAKE_DIR}/lib/debug>$<$<NOT:$<CONFIG:DEBUG>>:${_IMPORT_PREFIX}${PXR_CMAKE_DIR}/lib/release>;$<$<CONFIG:DEBUG>:${_IMPORT_PREFIX}${PXR_CMAKE_DIR}/plugin/debug/usd>$<$<NOT:$<CONFIG:DEBUG>>:${_IMPORT_PREFIX}${PXR_CMAKE_DIR}/plugin/release/usd>;")

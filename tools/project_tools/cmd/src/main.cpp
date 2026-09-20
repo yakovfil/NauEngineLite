@@ -33,7 +33,7 @@ namespace nau
             .required()
             .help("Project path");
         initProjectArgs.add_argument("--preset")
-            .default_value("win_vs2022_x64_dll")
+            .default_value("win_vs2026_x64_dll")
             .help("CMake preset name");
         initProjectArgs.add_argument("--name")
             .default_value("MyProject")
@@ -57,7 +57,7 @@ namespace nau
         argparse::ArgumentParser rebuildProjectArgs("clean_rebuild");
         rebuildProjectArgs.add_description("Regenerates solution and project files.");
         rebuildProjectArgs.add_argument("--preset")
-            .default_value("win_vs2022_x64")
+            .default_value("win_vs2026_x64")
             .help("CMake preset name");
         rebuildProjectArgs.add_argument("--project")
             .required()
