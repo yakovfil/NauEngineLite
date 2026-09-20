@@ -1,5 +1,10 @@
 if (NAU_CORE_SAMPLES)
 
+  if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+    add_subdirectory(minimalApp)
+    return()
+  endif()
+
   add_subdirectory("sample_common")
 
   nau_collect_cmake_subdirectories(sampleDirs ${CMAKE_CURRENT_SOURCE_DIR})

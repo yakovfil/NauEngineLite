@@ -305,7 +305,7 @@ namespace nau
 
         if (contentType.empty())
         {
-            if (strings::icaseEqual(std::wstring_view{filePath.extension().c_str()}, std::wstring_view{L".json"}))
+            if (strings::icaseEqual(std::string_view{filePath.extension().string()}, std::string_view{".json"}))
             {
                 contentType = "application/json";
             }

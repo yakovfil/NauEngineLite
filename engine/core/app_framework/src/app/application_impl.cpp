@@ -1,18 +1,21 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./application_impl.h"
+
+#include <cstdio>
 
 #include "nau/diag/device_error.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service_provider.h"
-#include "nau/ui.h"
-
+#ifndef NAU_MINIMAL_RUNTIME
+    #include "nau/ui.h"
+#endif
 
 namespace nau
 {
-    ApplicationImpl::ApplicationImpl()
+    ApplicationImpl::ApplicationImpl(RuntimeState::Ptr runtime) :
+        m_runtime(std::move(runtime))
     {
         NAU_ASSERT(!applicationExists());
         setApplication(this);
@@ -27,9 +30,48 @@ namespace nau
         setApplication(nullptr);
     }
 
+    Result<> cleanupFailedApplication(RuntimeState& runtime, IModuleManager::Ptr& modules)
+    {
+        auto previousExecutor = async::Executor::getThisThreadExecutor();
+        auto queue = WorkQueue::create();
+        async::Executor::setThisThreadExecutor(queue);
+        auto task = getServiceProvider().as<core_detail::IServiceProviderInitialization&>().shutdownServices();
+        while (!task.isReady())
+        {
+            queue->poll();
+            std::this_thread::yield();
+        }
+        Result<> result = task.isRejected() ? Result<>{task.getError()} : Result<>{};
+        task = nullptr;
+
+        auto drain = runtime.shutdown(false);
+        while (drain())
+        {
+            queue->poll();
+            std::this_thread::yield();
+        }
+        setDefaultServiceProvider(nullptr);
+        if (modules)
+        {
+            modules->doModulesPhase(IModuleManager::ModulesPhase::Cleanup);
+            modules.reset();
+        }
+        async::Executor::setThisThreadExecutor(std::move(previousExecutor));
+        queue.reset();
+        runtime.completeShutdown();
+        diag::setDeviceError(nullptr);
+        return result;
+    }
+
+    Result<> ApplicationImpl::abortCreation()
+    {
+        m_appState = AppState::ShutdownCompleted;
+        return cleanupFailedApplication(*m_runtime, m_moduleManager);
+    }
+
     bool ApplicationImpl::isClosing() const
     {
-        return m_appState != AppState::Active;
+        return m_stopRequested || getPhase() == ApplicationPhase::Stopping || getPhase() == ApplicationPhase::Stopped;
     }
 
     bool ApplicationImpl::hasExecutor()
@@ -56,30 +98,12 @@ namespace nau
         diag::setDeviceError(nullptr);
     }
 
-    Result<> ApplicationImpl::startupServices()
+    void ApplicationImpl::finishStartup()
     {
-        const auto waitTaskAndPoll = [&](async::Task<> task) -> Result<>
-        {
-            while (!task.isReady())
-            {
-                m_appWorkQueue->poll();
-            }
-
-            return !task.isRejected() ? Result<>{} : task.getError();
-        };
-
         ServiceProvider& serviceProvider = getServiceProvider();
-
-        auto& serviceProviderInit = serviceProvider.as<core_detail::IServiceProviderInitialization&>();
-
-        // TODO: check preInit result
-        NauCheckResult(waitTaskAndPoll(serviceProviderInit.preInitServices()))
-
-        // TODO: check init result
-        NauCheckResult(waitTaskAndPoll(serviceProviderInit.initServices()))
-
         m_mainLoop = &serviceProvider.get<MainLoopService>();
 
+#ifndef NAU_MINIMAL_RUNTIME
         if (getServiceProvider().has<ui::UiManager>())
         {
             m_uiManager = &getServiceProvider().get<ui::UiManager>();
@@ -90,11 +114,17 @@ namespace nau
             m_vfxManager = &getServiceProvider().get<vfx::VFXManager>();
         }
 
-        return {};
+#endif
+
+        m_appState = AppState::Active;
     }
 
-    void ApplicationImpl::startupOnCurrentThread()
+    void ApplicationImpl::beginStartup()
     {
+        if (m_appState != AppState::Created)
+        {
+            return;
+        }
         NAU_ASSERT(m_hostThreadId == std::thread::id{});
 
         m_hostThreadId = std::this_thread::get_id();
@@ -103,7 +133,59 @@ namespace nau
 
         async::Executor::setThisThreadExecutor(m_appWorkQueue);
 
-        startupServices().ignore();
+        if (m_stopRequested)
+        {
+            m_appState = AppState::ShutdownRequested;
+            return;
+        }
+        m_appState = AppState::PreInitializing;
+        getServiceProvider().as<core_detail::IServiceProviderInitialization&>().setInitializationStopToken(&m_stopRequested);
+        m_startupTask = getServiceProvider().as<core_detail::IServiceProviderInitialization&>().preInitServices();
+    }
+
+    void ApplicationImpl::startupOnCurrentThread()
+    {
+        beginStartup();
+        while (getPhase() == ApplicationPhase::PreInitializing || getPhase() == ApplicationPhase::Initializing)
+        {
+            pollLifecycle();
+            std::this_thread::yield();
+        }
+        if (m_lifecycleError)
+        {
+            std::fprintf(stderr, "%s\n", m_lifecycleError->getDiagMessage().c_str());
+        }
+    }
+
+    ApplicationPhase ApplicationImpl::getPhase() const
+    {
+        switch (m_appState.load())
+        {
+            case AppState::Created:
+                return ApplicationPhase::Created;
+            case AppState::PreInitializing:
+                return ApplicationPhase::PreInitializing;
+            case AppState::Initializing:
+                return ApplicationPhase::Initializing;
+            case AppState::Active:
+                return ApplicationPhase::Running;
+            case AppState::ShutdownCompleted:
+                return ApplicationPhase::Stopped;
+            default:
+                return ApplicationPhase::Stopping;
+        }
+    }
+
+    void ApplicationImpl::recordError(const async::Task<>& task, const char* phase)
+    {
+        if (task && task.isRejected())
+        {
+            eastl::string message = m_lifecycleError ? m_lifecycleError->getMessage() + "\n" : eastl::string{};
+            message += phase;
+            message += ": ";
+            message += task.getError()->getDiagMessage();
+            m_lifecycleError = NauMakeError(message);
+        }
     }
 
     bool ApplicationImpl::isMainThread()
@@ -113,7 +195,42 @@ namespace nau
         return m_hostThreadId == std::this_thread::get_id();
     }
 
+    Error::Ptr ApplicationImpl::getLifecycleError() const
+    {
+        if (m_lifecycleError)
+            return m_lifecycleError;
+        if (hasServiceProvider() && m_appState != AppState::Active)
+        {
+            return getServiceProvider().as<core_detail::IServiceProviderInitialization&>().getLifecycleError();
+        }
+        return nullptr;
+    }
+
+    bool ApplicationImpl::stepWithElapsedTime(std::chrono::milliseconds elapsed)
+    {
+        NAU_ASSERT(isMainThread());
+        if (m_appState != AppState::Active || m_stopRequested)
+            return false;
+        mainGameStep(static_cast<float>(elapsed.count()) / 1000.f);
+        return true;
+    }
+
+    uint64_t ApplicationImpl::getLifecycleProgress() const
+    {
+        return hasServiceProvider() ? getServiceProvider().as<core_detail::IServiceProviderInitialization&>().getLifecycleProgress() : 0;
+    }
+
     bool ApplicationImpl::step()
+    {
+        const bool alive = pollLifecycle();
+        if (alive && m_appState == AppState::Active && !m_stopRequested)
+        {
+            mainGameStep(m_tickStopwatch.tick());
+        }
+        return alive;
+    }
+
+    bool ApplicationImpl::pollLifecycle()
     {
         NAU_ASSERT(m_hostThreadId == std::this_thread::get_id(), "Invalid thread");
         if (m_appState == AppState::ShutdownCompleted)
@@ -121,42 +238,64 @@ namespace nau
             return false;
         }
 
-        const float dt = m_tickStopwatch.tick();
         m_appWorkQueue->poll();
 
-        if (m_appState == AppState::Active)
+        if (m_appState == AppState::PreInitializing || m_appState == AppState::Initializing)
         {
-            mainGameStep(dt);
+            if (!m_startupTask.isReady())
+            {
+                return true;
+            }
+            const bool preInit = m_appState == AppState::PreInitializing;
+            recordError(m_startupTask, preInit ? "Pre-initialization" : "Initialization");
+            m_startupTask = nullptr;
+            if (m_lifecycleError || m_stopRequested)
+            {
+                m_appState = AppState::ShutdownRequested;
+            }
+            else if (preInit)
+            {
+                m_appState = AppState::Initializing;
+                m_startupTask = getServiceProvider().as<core_detail::IServiceProviderInitialization&>().initServices();
+            }
+            else
+            {
+                finishStartup();
+            }
         }
-        else if (m_appState == AppState::ShutdownRequested)
+        if (m_appState == AppState::Active && m_stopRequested)
+        {
+            m_appState = AppState::ShutdownRequested;
+        }
+        if (m_appState == AppState::ShutdownRequested)
         {
             NAU_ASSERT(!m_shutdownTask);
-            NAU_FATAL(m_mainLoop);
 
             m_appState = AppState::GameShutdownProcessed;
-            m_shutdownTask = m_mainLoop->shutdownMainLoop();
+            m_shutdownTask = m_mainLoop ? m_mainLoop->shutdownMainLoop() : async::makeResolvedTask();
         }
         else if (m_appState == AppState::GameShutdownProcessed)
         {
             NAU_FATAL(m_shutdownTask);
             if (!m_shutdownTask.isReady())
             {
-                mainGameStep(dt);
+                m_mainLoop->pollShutdown();
             }
             else
             {
+                recordError(m_shutdownTask, "Game shutdown");
                 m_shutdownTask = nullptr;
                 m_shutdownTask = shutdownRuntime();
             }
         }
         else if (m_appState == AppState::RuntimeShutdownProcessed)
         {
-            NAU_FATAL(m_runtimeShutdown);
             NAU_FATAL(m_shutdownTask);
 
-            if (!m_runtimeShutdown())
+            if (m_shutdownTask.isReady() && m_runtimeShutdown && !m_runtimeShutdown())
             {
-                NAU_ASSERT(m_shutdownTask.isReady());
+                recordError(m_shutdownTask, "Service shutdown");
+                m_shutdownTask = nullptr;
                 completeShutdown();
             }
         }
@@ -166,8 +305,7 @@ namespace nau
 
     void ApplicationImpl::stop()
     {
-        [[maybe_unused]] AppState expectedState = AppState::Active;
-        m_appState.compare_exchange_strong(expectedState, AppState::ShutdownRequested);
+        m_stopRequested = true;
     }
 
     async::Task<> ApplicationImpl::shutdownRuntime()
@@ -176,8 +314,9 @@ namespace nau
         NAU_ASSERT(oldAppState == AppState::GameShutdownProcessed);
 
         async::Task<> shutdownServicesTask = getServiceProvider().as<core_detail::IServiceProviderInitialization&>().shutdownServices();
+        auto result = co_await shutdownServicesTask.doTry();
         m_runtimeShutdown = m_runtime->shutdown(false);
-        co_await shutdownServicesTask;
+        co_await result;
     }
 
     void ApplicationImpl::completeShutdown()
@@ -192,6 +331,7 @@ namespace nau
     {
         NAU_FATAL(m_mainLoop);
 
+#ifndef NAU_MINIMAL_RUNTIME
         if (m_uiManager)
         {
             m_uiManager->update(dt);
@@ -201,6 +341,8 @@ namespace nau
         {
             m_vfxManager->update(dt);
         }
+
+#endif
 
         m_mainLoop->doGameStep(dt);
 #if 0

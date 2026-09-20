@@ -6,6 +6,8 @@
 #pragma once
 #include <nau/core_defines.h>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <optional>
 
 #include "nau/kernel/kernel_config.h"

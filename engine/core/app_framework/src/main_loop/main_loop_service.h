@@ -7,7 +7,9 @@
 #include "concurrent_execution_container.h"
 #include "nau/app/main_loop/game_system.h"
 #include "nau/rtti/rtti_impl.h"
-#include "nau/scene/internal/scene_manager_internal.h"
+#ifndef NAU_MINIMAL_RUNTIME
+    #include "nau/scene/internal/scene_manager_internal.h"
+#endif
 #include "nau/service/service.h"
 
 namespace nau
@@ -21,6 +23,8 @@ namespace nau
         void doGameStep(float dt);
 
         async::Task<> shutdownMainLoop();
+
+        void pollShutdown();
 
     private:
         async::Task<> preInitGameSystem(IClassDescriptor& systemClass);
@@ -38,7 +42,9 @@ namespace nau
         eastl::vector<IGameSceneUpdate*> m_sceneUpdate;
         eastl::vector<eastl::unique_ptr<ConcurrentExecutionContainer> > m_concurrentContainers;
 
+#ifndef NAU_MINIMAL_RUNTIME
         scene::ISceneManagerInternal* m_sceneManager = nullptr;
+#endif
     };
 
 }  // namespace nau

@@ -12,17 +12,17 @@ namespace nau
     {
         ptrdiff_t diff = (uint8_t*)aligned - (uint8_t*)info.m_unaligned;
         NAU_ASSERT(diff >= sizeof(Pattern));
-        uint32_t* before = (uint32_t*)((uint8_t*)aligned - sizeof(Pattern));
-        uint32_t* after = (uint32_t*)((uint8_t*)aligned + info.m_size);
-        *before = Pattern;
-        *after = Pattern;
+        const uint32_t pattern = Pattern;
+        memcpy(static_cast<uint8_t*>(aligned) - sizeof(Pattern), &pattern, sizeof(pattern));
+        memcpy(static_cast<uint8_t*>(aligned) + info.m_size, &pattern, sizeof(pattern));
     }
 
     bool IAlignedAllocatorDebug::checkPattern(const void* aligned, AllocationInfo& info)
     {
-        uint32_t* before = (uint32_t*)((uint8_t*)aligned - sizeof(Pattern));
-        uint32_t* after = (uint32_t*)((uint8_t*)aligned + info.m_size);
-        if (*before != Pattern || *after != Pattern)
+        uint32_t before, after;
+        memcpy(&before, static_cast<const uint8_t*>(aligned) - sizeof(Pattern), sizeof(Pattern));
+        memcpy(&after, static_cast<const uint8_t*>(aligned) + info.m_size, sizeof(Pattern));
+        if (before != Pattern || after != Pattern)
         {
             return false;
         }
@@ -72,17 +72,15 @@ namespace nau
             }
             this->deallocate(info.first->m_unaligned);
 // TODO Tracy            TracyFreeN(info.first->m_unaligned, m_name.value().c_str());
-            m_allocations.value().erase(ptr);
+            info.second->erase(ptr);
         }
     }
 
     bool IAlignedAllocatorDebug::isValid(const void* ptr) const
     {
-        if (!isAligned(ptr))
-        {
-            return false;
-        }
-        return checkPattern(ptr, m_allocations.value()[const_cast<void*>(ptr)]);
+        lock_(m_lock);
+        auto info = getAllocationInfo(ptr);
+        return info.first && checkPattern(ptr, *info.first);
     }
 
 }  // namespace nau

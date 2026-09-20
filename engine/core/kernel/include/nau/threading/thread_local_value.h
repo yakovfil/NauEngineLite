@@ -15,6 +15,7 @@
 #include <mutex>
 #include <limits>
 #include <stack>
+#include <thread>
 
 namespace nau
 {
@@ -76,6 +77,7 @@ namespace nau
             : m_construct(construct)
         {
             m_lineSize = std::thread::hardware_concurrency();
+            if (m_lineSize == 0) m_lineSize = 1;
             resizeLines(0);
         }
 

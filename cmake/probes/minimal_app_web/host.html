@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nau minimal sample</title>
+<link rel="icon" href="data:,">
+<style>
+body { font: 17px system-ui, sans-serif; background: #f1f4f8; color: #192b40; margin: 0; }
+main { max-width: 620px; margin: 8vh auto; padding: 32px; background: white; border-radius: 16px; }
+h1 { margin-top: 0; } dt { color: #526175; } dd { margin: 4px 0 20px; font-size: 24px; }
+button { padding: 12px 24px; font: inherit; border: 0; border-radius: 8px; background: #245ab7; color: white; cursor: pointer; }
+button:disabled { opacity: .45; cursor: default; } pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+#nau-window { width: 100%; height: 32px; } small { color: #526175; }
+</style>
+<main>
+  <h1>Nau minimal sample</h1>
+  <p>Real application lifecycle, without rendering.</p>
+  <dl><dt>Status</dt><dd id="status" role="status">Loading</dd>
+      <dt>Completed updates</dt><dd id="count">0</dd></dl>
+  <button id="stop" disabled>Stop</button>
+  <p id="cleanup">Waiting for startup.</p>
+  <pre id="message"></pre>
+  <div id="nau-window" aria-label="Nau platform host"></div>
+  <small>Build-directory acceptance harness.</small>
+</main>
+<script>
+const scenario = new URLSearchParams(location.search).get('scenario') || 'success';
+if (scenario === 'missing-host') document.getElementById('nau-window').remove();
+let beats = 0;
+window.result = null;
+const button = document.getElementById('stop');
+function render() {
+    const status = Module.nauRuntime?.status;
+    if (!status) return;
+    document.getElementById('status').textContent = status.state;
+    document.getElementById('count').textContent = status.completedSteps;
+    document.getElementById('message').textContent = status.message;
+    document.getElementById('cleanup').textContent = status.cleanupComplete
+        ? 'Cleanup complete. Reload the page to run again.'
+        : status.state === 'Failed' ? 'Cleanup incomplete. Reload to retry.'
+        : status.state === 'Stopping' ? 'Cleaning up.' : 'Application active.';
+    button.disabled = status.cleanupComplete;
+}
+function finish(code, abortReason) {
+    render();
+    clearInterval(heartbeat);
+    window.result = {code, abortReason, status:Module.nauRuntime?.status,
+        history:Module.nauRuntime?.history, beats, isolated:crossOriginIsolated,
+        hosts:Module.nauPlatformHosts?.size || 0};
+}
+var Module = {
+    print: text => console.log(text), printErr: text => console.error(text),
+    onExit: code => finish(code), onAbort: reason => finish(1, String(reason))
+};
+button.onclick = () => Module.nauRuntime?.stop();
+const heartbeat = setInterval(() => { ++beats; render(); }, 10);
+</script>
+<script src="MinimalAppSample.js"></script>
+</html>

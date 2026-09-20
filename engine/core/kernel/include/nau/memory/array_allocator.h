@@ -180,7 +180,7 @@ namespace nau
 
     private:
 
-        struct Head
+        struct alignas(std::max_align_t) Head
         {
             size_t reserve = 0;
             size_t size = 0;
@@ -236,13 +236,12 @@ namespace nau
         {
             Head* const head = reinterpret_cast<Head*>(reinterpret_cast<BytePtr>(clientPtr) - sizeof(Head));
 
-            // TODO: future add align for Head and Signature
-            // NAU_ASSERT(reinterpret_cast<uintptr_t>(head) % alignof(Head) == 0);
+            NAU_ASSERT(reinterpret_cast<uintptr_t>(head) % alignof(Head) == 0);
 
 #ifdef NAU_ASSERT_ENABLED
-            const Signature* const signature = reinterpret_cast<const Signature*>(static_cast<BytePtr>(clientPtr) + head->size);
-            //NAU_ASSERT(reinterpret_cast<uintptr_t>(signature) % alignof(Signature) == 0);
-            NAU_ASSERT(signature->value == reinterpret_cast<uintptr_t>(head));
+            Signature signature;
+            memcpy(&signature, static_cast<BytePtr>(clientPtr) + head->size, sizeof(signature));
+            NAU_ASSERT(signature.value == reinterpret_cast<uintptr_t>(head));
 #endif
             return head;
         }
@@ -252,9 +251,8 @@ namespace nau
             head->size = newSize;
 
             BytePtr const clientPtr = reinterpret_cast<BytePtr>(head) + sizeof(Head);
-            Signature* const signature = reinterpret_cast<Signature*>(clientPtr + head->size);
-            //NAU_ASSERT(reinterpret_cast<uintptr_t>(signature) % alignof(Signature) == 0);
-            signature->value = reinterpret_cast<uintptr_t>(head);
+            const Signature signature{reinterpret_cast<uintptr_t>(head)};
+            memcpy(clientPtr + head->size, &signature, sizeof(signature));
         }
     };
 

@@ -3,9 +3,33 @@
 #
 cmake_minimum_required (VERSION 3.20)
 
+if(NAU_BUILD_BROWSER OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR
+   CMAKE_TOOLCHAIN_FILE MATCHES "Emscripten\\.cmake$")
+  include(cmake/NauEmscriptenSdk.cmake)
+endif()
+
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 project(NauEngine)
+
+set(NAU_RUNTIME_PROFILE "desktop" CACHE STRING "Runtime profile: desktop or minimal")
+set_property(CACHE NAU_RUNTIME_PROFILE PROPERTY STRINGS desktop minimal)
+if(NOT NAU_RUNTIME_PROFILE MATCHES "^(desktop|minimal)$")
+  message(FATAL_ERROR "Unknown NAU_RUNTIME_PROFILE '${NAU_RUNTIME_PROFILE}'; choose desktop or minimal.")
+endif()
+
+if(EMSCRIPTEN OR NAU_BUILD_BROWSER)
+  include(cmake/NauEmscriptenSdk.cmake)
+  if(NOT EMSCRIPTEN)
+    message(FATAL_ERROR "Browser builds require the Emscripten toolchain; use the web-minimal presets in a fresh build directory.")
+  endif()
+  if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+    message(FATAL_ERROR "Browser builds require NAU_RUNTIME_PROFILE=minimal; use the web-minimal presets.")
+  endif()
+  if(DEFINED BUILD_SHARED_LIBS AND BUILD_SHARED_LIBS)
+    message(FATAL_ERROR "Browser builds require static linking: set BUILD_SHARED_LIBS=OFF.")
+  endif()
+endif()
 
 # TODO: set enviroment variables for other platforms
 if (WIN32)
@@ -20,7 +44,9 @@ if(NOT DEFINED ${NauEngineFolder})
   set(NauEngineFolder "NauEngine")
 endif(NOT DEFINED ${NauEngineFolder})
 
-set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/output CACHE PATH "" FORCE)
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/output CACHE PATH "" FORCE)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 #  ${CMAKE_SOURCE_DIR}/cmake/modules
@@ -43,6 +69,11 @@ option(NAU_MATH_USE_DOUBLE_PRECISION "Enable double precision for math" OFF)
 
 option(BUILD_SHARED_LIBS "Build shared libs" ON)
 
+set(NAU_FRAMEWORK_TARGET NauFramework)
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  include(cmake/NauMinimalRuntime.cmake)
+endif()
+
 if (BUILD_SHARED_LIBS)
   message (STATUS "Configure for dynamic (DLL) runtime")
 else()
@@ -55,9 +86,9 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(Python
-    REQUIRED
-)
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  find_package(Python REQUIRED)
+endif()
 
 
 include(NauCommon)
@@ -71,7 +102,9 @@ else()
   message (STATUS "Skipping UsdPackages")
 endif()
 include(CTest)
-nau_check_python()
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  nau_check_python()
+endif()
 
 enable_testing()
 
@@ -92,8 +125,14 @@ file (STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/.nauversion NAU_VERSION_STRING)
 nau_set_version("${NAU_VERSION_STRING}")
 
 add_subdirectory(engine)
-add_subdirectory(tools)
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  add_subdirectory(tools)
+endif()
 add_subdirectory(samples)
+
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  return()
+endif()
 
 nau_generate_es_targets()
 

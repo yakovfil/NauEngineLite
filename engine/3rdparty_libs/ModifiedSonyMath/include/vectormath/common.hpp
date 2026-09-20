@@ -187,7 +187,7 @@ inline void decompose(const Matrix4& mat, Vector3* translationOut, Quat* rotatio
 		float root, trace = row[0].getX() + row[1].getY() + row[2].getZ();
 		if (trace > 0)
 		{
-			root = sqrt(FloatInVec(trace + 1.0f));
+			root = sqrtf(trace + 1.0f);
 			rotationOut->setW(0.5f * root);
 			root = 0.5f / root;
 			rotationOut->setX(root * (row[1].getZ() - row[2].getY()));

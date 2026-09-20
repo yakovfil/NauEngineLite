@@ -90,7 +90,7 @@ namespace nau
 
     namespace string_literals
     {
-        _NODISCARD constexpr size_t operator"" _sh(const char8_t* _Str, size_t _Len)
+        [[nodiscard]] constexpr size_t operator"" _sh(const char8_t* _Str, size_t _Len)
         {
             return hash_string::constHash(_Str, _Len);
         }

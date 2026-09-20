@@ -10,7 +10,7 @@
 #include "nau/string/string_conv.h"
 #include "nau/string/string_utils.h"
 
-#ifndef NAU_PLATFORM_WIN32
+#if !defined(NAU_PLATFORM_WIN32) && !defined(NAU_STATIC_RUNTIME)
     #error Compilation unit is intended only for windows/ms-family platforms.
 #endif
 

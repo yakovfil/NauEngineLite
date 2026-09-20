@@ -8,7 +8,7 @@
 
 namespace nau
 {
-    struct BlockHeader
+    struct alignas(std::max_align_t) BlockHeader
     {
         IMemAllocator* allocator = nullptr;
         size_t size = 0;
@@ -62,7 +62,10 @@ namespace nau
         
         void* newPtr = nullptr;
         if (header->allocator == allocator)
+        {
             newPtr = allocator->reallocate(realPtr, realSize);
+            header = static_cast<BlockHeaderPtr>(newPtr);
+        }
         else
         {
             newPtr = allocator->allocate(realSize);

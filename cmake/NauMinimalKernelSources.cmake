@@ -1,0 +1,83 @@
+# Explicit implementation sources shared by minimal native and Wasm builds.
+# See doc/minimal_kernel_sources.md for dependency/exclusion evidence.
+set(NAU_MINIMAL_KERNEL_COMMON_SOURCES
+  app/application.cpp
+  async/core_task_impl.cpp
+  async/executor.cpp
+  async/task.cpp
+  async/task_collection.cpp
+  async/thread_pool_executor.cpp
+  async/timer_manager.cpp
+  async/work_queue.cpp
+  diag/assertion.cpp
+  diag/error.cpp
+  diag/file_helper.cpp
+  diag/log_subscribers.cpp
+  diag/logging.cpp
+  io/directory_iterator.cpp
+  io/fs_path.cpp
+  io/memory_stream.cpp
+  io/stream.cpp
+  io/virtual_file_system_impl.cpp
+  math/gaussTable.cpp
+  math/random.cpp
+  memory/aligned_allocator.cpp
+  memory/aligned_allocator_debug.cpp
+  memory/bytes_buffer.cpp
+  memory/eastl_aliases.cpp
+  memory/eastl_new.cpp
+  memory/frame_allocator.cpp
+  memory/general_allocator.cpp
+  memory/heap_allocator.cpp
+  memory/mem_page.cpp
+  memory/mem_section.cpp
+  memory/stack_allocator.cpp
+  memory/string_allocator.cpp
+  messaging/async_message_source_impl.cpp
+  messaging/async_message_stream.cpp
+  messaging/async_message_stream_impl.cpp
+  messaging/messaging.cpp
+  meta/runtime_attribute.cpp
+  module/module_manager.cpp
+  module/module_utils.cpp
+  rtti/type_info.cpp
+  runtime/runtime_object_registry.cpp
+  runtime/runtime_state.cpp
+  serialization/json/json_jsoncpp_parse.cpp
+  serialization/json/json_jsoncpp_write.cpp
+  serialization/json/json_to_runtime_value.cpp
+  serialization/native_object.cpp
+  serialization/runtime_value.cpp
+  serialization/type_info_value.cpp
+  service/service_provider_impl.cpp
+  string/hash_string.cpp
+  string/string.cpp
+  string/string_utils.cpp
+  threading/barrier.cpp
+  threading/critsec.cpp
+  threading/event.cpp
+  threading/set_thread_name.cpp
+  threading/thread_local_value.cpp
+  threading/timedCritsec.cpp
+  utils/cancellation.cpp
+  utils/enum_reflection.cpp
+  utils/result.cpp
+  version/engine_version.cpp
+)
+set(NAU_MINIMAL_KERNEL_WINDOWS_SOURCES
+  platform/windows/native_file_system/win_file.cpp
+  platform/windows/win32_timer_manager.cpp
+  platform/windows/utils/uid.cpp
+  platform/windows/strings/windows_strings.cpp
+  platform/windows/io/special_paths.cpp
+  platform/windows/diag/win_error.cpp
+  platform/windows/debugger.cpp
+  diag/platform/windows/windows_error_device.cpp
+  diag/platform/windows/windows_debug_log_subscriber.cpp
+)
+
+set(NAU_MINIMAL_KERNEL_EMSCRIPTEN_SOURCES
+  platform/emscripten/core_platform.cpp
+  platform/emscripten/uid.cpp
+  platform/emscripten/timer_manager.cpp
+)

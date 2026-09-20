@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nau runtime acceptance fixture</title>
+<link rel="icon" href="data:,">
+<div id="nau-window" style="width:200px;height:100px"></div>
+<button id="stop" onclick="Module.nauRuntime?.stop()">Stop</button>
+<script>
+const scenario = new URLSearchParams(location.search).get('scenario') || 'success';
+const scenarios = ['success','immediate','deferred','stopstartup','pending','shutdownerror',
+    'configfail','setupfail','hostloss','stall','abort','fixture-failure','batchfailure'];
+window.result = null;
+let beats = 0;
+const heartbeat = setInterval(() => ++beats, 10);
+var Module = {
+    scenarioId: scenarios.indexOf(scenario), measurements: [],
+    print: text => console.log(text), printErr: text => console.error(text),
+    onExit: code => { clearInterval(heartbeat); window.result = {code, status:Module.nauRuntime?.status,
+        stats:Module.fixtureStats, beats, isolated:crossOriginIsolated, hosts:Module.nauPlatformHosts?.size || 0,
+        measurements:Module.measurements, history:Module.nauRuntime?.history}; },
+    onAbort: reason => { clearInterval(heartbeat); window.result = {code:1, reason:String(reason), status:Module.nauRuntime?.status, beats}; }
+};
+</script>
+<script src="NauBrowserRuntimeTests.js"></script>

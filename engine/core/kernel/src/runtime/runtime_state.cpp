@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/runtime/internal/runtime_state.h"
 
 #include <iostream>
@@ -64,7 +63,10 @@ namespace nau
             {
                 for (auto& object : objects)
                 {
-                    object->as<IDisposable&>().dispose();
+                    if (claimRuntimeDisposal(*object))
+                    {
+                        object->as<IDisposable&>().dispose();
+                    }
                 }
             });
 

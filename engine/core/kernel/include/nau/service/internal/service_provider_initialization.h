@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
+
+#include <atomic>
 
 #include "nau/async/task_base.h"
 #include "nau/rtti/rtti_object.h"
@@ -40,7 +41,13 @@ namespace nau::core_detail
 
         virtual async::Task<> preInitServices() = 0;
 
+        // The owner retains this token until all initialization work settles.
+        virtual void setInitializationStopToken(const std::atomic<bool>* token) = 0;
+
         virtual async::Task<> initServices() = 0;
+
+        virtual Error::Ptr getLifecycleError() const = 0;
+        virtual uint64_t getLifecycleProgress() const = 0;
 
         virtual async::Task<> shutdownServices() = 0;
     };

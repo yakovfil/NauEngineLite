@@ -5,12 +5,23 @@
 #include <nau/threading/critical_section.h>
 #include <string.h>
 #include "critsec.h"
+#include <chrono>
+#include <thread>
 
 //TODO: move to platform dirrectory, uncomment and fix code and split for different OS.
 namespace dag
 {
     bool try_timed_enter_critical_section(void* p, int timeout_ms, const char* waiter_perf_name)
     {
+#ifdef __EMSCRIPTEN__
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+        do
+        {
+            if (try_enter_critical_section(p)) return true;
+            if (std::chrono::steady_clock::now() >= deadline) return false;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        } while (true);
+#endif
         return false; /*
     #if LOCK_PROFILER_ENABLED
       DA_PROFILE_EVENT_DESC(::da_profiler::DescCritsec);

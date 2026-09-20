@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <cstdio>
 
 #include "./application_impl.h"
 #include "./global_properties_impl.h"
@@ -12,12 +13,11 @@
 #include "nau/io/virtual_file_system.h"
 #include "nau/string/string_conv.h"
 
-
 namespace nau
 {
     Result<> initAndApplyConfiguration(ApplicationInitDelegate& initDelegate);
 
-    eastl::unique_ptr<BackgroundWorkService> createBackgroundWorkService();
+    eastl::unique_ptr<IRttiObject> createBackgroundWorkService();
 
     Result<> setupCoreServicesAndConfigure(ApplicationInitDelegate& initDelegate)
     {
@@ -99,23 +99,54 @@ namespace nau
 
     }  // namespace
 
-    eastl::unique_ptr<Application> createApplication(ApplicationInitDelegate& initDelegate)
+    Result<eastl::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate& initDelegate)
     {
-        NAU_FATAL(!applicationExists());
-
-        if (!setupCoreServicesAndConfigure(initDelegate))
+        if (applicationExists() || hasServiceProvider() || hasModuleManager())
         {
-            return nullptr;
+            return NauMakeError("Creation: application resources already exist");
         }
 
-        auto application = eastl::make_unique<ApplicationImpl>();
+        auto runtime = RuntimeState::create();
+
+        if (auto configuration = setupCoreServicesAndConfigure(initDelegate); !configuration)
+        {
+            IModuleManager::Ptr modules;
+            const auto cleanup = cleanupFailedApplication(*runtime, modules);
+            auto message = eastl::string("Configuration: ") + configuration.getError()->getDiagMessage();
+            if (!cleanup)
+            {
+                message += "\nCleanup: ";
+                message += cleanup.getError()->getDiagMessage();
+            }
+            return NauMakeError(message);
+        }
+
+        auto application = eastl::make_unique<ApplicationImpl>(std::move(runtime));
 
         if (Result<> initRes = initDelegate.initializeApplication(); !initRes)
         {
-            return nullptr;
+            const auto cleanup = application->abortCreation();
+            auto message = eastl::string("Application setup: ") + initRes.getError()->getDiagMessage();
+            if (!cleanup)
+            {
+                message += "\nCleanup: ";
+                message += cleanup.getError()->getDiagMessage();
+            }
+            return NauMakeError(message);
         }
 
-        return application;
+        return eastl::unique_ptr<Application>{std::move(application)};
+    }
+
+    eastl::unique_ptr<Application> createApplication(ApplicationInitDelegate& initDelegate)
+    {
+        auto result = createApplicationChecked(initDelegate);
+        if (!result)
+        {
+            std::fprintf(stderr, "%s\n", result.getError()->getDiagMessage().c_str());
+            return nullptr;
+        }
+        return std::move(*result);
     }
 
     eastl::unique_ptr<Application> createApplication(Functor<Result<>()> preInitCallback)

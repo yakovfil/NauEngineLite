@@ -78,7 +78,7 @@ namespace spdlog
                 // fd_ = nau::getServiceProvider().get<nau::io::IFileSystem>().openFile(filename_,
                 //                                                                     nau::io::AccessMode::Write | nau::io::AccessMode::Async,
                 //                                                                     nau::io::OpenFileMode::CreateAlways);
-                auto utf8Path = strings::wstringToUtf8(logFilePath.c_str());
+                auto utf8Path = logFilePath.u8string();
                 sd_ = nau::io::createNativeFileStream(reinterpret_cast<const char*>(utf8Path.c_str()),
                                                       nau::io::AccessMode::Write | nau::io::AccessMode::Async,
                                                       nau::io::OpenFileMode::CreateAlways);

@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nau platform fixture</title>
+<link rel="icon" href="data:,">
+<div id="parent"><div id="nau-window" style="width:200px;height:100px;padding:10px;border:2px solid black"></div></div>
+<script>
+const scenario = new URLSearchParams(location.search).get('scenario') || 'valid';
+if (scenario === 'missing') document.getElementById('nau-window').remove();
+if (scenario === 'ambiguous') document.getElementById('parent').append(document.getElementById('nau-window').cloneNode());
+if (scenario === 'invalid') document.getElementById('parent').innerHTML = '<svg id="nau-window"></svg>';
+if (scenario === 'callbacks') {
+    const add = document.addEventListener;
+    document.addEventListener = function(type, ...args) {
+        const result = add.call(this, type, ...args);
+        if (type === 'visibilitychange') throw new Error('Injected callback installation failure');
+        return result;
+    };
+}
+window.result = null;
+let contextRequests = 0;
+for (const type of [HTMLCanvasElement, OffscreenCanvas]) {
+    const getContext = type.prototype.getContext;
+    type.prototype.getContext = function(...args) { ++contextRequests; return getContext.apply(this, args); };
+}
+var Module = {
+    scenario,
+    nauWindowSelector: '#nau-window',
+    expectFailure: !['valid', 'hostloss', 'fixture-failure'].includes(scenario),
+    print: text => console.log(text),
+    printErr: text => console.error(text),
+    onExit: code => { window.result = {code, isolated:crossOriginIsolated, hosts:Module.nauPlatformHosts?.size || 0, contextRequests, hostConnected:!!document.getElementById('nau-window')}; },
+    onAbort: reason => { window.result = {code:1, reason:String(reason)}; }
+};
+</script>
+<script src="NauBrowserPlatformTests.js"></script>

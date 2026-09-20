@@ -3,11 +3,14 @@
 
 
 #include "nau/threading/set_thread_name.h"
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/threading.h>
+#endif
 // TODO Tracy #include "tracy/Tracy.hpp"
 
 namespace nau::threading
 {
-#if 1//NAU_PLATFORM_WINDOWS
+#if defined(_WIN32)
     namespace
     {
         constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
@@ -28,7 +31,7 @@ namespace nau::threading
 
     void setThisThreadName([[maybe_unused]] const std::string& name)
     {
-#if 1// NAU_PLATFORM_WINDOWS
+#if defined(_WIN32)
         // https://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
 
         THREADNAME_INFO info;
@@ -48,6 +51,8 @@ namespace nau::threading
     #pragma warning(pop)
 
 // TODO Tracy        tracy::SetThreadName(name.c_str());
+#elif defined(__EMSCRIPTEN__)
+        emscripten_set_thread_name(pthread_self(), name.c_str());
 #endif // NAU_PLATFORM_WINDOWS
     }
 

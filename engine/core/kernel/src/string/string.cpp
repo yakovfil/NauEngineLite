@@ -6,15 +6,15 @@
 
 namespace nau::string_literals
 {
-    _NODISCARD string operator"" _ns(const char8_t* _Str, size_t _Len)
+    [[nodiscard]] string operator"" _ns(const char8_t* _Str, size_t _Len)
     {
         return string(_Str);
     }
-    _NODISCARD string operator"" _ns(const char16_t* _Str, size_t _Len)
+    [[nodiscard]] string operator"" _ns(const char16_t* _Str, size_t _Len)
     {
         return string(_Str);
     }
-    _NODISCARD string operator"" _ns(const char32_t* _Str, size_t _Len)
+    [[nodiscard]] string operator"" _ns(const char32_t* _Str, size_t _Len)
     {
         return string(_Str);
     }

@@ -96,7 +96,16 @@
 	#define EA_PLATFORM_DESKTOP 1
 #endif
 
-#if defined(EA_PLATFORM_PS4) || defined(__ORBIS__) || defined(EA_PLATFORM_KETTLE)
+#if defined(__EMSCRIPTEN__)
+    #define EA_PLATFORM_EMSCRIPTEN 1
+    #define EA_PLATFORM_POSIX 1
+    #define EA_PLATFORM_NAME "Emscripten"
+    #define EA_PLATFORM_DESCRIPTION "Emscripten on wasm32"
+    #define EA_PROCESSOR_WASM32 1
+    #define EA_SYSTEM_LITTLE_ENDIAN 1
+    #define EA_PLATFORM_PTR_SIZE 4
+    #define EA_PLATFORM_WORD_SIZE 4
+#elif defined(EA_PLATFORM_PS4) || defined(__ORBIS__) || defined(EA_PLATFORM_KETTLE)
 	// PlayStation 4
 	// Orbis was Sony's code-name for the platform, which is now obsolete.
 	// Kettle was an EA-specific code-name for the platform, which is now obsolete.
@@ -731,7 +740,6 @@
 
 
 #endif // INCLUDED_eaplatform_H
-
 
 
 

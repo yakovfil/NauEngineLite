@@ -1,10 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "main_loop_service.h"
 
-#include "nau/gui/dag_imgui.h"
+#ifndef NAU_MINIMAL_RUNTIME
+    #include "nau/gui/dag_imgui.h"
+#endif
 
 namespace nau
 {
@@ -95,7 +96,7 @@ namespace nau
             eastl::copy(serviceWithPreUpdate.begin(), serviceWithPreUpdate.end(), m_preUpdate.begin() + offset);
         }
 
-        if (auto serviceWithPostUpdate = getServiceProvider().getAll<IGamePostUpdate>(); !serviceWithPostUpdate .empty())
+        if (auto serviceWithPostUpdate = getServiceProvider().getAll<IGamePostUpdate>(); !serviceWithPostUpdate.empty())
         {
             const auto offset = m_postUpdate.size();
             m_postUpdate.resize(serviceWithPostUpdate.size());
@@ -120,10 +121,12 @@ namespace nau
 
     async::Task<> MainLoopService::initService()
     {
+#ifndef NAU_MINIMAL_RUNTIME
         if (getServiceProvider().has<scene::ISceneManagerInternal>())
         {
             m_sceneManager = &getServiceProvider().get<scene::ISceneManagerInternal>();
         }
+#endif
 
         return async::makeResolvedTask();
     }
@@ -135,10 +138,23 @@ namespace nau
 
     async::Task<> MainLoopService::shutdownMainLoop()
     {
+#ifndef NAU_MINIMAL_RUNTIME
         if (m_sceneManager)
         {
             co_await m_sceneManager->shutdown();
         }
+#endif
+        co_return;
+    }
+
+    void MainLoopService::pollShutdown()
+    {
+#ifndef NAU_MINIMAL_RUNTIME
+        if (m_sceneManager)
+        {
+            m_sceneManager->pollShutdown();
+        }
+#endif
     }
 
     void MainLoopService::doGameStep(float dt)
@@ -152,21 +168,24 @@ namespace nau
             preUpdate->gamePreUpdate(msDt);
         }
 
+#ifndef NAU_MINIMAL_RUNTIME
         if (m_sceneManager != nullptr)
         {
             m_sceneManager->update(dt);
         }
+#endif
 
         for (IGamePostUpdate* const postUpdate : m_postUpdate)
         {
             postUpdate->gamePostUpdate(msDt);
         }
 
+#ifndef NAU_MINIMAL_RUNTIME
         if (imgui_get_state() != ImGuiState::OFF)
         {
             imgui_cache_render_data();
             imgui_update();
         }
-        
+#endif
     }
 }  // namespace nau

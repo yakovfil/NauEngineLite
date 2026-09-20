@@ -2383,10 +2383,11 @@ namespace tiny_utf8
 		bool starts_with( const value_type (&str)[LITLEN] ) const noexcept {
 			size_type		str_len = str[LITLEN-1] ? LITLEN : LITLEN-1;
 			const_iterator	it = cbegin(), end = cend();
+			const value_type* cursor = str;
 			while( it != end && str_len ){
-				if( *it != *str )
+				if( *it != *cursor )
 					return false;
-				++it, ++str, --str_len;
+				++it, ++cursor, --str_len;
 			}
 			return !str_len;
 		}

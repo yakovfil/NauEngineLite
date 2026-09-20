@@ -40,7 +40,11 @@
 */
 
 
+#if defined(__EMSCRIPTEN__)
+#define NAU_PLATFORM_HEADER_DIR_NAME emscripten
+#else
 #define NAU_PLATFORM_HEADER_DIR_NAME windows
+#endif
 #define NAU_PLATFORM_PATH_IMPL(Platform, FileName) nau/platform/Platform/FileName
 #define NAU_PLATFORM_PATH(FileName) NAU_PLATFORM_PATH_IMPL(NAU_PLATFORM_HEADER_DIR_NAME, FileName)
 

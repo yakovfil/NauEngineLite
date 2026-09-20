@@ -9,10 +9,16 @@ nau_collect_files(Sources
   DIRECTORIES ${moduleRoot}/src
   MASK "*.cpp" "*.h"
   EXCLUDE
-    "/platform/.*"
+    "(^|/)platform/.*"
 )
 
-if (${Platform_Windows})
+if(Platform_Emscripten)
+  nau_collect_files(Sources
+    RELATIVE ${moduleRoot}/src
+    DIRECTORIES ${moduleRoot}/src/platform/emscripten
+    MASK "*.cpp" "*.h"
+  )
+elseif (${Platform_Windows})
   nau_collect_files(Sources
     RELATIVE ${moduleRoot}/src
     DIRECTORIES
@@ -29,6 +35,9 @@ nau_add_module(${TargetName}
 )
 
 target_precompile_headers(${TargetName} PRIVATE pch.h)
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  target_compile_definitions(${TargetName} PRIVATE NAU_MINIMAL_RUNTIME=1)
+endif()
 
 target_include_directories(${TargetName} PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

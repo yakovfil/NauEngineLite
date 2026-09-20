@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
 #include "nau/app/application.h"
@@ -12,6 +11,10 @@
 
 namespace nau
 {
+    // Creation and failure cleanup run on the calling thread. Browser callers
+    // must use the application worker, never the page UI thread.
+    Result<eastl::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate&);
+
     eastl::unique_ptr<Application> createApplication(ApplicationInitDelegate&);
 
     [[deprecated("createApplication with delegate should by used")]]

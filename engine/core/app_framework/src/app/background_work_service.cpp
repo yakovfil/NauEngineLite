@@ -6,6 +6,7 @@
 #include <EASTL/unique_ptr.h>
 
 #include "nau/async/work_queue.h"
+#include "nau/runtime/disposable.h"
 #include "nau/runtime/internal/runtime_component.h"
 #include "nau/service/service.h"
 #include "nau/threading/event.h"
@@ -13,10 +14,10 @@
 
 namespace nau
 {
-    class BackgroundWorkServiceImpl : public BackgroundWorkService
+    class BackgroundWorkServiceImpl : public BackgroundWorkService,
+                                      public IDisposable
     {
-        NAU_TYPEID(nau::BackgroundWorkServiceImpl)
-        NAU_CLASS_BASE(BackgroundWorkService);
+        NAU_RTTI_CLASS(nau::BackgroundWorkServiceImpl, BackgroundWorkService, IDisposable)
 
     public:
         BackgroundWorkServiceImpl()
@@ -39,7 +40,7 @@ namespace nau
                 {
                     while (self.m_workQueue->as<IRuntimeComponent&>().hasWorks())
                     {
-                        self.m_workQueue->poll(std::nullopt);
+                        self.m_workQueue->poll();
                     }
                 }
             }, std::ref(*this));
@@ -47,6 +48,15 @@ namespace nau
 
         ~BackgroundWorkServiceImpl()
         {
+            dispose();
+        }
+
+        void dispose() override
+        {
+            if (!m_thread.joinable())
+            {
+                return;
+            }
             m_isAlive = false;
             while (!m_isCompleted)
             {
@@ -70,7 +80,7 @@ namespace nau
         std::atomic<bool> m_isCompleted = false;
     };
 
-    eastl::unique_ptr<BackgroundWorkService> createBackgroundWorkService()
+    eastl::unique_ptr<IRttiObject> createBackgroundWorkService()
     {
         return eastl::make_unique<BackgroundWorkServiceImpl>();
     }

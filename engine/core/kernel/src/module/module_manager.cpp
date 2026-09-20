@@ -12,7 +12,9 @@
 #include "nau/memory/singleton_memop.h"
 #include "nau/module/internal/module_entry.h"
 #include "nau/module/module.h"
+#if !defined(NAU_STATIC_RUNTIME)
 #include "nau/platform/windows/diag/win_error.h"
+#endif
 #include "nau/string/hash_string.h"
 #include "nau/string/string_conv.h"
 

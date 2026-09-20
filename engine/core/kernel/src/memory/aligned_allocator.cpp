@@ -65,7 +65,7 @@ namespace nau
         {
             this->deallocate(info.first->m_unaligned);
 // TODO Tracy            TracyFreeN(info.first->m_unaligned, m_name.value().c_str());
-            m_allocations.value().erase(ptr);
+            info.second->erase(ptr);
         }
     }
 

@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/async/work_queue.h"
 
 #include "nau/async/task_base.h"
@@ -31,6 +30,11 @@ namespace nau
 
         void notify() override;
 
+        void setWakeCallback(void (*callback)()) override
+        {
+            m_wakeCallback = callback;
+        }
+
         bool hasWorks() override;
 
         void waitAnyActivity() noexcept override;
@@ -56,6 +60,10 @@ namespace nau
             }
 
             m_event.set();
+            if (auto callback = m_wakeCallback.load())
+            {
+                callback();
+            }
         }
 
         std::mutex m_mutex;
@@ -63,6 +71,7 @@ namespace nau
         async::TaskSource<> m_signal;
         std::atomic<bool> m_isPolled = false;
         std::atomic<bool> m_isNotified = false;
+        std::atomic<void (*)()> m_wakeCallback = nullptr;
 
         threading::Event m_event{threading::Event::ResetMode::Manual};
 

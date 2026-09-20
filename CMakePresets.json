@@ -2,6 +2,92 @@
     "version": 5,
     "configurePresets": [
         {
+            "name": "native_minimal_base",
+            "hidden": true,
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "toolset": "v143,host=x64",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/build/${presetName}/install",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "NAU_RUNTIME_PROFILE": "minimal",
+                "BUILD_SHARED_LIBS": false,
+                "NAU_CORE_TOOLS": false,
+                "NAU_CORE_TESTS": false,
+                "NAU_MINIMAL_TESTS": true,
+                "NAU_CORE_SAMPLES": true,
+                "EASTL_BUILD_BENCHMARK": false,
+                "EASTL_BUILD_TESTS": false
+            }
+        },
+        {
+            "name": "native-minimal-debug",
+            "inherits": "native_minimal_base",
+            "cacheVariables": {
+                "CMAKE_CONFIGURATION_TYPES": "Debug"
+            }
+        },
+        {
+            "name": "native-minimal-release",
+            "inherits": "native_minimal_base",
+            "cacheVariables": {
+                "CMAKE_CONFIGURATION_TYPES": "Release"
+            }
+        },
+        {
+            "name": "web_minimal_base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/build/${presetName}/install",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+                "EMSCRIPTEN_SYSTEM_PROCESSOR": "wasm32",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+                "NAU_BUILD_BROWSER": true,
+                "NAU_CORE_SAMPLES": true,
+                "NAU_MINIMAL_TESTS": false,
+                "NAU_RUNTIME_PROFILE": "minimal",
+                "BUILD_SHARED_LIBS": false,
+                "NAU_CORE_TOOLS": false,
+                "NAU_CORE_TESTS": false,
+                "EASTL_BUILD_BENCHMARK": false,
+                "EASTL_BUILD_TESTS": false,
+                "TRACY_ENABLE": false
+            }
+        },
+        {
+            "name": "web-minimal-debug",
+            "inherits": "web_minimal_base",
+            "displayName": "Minimal browser runtime (Debug)",
+            "description": "Emscripten/Ninja; real non-rendering MinimalAppSample with worker lifecycle",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "web-minimal-release",
+            "inherits": "web_minimal_base",
+            "displayName": "Minimal browser runtime (Release)",
+            "description": "Emscripten/Ninja; real non-rendering MinimalAppSample with worker lifecycle",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
             "name": "config_base",
             "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
@@ -157,6 +243,32 @@
         }
     ],
     "buildPresets": [
+        {
+            "name": "native-minimal-debug",
+            "configurePreset": "native-minimal-debug",
+            "configuration": "Debug",
+            "targets": [
+                "MinimalAppSample",
+                "NauMinimalLifecycleTests"
+            ]
+        },
+        {
+            "name": "native-minimal-release",
+            "configurePreset": "native-minimal-release",
+            "configuration": "Release",
+            "targets": [
+                "MinimalAppSample",
+                "NauMinimalLifecycleTests"
+            ]
+        },
+        {
+            "name": "web-minimal-debug",
+            "configurePreset": "web-minimal-debug"
+        },
+        {
+            "name": "web-minimal-release",
+            "configurePreset": "web-minimal-release"
+        },
         {
             "name": "VS Debug",
             "displayName": "VS 2022 x64 Debug",

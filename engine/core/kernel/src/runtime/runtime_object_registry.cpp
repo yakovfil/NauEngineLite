@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/runtime/internal/runtime_object_registry.h"
 
 #include "nau/memory/singleton_memop.h"
@@ -28,6 +27,8 @@ namespace nau
         void removeObject(ObjectId);
 
         bool isAutoRemovable(ObjectId);
+
+        bool claimDisposal(IRttiObject&) override;
 
     private:
         class ObjectEntry
@@ -60,7 +61,8 @@ namespace nau
             ObjectEntry(ObjectEntry&& other) :
                 m_objectId(std::exchange(other.m_objectId, 0)),
                 m_ptr(std::exchange(other.m_ptr, nullptr)),
-                m_isWeak(std::exchange(other.m_isWeak, false))
+                m_isWeak(std::exchange(other.m_isWeak, false)),
+                disposalClaimed(other.disposalClaimed)
             {
             }
 
@@ -78,6 +80,7 @@ namespace nau
                 m_objectId = std::exchange(other.m_objectId, 0);
                 m_ptr = std::exchange(other.m_ptr, nullptr);
                 m_isWeak = std::exchange(other.m_isWeak, false);
+                disposalClaimed = other.disposalClaimed;
 
                 return *this;
             }
@@ -104,18 +107,18 @@ namespace nau
 
             IRttiObject* lock() const
             {
-                if(!m_ptr)
+                if (!m_ptr)
                 {
                     return nullptr;
                 }
 
-                if(m_isWeak)
+                if (m_isWeak)
                 {
                     return reinterpret_cast<IWeakRef*>(m_ptr)->acquire();
                 }
 
                 IRttiObject* const instance = reinterpret_cast<IRttiObject*>(m_ptr);
-                if(IRefCounted* const refCounted = instance->as<IRefCounted*>())
+                if (IRefCounted* const refCounted = instance->as<IRefCounted*>())
                 {  // always add reference if object is ref counted (even it was registered throug IRttiObject& constructor)
                    // this is makes logic below where objects are used more simple (just always releaseRef())
                     refCounted->addRef();
@@ -129,6 +132,8 @@ namespace nau
                 return !m_isWeak && m_ptr == object;
             }
 
+            bool disposalClaimed = false;
+
         private:
             static void* getWeakRef(nau::Ptr<>& object)
             {
@@ -138,7 +143,7 @@ namespace nau
 
             void reset()
             {
-                if(m_ptr && m_isWeak)
+                if (m_ptr && m_isWeak)
                 {
                     reinterpret_cast<IWeakRef*>(m_ptr)->releaseRef();
                 }
@@ -167,11 +172,39 @@ namespace nau
         NAU_ASSERT(m_objects.empty(), "Still alive ({}) objects", m_objects.size());
     }
 
+    bool RuntimeObjectRegistryImpl::claimDisposal(IRttiObject& object)
+    {
+        lock_(m_mutex);
+        for (auto& entry : m_objects)
+        {
+            auto* instance = entry.lock();
+            if (!instance)
+            {
+                continue;
+            }
+            const bool matches = instance == &object;
+            if (auto* counted = instance->as<IRefCounted*>())
+            {
+                counted->releaseRef();
+            }
+            if (matches)
+            {
+                return !std::exchange(entry.disposalClaimed, true);
+            }
+        }
+        return true;
+    }
+
+    bool claimRuntimeDisposal(IRttiObject& object)
+    {
+        return !RuntimeObjectRegistry::hasInstance() || RuntimeObjectRegistry::getInstance().claimDisposal(object);
+    }
+
     void RuntimeObjectRegistryImpl::visitObjects(VisitObjectsCallback callback, const rtti::TypeInfo* type, void* callbackData)
     {
         lock_(m_mutex);
 
-        if(m_objects.empty())
+        if (m_objects.empty())
         {
             return;
         }
@@ -180,9 +213,9 @@ namespace nau
 
         scope_on_leave
         {
-            for(IRttiObject* const obj : instances)
+            for (IRttiObject* const obj : instances)
             {
-                if(IRefCounted* const refCounted = obj->as<IRefCounted*>())
+                if (IRefCounted* const refCounted = obj->as<IRefCounted*>())
                 {
                     refCounted->releaseRef();
                 }
@@ -190,13 +223,13 @@ namespace nau
         };
 
         // collect required objects, remove expired entries
-        for(size_t i = 0; i < m_objects.size();)
+        for (size_t i = 0; i < m_objects.size();)
         {
             IRttiObject* const instance = m_objects[i].lock();
-            if(!instance)
+            if (!instance)
             {
                 const size_t lastIndex = m_objects.size() - 1;
-                if(i != lastIndex)
+                if (i != lastIndex)
                 {
                     m_objects[i] = std::move(m_objects[lastIndex]);
                 }
@@ -205,11 +238,11 @@ namespace nau
                 continue;
             }
 
-            if(!type || instance->is(*type))
+            if (!type || instance->is(*type))
             {
                 instances.push_back(std::move(instance));
             }
-            else if(IRefCounted* const refCounted = instance->as<IRefCounted*>())
+            else if (IRefCounted* const refCounted = instance->as<IRefCounted*>())
             {  // object will not be used and must be released immediately
                 refCounted->releaseRef();
             }
@@ -217,7 +250,7 @@ namespace nau
             ++i;
         }
 
-        if(!instances.empty())
+        if (!instances.empty())
         {
             callback({instances.begin(), instances.end()}, callbackData);
         }
@@ -248,21 +281,21 @@ namespace nau
     void RuntimeObjectRegistryImpl::removeExpiredEntries()
     {
         eastl::erase_if(m_objects, [](const ObjectEntry& entry)
-                        {
-                            return entry.isExpired();
-                        });
+        {
+            return entry.isExpired();
+        });
     }
 
     void RuntimeObjectRegistryImpl::removeObject(ObjectId id)
     {
         lock_(m_mutex);
 
-        for(size_t i = 0, size = m_objects.size(); i < size; ++i)
+        for (size_t i = 0, size = m_objects.size(); i < size; ++i)
         {
-            if(m_objects[i].getObjectId() == id)
+            if (m_objects[i].getObjectId() == id)
             {
                 const auto lastIndex = size - 1;
-                if(i != lastIndex)
+                if (i != lastIndex)
                 {
                     m_objects[i] = std::move(m_objects[lastIndex]);
                 }
@@ -277,9 +310,9 @@ namespace nau
         lock_(m_mutex);
 
         auto iter = eastl::find_if(m_objects.begin(), m_objects.end(), [objectId](const ObjectEntry& entry)
-                                   {
-                                       return entry.getObjectId() == objectId;
-                                   });
+        {
+            return entry.getObjectId() == objectId;
+        });
 
         return iter != m_objects.end() && iter->isWeakRef();
     }
@@ -326,7 +359,7 @@ namespace nau
     RuntimeObjectRegistration::RuntimeObjectRegistration(nau::Ptr<> object) :
         RuntimeObjectRegistration()
     {
-        if(RuntimeObjectRegistry::hasInstance())
+        if (RuntimeObjectRegistry::hasInstance())
         {
             m_objectId = getRuntimeObjectRegistryRef()->addObject(std::move(object));
         }
@@ -335,7 +368,7 @@ namespace nau
     RuntimeObjectRegistration::RuntimeObjectRegistration(IRttiObject& object) :
         RuntimeObjectRegistration()
     {
-        if(RuntimeObjectRegistry::hasInstance())
+        if (RuntimeObjectRegistry::hasInstance())
         {
             m_objectId = getRuntimeObjectRegistryRef()->addObject(object);
         }
@@ -371,14 +404,14 @@ namespace nau
 
     void RuntimeObjectRegistration::setAutoRemove()
     {
-        if(m_objectId == 0 || !RuntimeObjectRegistry::hasInstance())
+        if (m_objectId == 0 || !RuntimeObjectRegistry::hasInstance())
         {
             return;
         }
         const bool isAutoRemovable = getRuntimeObjectRegistryRef()->isAutoRemovable(m_objectId);
         NAU_FATAL(isAutoRemovable, "Object can not be used as autoremovable");
 
-        if(isAutoRemovable)
+        if (isAutoRemovable)
         {
             m_objectId = 0;
         }
@@ -386,12 +419,12 @@ namespace nau
 
     void RuntimeObjectRegistration::reset()
     {
-        if(m_objectId != 0)
+        if (m_objectId != 0)
         {
             const auto objectId = std::exchange(m_objectId, 0);
 
             NAU_ASSERT(RuntimeObjectRegistry::hasInstance());
-            if(RuntimeObjectRegistry::hasInstance())
+            if (RuntimeObjectRegistry::hasInstance())
             {
                 getRuntimeObjectRegistryRef()->removeObject(objectId);
             }

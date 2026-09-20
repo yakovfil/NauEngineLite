@@ -6,10 +6,16 @@
 
 #include <chrono>
 
+#ifdef _MSC_VER
+    #define NAU_STOPWATCH_EXPORT __declspec(dllexport)
+#else
+    #define NAU_STOPWATCH_EXPORT
+#endif
+
 namespace nau
 {
     template <class TClock, class TDt>
-    class __declspec(dllexport) /*NAU_KERNEL_EXPORT*/ /* FIXME: SceneBaseSample DLL build */ Stopwatch
+    class NAU_STOPWATCH_EXPORT /* FIXME: SceneBaseSample DLL build */ Stopwatch
     {
         using TOutSeconds =
             std::chrono::duration<TDt, std::chrono::seconds::period>;
@@ -48,9 +54,11 @@ namespace nau
         TDuration m_lastDt;
     };
 
-    class __declspec(dllexport) /*NAU_KERNEL_EXPORT*/ /* FIXME : SceneBaseSample DLL build */ TickStopwatch 
+    class NAU_STOPWATCH_EXPORT /* FIXME : SceneBaseSample DLL build */ TickStopwatch
         : public Stopwatch<std::chrono::steady_clock, float>
     {
     };
 
 }  // namespace nau
+
+#undef NAU_STOPWATCH_EXPORT

@@ -1,12 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./service_provider_impl.h"
 
+#include "nau/memory/eastl_aliases.h"
 #include "nau/runtime/async_disposable.h"
 #include "nau/runtime/disposable.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/runtime/internal/runtime_object_registry.h"
 
 namespace nau
 {
@@ -386,7 +386,7 @@ namespace nau
         });
     }
 
-    template<typename T>
+    template <typename T>
     T& ServiceProviderImpl::getInitializationInstance(T* instance)
     {
         NAU_FATAL(instance);
@@ -411,10 +411,39 @@ namespace nau
         }
     }
 
+    Error::Ptr ServiceProviderImpl::getLifecycleError() const
+    {
+        if (m_initializationError)
+            return m_initializationError;
+        if (m_shutdownError)
+            return m_shutdownError;
+        for (const auto* task : m_activeLifecycleTasks)
+        {
+            if (*task && task->isReady() && task->isRejected())
+                return task->getError();
+        }
+        return nullptr;
+    }
 
-    async::Task<> ServiceProviderImpl::initServicesInternal(async::Task<> (*getTaskCallback)(IServiceInitialization&))
+    uint64_t ServiceProviderImpl::getLifecycleProgress() const
+    {
+        uint64_t progress = m_completedServiceTasks;
+        for (const auto* task : m_activeLifecycleTasks)
+        {
+            if (*task && task->isReady())
+                ++progress;
+        }
+        return progress;
+    }
+
+    async::Task<> ServiceProviderImpl::initServicesInternal(async::Task<> (*getTaskCallback)(IServiceInitialization&), bool finalPhase)
     {
         using namespace nau::async;
+
+        if (m_initializationError)
+        {
+            co_await Result<>{m_initializationError};
+        }
 
         eastl::vector<IServiceInitialization*> services;
         findAllInternal(rtti::getTypeInfo<IServiceInitialization>(), [](void* servicePtr, void* serviceCollection)
@@ -425,46 +454,72 @@ namespace nau
         auto [independentServices, orderedDependentServices] = makeInitOrderedServiceList(services);
 
         {
-            eastl::vector<Task<>> independentInitializationTasks;
+            eastl::vector<eastl::pair<IServiceInitialization*, Task<>>> independentInitializationTasks;
             for (const ServiceEntry& entry : independentServices)
             {
+                if (m_stopToken && m_stopToken->load())
+                {
+                    break;
+                }
                 IServiceInitialization& serviceInstance = getInitializationInstance(entry.service);
-                if (auto task = getTaskCallback(serviceInstance); task && !task.isReady())
-                {
-                    independentInitializationTasks.emplace_back(std::move(task));
-                }
+                independentInitializationTasks.emplace_back(entry.service, getTaskCallback(serviceInstance));
             }
 
-            co_await whenAll(independentInitializationTasks);
-
-#ifdef NAU_ASSERT_ENABLED
-            for (auto& task : independentInitializationTasks)
+            for (const auto& entry : independentInitializationTasks)
             {
-                if (task.isRejected())
+                m_activeLifecycleTasks.push_back(&entry.second);
+            }
+            scope_on_leave
+            {
+                m_activeLifecycleTasks.clear();
+            };
+            eastl::string errors;
+            for (auto& [service, task] : independentInitializationTasks)
+            {
+                const Result<> result = task ? co_await task.doTry() : Result<>{};
+                ++m_completedServiceTasks;
+                if (!result)
                 {
-                    NAU_FAILURE(task.getError()->getDiagMessage().c_str());
+                    if (!errors.empty())
+                    {
+                        errors += "\n";
+                    }
+                    errors += result.getError()->getDiagMessage();
+                }
+                else if (finalPhase)
+                {
+                    m_initializedServices.push_back(service);
                 }
             }
-#endif
+            if (!errors.empty())
+            {
+                m_initializationError = NauMakeError(errors);
+                co_await Result<>{m_initializationError};
+            }
         }
 
         for (const ServiceEntry& serviceEntry : orderedDependentServices)
         {
+            if (m_stopToken && m_stopToken->load())
+            {
+                co_return;
+            }
             IServiceInitialization& serviceInstance = getInitializationInstance(serviceEntry.service);
             if (Task<> task = getTaskCallback(serviceInstance); task)
             {
-                co_await task;
-
-#ifdef NAU_ASSERT_ENABLED
-                if (task.isRejected())
+                if (const Result<> result = co_await task.doTry(); !result)
                 {
-                    NAU_FAILURE(task.getError()->getDiagMessage().c_str());
+                    m_initializationError = result.getError();
+                    co_await Result<>{m_initializationError};
                 }
-#endif
             }
+            if (finalPhase)
+            {
+                m_initializedServices.push_back(serviceEntry.service);
+            }
+            ++m_completedServiceTasks;
         }
     }
-
 
     void ServiceProviderImpl::setInitializationProxy(const IServiceInitialization& source, IServiceInitialization* proxy)
     {
@@ -486,7 +541,7 @@ namespace nau
         return initServicesInternal([](IServiceInitialization& serviceInit)
         {
             return serviceInit.preInitService();
-        });
+        }, false);
     }
 
     async::Task<> ServiceProviderImpl::initServices()
@@ -494,12 +549,26 @@ namespace nau
         return initServicesInternal([](IServiceInitialization& serviceInit)
         {
             return serviceInit.initService();
-        });
+        }, true);
     }
 
     async::Task<> ServiceProviderImpl::shutdownServices()
     {
         using namespace nau::async;
+        eastl::string errors;
+        const auto recordError = [this, &errors](const Result<>& result)
+        {
+            ++m_completedServiceTasks;
+            if (!result)
+            {
+                if (!errors.empty())
+                {
+                    errors += "\n";
+                }
+                errors += result.getError()->getDiagMessage();
+                m_shutdownError = NauMakeError(errors);
+            }
+        };
 
         constexpr auto NoLazyCreation = ServiceAccessor::GetApiMode::DoNotCreate;
 
@@ -524,7 +593,12 @@ namespace nau
             {
                 if (void* const serviceShutdown = accessor->getApi(rtti::getTypeInfo<IServiceShutdown>(), NoLazyCreation))
                 {
-                    unorderedShutdownSequence.push_back(reinterpret_cast<IServiceShutdown*>(serviceShutdown));
+                    auto* service = reinterpret_cast<IServiceShutdown*>(serviceShutdown);
+                    const auto* initialization = service->as<IServiceInitialization*>();
+                    if (!initialization || eastl::find(m_initializedServices.begin(), m_initializedServices.end(), initialization) != m_initializedServices.end())
+                    {
+                        unorderedShutdownSequence.push_back(service);
+                    }
                 }
             }
 
@@ -534,20 +608,29 @@ namespace nau
             {
                 if (auto task = getInitializationInstance(serviceShutdown).shutdownService(); task)
                 {
-                    co_await task;
+                    recordError(co_await task.doTry());
                 }
             }
 
             eastl::vector<Task<>> shutdownIndependentTasks;
             for (IServiceShutdown* const serviceShutdown : independentServices)
             {
-                if (auto task = getInitializationInstance(serviceShutdown).shutdownService(); task && !task.isReady())
+                if (auto task = getInitializationInstance(serviceShutdown).shutdownService(); task)
                 {
                     shutdownIndependentTasks.emplace_back(std::move(task));
                 }
             }
 
-            co_await whenAll(shutdownIndependentTasks);
+            for (const auto& task : shutdownIndependentTasks)
+                m_activeLifecycleTasks.push_back(&task);
+            scope_on_leave
+            {
+                m_activeLifecycleTasks.clear();
+            };
+            for (auto& task : shutdownIndependentTasks)
+            {
+                recordError(co_await task.doTry());
+            }
         }
 
         {
@@ -556,13 +639,18 @@ namespace nau
             {
                 for (const ServiceAccessor::Ptr& accessor : m_accessors)
                 {
+                    auto* object = reinterpret_cast<IRttiObject*>(accessor->getApi(rtti::getTypeInfo<IRttiObject>(), NoLazyCreation));
+                    if (object && (object->is<IAsyncDisposable>() || object->is<IDisposable>()) && !claimRuntimeDisposal(*object))
+                    {
+                        continue;
+                    }
                     // invoke disposeAsync first.
                     // same class can provide both IAsyncDisposable and IDisposable api,
                     // so first async version must be called and in this case dispose can do nothing (because if async variant called).
                     if (void* const asyncDisposable = accessor->getApi(rtti::getTypeInfo<IAsyncDisposable>(), NoLazyCreation))
                     {
                         Task<> task = reinterpret_cast<IAsyncDisposable*>(asyncDisposable)->disposeAsync();
-                        if (task && !task.isReady())
+                        if (task)
                         {
                             disposeTasks.push_back(std::move(task));
                         }
@@ -575,7 +663,20 @@ namespace nau
                 }
             }
 
-            co_await whenAll(disposeTasks);
+            for (const auto& task : disposeTasks)
+                m_activeLifecycleTasks.push_back(&task);
+            scope_on_leave
+            {
+                m_activeLifecycleTasks.clear();
+            };
+            for (auto& task : disposeTasks)
+            {
+                recordError(co_await task.doTry());
+            }
+        }
+        if (!errors.empty())
+        {
+            co_await Result<>{NauMakeError(errors)};
         }
     }
 

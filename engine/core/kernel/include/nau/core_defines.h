@@ -6,7 +6,9 @@
 #include <cstdint>
 #define NAU_ENGINE
 
-#ifdef __unix__
+#if defined(__EMSCRIPTEN__)
+#define NAU_PLATFORM_EMSCRIPTEN 1
+#elif defined(__unix__)
 #define NAU_PLATFORM_LINUX 1
 #endif
 

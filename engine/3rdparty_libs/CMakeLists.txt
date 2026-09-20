@@ -1,5 +1,25 @@
 set(FolderName "${NauEngineFolder}/3rdparty")
 
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  foreach(libDir IN LISTS NAU_MINIMAL_DEPENDENCY_DIRS)
+    add_subdirectory(${libDir})
+  endforeach()
+  nau_target_add_compile_options(TARGETS ${NAU_MINIMAL_DEPENDENCY_TARGETS})
+  set_target_properties(${NAU_MINIMAL_DEPENDENCY_TARGETS} PROPERTIES FOLDER "${FolderName}")
+  target_compile_definitions(EASTL PUBLIC EA_DLL=0 EASTL_USER_DEFINED_ALLOCATOR)
+  target_sources(EASTL PRIVATE EASTL/EASTL.natvis)
+  if(NAU_MINIMAL_TESTS)
+    set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    set(BUILD_GMOCK ${NAU_MINIMAL_GMOCK} CACHE BOOL "" FORCE)
+    add_subdirectory(googletest)
+    nau_target_add_compile_options(TARGETS gtest gtest_main)
+    if(TARGET gmock)
+      nau_target_add_compile_options(TARGETS gmock gmock_main)
+    endif()
+  endif()
+  return()
+endif()
+
 set (3rdPartyLibDirs
   asio
   EABase

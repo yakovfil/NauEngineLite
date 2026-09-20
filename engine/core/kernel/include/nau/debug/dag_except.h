@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved 
 #pragma once
+#include "nau/kernel/kernel_config.h"
 
 #if NAU_EXCEPTIONS_ENABLED
 #include <osApiWrappers/dag_stackHlp.h>
@@ -13,13 +14,13 @@ public:
   int excCode;
   const char *excDesc;
 
-  __forceinline NauException(int code, const char *desc)
+  NAU_FORCE_INLINE NauException(int code, const char *desc)
   {
     excCode = code;
     excDesc = desc;
     ::stackhlp_fill_stack(excStack, 32, 0);
   }
-  __forceinline NauException(int code, const char *desc, void *ctx_ptr)
+  NAU_FORCE_INLINE NauException(int code, const char *desc, void *ctx_ptr)
   {
     excCode = code;
     excDesc = desc;
@@ -47,7 +48,7 @@ public:
   int excCode;
   const char *excDesc;
 
-  __forceinline NauException(int code, const char *desc)
+  NAU_FORCE_INLINE NauException(int code, const char *desc)
   {
     excCode = code;
     excDesc = desc;

@@ -1,15 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "scene_manager_impl.h"
+
+#include <nau/assets/asset_ref.h>
+#include <nau/assets/scene_asset.h>
+#include <nau/scene/scene_factory.h>
 
 #include "nau/memory/stack_allocator.h"
 #include "nau/scene/scene_processor.h"
 #include "scene_impl.h"
-#include <nau/assets/asset_ref.h>
-#include <nau/assets/scene_asset.h>
-#include <nau/scene/scene_factory.h>
 
 namespace nau::scene
 {
@@ -816,6 +816,20 @@ namespace nau::scene
     {
         auto component = m_activeComponents.find(componentUid);
         return component != m_activeComponents.end() ? component->second : nullptr;
+    }
+
+    void SceneManagerImpl::pollShutdown()
+    {
+        using namespace nau::async;
+        NAU_ASSERT(!m_insideUpdate);
+        auto previousExecutor = Executor::getThisThreadExecutor();
+        scope_on_leave
+        {
+            Executor::setThisThreadExecutor(std::move(previousExecutor));
+        };
+        Executor::setThisThreadExecutor(m_updateWorkQueue);
+        m_updateWorkQueue->poll();
+        m_postUpdateWorkQueue->poll();
     }
 
     async::Task<> SceneManagerImpl::shutdown()

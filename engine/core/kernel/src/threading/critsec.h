@@ -4,6 +4,8 @@
 
 #pragma once
 #include "nau/threading/critical_section.h"
+#include "nau/threading/dag_atomic.h"
+#include "nau/diag/assertion.h"
 namespace dag
 {
 
@@ -52,7 +54,7 @@ namespace dag
             }
             static inline void decrement(void* p)
             {
-                G_ASSERTF(lockcount::ref(p) > 0, "unlock not-locked CC? lockCount=%d", lockcount::ref(p));
+                NAU_ASSERT(lockcount::ref(p) > 0, "unlock not-locked CC? lockCount={}", lockcount::ref(p));
                 interlocked_decrement(lockcount::ref(p));
             }
 #else

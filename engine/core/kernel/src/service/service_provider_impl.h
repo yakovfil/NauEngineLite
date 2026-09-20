@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
 #include "nau/rtti/rtti_impl.h"
@@ -57,19 +56,33 @@ namespace nau
 
         async::Task<> preInitServices() override;
 
+        void setInitializationStopToken(const std::atomic<bool>* token) override
+        {
+            m_stopToken = token;
+        }
+
         async::Task<> initServices() override;
+
+        Error::Ptr getLifecycleError() const override;
+        uint64_t getLifecycleProgress() const override;
 
         async::Task<> shutdownServices() override;
 
-        async::Task<> initServicesInternal(async::Task<> (*)(IServiceInitialization&));
+        async::Task<> initServicesInternal(async::Task<> (*)(IServiceInitialization&), bool finalPhase);
 
-        template<typename T>
+        template <typename T>
         T& getInitializationInstance(T* instance);
 
         eastl::list<ServiceAccessor::Ptr> m_accessors;
         eastl::unordered_map<rtti::TypeIndex, ServiceInstanceEntry> m_instances;
         eastl::vector<IClassDescriptor::Ptr> m_classDescriptors;
         eastl::unordered_map<const IServiceInitialization*, IServiceInitialization*> m_initializationProxy;
+        eastl::vector<const IServiceInitialization*> m_initializedServices;
+        Error::Ptr m_initializationError;
+        Error::Ptr m_shutdownError;
+        uint64_t m_completedServiceTasks = 0;
+        eastl::vector<const async::Task<>*> m_activeLifecycleTasks;
+        const std::atomic<bool>* m_stopToken = nullptr;
         std::shared_mutex m_mutex;
         bool m_isDisposed = false;
     };

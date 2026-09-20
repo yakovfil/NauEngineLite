@@ -2,18 +2,17 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/runtime/runtime_object_registry.h
 
-
 #pragma once
 
+#include <EASTL/shared_ptr.h>
 #include <EASTL/span.h>
 
 #include <memory>
-#include <EASTL/shared_ptr.h>
 
+#include "nau/kernel/kernel_config.h"
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/rtti/weak_ptr.h"
-#include "nau/kernel/kernel_config.h"
 
 namespace nau
 {
@@ -34,8 +33,12 @@ namespace nau
 
         virtual ~RuntimeObjectRegistry() = default;
 
+        // Claim disposal of a registered object once for its registration lifetime.
+        // Unregistered objects remain the caller's responsibility.
+        virtual bool claimDisposal(IRttiObject&) = 0;
+
         template <typename Callback>
-            requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
+        requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
         void visitAllObjects(Callback callback)
         {
             const auto callbackHelper = [](eastl::span<IRttiObject*> objects, void* callbackData)
@@ -47,7 +50,7 @@ namespace nau
         }
 
         template <typename T, typename Callback>
-            requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
+        requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
         void visitObjects(Callback callback)
         {
             const auto callbackHelper = [](eastl::span<IRttiObject*> objects, void* callbackData)
@@ -66,6 +69,8 @@ namespace nau
 
         friend class RuntimeObjectRegistration;
     };
+
+    NAU_KERNEL_EXPORT bool claimRuntimeDisposal(IRttiObject& object);
 
     /**
      */

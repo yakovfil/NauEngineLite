@@ -17,18 +17,23 @@
 namespace nau::math
 {
     using namespace Vectormath;
-    
-    using Vectormath::max;
-    using Vectormath::min;
-    using namespace Vectormath::SSE::vector4int;
-    using Vectormath::normalize;
+
     using Vectormath::length;
     using Vectormath::lengthSqr;
+    using Vectormath::max;
+    using Vectormath::min;
+    using Vectormath::normalize;
 
 #if (VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_FORCE_SCALAR_MODE)
-    using Vectormath::SSE::normalize;
+    using namespace Vectormath::SSE::vector4int;
     using Vectormath::SSE::length;
     using Vectormath::SSE::lengthSqr;
+    using Vectormath::SSE::normalize;
+#elif !(VECTORMATH_CPU_HAS_NEON && !VECTORMATH_FORCE_SCALAR_MODE)
+    using namespace Vectormath::Scalar::vector4int;
+    using Vectormath::Scalar::length;
+    using Vectormath::Scalar::lengthSqr;
+    using Vectormath::Scalar::normalize;
 #endif
 
     using vec2 = Vector2;
@@ -65,19 +70,19 @@ namespace nau::math
 
 #include <float.h>
     // msvc just does not optimize fast math
-    __forceinline bool check_finite(float a)
+    NAU_FORCE_INLINE bool check_finite(float a)
     {
         return isfinite(a);
     }
-    __forceinline bool check_nan(float a)
+    NAU_FORCE_INLINE bool check_nan(float a)
     {
         return isnan(a);
     }
-    __forceinline bool check_finite(double a)
+    NAU_FORCE_INLINE bool check_finite(double a)
     {
         return isfinite(a);
     }
-    __forceinline bool check_nan(double a)
+    NAU_FORCE_INLINE bool check_nan(double a)
     {
         return isnan(a);
     }
@@ -485,7 +490,13 @@ namespace Vectormath
     }
 }  // namespace Vectormath
 
+#if (VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_FORCE_SCALAR_MODE)
 namespace Vectormath::SSE
+#elif (VECTORMATH_CPU_HAS_NEON && !VECTORMATH_FORCE_SCALAR_MODE)
+namespace Vectormath::Neon
+#else
+namespace Vectormath::Scalar
+#endif
 {
     // Vector3
 

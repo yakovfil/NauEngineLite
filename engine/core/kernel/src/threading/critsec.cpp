@@ -42,11 +42,12 @@ namespace dag
         // pthread_mutexattr_setprotocol(&cca, SYS_SYNC_PRIORITY);
         pthread_mutexattr_settype(&cca, PTHREAD_MUTEX_RECURSIVE);
         int ret = pthread_mutex_init(cc, &cca);
+        pthread_mutexattr_destroy(&cca);
     #endif
         csimpl::lockcount::release(p);
     #if DAGOR_DBGLEVEL > 0
         if(ret != 0)
-            fatal_x("pthread_mutex_create failed: 0x%08X", ret);
+            NAU_FATAL(false, "pthread_mutex_create failed: {}", ret);
     #endif
 #endif
     }
@@ -69,7 +70,7 @@ namespace dag
     #endif
     #if DAGOR_DBGLEVEL > 0
         if(ret != 0)
-            fatal_x("pthread_mutex_destroy failed: 0x%08X\n", ret);
+            NAU_FATAL(false, "pthread_mutex_destroy failed: {}", ret);
     #endif
 
         memset(cc, 0, sizeof(pthread_mutex_t));
@@ -84,7 +85,7 @@ namespace dag
         NAU_ANALYSIS_ASSUME(cc != NULL);
         EnterCriticalSection(cc);
 #else
-        G_ASSERT(cc && "critical section is NULL!");
+        NAU_ASSERT(cc && "critical section is NULL!");
 
     #if _TARGET_C1 | _TARGET_C2
 
@@ -102,7 +103,7 @@ namespace dag
         NAU_ANALYSIS_ASSUME(cc != NULL);
         LeaveCriticalSection(cc);
 #else
-        G_ASSERT(cc && "critical section is NULL!");
+        NAU_ASSERT(cc && "critical section is NULL!");
         csimpl::lockcount::decrement(p);
     #if _TARGET_C1 | _TARGET_C2
 
@@ -120,7 +121,7 @@ namespace dag
 
         return TryEnterCriticalSection(cc) != FALSE;
 #else
-        G_ASSERT(cc && "critical section is NULL!");
+        NAU_ASSERT(cc && "critical section is NULL!");
 
     #if _TARGET_C1 | _TARGET_C2
 

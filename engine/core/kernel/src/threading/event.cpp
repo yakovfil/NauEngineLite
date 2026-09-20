@@ -24,6 +24,12 @@ namespace nau::threading
 
     Event::~Event() = default;
 
+    void Event::reset()
+    {
+        lock_(m_mutex);
+        m_state = false;
+    }
+
     void Event::set()
     {
         lock_(m_mutex);

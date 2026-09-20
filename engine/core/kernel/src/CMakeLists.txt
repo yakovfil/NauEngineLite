@@ -2,12 +2,15 @@ set(TargetName NauKernel)
 
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH moduleRoot)
 
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
 nau_collect_files(Sources
   DIRECTORIES ${moduleRoot}/src
   RELATIVE ${moduleRoot}/src
   MASK "*.cpp" "*.h" "*.hpp"
-  EXCLUDE "/platform/.*"
+  EXCLUDE "(^|/)platform/.*"
 )
+
+endif()
 
 nau_collect_files(PublicHeaders
   DIRECTORIES ${moduleRoot}/include
@@ -18,13 +21,13 @@ nau_collect_files(PublicHeaders
 )
 
 
-if (${Platform_Windows})
+if (Platform_Windows AND NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
 
   nau_collect_files(Sources
     DIRECTORIES ${moduleRoot}/src
     RELATIVE ${moduleRoot}/src
     INCLUDE
-      "/platform/windows/.*"
+      "(^|/)platform/windows/.*"
     MASK "*.cpp" "*.h" "*.hpp"
   )
 
@@ -38,6 +41,17 @@ if (${Platform_Windows})
   )
 endif()
 
+
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  include(NauMinimalKernelSources)
+  set(Sources ${NAU_MINIMAL_KERNEL_COMMON_SOURCES})
+  if(Platform_Windows)
+    list(APPEND Sources ${NAU_MINIMAL_KERNEL_WINDOWS_SOURCES})
+  else()
+    list(APPEND Sources ${NAU_MINIMAL_KERNEL_EMSCRIPTEN_SOURCES})
+  endif()
+  list(TRANSFORM Sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+endif()
 
 add_library(${TargetName} ${Sources} ${PublicHeaders})
 
@@ -70,8 +84,11 @@ endif()
 
 target_compile_definitions(${TargetName} PRIVATE
   NAU_KERNEL_BUILD=1
-  _TARGET_PC_WIN=1
 )
+
+if(Platform_Windows)
+  target_compile_definitions(${TargetName} PRIVATE _TARGET_PC_WIN=1)
+endif()
 
 target_include_directories(${TargetName} PUBLIC
   $<BUILD_INTERFACE:${moduleRoot}/include>
@@ -79,6 +96,9 @@ target_include_directories(${TargetName} PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/core/kernel/include>
 )
 
+if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  target_link_libraries(${TargetName} PUBLIC ${NAU_MINIMAL_DEPENDENCY_TARGETS})
+else()
 target_link_libraries(${TargetName} PUBLIC
   EASTL
   tinyutf8
@@ -94,6 +114,7 @@ target_link_libraries(${TargetName} PUBLIC
   md5
   fast_float
 )
+endif()
 
 if (Platform_Windows)
   # Rpcrt4.lib required by uid implmentaion

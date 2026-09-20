@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
 #include "nau/async/task_base.h"
@@ -47,6 +46,9 @@ namespace nau::scene
         virtual Component* findComponent(Uid componentId) = 0;
 
         virtual async::Task<> shutdown() = 0;
+
+        // Resume outstanding scene work without beginning a new component update.
+        virtual void pollShutdown() = 0;
 
         virtual SceneListenerRegistration addSceneListener(ISceneListener&) = 0;
     };

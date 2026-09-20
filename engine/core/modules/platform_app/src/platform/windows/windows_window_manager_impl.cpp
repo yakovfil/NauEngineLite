@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // windows_app.cpp
 
-
 #include "./windows_window_manager_impl.h"
 
 #include "nau/app/app_messages.h"
 #include "nau/runtime/internal/runtime_object_registry.h"
 #include "nau/service/service_provider.h"
 #include "nau/utils/performance_profiling.h"
-#include <nau/graphics/core_graphics.h>
+#ifndef NAU_MINIMAL_RUNTIME
+    #include <nau/graphics/core_graphics.h>
+#endif
 // #include "nau/input.h"
 
 namespace nau
@@ -162,7 +163,6 @@ namespace nau
             ::TranslateMessage(&msg);
             ::DispatchMessageA(&msg);
 
-
             for (IWindowsApplicationMessageHandler* const handler : m_appMessageHandlers)
             {
                 handler->postDispatchMsg(msg);
@@ -179,7 +179,6 @@ namespace nau
             auto task = async::run([](WindowsWindowManager& self, bool exitAppOnClose) -> nau::Ptr<WindowsWindow>
             {
                 return rtti::createInstance<WindowsWindow>(self, ::GetModuleHandleA(nullptr), WindowsWindowManager::WindowClassName, exitAppOnClose);
-
             }, nau::Ptr{this}, std::ref(*this), exitAppOnClose);
 
             async::wait(task);
@@ -191,7 +190,7 @@ namespace nau
 
     void WindowsWindowManager::processAsyncInvocations()
     {
-// TODO Tracy        NAU_CPU_SCOPED_TAG(nau::PerfTag::Platform);
+        // TODO Tracy        NAU_CPU_SCOPED_TAG(nau::PerfTag::Platform);
         using namespace nau::async;
 
         eastl::vector<Executor::Invocation> invocations;
@@ -268,7 +267,7 @@ namespace nau
 
     bool WindowsWindowManager::handleWindowMessage(WindowsWindow& window, HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
-// TODO Tracy NAU_CPU_SCOPED_TAG(nau::PerfTag::Platform);
+        // TODO Tracy NAU_CPU_SCOPED_TAG(nau::PerfTag::Platform);
         if (message == WM_CLOSE)
         {
             if (window.exitAppOnClose())
@@ -277,20 +276,24 @@ namespace nau
             }
             else
             {
+#ifndef NAU_MINIMAL_RUNTIME
                 auto* const coreGraphics = getServiceProvider().find<ICoreGraphics>();
                 auto task = coreGraphics->closeWindow(hWnd);
                 task.detach();
+#endif
                 window.destroyWindow();
             }
         }
         else if (message == WM_SIZE)
         {
-            int width  = LOWORD(lParam);
+#ifndef NAU_MINIMAL_RUNTIME
+            int width = LOWORD(lParam);
             int height = HIWORD(lParam);
 
             auto* const coreGraphics = getServiceProvider().find<ICoreGraphics>();
             auto task = coreGraphics->requestViewportResize(width, height, hWnd);
             task.detach();
+#endif
         }
         else if (message == WM_DESTROY)
         {
