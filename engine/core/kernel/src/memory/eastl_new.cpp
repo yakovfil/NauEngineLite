@@ -7,6 +7,11 @@
 #if __has_include(<EASTL/allocator.h>)
 
 #include <EASTL/allocator.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
 
 #if !defined(EASTL_USER_DEFINED_ALLOCATOR)
 
@@ -26,6 +31,55 @@ void* operator new[](size_t size, size_t alignment, [[maybe_unused]] size_t alig
 #endif  // !EASTL_DLL
 
 #else
+
+namespace
+{
+    struct AllocationHeader
+    {
+        void* base;
+        size_t size;
+        size_t alignment;
+        size_t offset;
+    };
+
+    AllocationHeader readAllocationHeader(void* ptr)
+    {
+        AllocationHeader header;
+        // An alignment offset can leave the header itself unaligned.
+        std::memcpy(&header, static_cast<unsigned char*>(ptr) - sizeof(header), sizeof(header));
+        return header;
+    }
+
+    void* allocateAligned(size_t size, size_t alignment, size_t offset)
+    {
+        if (alignment == 0 || (alignment & (alignment - 1)) != 0)
+        {
+            return nullptr;
+        }
+        constexpr size_t maxSize = std::numeric_limits<size_t>::max();
+        if (alignment - 1 > maxSize - sizeof(AllocationHeader))
+        {
+            return nullptr;
+        }
+        const size_t overhead = sizeof(AllocationHeader) + alignment - 1;
+        if (size > maxSize - overhead)
+        {
+            return nullptr;
+        }
+        void* base = std::malloc(size + overhead);
+        if (!base)
+        {
+            return nullptr;
+        }
+        auto* first = static_cast<unsigned char*>(base) + sizeof(AllocationHeader);
+        // The bundled EASTL checks that pointer - offset is aligned.
+        const size_t padding = (offset - reinterpret_cast<uintptr_t>(first)) & (alignment - 1);
+        auto* ptr = first + padding;
+        const AllocationHeader header{base, size, alignment, offset};
+        std::memcpy(ptr - sizeof(header), &header, sizeof(header));
+        return ptr;
+    }
+}
 
 namespace eastl
 {
@@ -77,22 +131,41 @@ namespace eastl
 
     void* allocator::allocate(size_t n, int flags)
     {
-        return ::malloc(n);
+        return allocateAligned(n, alignof(std::max_align_t), 0);
     }
 
     void* allocator::realloc(void* p, size_t n, int flags)
     {
-        return ::realloc(p, n);
+        if (!p)
+        {
+            return allocate(n, flags);
+        }
+        const AllocationHeader header = readAllocationHeader(p);
+        if (n == 0)
+        {
+            std::free(header.base);
+            return nullptr;
+        }
+        void* replacement = allocateAligned(n, header.alignment, header.offset);
+        if (replacement)
+        {
+            std::memcpy(replacement, p, n < header.size ? n : header.size);
+            std::free(header.base);
+        }
+        return replacement;
     }
 
     void* allocator::allocate(size_t n, size_t alignment, size_t offset, int flags)
     {
-        return ::malloc(n);
+        return allocateAligned(n, alignment, offset);
     }
 
     void allocator::deallocate(void* p, size_t)
     {
-        ::free(p);
+        if (p)
+        {
+            std::free(readAllocationHeader(p).base);
+        }
     }
 
     bool operator==(const allocator& a, const allocator& b)

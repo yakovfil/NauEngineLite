@@ -4,7 +4,7 @@
 application pthread. It links `NauFrameworkMinimal`, the production static
 `PlatformApp` module and the minimal kernel. The independent acceptance target
 remains a lifecycle fixture. The [actual sample](minimal_app_web.md) now adapts
-`samples/minimalApp/app_sample_main_min.cpp`; runtime packaging remains separate.
+`../NauSamples/minimalApp/app_sample_main_min.cpp`; runtime packaging remains separate.
 
 ## Build and test on Windows
 

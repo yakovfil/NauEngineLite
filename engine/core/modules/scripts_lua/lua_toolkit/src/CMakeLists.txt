@@ -34,6 +34,7 @@ target_include_directories(${TargetName} PRIVATE
 
 target_include_directories(${TargetName} PUBLIC
   $<BUILD_INTERFACE:${moduleRoot}/include>
+  $<INSTALL_INTERFACE:include/core/lua_toolkit/include>
 #  $<BUILD_INTERFACE:${PROG_DIR}/dagorInclude>
 #  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/1stPartyLibs/${TargetName}/include>
 )

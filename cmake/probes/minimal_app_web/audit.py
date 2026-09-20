@@ -7,8 +7,10 @@ import subprocess
 import sys
 import tempfile
 
+sys.dont_write_bytecode = True
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from test_minimal_runtime import targets, source_names
+from test_minimal_runtime import targets, source_names, samples_root
 
 engine = Path(__file__).resolve().parents[3]
 build_root = engine / 'build'
@@ -42,7 +44,7 @@ for configuration in ('debug', 'release'):
         if path.startswith('engine/3rdparty_libs/'):
             assert path.split('/')[2] in allowed, path
         else:
-            assert path == '.' or path == 'samples/minimalApp' or path.startswith((
+            assert path == '.' or (engine / path).resolve() == samples_root(build) / 'minimalApp' or path.startswith((
                 'engine/core/kernel', 'engine/core/app_framework', 'engine/core/modules/platform_app')), path
     sample_sources = source_names(graph['MinimalAppSample'])
     assert 'app_sample_main_min.cpp' in sample_sources and 'app_sample_main.cpp' not in sample_sources
@@ -51,6 +53,7 @@ for configuration in ('debug', 'release'):
     assert 'createModule_PlatformApp' in registration
     commands = json.loads((build / 'compile_commands.json').read_text())
     assert sum(Path(c['file']).name == 'app_sample_main_min.cpp' for c in commands) == 1
+    assert any(Path(c['file']).resolve() == samples_root(build) / 'minimalApp/app_sample_main_min.cpp' for c in commands)
     forbidden = ('-D_WIN32', '-DWIN32', '-D_WIN64', '-D_M_X64', '-D_TARGET_PC', ' /MD', ' /EH', '-mavx')
     for entry in commands:
         command = entry['command']
@@ -75,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix='sample-config-contract-', dir=build_roo
     scratch = Path(temp).resolve()
     assert scratch.is_relative_to(build_root.resolve())
     for name, option, message in (
-        ('desktop-profile', '-DNAU_RUNTIME_PROFILE=desktop', 'require NAU_RUNTIME_PROFILE=minimal'),
+        ('desktop-profile', '-DNAU_RUNTIME_PROFILE=desktop', 'require a minimal or demo runtime profile'),
         ('shared', '-DBUILD_SHARED_LIBS=ON', 'require static linking')):
         result = run(['cmake', '--preset', 'web-minimal-debug', '-B', str(scratch / name), option])
         output = result.stdout + result.stderr

@@ -23,23 +23,11 @@ target_include_directories(${TargetName} PRIVATE
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/core/modules/scripts_lua/src>
 )
 
-target_include_directories(${TargetName} PUBLIC
-  $<BUILD_INTERFACE:${ModuleRoot}/include>
-  $<BUILD_INTERFACE:${ModuleRoot}/include/nau/generated>
-  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/core/modules/scripts_lua/include>
-)
+# ScriptsLua exposes the kernel scripting interfaces and has no public header tree.
 
 target_link_libraries(${TargetName} PRIVATE LuaToolkit)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Sources})
 
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/core/modules/scripts_lua
-    FILES_MATCHING 
-      PATTERN "*.h"
-      PATTERN "*.hpp"
-      PATTERN "*.ipp"
-)
 
 nau_install(${TargetName} core)

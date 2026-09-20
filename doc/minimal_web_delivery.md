@@ -16,7 +16,7 @@ current loader/Wasm and authored files, stages a temporary sibling, generates
 SHA-256 hashes and replaces only the owned package. Obsolete files disappear.
 A failed replacement keeps the old manifest identifiable; inspect any retained
 `package.staging` or `package.previous` before removing those owned leftovers
-and retrying. Do not edit generated packages; edit `samples/minimalApp/web`.
+and retrying. Do not edit generated packages; edit `../NauSamples/minimalApp/web`.
 
 Each package contains index.html, MinimalAppSample.js, MinimalAppSample.wasm,
 serve.py, README.md and manifest.json. Worker support is embedded in the pinned

@@ -17,6 +17,8 @@ import urllib.request
 import urllib.parse
 from playwright.sync_api import sync_playwright
 
+sys.dont_write_bytecode = True
+
 HERE = pathlib.Path(__file__).resolve().parent
 WORKSPACE = HERE.parents[3]
 spec = importlib.util.spec_from_file_location('sample_acceptance', HERE.parent / 'minimal_app_web/run.py')

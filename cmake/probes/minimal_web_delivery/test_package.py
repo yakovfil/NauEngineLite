@@ -14,7 +14,7 @@ import unittest
 import urllib.parse
 
 ENGINE = pathlib.Path(__file__).resolve().parents[3]
-ASSETS = ENGINE / 'samples/minimalApp/web'
+ASSETS = pathlib.Path(os.environ.get('NAU_SAMPLES_SOURCE_DIR', ENGINE.parent / 'NauSamples')).resolve() / 'minimalApp/web'
 
 
 class PackageTests(unittest.TestCase):

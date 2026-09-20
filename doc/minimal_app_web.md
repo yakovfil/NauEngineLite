@@ -1,6 +1,6 @@
 # Minimal browser sample
 
-`MinimalAppSample` now builds from `samples/minimalApp/app_sample_main_min.cpp`
+`MinimalAppSample` now builds from `../NauSamples/minimalApp/app_sample_main_min.cpp`
 through the production `web-minimal-debug` and `web-minimal-release` presets.
 The sample uses the real shared application, minimal kernel and statically
 registered browser PlatformApp. It runs on an application worker without a

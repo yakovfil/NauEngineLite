@@ -15,6 +15,13 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def samples_root(build):
+    cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
+    configured = next(line.split("=", 1)[1] for line in cache.splitlines()
+                      if line.startswith("NAU_SAMPLES_SOURCE_DIR:PATH="))
+    return (ROOT / configured).resolve()
+
+
 def targets(build):
     reply = build / ".cmake/api/v1/reply"
     index = json.loads(max(reply.glob("index-*.json"), key=lambda p: p.stat().st_mtime).read_text())
@@ -43,8 +50,8 @@ def minimal_graph(build):
             assert directory.split("/")[2] in allowed_dependencies, directory
         elif directory.startswith("engine/core/"):
             assert directory.startswith(("engine/core/kernel", "engine/core/app_framework", "engine/core/modules/platform_app")), directory
-        elif directory.startswith("samples/"):
-            assert directory == "samples/minimalApp", directory
+        elif (ROOT / directory).resolve() == samples_root(build) / "minimalApp":
+            assert target["name"] == "MinimalAppSample", directory
         else:
             assert directory == ".", directory
 

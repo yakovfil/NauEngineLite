@@ -104,14 +104,16 @@ source rather than misidentifying it as the base commit. From the parent Nau:
 python NauDemo/web/reproduce.py --destination C:/temp/nau-demo-fresh --sdk "$HOME/emsdk"
 ```
 
-Choose a new destination outside the checkout. The helper records base revisions,
-patch/file hashes, SDK/tool identities, commands, fresh Debug/Release builds and
-Chrome rendering/Stop at `/fresh/demo/`, and checks that builds did not edit
+Choose a new destination outside the checkout. The helper clones Nau, NauEngineLite,
+NauSamples and NauDemo, and records their base revisions, patch/file hashes,
+SDK/tool identities and commands. It builds minimal and demo packages in Debug/Release,
+checks minimal update/Stop and Chrome demo rendering/Stop at `/fresh/demo/`, and verifies that builds did not edit
 tracked source. Evidence is in `NauEngineLite/build/demo-fresh-evidence/`.
 It creates no commits and publishes nothing. After committing the changes,
 ordinary remote clones at the recorded component revisions can use the build
 commands above without a patch bundle.
 
 Native coexistence commands remain in [NauDemo README](../../NauDemo/README.md).
-The change's [validation record](../../openspec/changes/naudemo-web/validation.md)
-distinguishes executed checks from the outstanding native visual confirmation.
+The original web milestone's [validation record](../../openspec/changes/archive/2026-09-20-naudemo-web/validation.md)
+retains its historical evidence. The [sample extraction validation](../../openspec/changes/extract-nau-samples/validation.md)
+records the external sample layout and subsequent native visual acceptance.

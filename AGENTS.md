@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Nau Engine is a C++20 game engine. `engine/core/kernel/` contains foundational APIs, implementations, and tests in `include/`, `src/`, and `tests/`. Feature systems live in `engine/core/modules/`; application support lives in `engine/core/app_framework/`. `tools/` contains asset, shader, project, and build utilities. `samples/` contains example applications; `project_templates/` contains starter projects and resources. Shared build logic lives in `cmake/`, documentation in `doc/`, and bundled dependencies in `engine/3rdparty_libs/`.
+Nau Engine is a C++20 game engine. `engine/core/kernel/` contains foundational APIs, implementations, and tests in `include/`, `src/`, and `tests/`. Feature systems live in `engine/core/modules/`; application support lives in `engine/core/app_framework/`. `tools/` contains asset, shader, project, and build utilities. The sibling `NauSamples/` checkout contains example applications selected through `NAU_SAMPLES_SOURCE_DIR`; `project_templates/` contains starter projects and resources. Shared build logic lives in `cmake/`, documentation in `doc/`, and bundled dependencies in `engine/3rdparty_libs/`.
 
 ## Build, Test, and Development Commands
 
