@@ -192,23 +192,23 @@ inline float Quat::getW() const
 
 inline Quat & Quat::setElem(int idx, float value)
 {
-    *(&mX + idx) = value;
+    (idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW) = value;
     return *this;
 }
 
 inline float Quat::getElem(int idx) const
 {
-    return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline float & Quat::operator[](int idx)
 {
-    return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline float Quat::operator[](int idx) const
 {
-    return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline const Quat Quat::operator + (const Quat & quat) const

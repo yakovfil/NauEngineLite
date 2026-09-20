@@ -35,7 +35,7 @@ nau_add_module(${TargetName}
 )
 
 target_precompile_headers(${TargetName} PRIVATE pch.h)
-if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   target_compile_definitions(${TargetName} PRIVATE NAU_MINIMAL_RUNTIME=1)
 endif()
 

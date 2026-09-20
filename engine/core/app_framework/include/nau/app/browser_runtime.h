@@ -7,9 +7,21 @@
 
 namespace nau
 {
+    // Optional owner-thread services (for example graphics) polled at bounded
+    // lifecycle intervals, including startup and cleanup, without game steps.
+    struct IBrowserRuntimeService
+    {
+        NAU_TYPEID(nau::IBrowserRuntimeService)
+        virtual ~IBrowserRuntimeService() = default;
+        virtual Result<> pollBrowserRuntime() = 0;
+    };
+
     struct BrowserRuntimeOptions
     {
         int foregroundProgressTimeoutMs = 10000;
+        // Opt-in presentation mode returns to the worker event loop between polls.
+        // The delegate must have static or otherwise persistent lifetime.
+        bool cooperativePresentation = false;
     };
 
     // Call once on the PROXY_TO_PTHREAD application worker. The page receives

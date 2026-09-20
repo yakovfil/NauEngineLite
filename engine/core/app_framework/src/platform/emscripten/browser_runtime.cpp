@@ -123,133 +123,183 @@ namespace nau
 // clang-format on
 }
 
+namespace
+{
+    struct BrowserLoop
+    {
+        eastl::unique_ptr<Application> app;
+        ApplicationLifecycle& lifecycle;
+        WorkQueue* queue;
+        int timeout;
+        bool cooperative;
+        int sequence = 1, steps = 0;
+        eastl::string failure;
+        const char* failurePhase = nullptr;
+        browser_detail::StepDeadline deadline;
+        int64_t lastProgress = nowMs(), lastPublish = lastProgress;
+        ApplicationPhase previousPhase;
+        uint64_t previousProgress;
+        bool wasVisible = true, alive = true;
+
+        BrowserLoop(eastl::unique_ptr<Application> application, int timeoutMs, bool yield) :
+            app(std::move(application)),
+            lifecycle(app->as<ApplicationLifecycle&>()),
+            queue(nullptr),
+            timeout(timeoutMs),
+            cooperative(yield)
+        {
+            if (stopRequested.load())
+                app->stop();
+            lifecycle.beginStartup();
+            queue = app->getExecutor()->as<WorkQueue*>();
+            queue->setWakeCallback(wakeWorker);
+            deadline.reset(nowMs());
+            previousPhase = lifecycle.getPhase();
+            previousProgress = lifecycle.getLifecycleProgress();
+        }
+        void tick()
+        {
+            const auto wake = wakeSequence.load();
+            const auto now = nowMs();
+            bool visible = documentVisible.load() != 0;
+            if (stopRequested.load())
+                app->stop();
+            for (auto* service : getServiceProvider().getAll<IBrowserRuntimeService>())
+            {
+                auto result = service->pollBrowserRuntime();
+                if (!result && failure.empty())
+                    failure = result.getError()->getDiagMessage();
+            }
+            if (auto* window = getServiceProvider().find<IBrowserWindowStatus>())
+            {
+                if (window->getBrowserState() == BrowserWindowState::Ready)
+                    visible = visible && window->isDocumentVisible();
+                if (window->getBrowserState() == BrowserWindowState::Failed && failure.empty())
+                    failure = "Platform host lost";
+            }
+            if (visible != wasVisible)
+            {
+                deadline.reset(now);
+                lastProgress = now;
+                wasVisible = visible;
+            }
+            if (!visible)
+                lastProgress = now;
+            if (watchdogFailed.load() && failure.empty())
+                failure = "Foreground worker progress deadline expired";
+            if (auto error = lifecycle.getLifecycleError())
+            {
+                const auto diagnostic = error->getDiagMessage();
+                if (failure.empty())
+                    failure = diagnostic;
+                else if (failure.find(diagnostic) == eastl::string::npos)
+                    failure += eastl::string("\n") + diagnostic;
+            }
+            if (stopRequested.load() || !failure.empty())
+                app->stop();
+            if (!failure.empty() && !failurePhase)
+                failurePhase = phaseName(lifecycle.getPhase());
+            alive = lifecycle.pollLifecycle();
+            const auto phase = lifecycle.getPhase();
+            const auto progress = lifecycle.getLifecycleProgress();
+            if (progress != previousProgress)
+                lastProgress = now;
+            previousProgress = progress;
+            if (phase != previousPhase)
+            {
+                lastProgress = now;
+                deadline.reset(now);
+            }
+            if (auto error = lifecycle.getLifecycleError())
+            {
+                const auto diagnostic = error->getDiagMessage();
+                if (failure.empty())
+                    failure = diagnostic;
+                else if (failure.find(diagnostic) == eastl::string::npos)
+                    failure += eastl::string("\n") + diagnostic;
+            }
+            if (visible && alive && now - lastProgress >= timeout && failure.empty())
+            {
+                failure = "Foreground lifecycle progress deadline expired";
+                app->stop();
+            }
+            if (!failure.empty() && !failurePhase)
+            {
+                const bool wasStarting = previousPhase == ApplicationPhase::PreInitializing || previousPhase == ApplicationPhase::Initializing;
+                const bool isStarting = phase == ApplicationPhase::PreInitializing || phase == ApplicationPhase::Initializing;
+                failurePhase = phaseName(wasStarting && !isStarting ? previousPhase : phase);
+            }
+            bool stepped = false;
+            if (alive && phase == ApplicationPhase::Running && failure.empty() && !stopRequested.load() && deadline.due(now))
+            {
+                stepped = lifecycle.stepWithElapsedTime(std::chrono::milliseconds(deadline.elapsedAndAdvance(now)));
+                if (stepped)
+                {
+                    ++steps;
+                    lastProgress = now;
+                }
+            }
+            const char* state = !failure.empty() ? "Failed" : !alive                                                      ? "Stopped"
+                                                          : (stopRequested.load() || phase == ApplicationPhase::Stopping) ? "Stopping"
+                                                          : phase == ApplicationPhase::Running                            ? "Running"
+                                                                                                                          : "Starting";
+            if (!alive || stepped || phase != previousPhase || now - lastPublish >= 50 || !failure.empty())
+            {
+                // Publish final cleanup only after Application and RuntimeState destruction.
+                if (!alive)
+                {
+                    queue->setWakeCallback(nullptr);
+                    app.reset();
+                }
+                publish(state, failurePhase ? failurePhase : phaseName(phase), failure, steps, ++sequence, !alive);
+                lastPublish = now;
+            }
+            previousPhase = phase;
+            if (alive && !cooperative)
+            {
+                const int wait = phase == ApplicationPhase::Running && failure.empty() ? deadline.waitTime(nowMs()) : 5;
+                emscripten_futex_wait(&wakeSequence, wake, wait);
+            }
+        }
+    };
+}
+
 int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptions options)
 {
     if (emscripten_is_main_browser_thread() || started.exchange(true))
         return 1;
     const int timeout = std::max(1, options.foregroundProgressTimeoutMs);
     installBridge(timeout);
-    int sequence = 0, steps = 0;
-    eastl::string failure;
-    const char* failurePhase = nullptr;
-    publish("Starting", "Creation", failure, steps, ++sequence, false);
+    publish("Starting", "Creation", {}, 0, 1, false);
     auto creation = createApplicationChecked(delegate);
     if (!creation)
     {
-        failure = creation.getError()->getDiagMessage();
-        publish("Failed", "Creation", failure, steps, ++sequence, true);
+        publish("Failed", "Creation", creation.getError()->getDiagMessage(), 0, 2, true);
         return 1;
     }
-    auto app = std::move(*creation);
-    auto& lifecycle = app->as<ApplicationLifecycle&>();
-    if (stopRequested.load())
-        app->stop();
-    lifecycle.beginStartup();
-    auto queue = app->getExecutor()->as<WorkQueue*>();
-    queue->setWakeCallback(wakeWorker);
-    browser_detail::StepDeadline deadline;
-    deadline.reset(nowMs());
-    auto lastProgress = nowMs(), lastPublish = lastProgress;
-    auto previousPhase = lifecycle.getPhase();
-    auto previousProgress = lifecycle.getLifecycleProgress();
-    bool wasVisible = true;
-    bool alive = true;
-    while (alive)
+    if (options.cooperativePresentation)
     {
-        const auto wake = wakeSequence.load();
-        const auto now = nowMs();
-        bool visible = documentVisible.load() != 0;
-        if (auto* window = getServiceProvider().find<IBrowserWindowStatus>())
+        // A heap-owned loop survives returning to the worker's JavaScript event
+        // loop. Chrome presents OffscreenCanvas frames there. No Asyncify and no
+        // additional game steps: tick retains the shared deadline policy.
+        auto* loop = new BrowserLoop(std::move(*creation), timeout, true);
+        emscripten_set_main_loop_arg([](void* argument)
         {
-            if (window->getBrowserState() == BrowserWindowState::Ready)
-                visible = visible && window->isDocumentVisible();
-            if (window->getBrowserState() == BrowserWindowState::Failed && failure.empty())
-                failure = "Platform host lost";
-        }
-        if (visible != wasVisible)
-        {
-            deadline.reset(now);
-            lastProgress = now;
-            wasVisible = visible;
-        }
-        if (!visible)
-            lastProgress = now;
-        if (watchdogFailed.load() && failure.empty())
-            failure = "Foreground worker progress deadline expired";
-        if (auto error = lifecycle.getLifecycleError())
-        {
-            const auto diagnostic = error->getDiagMessage();
-            if (failure.empty())
-                failure = diagnostic;
-            else if (failure.find(diagnostic) == eastl::string::npos)
-                failure += eastl::string("\n") + diagnostic;
-        }
-        if (stopRequested.load() || !failure.empty())
-            app->stop();
-        if (!failure.empty() && !failurePhase)
-            failurePhase = phaseName(lifecycle.getPhase());
-        alive = lifecycle.pollLifecycle();
-        const auto phase = lifecycle.getPhase();
-        const auto progress = lifecycle.getLifecycleProgress();
-        if (progress != previousProgress)
-            lastProgress = now;
-        previousProgress = progress;
-        if (phase != previousPhase)
-        {
-            lastProgress = now;
-            deadline.reset(now);
-        }
-        if (auto error = lifecycle.getLifecycleError())
-        {
-            const auto diagnostic = error->getDiagMessage();
-            if (failure.empty())
-                failure = diagnostic;
-            else if (failure.find(diagnostic) == eastl::string::npos)
-                failure += eastl::string("\n") + diagnostic;
-        }
-        if (visible && alive && now - lastProgress >= timeout && failure.empty())
-        {
-            failure = "Foreground lifecycle progress deadline expired";
-            app->stop();
-        }
-        if (!failure.empty() && !failurePhase)
-        {
-            const bool wasStarting = previousPhase == ApplicationPhase::PreInitializing || previousPhase == ApplicationPhase::Initializing;
-            const bool isStarting = phase == ApplicationPhase::PreInitializing || phase == ApplicationPhase::Initializing;
-            failurePhase = phaseName(wasStarting && !isStarting ? previousPhase : phase);
-        }
-        bool stepped = false;
-        if (alive && phase == ApplicationPhase::Running && failure.empty() && !stopRequested.load() && deadline.due(now))
-        {
-            stepped = lifecycle.stepWithElapsedTime(std::chrono::milliseconds(deadline.elapsedAndAdvance(now)));
-            if (stepped)
+            auto* loop = static_cast<BrowserLoop*>(argument);
+            loop->tick();
+            if (!loop->alive)
             {
-                ++steps;
-                lastProgress = now;
+                const int code = loop->failure.empty() ? 0 : 1;
+                emscripten_cancel_main_loop();
+                delete loop;
+                emscripten_force_exit(code);
             }
-        }
-        const char* state = !failure.empty() ? "Failed" : !alive                                                      ? "Stopped"
-                                                      : (stopRequested.load() || phase == ApplicationPhase::Stopping) ? "Stopping"
-                                                      : phase == ApplicationPhase::Running                            ? "Running"
-                                                                                                                      : "Starting";
-        if (!alive || stepped || phase != previousPhase || now - lastPublish >= 50 || !failure.empty())
-        {
-            // Publish final cleanup only after Application and RuntimeState destruction.
-            if (!alive)
-            {
-                queue->setWakeCallback(nullptr);
-                app.reset();
-            }
-            publish(state, failurePhase ? failurePhase : phaseName(phase), failure, steps, ++sequence, !alive);
-            lastPublish = now;
-        }
-        previousPhase = phase;
-        if (alive)
-        {
-            const int wait = phase == ApplicationPhase::Running && failure.empty() ? deadline.waitTime(nowMs()) : 5;
-            emscripten_futex_wait(&wakeSequence, wake, wait);
-        }
+        }, loop, 200, true);
+        return 1;  // simulate_infinite_loop unwinds to the worker scheduler.
     }
-    return failure.empty() ? 0 : 1;
+    BrowserLoop loop(std::move(*creation), timeout, false);
+    while (loop.alive)
+        loop.tick();
+    return loop.failure.empty() ? 0 : 1;
 }
 }

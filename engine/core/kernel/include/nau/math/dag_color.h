@@ -11,7 +11,7 @@
 namespace nau::math
 {
     template <typename To, typename From>
-    __forceinline To bitwise_cast(const From& from)
+    NAU_FORCE_INLINE To bitwise_cast(const From& from)
     {
         static_assert(sizeof(To) == sizeof(From), "bitwise_cast: types of different sizes provided");
         static_assert(eastl::is_pointer<To>::value == eastl::is_pointer<From>::value,

@@ -271,6 +271,11 @@ namespace nau
         {
             NAU_ASSERT(!m_shutdownTask);
 
+            if (!m_mainLoop)
+            {
+                m_mainLoop = getServiceProvider().find<MainLoopService>();
+            }
+
             m_appState = AppState::GameShutdownProcessed;
             m_shutdownTask = m_mainLoop ? m_mainLoop->shutdownMainLoop() : async::makeResolvedTask();
         }

@@ -59,7 +59,7 @@ namespace nau
          * 
          * @return A collection of asset kind names supported by the interface implementation.
          */
-        virtual eastl::vector<eastl::string_view> getSupportedAssetKind() const;
+        virtual eastl::vector<eastl::string_view> getSupportedAssetKind() const = 0;
 
         /**
          * @brief Schedules asset load from a byte stream into a container.

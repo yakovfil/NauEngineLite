@@ -214,23 +214,23 @@ inline float Vector3::getW() const
 
 inline Vector3 & Vector3::setElem(int idx, float value)
 {
-	*(&mX + idx) = value;
-	return *this;
+    (idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW) = value;
+    return *this;
 }
 
 inline float Vector3::getElem(int idx) const
 {
-	return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline float & Vector3::operator[](int idx)
 {
-	return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline float Vector3::operator[](int idx) const
 {
-	return *(&mX + idx);
+    return idx == 0 ? mX : idx == 1 ? mY : idx == 2 ? mZ : mW;
 }
 
 inline const Vector3 Vector3::operator + (const Vector3 & vec) const

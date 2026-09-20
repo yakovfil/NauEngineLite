@@ -22,6 +22,10 @@ nau_collect_files(PublicHeaders
 )
 
 
+if(NAU_RUNTIME_PROFILE STREQUAL "demo")
+  set(Sources ${NAU_DEMO_CoreScene_SOURCES})
+endif()
+
 nau_add_module(${TargetName}
   SOURCES ${Sources} ${PublicHeaders}
   FOLDER "${NauEngineFolder}/core/modules"

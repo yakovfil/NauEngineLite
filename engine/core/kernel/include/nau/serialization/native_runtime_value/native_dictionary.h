@@ -59,7 +59,11 @@ namespace nau::ser_detail
         std::string_view getKey(size_t index) const override
         {
             auto head = m_dict.begin();
-            std::advance(head, index);
+            // EASTL and std iterators have distinct category tags in libc++.
+            for (size_t i = 0; i < index; ++i)
+            {
+                ++head;
+            }
             return std::string_view{head->first.data(), head->first.size()};
         }
 

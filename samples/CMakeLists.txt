@@ -1,3 +1,8 @@
+if(NAU_RUNTIME_PROFILE STREQUAL "demo")
+  # Actual demo executable is integrated in task 4.1.
+  return()
+endif()
+
 if (NAU_CORE_SAMPLES)
 
   if(NAU_RUNTIME_PROFILE STREQUAL "minimal")

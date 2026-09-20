@@ -2,7 +2,7 @@ set (TargetName ${NAU_FRAMEWORK_TARGET})
 
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH moduleRoot)
 
-if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   set(Sources
     app/application_impl.cpp
     app/application_setup.cpp
@@ -54,8 +54,12 @@ target_compile_definitions(${TargetName} PRIVATE
 )
 
 target_link_libraries(${TargetName} PUBLIC NauKernel PlatformAppApi)
-if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   target_compile_definitions(${TargetName} PRIVATE NAU_MINIMAL_RUNTIME=1)
+  if(NAU_RUNTIME_PROFILE STREQUAL "demo")
+    target_compile_definitions(${TargetName} PRIVATE NAU_SCENE_RUNTIME=1)
+    target_link_libraries(${TargetName} PUBLIC CoreScene)
+  endif()
 else()
   target_link_libraries(${TargetName} PUBLIC CoreScene Graphics ui VFX)
 endif()

@@ -14,6 +14,10 @@ nau_collect_files(PublicHeaders
   MASK "*.h"
 )
 
+if(NAU_RUNTIME_PROFILE STREQUAL "demo")
+  set(Sources ${NAU_DEMO_CoreAssets_SOURCES})
+endif()
+
 nau_add_module(${TargetName}
   SOURCES ${Sources} ${PublicHeaders}
   FOLDER "${NauEngineFolder}/core/modules"

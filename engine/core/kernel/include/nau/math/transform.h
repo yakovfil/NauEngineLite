@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/scene/transform.h
 
-
 #pragma once
+#include <cmath>
+#include <numbers>
+
 #include "nau/math/math.h"
 
 namespace nau::math
@@ -22,28 +24,39 @@ namespace nau::math
         NAU_CLASS_FIELDS(
             CLASS_NAMED_FIELD(m_quat, "rotation"),
             CLASS_NAMED_FIELD(m_translation, "translation"),
-            CLASS_NAMED_FIELD(m_scale, "scale")
-        )
+            CLASS_NAMED_FIELD(m_scale, "scale"))
 
     public:
         static const Transform& identity()
         {
-            static Transform identity = { };
+            static Transform identity = {};
             return identity;
         }
 
 #pragma region NaNChecks
         NAU_FORCE_INLINE bool isTranslationNaN() const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            return !std::isfinite(m_translation.getElem(0)) || !std::isfinite(m_translation.getElem(1)) || !std::isfinite(m_translation.getElem(2));
+#else
             return FloatInVec(m_translation.get128()).hasInfOrNaN();
+#endif
         };
         NAU_FORCE_INLINE bool isRotateNaN() const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            return !std::isfinite(m_quat.getElem(0)) || !std::isfinite(m_quat.getElem(1)) || !std::isfinite(m_quat.getElem(2)) || !std::isfinite(m_quat.getElem(3));
+#else
             return FloatInVec(m_quat.get128()).hasInfOrNaN();
+#endif
         };
         NAU_FORCE_INLINE bool isScaleNaN() const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            return !std::isfinite(m_scale.getElem(0)) || !std::isfinite(m_scale.getElem(1)) || !std::isfinite(m_scale.getElem(2));
+#else
             return FloatInVec(m_scale.get128()).hasInfOrNaN();
+#endif
         };
         NAU_FORCE_INLINE bool containsNaN() const
         {
@@ -52,8 +65,10 @@ namespace nau::math
 
         NAU_FORCE_INLINE bool isRotationNormalized() const
         {
-            NAU_ASSERT(!isRotateNaN());
-            return (dot(m_quat, m_quat) - FloatInVec(1)).abs() > FloatInVec(0);
+            // Squared-length tolerance accommodates the native SSE reciprocal-square-root
+            // approximation used by normalize(), as well as scalar roundoff.
+            const float squaredLength = float(dot(m_quat, m_quat));
+            return std::isfinite(squaredLength) && std::abs(squaredLength - 1.0f) <= 1.0e-3f;
         }
 
         inline bool isValid() const
@@ -79,7 +94,7 @@ namespace nau::math
         NAU_FORCE_INLINE Transform(const Quat& inRotation, const Vector3& inTranslation, const Vector3& inScale = Vector3(1.f, 1.f, 1.f)) :
             m_quat(inRotation),
             m_translation(inTranslation),
-            m_scale(inScale){};
+            m_scale(inScale) {};
         NAU_FORCE_INLINE explicit Transform(const Matrix4& inMatrix)
         {
             setFromMatrix(inMatrix);
@@ -97,9 +112,9 @@ namespace nau::math
             auto output = Matrix4::rotation(m_quat);
 
             output = {
-                output.getCol0() * FloatInVec(m_scale.getX()),
-                output.getCol1() * FloatInVec(m_scale.getY()),
-                output.getCol2() * FloatInVec(m_scale.getZ()),
+                output.getCol0() * m_scale.getX(),
+                output.getCol1() * m_scale.getY(),
+                output.getCol2() * m_scale.getZ(),
                 Vector4(m_translation, 1)};
 
             return output;
@@ -142,8 +157,16 @@ namespace nau::math
 
             // Removing negative scale from matrix
             auto invScale = (divPerElem(Vector3{1, 1, 1}, Vector3{length(matrix[0]), length(matrix[1]), length(matrix[2])}));
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            auto mask = std::array<bool, 3>{std::abs(scale.getX()) > MATH_SMALL_NUMBER, std::abs(scale.getY()) > MATH_SMALL_NUMBER, std::abs(scale.getZ()) > MATH_SMALL_NUMBER};
+#else
             auto mask = absPerElem(scale) > Vector3{MATH_SMALL_NUMBER};
+#endif
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            invScale = Vector3{mask[0] ? invScale.getX() : 0.0f, mask[1] ? invScale.getY() : 0.0f, mask[2] ? invScale.getZ() : 0.0f};
+#else
             invScale = select(Vector3::zero(), invScale, mask);
+#endif
             Vector3 signVector = copySignPerElem(invScale, scale);
             matrix[0] *= signVector.getX();
             matrix[1] *= signVector.getY();
@@ -154,7 +177,7 @@ namespace nau::math
             Quat newRotation = {0, 0, 0, 1};
             Vector3 newScale = {1, 1, 1};
             decompose(matrix, newTranslation, newRotation, newScale);
-            newRotation = newRotation * FloatInVec(1 / length(newRotation));
+            newRotation = newRotation * (1.0f / float(length(newRotation)));
 
             output.setRotation(newRotation);
             output.setTranslation(newTranslation);
@@ -169,9 +192,13 @@ namespace nau::math
         {
             Transform output;
 
-            output.setScale(m_scale * FloatInVec(other.m_scale.get128()));
+            output.setScale(mulPerElem(m_scale, other.m_scale));
 
-            if(!(bool(m_scale > Vector3::zero())) || !(bool(other.m_scale > Vector3::zero())))
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            if (minElem(m_scale) <= 0.0f || minElem(other.m_scale) <= 0.0f)
+#else
+            if (!(bool(m_scale > Vector3::zero())) || !(bool(other.m_scale > Vector3::zero())))
+#endif
             {
                 // Then some parts of scale are 0 or less
                 // decompose usage is required to save rotation
@@ -186,7 +213,7 @@ namespace nau::math
 
         NAU_FORCE_INLINE void operator*=(const Transform& other)
         {
-            setScale(m_scale * FloatInVec(other.m_scale.get128()));
+            setScale(mulPerElem(m_scale, other.m_scale));
             setRotation(m_quat * other.m_quat);
             setTranslation(other.m_translation + other.transformVector(m_translation));
         };
@@ -212,11 +239,15 @@ namespace nau::math
 
         NAU_FORCE_INLINE Vector3 transformVector(const Vector3& v) const
         {
-            return rotate(m_quat, v * FloatInVec(m_scale.get128()));
+            return rotate(m_quat, mulPerElem(v, m_scale));
         };
         NAU_FORCE_INLINE Point3 transformPoint(const Point3& p) const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            return Point3(rotate(m_quat, mulPerElem(Vector3(p), m_scale)) + m_translation);
+#else
             return rotate(m_quat, scale(p, m_scale)) + m_translation;
+#endif
         };
         NAU_FORCE_INLINE Quat transformRotation(const Quat& q) const
         {
@@ -260,14 +291,26 @@ namespace nau::math
         {
             Transform output;
 
-            if((absPerElem(m_scale) < Vector3{MATH_SMALL_NUMBER}))
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            if (maxElem(absPerElem(m_scale)) < MATH_SMALL_NUMBER)
+#else
+            if ((absPerElem(m_scale) < Vector3{MATH_SMALL_NUMBER}))
+#endif
             {
                 return identity();
             }
 
             output.setScale(divPerElem({1, 1, 1}, m_scale));
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            auto mask = std::array<bool, 3>{std::abs(m_scale.getX()) > MATH_SMALL_NUMBER, std::abs(m_scale.getY()) > MATH_SMALL_NUMBER, std::abs(m_scale.getZ()) > MATH_SMALL_NUMBER};
+#else
             auto mask = absPerElem(m_scale) > Vector3{MATH_SMALL_NUMBER};
+#endif
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            output.setScale(Vector3{mask[0] ? output.m_scale.getX() : 0.0f, mask[1] ? output.m_scale.getY() : 0.0f, mask[2] ? output.m_scale.getZ() : 0.0f});
+#else
             output.setScale(select(Vector3::zero(), output.m_scale, mask));
+#endif
             output.m_scale.setW(0);
             output.setRotation(conj(m_quat));
             output.setTranslation(-output.transformVector(m_translation));
@@ -280,15 +323,35 @@ namespace nau::math
          */
         NAU_FORCE_INLINE Transform getRelativeTransformInverse(const Transform& other) const
         {
-            if(!(bool(m_scale > Vector3::zero())) || !(bool(other.m_scale > Vector3::zero())))
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            if (minElem(m_scale) <= 0.0f || minElem(other.m_scale) <= 0.0f)
+#else
+            if (!(bool(m_scale > Vector3::zero())) || !(bool(other.m_scale > Vector3::zero())))
+#endif
             {
                 // Then some parts of scale are 0 or less
                 // Decompose usage is required
 
                 auto invScale = (divPerElem({1, 1, 1}, other.m_scale));
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+                auto mask = std::array<bool, 3>{std::abs(other.m_scale.getX()) > MATH_SMALL_NUMBER, std::abs(other.m_scale.getY()) > MATH_SMALL_NUMBER, std::abs(other.m_scale.getZ()) > MATH_SMALL_NUMBER};
+#else
                 auto mask = absPerElem(other.m_scale) > Vector3{MATH_SMALL_NUMBER};
+#endif
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+                invScale = (Vector3{mask[0] ? invScale.getX() : 0.0f, mask[1] ? invScale.getY() : 0.0f, mask[2] ? invScale.getZ() : 0.0f});
+#else
                 invScale = (select(Vector3::zero(), invScale, mask));
+#endif
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+                // Scalar Vector3 has no padding lane to clear.
+#else
+    #if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+                    // Scalar Vector3 has no padding lane to clear.
+    #else
                 invScale.setW(0);
+    #endif
+#endif
                 auto desiredScale = mulPerElem(invScale, m_scale);
 
                 auto matrix = nau::math::inverse(other.toMatrixWithScale()) * toMatrixWithScale();
@@ -298,12 +361,20 @@ namespace nau::math
             Transform output;
 
             auto invScale = divPerElem({1, 1, 1}, other.m_scale);
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            auto mask = std::array<bool, 3>{std::abs(other.m_scale.getX()) > MATH_SMALL_NUMBER, std::abs(other.m_scale.getY()) > MATH_SMALL_NUMBER, std::abs(other.m_scale.getZ()) > MATH_SMALL_NUMBER};
+#else
             auto mask = absPerElem(other.m_scale) > Vector3{MATH_SMALL_NUMBER};
+#endif
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            invScale = Vector3{mask[0] ? invScale.getX() : 0.0f, mask[1] ? invScale.getY() : 0.0f, mask[2] ? invScale.getZ() : 0.0f};
+#else
             invScale = select(Vector3::zero(), invScale, mask);
+#endif
             invScale.setW(0);
             auto invRot = conj(other.m_quat);
 
-            output.setScale(m_scale * FloatInVec(invScale.get128()));
+            output.setScale(mulPerElem(m_scale, invScale));
             output.setRotation(invRot * m_quat);
             auto diffT = m_translation - other.m_translation;
             output.setTranslation(mulPerElem(rotate(invRot, diffT), invScale));
@@ -382,20 +453,39 @@ namespace nau::math
 #pragma region Comparators
         NAU_FORCE_INLINE bool similar(const Transform& other, float tolerance = MATH_SMALL_NUMBER) const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            for (int i = 0; i < 3; ++i)
+            {
+                if (!(std::abs(m_scale.getElem(i) - other.m_scale.getElem(i)) <= tolerance) ||
+                    !(std::abs(m_translation.getElem(i) - other.m_translation.getElem(i)) <= tolerance))
+                    return false;
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                if (!(std::abs(m_quat.getElem(i) - other.m_quat.getElem(i)) <= tolerance))
+                    return false;
+            }
+            return true;
+#else
             return m_scale.similar(other.m_scale, tolerance) &&
                    m_translation.similar(other.m_translation, tolerance) &&
                    m_quat.similar(other.m_quat, tolerance);
+#endif
         };
         bool operator==(const Transform& other) const
         {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+            return similar(other, 0.0f);
+#else
             return m_scale == other.m_scale &&
                    m_translation == other.m_translation &&
                    m_quat == other.m_quat;
+#endif
         };
 #pragma endregion
     };
 
-    //inline const Transform Transform::Identity = {};
+    // inline const Transform Transform::Identity = {};
 
     NAU_FORCE_INLINE Transform lerpTransform(const Transform& A, const Transform& B, float alpha)
     {
@@ -420,7 +510,23 @@ struct fmt::formatter<nau::math::Transform> : fmt::formatter<const char*>
 {
     auto format(nau::math::Transform const& transform, fmt::format_context& ctx) const
     {
+#if VECTORMATH_FORCE_SCALAR_MODE || (!VECTORMATH_CPU_HAS_SSE1_OR_BETTER && !VECTORMATH_CPU_HAS_NEON)
+        const auto& q = transform.getRotation();
+        const float x = q.getX(), y = q.getY(), z = q.getZ(), w = q.getW();
+        const float test = w * y - x * z;
+        const float degrees = 180.0f / std::numbers::pi_v<float>;
+        nau::math::Vector3 rotation;
+        if (test > 0.49999f)
+            rotation = {0, -90, -2 * std::atan2(x, w) * degrees};
+        else if (test < -0.49999f)
+            rotation = {0, 90, 2 * std::atan2(x, w) * degrees};
+        else
+            rotation = {-std::atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y)) * degrees,
+                        -std::asin(std::clamp(2 * test, -1.0f, 1.0f)) * degrees,
+                        std::atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)) * degrees};
+#else
         auto rotation = transform.getRotation().toEuler();
+#endif
         return format_to(ctx.out(),
                          "translate: ({}, {}, {})\n"
                          "rotation: ({}, {}, {})\n"

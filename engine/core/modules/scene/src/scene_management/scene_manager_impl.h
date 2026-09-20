@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include "nau/async/work_queue.h"
 #include "nau/memory/eastl_aliases.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/internal/scene_listener.h"

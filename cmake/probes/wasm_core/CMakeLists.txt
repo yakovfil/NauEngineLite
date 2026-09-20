@@ -42,6 +42,7 @@ target_sources(NauCorePortabilityTests PRIVATE "${moduleRegistration}")
 target_compile_definitions(NauCorePortabilityTests PRIVATE NAU_MODULE_NAME=CoreTest)
 target_include_directories(NauCorePortabilityTests PRIVATE "${engine}/engine/core/app_framework/src")
 target_sources(NauCorePortabilityTests PRIVATE
+  "${engine}/engine/core/kernel/tests/test_wasm_core/test_transform_portability.cpp"
   "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_math_serialization.cpp")
 target_precompile_headers(NauCorePortabilityTests PRIVATE <gtest/gtest.h> <gmock/gmock.h>)
 target_link_libraries(NauCorePortabilityTests PRIVATE NauKernel NauFrameworkMinimal gtest_main gmock)

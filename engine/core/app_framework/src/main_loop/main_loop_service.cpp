@@ -121,7 +121,7 @@ namespace nau
 
     async::Task<> MainLoopService::initService()
     {
-#ifndef NAU_MINIMAL_RUNTIME
+#if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
         if (getServiceProvider().has<scene::ISceneManagerInternal>())
         {
             m_sceneManager = &getServiceProvider().get<scene::ISceneManagerInternal>();
@@ -138,7 +138,11 @@ namespace nau
 
     async::Task<> MainLoopService::shutdownMainLoop()
     {
-#ifndef NAU_MINIMAL_RUNTIME
+#if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
+        if (!m_sceneManager)
+        {
+            m_sceneManager = getServiceProvider().find<scene::ISceneManagerInternal>();
+        }
         if (m_sceneManager)
         {
             co_await m_sceneManager->shutdown();
@@ -149,7 +153,7 @@ namespace nau
 
     void MainLoopService::pollShutdown()
     {
-#ifndef NAU_MINIMAL_RUNTIME
+#if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
         if (m_sceneManager)
         {
             m_sceneManager->pollShutdown();
@@ -168,7 +172,7 @@ namespace nau
             preUpdate->gamePreUpdate(msDt);
         }
 
-#ifndef NAU_MINIMAL_RUNTIME
+#if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
         if (m_sceneManager != nullptr)
         {
             m_sceneManager->update(dt);

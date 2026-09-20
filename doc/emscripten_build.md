@@ -4,7 +4,9 @@ Current status: external SDK **6.0.9** builds the actual minimal Nau sample in
 Debug and Release. Both browser presets pass real Chrome sample acceptance using
 the production shared lifecycle and static PlatformApp. See
 [minimal_app_web.md](minimal_app_web.md) for sample build/test commands and results.
-Runtime-package staging and relocated delivery acceptance remain pending.
+Minimal runtime packages are staged and tested separately. The scene-driven
+[NauDemo browser guide](naudemo_web.md) describes the new demo presets, WebGL 2
+requirements, complete packages and fresh-checkout acceptance.
 
 ## Install and activate explicitly
 

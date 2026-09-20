@@ -452,7 +452,7 @@ namespace nau
 
     IAssetDescriptor::AssetId AssetManagerImpl::getNextAssetId()
     {
-        const auto id = m_nextAssetId.fetch_add(1ui64, std::memory_order_relaxed);
+        const auto id = m_nextAssetId.fetch_add(1ULL, std::memory_order_relaxed);
         return id;
     }
 

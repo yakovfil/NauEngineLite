@@ -189,7 +189,14 @@ namespace nau
         if (needToFabricateAssetView)
         {
             NAU_ASSERT(m_assetViewRef.isDead());
-            assetView = co_await fabricateAssetView(container);
+            auto result = co_await fabricateAssetView(container).doTry();
+            if (!result)
+            {
+                auto error = result.getError();
+                m_assetViewCreationState.reject(error);
+                co_return error;
+            }
+            assetView = *std::move(result);
             m_assetViewRef = assetView;
             m_assetViewCreationState.resolve(assetView);
         }

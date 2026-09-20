@@ -2,7 +2,7 @@ set(TargetName NauKernel)
 
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH moduleRoot)
 
-if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NOT NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
 nau_collect_files(Sources
   DIRECTORIES ${moduleRoot}/src
   RELATIVE ${moduleRoot}/src
@@ -21,7 +21,7 @@ nau_collect_files(PublicHeaders
 )
 
 
-if (Platform_Windows AND NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if (Platform_Windows AND NOT NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
 
   nau_collect_files(Sources
     DIRECTORIES ${moduleRoot}/src
@@ -42,7 +42,7 @@ if (Platform_Windows AND NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
 endif()
 
 
-if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   include(NauMinimalKernelSources)
   set(Sources ${NAU_MINIMAL_KERNEL_COMMON_SOURCES})
   if(Platform_Windows)
@@ -96,7 +96,7 @@ target_include_directories(${TargetName} PUBLIC
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/core/kernel/include>
 )
 
-if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   target_link_libraries(${TargetName} PUBLIC ${NAU_MINIMAL_DEPENDENCY_TARGETS})
 else()
 target_link_libraries(${TargetName} PUBLIC

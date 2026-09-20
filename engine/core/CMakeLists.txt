@@ -1,6 +1,6 @@
 if(NAU_ENGINE_MODULES)
   message(NOTICE "Building engine modules")
-  if(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
     set(kernelModules ${NAU_MINIMAL_MODULE_DIRS})
   else()
     nau_collect_cmake_subdirectories(kernelModules ${CMAKE_CURRENT_SOURCE_DIR}/modules)

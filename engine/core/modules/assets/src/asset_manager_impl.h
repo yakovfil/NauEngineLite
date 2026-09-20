@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <EASTL/variant.h>
+
 #include "./asset_descriptor_impl.h"
 #include "nau/assets/asset_container.h"
 #include "nau/assets/asset_descriptor_factory.h"
@@ -83,7 +85,7 @@ namespace nau
         eastl::unordered_map<rtti::TypeIndex, IAssetViewFactory*> m_assetViewFactories;
         eastl::vector<IAssetListener*> m_assetListeners;
 
-        std::atomic<IAssetDescriptor::AssetId> m_nextAssetId{1ui64};
+        std::atomic<IAssetDescriptor::AssetId> m_nextAssetId{1ULL};
         mutable std::shared_mutex m_mutex;
     };
 }  // namespace nau
