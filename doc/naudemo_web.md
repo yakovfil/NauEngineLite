@@ -115,5 +115,5 @@ commands above without a patch bundle.
 
 Native coexistence commands remain in [NauDemo README](../../NauDemo/README.md).
 The original web milestone's [validation record](../../openspec/changes/archive/2026-09-20-naudemo-web/validation.md)
-retains its historical evidence. The [sample extraction validation](../../openspec/changes/extract-nau-samples/validation.md)
+retains its historical evidence. The [sample extraction validation](../../openspec/changes/archive/2026-09-20-extract-nau-samples/validation.md)
 records the external sample layout and subsequent native visual acceptance.
