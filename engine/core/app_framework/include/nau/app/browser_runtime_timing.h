@@ -37,4 +37,22 @@ namespace nau::browser_detail
         int64_t m_last = 0;
         int64_t m_next = Interval;
     };
+
+    class FrameElapsed
+    {
+    public:
+        void reset(int64_t now)
+        {
+            m_last = now;
+        }
+        int elapsedAndAdvance(int64_t now)
+        {
+            const auto elapsed = std::clamp<int64_t>(now - m_last, 0, 100);
+            reset(now);
+            return static_cast<int>(elapsed);
+        }
+
+    private:
+        int64_t m_last = 0;
+    };
 }  // namespace nau::browser_detail

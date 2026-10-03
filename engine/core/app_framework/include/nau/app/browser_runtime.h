@@ -22,6 +22,9 @@ namespace nau
         // Opt-in presentation mode returns to the worker event loop between polls.
         // The delegate must have static or otherwise persistent lifetime.
         bool cooperativePresentation = false;
+        // Step the application on each presentation callback using elapsed time.
+        // Requires cooperativePresentation; other callers keep the fixed cadence.
+        bool frameDrivenUpdates = false;
     };
 
     // Call once on the PROXY_TO_PTHREAD application worker. The page receives

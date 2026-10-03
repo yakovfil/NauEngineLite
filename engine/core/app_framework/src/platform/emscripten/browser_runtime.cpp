@@ -134,21 +134,24 @@ namespace
         WorkQueue* queue;
         int timeout;
         bool cooperative;
+        bool frameDriven;
         int sequence = 1, steps = 0;
         std::string failure;
         const char* failurePhase = nullptr;
         browser_detail::StepDeadline deadline;
+        browser_detail::FrameElapsed frameElapsed;
         int64_t lastProgress = nowMs(), lastPublish = lastProgress;
         ApplicationPhase previousPhase;
         uint64_t previousProgress;
         bool wasVisible = true, alive = true;
 
-        BrowserLoop(std::unique_ptr<Application> application, int timeoutMs, bool yield) :
+        BrowserLoop(std::unique_ptr<Application> application, int timeoutMs, bool yield, bool frameUpdates = false) :
             app(std::move(application)),
             lifecycle(app->as<ApplicationLifecycle&>()),
             queue(nullptr),
             timeout(timeoutMs),
-            cooperative(yield)
+            cooperative(yield),
+            frameDriven(frameUpdates)
         {
             if (stopRequested.load())
                 app->stop();
@@ -156,6 +159,7 @@ namespace
             queue = app->getExecutor()->as<WorkQueue*>();
             queue->setWakeCallback(wakeWorker);
             deadline.reset(nowMs());
+            frameElapsed.reset(nowMs());
             previousPhase = lifecycle.getPhase();
             previousProgress = lifecycle.getLifecycleProgress();
         }
@@ -182,6 +186,7 @@ namespace
             if (visible != wasVisible)
             {
                 deadline.reset(now);
+                frameElapsed.reset(now);
                 lastProgress = now;
                 wasVisible = visible;
             }
@@ -211,6 +216,7 @@ namespace
             {
                 lastProgress = now;
                 deadline.reset(now);
+                frameElapsed.reset(now);
             }
             if (auto error = lifecycle.getLifecycleError())
             {
@@ -232,9 +238,11 @@ namespace
                 failurePhase = phaseName(wasStarting && !isStarting ? previousPhase : phase);
             }
             bool stepped = false;
-            if (alive && phase == ApplicationPhase::Running && failure.empty() && !stopRequested.load() && deadline.due(now))
+            if (alive && phase == ApplicationPhase::Running && failure.empty() && !stopRequested.load() &&
+                (frameDriven ? visible : deadline.due(now)))
             {
-                stepped = lifecycle.stepWithElapsedTime(std::chrono::milliseconds(deadline.elapsedAndAdvance(now)));
+                const int elapsed = frameDriven ? frameElapsed.elapsedAndAdvance(now) : deadline.elapsedAndAdvance(now);
+                stepped = lifecycle.stepWithElapsedTime(std::chrono::milliseconds(elapsed));
                 if (stepped)
                 {
                     ++steps;
@@ -283,8 +291,8 @@ int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptio
     {
         // A heap-owned loop survives returning to the worker's JavaScript event
         // loop. Chrome presents OffscreenCanvas frames there. No Asyncify and no
-        // additional game steps: tick retains the shared deadline policy.
-        auto* loop = new BrowserLoop(std::move(*creation), timeout, true);
+        // additional game steps unless the caller requests frame-driven updates.
+        auto* loop = new BrowserLoop(std::move(*creation), timeout, true, options.frameDrivenUpdates);
         emscripten_set_main_loop_arg([](void* argument)
         {
             auto* loop = static_cast<BrowserLoop*>(argument);
@@ -296,7 +304,7 @@ int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptio
                 delete loop;
                 emscripten_force_exit(code);
             }
-        }, loop, 200, true);
+        }, loop, options.frameDrivenUpdates ? 0 : 200, true);
         return 1;  // simulate_infinite_loop unwinds to the worker scheduler.
     }
     BrowserLoop loop(std::move(*creation), timeout, false);

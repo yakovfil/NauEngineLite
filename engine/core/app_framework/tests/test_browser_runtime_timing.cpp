@@ -40,3 +40,14 @@ TEST(BrowserTiming, VisibilityResetStartsANewInterval)
     EXPECT_TRUE(clock.due(60100));
     EXPECT_EQ(clock.elapsedAndAdvance(60100), 100);
 }
+
+TEST(BrowserTiming, FrameUpdatesUseElapsedTimeAndBoundLongStalls)
+{
+    nau::browser_detail::FrameElapsed clock;
+    clock.reset(1000);
+    EXPECT_EQ(clock.elapsedAndAdvance(1016), 16);
+    EXPECT_EQ(clock.elapsedAndAdvance(1033), 17);
+    EXPECT_EQ(clock.elapsedAndAdvance(5000), 100);
+    clock.reset(6000);
+    EXPECT_EQ(clock.elapsedAndAdvance(6017), 17);
+}
