@@ -5,5 +5,3 @@ if(NAU_ENGINE_KERNEL)
   add_subdirectory(core/kernel)
   set_target_properties (NauKernel PROPERTIES FOLDER "${NauEngineFolder}/core")
 endif()
-
-add_subdirectory(core)

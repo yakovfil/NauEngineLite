@@ -1,7 +1,0 @@
-if(NOT EMSCRIPTEN OR NOT NAU_RUNTIME_PROFILE STREQUAL "scene")
-  return()
-endif()
-add_library(NauBrowserRenderer STATIC src/browser_renderer.cpp)
-target_include_directories(NauBrowserRenderer PUBLIC include)
-target_link_libraries(NauBrowserRenderer PUBLIC CoreScene CoreAssetsCpu)
-nau_add_compile_options(NauBrowserRenderer)

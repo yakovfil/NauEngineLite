@@ -7,9 +7,6 @@ ninjabuild
 **/node_modules/**
 
 
-# Custom Modules
-engine/core/modules/graphics_dx12
-
 # Temp build info
 engine/core/kernel/include/nau/version/vcs_version.h
 
@@ -48,9 +45,6 @@ engine/core/kernel/include/nau/version/vcs_version.h
 tools/nau_project/obj
 cmake/_scripts/__pycache__
 __pycache__/
-engine/core/modules/dagorECS/tests/test_ecs/test_dagor_ecs.lib_es_pull.cpp
-engine/core/modules/dagorECS/tests/test_ecs/testSystemsECS.cpp.gen.es.cpp
-engine/core/modules/dagorECS/tests/test_ecs/testTemplateDeclaration.cpp.gen.es.cpp
 /run_tests.bat
 samples/sceneBase/{}
 logs.*.log

@@ -60,8 +60,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 )
 
 option(NAU_ENGINE_KERNEL "Build kernel" ON)
-option(NAU_ENGINE_MODULES "Build modules" ON)
-option(NAU_ENGINE_FRAMEWORK "Build framework" ON)
 option(NAU_CORE_TOOLS "Build core tools projects" ON)
 option(NAU_CORE_SAMPLES "Build externally registered sample projects" OFF)
 option(NAU_CORE_TESTS "Build core tests projects" ON)
@@ -74,15 +72,16 @@ option(NAU_MATH_USE_DOUBLE_PRECISION "Enable double precision for math" OFF)
 
 option(BUILD_SHARED_LIBS "Build shared libs" ON)
 
-set(NAU_FRAMEWORK_TARGET NauFramework)
-if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
-  if(NAU_RUNTIME_PROFILE STREQUAL "scene")
-    if(NOT NAU_EXTERNAL_RUNTIME_FILE OR NOT EXISTS "${NAU_EXTERNAL_RUNTIME_FILE}")
-      message(FATAL_ERROR "Scene runtime requires NAU_EXTERNAL_RUNTIME_FILE from the consuming project.")
-    endif()
+if(NAU_RUNTIME_PROFILE STREQUAL "scene")
+  if(NOT NAU_EXTERNAL_RUNTIME_FILE OR NOT EXISTS "${NAU_EXTERNAL_RUNTIME_FILE}")
+    message(FATAL_ERROR "Scene runtime requires NAU_EXTERNAL_RUNTIME_FILE from the consuming project.")
+  endif()
+  include("${NAU_EXTERNAL_RUNTIME_FILE}")
+elseif(NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  if(NAU_EXTERNAL_RUNTIME_FILE AND EXISTS "${NAU_EXTERNAL_RUNTIME_FILE}")
     include("${NAU_EXTERNAL_RUNTIME_FILE}")
   else()
-    include(cmake/NauMinimalRuntime.cmake)
+    include(cmake/NauStandaloneMinimal.cmake)
   endif()
 endif()
 
@@ -137,9 +136,6 @@ file (STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/.nauversion NAU_VERSION_STRING)
 nau_set_version("${NAU_VERSION_STRING}")
 
 add_subdirectory(engine)
-if(NOT NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
-  add_subdirectory(tools)
-endif()
 list(REMOVE_DUPLICATES NAU_EXTERNAL_PROJECT_DIRS)
 foreach(externalProject IN LISTS NAU_EXTERNAL_PROJECT_DIRS)
   if(NOT EXISTS "${externalProject}/CMakeLists.txt")
@@ -164,9 +160,6 @@ install(DIRECTORY cmake
       PATTERN "*.bat"
 )
 
-install(DIRECTORY cmake/for_build/
-    DESTINATION ${CMAKE_INSTALL_PREFIX}
-)
 
 install(CODE "
   message(STATUS \"Installing USD plugins from ${CMAKE_BINARY_DIR}/bin/$<CONFIG>/plugins to ${CMAKE_INSTALL_PREFIX}/bin/$<CONFIG>/plugins\")
