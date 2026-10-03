@@ -29,7 +29,7 @@ THE SOFTWARE.
 #define __BASE_CCPROTOCOLS_H__
 /// @cond DO_NOT_SHOW
 
-#include <EASTL/string.h>
+#include <string>
 
 #include "base/ccTypes.h"
 #include "renderer/CCTexture2D.h"
@@ -240,7 +240,7 @@ public:
      * @js NA
      * @lua NA
      */
-    virtual void setString(const eastl::string &label) = 0;
+    virtual void setString(const std::string &label) = 0;
 
     /** 
      * Returns the string that is currently being used in this label 
@@ -249,7 +249,7 @@ public:
      * @js NA
      * @lua NA
      */
-    virtual eastl::string getString() const = 0;
+    virtual std::string getString() const = 0;
 };
 
 /** 

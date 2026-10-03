@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
+#include <vector>
+
 #include "nau/async/task.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service.h"
@@ -130,7 +133,7 @@ namespace nau::test
                 co_return;
             }
 
-            eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override
+            std::vector<const rtti::TypeInfo*> getServiceDependencies() const override
             {
                 return {&rtti::getTypeInfo<MyService1>()};
             }
@@ -213,8 +216,8 @@ namespace nau::test
      */
     TEST_F(TestServiceInitProxy, SetProxy_Init)
     {
-        eastl::unique_ptr<MyService1> service1 = eastl::make_unique<MyService1>();
-        eastl::unique_ptr<IServiceInitialization> proxy = eastl::make_unique<MyServiceInitProxy>(*service1);
+        std::unique_ptr<MyService1> service1 = std::make_unique<MyService1>();
+        std::unique_ptr<IServiceInitialization> proxy = std::make_unique<MyServiceInitProxy>(*service1);
 
         auto& serviceProvider = getServiceProvider();
         auto& serviceProviderInit = serviceProvider.as<core_detail::IServiceProviderInitialization&>();
@@ -248,11 +251,11 @@ namespace nau::test
         auto& serviceProvider = getServiceProvider();
         auto& serviceProviderInit = serviceProvider.as<core_detail::IServiceProviderInitialization&>();
 
-        eastl::unique_ptr<MyService1> service1 = eastl::make_unique<MyService1>();
-        eastl::unique_ptr<MyService2> service2 = eastl::make_unique<MyService2>();
+        std::unique_ptr<MyService1> service1 = std::make_unique<MyService1>();
+        std::unique_ptr<MyService2> service2 = std::make_unique<MyService2>();
 
-        eastl::unique_ptr<IServiceInitialization> proxy1 = eastl::make_unique<MyServiceInitProxy>(*service1);
-        eastl::unique_ptr<IServiceInitialization> proxy2 = eastl::make_unique<MyServiceInitProxy2>();
+        std::unique_ptr<IServiceInitialization> proxy1 = std::make_unique<MyServiceInitProxy>(*service1);
+        std::unique_ptr<IServiceInitialization> proxy2 = std::make_unique<MyServiceInitProxy2>();
 
         serviceProviderInit.setInitializationProxy(service1->as<const IServiceInitialization&>(), proxy1.get());
         serviceProviderInit.setInitializationProxy(service2->as<const IServiceInitialization&>(), proxy2.get());

@@ -1,39 +1,43 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_pipeline/skinned_mesh_manager.h"
+
+#include <functional>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "graphics_assets/skinned_mesh_asset.h"
 #include "nau/math/dag_lsbVisitor.h"
 
 namespace nau
 {
-    eastl::shared_ptr<nau::SkinnedMeshInstance> SkinnedMeshManager::addSkinnedMesh(SkinnedMeshAssetRef ref)
+    std::shared_ptr<nau::SkinnedMeshInstance> SkinnedMeshManager::addSkinnedMesh(SkinnedMeshAssetRef ref)
     {
         ReloadableAssetView::Ptr meshAsset = *async::waitResult(ref.getReloadableAssetViewTyped<SkinnedMeshAssetView>());
         NAU_ASSERT(meshAsset);
         m_skinnedMeshes.push_back(meshAsset);
 
-        eastl::shared_ptr<nau::SkinnedMeshInstance> ret = eastl::make_shared<nau::SkinnedMeshInstance>();
+        std::shared_ptr<nau::SkinnedMeshInstance> ret = std::make_shared<nau::SkinnedMeshInstance>();
 
         ret->skinnedMesh = m_skinnedMeshes.back();
 
         m_skinnedMeshInstances.emplace_back(ret);
 
-        return eastl::move(ret);
+        return std::move(ret);
     }
 
     RenderList::Ptr nau::SkinnedMeshManager::getRenderList(const nau::math::Vector3& viewerPosition,
-        eastl::function<bool(const InstanceInfo&)>& filterFunc,
-        eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
+                                                           std::function<bool(const InstanceInfo&)>& filterFunc,
+                                                           std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
     {
-        eastl::vector<RenderList::Ptr> lists;
+        std::vector<RenderList::Ptr> lists;
 
         if (!m_skinnedMeshInstances.empty())
         {
             lists.emplace_back();
-            lists.front() = eastl::make_shared<RenderList>();
+            lists.front() = std::make_shared<RenderList>();
         }
 
         for (auto& skinnedMeshInstanceWeak : m_skinnedMeshInstances)
@@ -87,12 +91,12 @@ namespace nau
             ent.instanceData.emplace_back(skinnedMeshInstance->worldMatrix, skinnedMeshInstance->worldMatrix, skinnedMeshInstance->getUid(), skinnedMeshInstance->isHighlighted());
         }
 
-        return eastl::make_shared<RenderList>(std::move(lists));
+        return std::make_shared<RenderList>(std::move(lists));
     }
 
     void SkinnedMeshManager::update()
     {
-        eastl::erase_if(m_skinnedMeshInstances, [](eastl::weak_ptr<nau::SkinnedMeshInstance>& val)
+        std::erase_if(m_skinnedMeshInstances, [](std::weak_ptr<nau::SkinnedMeshInstance>& val)
         {
             return val.expired();
         });

@@ -1,9 +1,10 @@
+#include <algorithm>
+#include <vector>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // windows_app.cpp
 
 #include "./windows_window_manager_impl.h"
-
 #include "nau/app/app_messages.h"
 #include "nau/runtime/internal/runtime_object_registry.h"
 #include "nau/service/service_provider.h"
@@ -85,13 +86,13 @@ namespace nau
         {
             const auto windowMessageHandlers = getServiceProvider().getAll<IWindowMessageHandler>();
             m_windowMessageHandlers.resize(windowMessageHandlers.size());
-            eastl::copy(windowMessageHandlers.begin(), windowMessageHandlers.end(), m_windowMessageHandlers.begin());
+            std::copy(windowMessageHandlers.begin(), windowMessageHandlers.end(), m_windowMessageHandlers.begin());
         }
 
         {
             const auto appMessageHandlers = getServiceProvider().getAll<IWindowsApplicationMessageHandler>();
             m_appMessageHandlers.resize(appMessageHandlers.size());
-            eastl::copy(appMessageHandlers.begin(), appMessageHandlers.end(), m_appMessageHandlers.begin());
+            std::copy(appMessageHandlers.begin(), appMessageHandlers.end(), m_appMessageHandlers.begin());
         }
     }
 
@@ -193,7 +194,7 @@ namespace nau
         // TODO Tracy        NAU_CPU_SCOPED_TAG(nau::PerfTag::Platform);
         using namespace nau::async;
 
-        eastl::vector<Executor::Invocation> invocations;
+        std::vector<Executor::Invocation> invocations;
         {
             lock_(m_mutex);
             if (m_asyncInvocations.empty())

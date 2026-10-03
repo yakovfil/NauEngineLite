@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "nau/app/application.h"
 #include "nau/app/application_init_delegate.h"
 #include "nau/framework/framework_config.h"
@@ -13,12 +15,12 @@ namespace nau
 {
     // Creation and failure cleanup run on the calling thread. Browser callers
     // must use the application worker, never the page UI thread.
-    Result<eastl::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate&);
+    Result<std::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate&);
 
-    eastl::unique_ptr<Application> createApplication(ApplicationInitDelegate&);
+    std::unique_ptr<Application> createApplication(ApplicationInitDelegate&);
 
     [[deprecated("createApplication with delegate should by used")]]
-    eastl::unique_ptr<Application> createApplication(Functor<Result<>()> preInitCallback = {});
+    std::unique_ptr<Application> createApplication(Functor<Result<>()> preInitCallback = {});
 
-    eastl::unique_ptr<IRttiObject> createPlatformWindowService();
+    std::unique_ptr<IRttiObject> createPlatformWindowService();
 }  // namespace nau

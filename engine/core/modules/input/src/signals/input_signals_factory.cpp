@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "input_signals_gate.h"
 #include "input_signals_impl.h"
 #include "input_signals_key.h"
@@ -13,7 +15,7 @@
 
 namespace nau
 {
-    InputSignalImpl* InputSystemImpl::InputSignalFactory::create(const eastl::string& type)
+    InputSignalImpl* InputSystemImpl::InputSignalFactory::create(const std::string& type)
     {
         if (type == "pressed")
         {

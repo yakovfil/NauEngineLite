@@ -1,10 +1,12 @@
+#include <cctype>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <string>
+
 #include "gpuConfig.h"
 #include "gpuVendor.h"
-
 
 //#include <memory/dag_framemem.h>
 #include "nau/dataBlock/dag_dataBlock.h"
@@ -581,8 +583,11 @@ void d3d_apply_gpu_settings(const GpuVideoSettings &video)
   //gpuDescription.toLower();
 
   /////// TODO: remove ugly code
-  eastl::string tempStr = gpuDescription.tostring();
-  tempStr.make_lower();
+  std::string tempStr = gpuDescription.tostring();
+  std::transform(tempStr.begin(), tempStr.end(), tempStr.begin(), [](unsigned char c)
+  {
+      return static_cast<char>(std::tolower(c));
+  });
 
   gpuDescription = tempStr;
 
@@ -702,10 +707,13 @@ void d3d_read_gpu_video_settings(const nau::DataBlock &blk, GpuVideoSettings &ou
     //out_video.oldHardwareList[oldHardwareNo].toLower();
 
       /////// TODO: remove ugly code
-      eastl::string tempStr = out_video.oldHardwareList[oldHardwareNo].tostring();
-      tempStr.make_lower();
+    std::string tempStr = out_video.oldHardwareList[oldHardwareNo].tostring();
+    std::transform(tempStr.begin(), tempStr.end(), tempStr.begin(), [](unsigned char c)
+    {
+        return static_cast<char>(std::tolower(c));
+    });
 
-      out_video.oldHardwareList[oldHardwareNo] = tempStr;
+    out_video.oldHardwareList[oldHardwareNo] = tempStr;
   }
   out_video.adjustVideoSettings = NAU_LOG_DEBUGBlk->getBool("adjustVideoSettings", true);
   out_video.lowVideoMemMb = graphicsBlk->getInt("lowVideoMemMb", 0);

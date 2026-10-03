@@ -2,11 +2,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
 #include <nau/debug/dag_except.h>
 #include <nau/utils/dag_baseDef.h>
 #include <nau/utils/dag_stdint.h>
 
+#include <span>
 #include <type_traits>
 
 #include "nau/diag/assertion.h"
@@ -95,7 +95,7 @@ namespace nau::iosys
         inline void writeString(const T& s)
         {
             int len = s.length();
-            if(!len)
+            if (!len)
             {
                 writeInt(0);
                 return;
@@ -109,7 +109,7 @@ namespace nau::iosys
         /// Write text string. NOTE: padded with zeros to align on 4 bytes.
         inline void writeString(const char* s)
         {
-            if(!s)
+            if (!s)
             {
                 writeInt(0);
                 return;
@@ -130,7 +130,7 @@ namespace nau::iosys
         inline void writeShortString(const T& s)
         {
             int len = s.length();
-            if(len > 0xFFFF)
+            if (len > 0xFFFF)
                 len = 0xFFFF;
 
             writeIntP<2>(len);
@@ -139,14 +139,14 @@ namespace nau::iosys
 
         inline void writeShortString(const char* s)
         {
-            if(!s)
+            if (!s)
             {
                 writeIntP<2>(0);
                 return;
             }
 
             int len = static_cast<int>(strlen(s));
-            if(len > 0xFFFF)
+            if (len > 0xFFFF)
                 len = 0xFFFF;
             writeIntP<2>(len);
             write(s, len);
@@ -210,7 +210,7 @@ namespace nau::iosys
         inline void alignOnDword(int len)
         {
             // alignment! all strings are aligned on 4 bytes boundary
-            if(len & 3)
+            if (len & 3)
             {
                 int zero = 0;
                 write(&zero, 4 - (len & 3));
@@ -287,7 +287,7 @@ namespace nau::iosys
         }
 
         /// Returns underlying ROM-data (e.g. file read from vromfs or in-place memory loader) or (nullptr,0) when non applicable
-        virtual eastl::span<const char> getTargetRomData() const
+        virtual std::span<const char> getTargetRomData() const
         {
             return {};
         }
@@ -321,7 +321,7 @@ namespace nau::iosys
         {
             int rd_part = tryRead(ptr, size);
             int rd = 0;
-            for(rd = rd_part; rd_part && rd < size; rd += rd_part)
+            for (rd = rd_part; rd_part && rd < size; rd += rd_part)
                 rd_part = tryRead(rd + (char*)ptr, size - rd);
 
             NAU_ASSERT(rd == size, "{}: readExact({:p},{})={}", getTargetName(), ptr, size, rd);
@@ -412,13 +412,13 @@ namespace nau::iosys
         inline void gets(char* s, int n)
         {
             int i;
-            for(i = 0; i < n - 1; i++)
+            for (i = 0; i < n - 1; i++)
             {
-                if(tryRead(&s[i], 1) != 1)
+                if (tryRead(&s[i], 1) != 1)
                     break;
-                if(s[i] == '\n')
+                if (s[i] == '\n')
                 {
-                    if(i > 0 && s[i - 1] == '\r')
+                    if (i > 0 && s[i - 1] == '\r')
                         --i;
                     break;
                 }
@@ -431,7 +431,7 @@ namespace nau::iosys
         inline void readVectorData(T& vector)
         {
             const auto dataSize = vector.size() * sizeof(typename T::value_type);
-            if(dataSize)
+            if (dataSize)
             {
                 read(vector.data(), dataSize);
             }
@@ -450,7 +450,7 @@ namespace nau::iosys
         inline bool readTabSafe(T& tab)
         {
             int elemsz = readInt();
-            if(elemsz != elem_size(tab))
+            if (elemsz != elem_size(tab))
             {
                 tab.resize(0);
                 seekrel(elemsz * readInt());
@@ -463,7 +463,7 @@ namespace nau::iosys
         inline void alignOnDword(int len)
         {
             // alignment! all strings are aligned on 4 bytes boundary
-            if(len & 3)
+            if (len & 3)
                 seekrel(4 - (len & 3));
         }
     };

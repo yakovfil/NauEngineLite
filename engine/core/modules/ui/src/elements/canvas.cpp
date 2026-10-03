@@ -1,20 +1,24 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/elements/canvas.h"
+
+#include <algorithm>
+#include <string>
+
 #include "CCDirector.h"
-#include "EASTL/algorithm.h"
 #include "math/Vec2.h"
 #include "nau/diag/assertion.h"
 #include "nau/math/math.h"
 
-
 namespace nau::ui
 {
-const eastl::string Canvas::DEFAULT_NAME = "[unnamed]";
+    const std::string Canvas::DEFAULT_NAME = "[unnamed]";
 
-Canvas::Canvas(const eastl::string& name) : m_canvasName(name) {}
+    Canvas::Canvas(const std::string& name) :
+        m_canvasName(name)
+    {
+    }
 
 Canvas::~Canvas() {}
 
@@ -34,7 +38,7 @@ Canvas* Canvas::create(math::vec2 size, RescalePolicy rescale)
     return ret;
 }
 
-Canvas* Canvas::create(const eastl::string& name, math::vec2 size, RescalePolicy rescale)
+Canvas* Canvas::create(const std::string& name, math::vec2 size, RescalePolicy rescale)
 {
     Canvas * ret = new (std::nothrow) Canvas(name);
     if (ret && ret->init())
@@ -85,7 +89,7 @@ void Canvas::setRescalePolicy(RescalePolicy rescale)
 
                 if (m_size.getX() > windowSize.getX())
                 {
-                    scaleFactor = eastl::min(scaleFactor, windowSize.getY() / m_size.getY());
+                    scaleFactor = std::min(scaleFactor, windowSize.getY() / m_size.getY());
                 }
 
                 setScale(scaleFactor);

@@ -4,17 +4,13 @@
 
 #pragma once
 
-#include <EASTL/map.h>
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/unordered_map.h>
-#include <EASTL/vector.h>
-
+#include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include "nau/async/task.h"

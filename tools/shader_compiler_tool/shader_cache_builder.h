@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/assets/shader_asset_accessor.h"
 #include "shader_cache.h"
 #include "shader_compiler.h"
@@ -41,7 +43,7 @@ namespace nau
         {
             std::vector<CompileConfig> configs;
             std::vector<ShaderPermutation> permutations;
-            eastl::vector<VertexShaderDeclaration> vsd;
+            std::vector<VertexShaderDeclaration> vsd;
         };
 
         Result<std::vector<ShaderInfo>> collectShaderInfo(const fs::path& shadersPath, const fs::path& metafilesPath);

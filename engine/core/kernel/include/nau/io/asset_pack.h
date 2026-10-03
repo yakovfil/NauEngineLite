@@ -3,8 +3,10 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "nau/meta/class_info.h"
-#include "EASTL/vector.h"
 
 /**
  * @brief Defines structures for representing blob data, file entries in asset packs, and asset pack index data.
@@ -18,8 +20,8 @@ namespace nau::io
      */
     struct BlobData
     {
-        size_t size;   ///< Size of the blob.
-        size_t offset; ///< Offset of the blob within a asset pack.
+        size_t size;    ///< Size of the blob.
+        size_t offset;  ///< Offset of the blob within a asset pack.
 
 #pragma region Class Info
         NAU_CLASS_FIELDS(
@@ -34,10 +36,10 @@ namespace nau::io
      */
     struct AssetPackFileEntry
     {
-        eastl::string filePath;            ///< Path to the file within the asset pack.
-        eastl::string contentCompression;  ///< Compression method used for the content, if any.
-        size_t clientSize;                 ///< Size of the file without compression.
-        BlobData blobData;                 ///< Blob data associated with this file entry.
+        std::string filePath;            ///< Path to the file within the asset pack.
+        std::string contentCompression;  ///< Compression method used for the content, if any.
+        size_t clientSize;               ///< Size of the file without compression.
+        BlobData blobData;               ///< Blob data associated with this file entry.
 
 #pragma region Class Info
         NAU_CLASS_FIELDS(
@@ -54,10 +56,10 @@ namespace nau::io
      */
     struct AssetPackIndexData
     {
-        eastl::string version;             ///< Version of the asset pack.
-        eastl::string description;         ///< Description of the asset pack.
+        std::string version;      ///< Version of the asset pack.
+        std::string description;  ///< Description of the asset pack.
 
-        eastl::vector<AssetPackFileEntry> content; ///< List of file entries within the asset pack.
+        std::vector<AssetPackFileEntry> content;  ///< List of file entries within the asset pack.
 
 #pragma region Class Info
         NAU_CLASS_FIELDS(
@@ -66,4 +68,4 @@ namespace nau::io
             CLASS_FIELD(content))
 #pragma endregion
     };
-} // namespace nau::io
+}  // namespace nau::io

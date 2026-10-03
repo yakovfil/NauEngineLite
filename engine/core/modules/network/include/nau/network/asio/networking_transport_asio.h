@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+#include <vector>
+
 #include "nau/network/napi/networking_transport.h"
 
 namespace nau
@@ -28,7 +31,7 @@ namespace nau
          * @param [out] messages    A collection of received message. Empty if no messages.
          * @return                  Number of received messages, i.e. size of **messages**.
          */
-        size_t read(eastl::vector<nau::NetworkingMessage>& messages) override;
+        size_t read(std::vector<nau::NetworkingMessage>& messages) override;
 
         /**
          * @brief Attempts to send the specified message.
@@ -57,14 +60,14 @@ namespace nau
          *
          * @return Local endpoint in URI form.
          */
-        const eastl::string& localEndPoint() const override;
+        const std::string& localEndPoint() const override;
 
         /**
          * @brief Retrieves the remote endpoint as URI.
          *
          * @return Remote endpoint in URI form.
          */
-        const eastl::string& remoteEndPoint() const override;
+        const std::string& remoteEndPoint() const override;
 
     private:
         ASIO_Connection* m_connection;

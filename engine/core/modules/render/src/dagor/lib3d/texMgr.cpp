@@ -2,18 +2,20 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "texMgrData.h"
-#include "nau/osApiWrappers/dag_localConv.h"
-#include "nau/threading/dag_atomic.h"
-#include "nau/dataBlock/dag_dataBlock.h"
-#include "nau/startup/dag_globalSettings.h"
-#include "nau/util/dag_texMetaData.h"
+#include <span>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_tex3d.h"
 #include "nau/3d/fileTexFactory.h"
+#include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/dag_adjpow2.h"
-
+#include "nau/osApiWrappers/dag_localConv.h"
+#include "nau/startup/dag_globalSettings.h"
+#include "nau/threading/dag_atomic.h"
+#include "nau/util/dag_texMetaData.h"
 #include "nau/utils/span.h"
+#include "texMgrData.h"
 
 using namespace texmgr_internal;
 
@@ -139,7 +141,7 @@ bool check_managed_texture_loaded(TEXTUREID tid, bool fq_loaded)
 
   return RMGR.isTexLoaded(idx, fq_loaded);
 }
-bool check_all_managed_textures_loaded(eastl::span<const TEXTUREID> id_list, bool fq_loaded, bool ignore_unref_tex)
+bool check_all_managed_textures_loaded(std::span<const TEXTUREID> id_list, bool fq_loaded, bool ignore_unref_tex)
 {
   if (texmgr_internal::dbg_texq_only_stubs)
     return true;
@@ -705,7 +707,7 @@ void textag_clear_tag(int textag)
   release_texmgr_lock();
 }
 
-void mark_managed_textures_important(eastl::span<const TEXTUREID> id, unsigned add_importance)
+void mark_managed_textures_important(std::span<const TEXTUREID> id, unsigned add_importance)
 {
   for (TEXTUREID tid : id)
   {
@@ -722,7 +724,7 @@ void mark_managed_textures_important(eastl::span<const TEXTUREID> id, unsigned a
 
 const TexTagInfo &textag_get_info(int textag) { return texmgr_internal::textagInfo[textag]; }
 
-void textag_get_list(int textag, eastl::vector<TEXTUREID> &out_list, bool skip_unused)
+void textag_get_list(int textag, std::vector<TEXTUREID>& out_list, bool skip_unused)
 {
   NAU_ASSERT(textag >= 0 && textag < TEXTAG__COUNT);
   int cnt = texmgr_internal::textagInfo[textag].texCount;

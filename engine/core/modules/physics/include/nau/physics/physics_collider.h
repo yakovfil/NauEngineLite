@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <vector>
 
 #include "nau/math/transform.h"
 #include "nau/physics/physics_defines.h"
 #include "nau/physics/physics_material.h"
 #include "nau/rtti/rtti_impl.h"
-
 
 namespace nau::physics
 {
@@ -22,7 +22,7 @@ namespace nau::physics
         /**
          * @brief Pointer type used to reference a collision shape.
          */
-        using Ptr = eastl::unique_ptr<ICollisionShape>;
+        using Ptr = std::unique_ptr<ICollisionShape>;
 
         NAU_INTERFACE(nau::physics::ICollisionShape, IRttiObject)
 
@@ -121,7 +121,7 @@ namespace nau::physics
             /**
              * @brief Vertices of the convex hull.
              */
-            eastl::vector<nau::math::vec3> points;
+            std::vector<nau::math::vec3> points;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(points))
@@ -163,12 +163,12 @@ namespace nau::physics
             /**
              * @brief List of triangles making up the mesh.
              */
-            eastl::vector<Triangle> triangles;
+            std::vector<Triangle> triangles;
 
             /**
              * @brief List of materials which triangles in the mesh can reference via nau::physics::IMeshCollision::Triangle::materialIndex.
              */
-            eastl::vector<nau::physics::IPhysicsMaterial*> materials;
+            std::vector<nau::physics::IPhysicsMaterial*> materials;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(triangles))

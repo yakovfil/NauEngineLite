@@ -19,11 +19,11 @@ struct IAllocImg
 class ILoadImageFactory
 {
 public:
-  virtual TexImage32 *loadImage(const char *fn, eastl::allocator *mem, const char *fn_ext, bool *out_alpha_used = NULL) = 0;
-  virtual TexImage32 *loadImage(IGenLoad & /*crd*/, eastl::allocator * /*mem*/, const char * /*fn_ext*/, bool * /*out_alpha_used*/ = NULL)
-  {
-    return NULL;
-  }
+    virtual TexImage32* loadImage(const char* fn, nau::HeapByteAllocator* mem, const char* fn_ext, bool* out_alpha_used = NULL) = 0;
+    virtual TexImage32* loadImage(IGenLoad& /*crd*/, nau::HeapByteAllocator* /*mem*/, const char* /*fn_ext*/, bool* /*out_alpha_used*/ = NULL)
+    {
+        return NULL;
+    }
 
   virtual bool supportLoadImage2() = 0;
   virtual void *loadImage2(const char *fn, IAllocImg &a, const char *fn_ext) = 0;
@@ -33,7 +33,8 @@ public:
 void add_load_image_factory(ILoadImageFactory *lif, bool add_first = false);
 void del_load_image_factory(ILoadImageFactory *lif);
 
-TexImage32 *load_image(const char *fn, eastl::allocator *mem, bool *out_alpha_used = NULL, const char *fn_ext = NULL);
-TexImage32 *load_image(IGenLoad &crd, const char *fn_ext, eastl::allocator *mem, bool *out_alpha_used = NULL);
+TexImage32* load_image(const char* fn, nau::HeapByteAllocator* mem, bool* out_alpha_used = NULL, const char* fn_ext = NULL);
+TexImage32* load_image(IGenLoad& crd, const char* fn_ext, nau::HeapByteAllocator* mem, bool* out_alpha_used = NULL);
 void *load_image2(const char *fn, IAllocImg &a, const char *fn_ext = NULL);
-void *load_image2(IGenLoad &crd, const char *fn_ext, IAllocImg &a);
+void* load_image2(IGenLoad& crd, const char* fn_ext, IAllocImg& a);
+#include "nau/memory/heap_byte_allocator.h"

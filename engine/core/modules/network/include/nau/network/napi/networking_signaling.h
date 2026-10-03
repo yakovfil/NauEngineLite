@@ -3,7 +3,7 @@
 // inetworking_signaling.h
 
 #pragma once
-#include <EASTL/string.h>
+#include <string>
 
 namespace nau
 {
@@ -19,7 +19,7 @@ namespace nau
          * @param [in] identity Destination identity.
          * @param [in] data     Data to send.
          */
-        virtual void send(const eastl::string& identity, const eastl::string& data) = 0;
+        virtual void send(const std::string& identity, const std::string& data) = 0;
 
         /**
          * @brief Sets the callback that is used to filter data from the side channel.
@@ -28,6 +28,6 @@ namespace nau
          * 
          * @note The callback takes the source directory and a reference to the received data as parameters.
          */
-        virtual void setOnDispatch(nau::Functor<bool(const eastl::string& fromIdentity, const eastl::string& data)> cb) = 0;
+        virtual void setOnDispatch(nau::Functor<bool(const std::string& fromIdentity, const std::string& data)> cb) = 0;
     };
 }  // namespace nau

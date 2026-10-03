@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include <EASTL/string_view.h>
+#include <string_view>
 
 #include "nau/scene/nau_object.h"
 #include "nau/scene/scene_object.h"
@@ -27,14 +27,14 @@ namespace nau::scene
          * 
          * @return Name of the scene.
          */
-        virtual eastl::string_view getName() const = 0;
+        virtual std::string_view getName() const = 0;
 
         /**
          * @brief Assigns the name to the scene.
          * 
          * @param [in] name Name to assign.
          */
-        virtual void setName(eastl::string_view name) = 0;
+        virtual void setName(std::string_view name) = 0;
 
         /**
          * @brief Retrieves the world which the scene is associated with.

@@ -3,15 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/threading/spin_lock.h"
-#include "nau/threading/lock_guard.h"
+#include <memory>
+#include <span>
 
 #include "descriptor_heap.h"
-#include "pipeline.h"
 #include "format_store.h"
-
+#include "nau/threading/lock_guard.h"
+#include "nau/threading/spin_lock.h"
+#include "pipeline.h"
 #include "resource_manager/object_components.h"
-
 
 namespace drv3d_dx12
 {
@@ -70,7 +70,7 @@ protected:
 public:
   D3D12_CPU_DESCRIPTOR_HANDLE allocateTextureSRVDescriptor(ID3D12Device *device) { return srvHeap.allocate(device); }
   void freeTextureSRVDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor) { srvHeap.free(descriptor); }
-  void freeTextureSRVDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
+  void freeTextureSRVDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
   {
     for (auto &&descriptor : descriptors)
     {
@@ -79,7 +79,7 @@ public:
   }
   D3D12_CPU_DESCRIPTOR_HANDLE allocateTextureRTVDescriptor(ID3D12Device *device) { return rtvHeap.allocate(device); }
   void freeTextureRTVDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor) { rtvHeap.free(descriptor); }
-  void freeTextureRTVDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
+  void freeTextureRTVDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
   {
     for (auto &&descriptor : descriptors)
     {
@@ -88,7 +88,7 @@ public:
   }
   D3D12_CPU_DESCRIPTOR_HANDLE allocateTextureDSVDescriptor(ID3D12Device *device) { return dsvHeap.allocate(device); }
   void freeTextureDSVDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor) { dsvHeap.free(descriptor); }
-  void freeTextureDSVDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
+  void freeTextureDSVDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
   {
     for (auto &&descriptor : descriptors)
     {
@@ -129,38 +129,36 @@ protected:
     srvHeap.access()->init(info.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
   }
 
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> createBufferSRVs(ID3D12Device *device, ID3D12Resource *buffer, uint32_t count,
-    D3D12_SHADER_RESOURCE_VIEW_DESC desc)
+  std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> createBufferSRVs(ID3D12Device* device, ID3D12Resource* buffer, uint32_t count, D3D12_SHADER_RESOURCE_VIEW_DESC desc)
   {
-    auto descriptors = eastl::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(count);
-    auto srvHeapAccess = srvHeap.access();
-    for (uint32_t i = 0; i < count; ++i)
-    {
-      descriptors[i] = srvHeapAccess->allocate(device);
-      device->CreateShaderResourceView(buffer, &desc, descriptors[i]);
-      desc.Buffer.FirstElement += desc.Buffer.NumElements;
-    }
+      auto descriptors = std::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(count);
+      auto srvHeapAccess = srvHeap.access();
+      for (uint32_t i = 0; i < count; ++i)
+      {
+          descriptors[i] = srvHeapAccess->allocate(device);
+          device->CreateShaderResourceView(buffer, &desc, descriptors[i]);
+          desc.Buffer.FirstElement += desc.Buffer.NumElements;
+      }
     return descriptors;
   }
 
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> createBufferUAVs(ID3D12Device *device, ID3D12Resource *buffer, uint32_t count,
-    D3D12_UNORDERED_ACCESS_VIEW_DESC desc)
+  std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> createBufferUAVs(ID3D12Device* device, ID3D12Resource* buffer, uint32_t count, D3D12_UNORDERED_ACCESS_VIEW_DESC desc)
   {
-    auto descriptors = eastl::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(count);
-    auto srvHeapAccess = srvHeap.access();
-    for (uint32_t i = 0; i < count; ++i)
-    {
-      descriptors[i] = srvHeapAccess->allocate(device);
-      device->CreateUnorderedAccessView(buffer, nullptr, &desc, descriptors[i]);
-      desc.Buffer.FirstElement += desc.Buffer.NumElements;
-    }
+      auto descriptors = std::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(count);
+      auto srvHeapAccess = srvHeap.access();
+      for (uint32_t i = 0; i < count; ++i)
+      {
+          descriptors[i] = srvHeapAccess->allocate(device);
+          device->CreateUnorderedAccessView(buffer, nullptr, &desc, descriptors[i]);
+          desc.Buffer.FirstElement += desc.Buffer.NumElements;
+      }
     return descriptors;
   }
 
 public:
   D3D12_CPU_DESCRIPTOR_HANDLE allocateBufferSRVDescriptor(ID3D12Device *device) { return srvHeap.access()->allocate(device); }
   void freeBufferSRVDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE descriptor) { srvHeap.access()->free(descriptor); }
-  void freeBufferSRVDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
+  void freeBufferSRVDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
   {
     for (auto &&descriptor : descriptors)
     {
@@ -188,7 +186,7 @@ public:
   {
     NAU_ASSERT(0 == (buffer.offset % struct_size), "DX12: Offset {} has to be multiples of element size {}", buffer.offset,
       struct_size);
-    auto srvs = eastl::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(buffer.discardCount);
+    auto srvs = std::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(buffer.discardCount);
     D3D12_SHADER_RESOURCE_VIEW_DESC desc;
     desc.Format = DXGI_FORMAT_UNKNOWN;
     desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -209,7 +207,7 @@ public:
       NAU_ASSERT(0 == (buffer.size % 16), "DX12: Buffer size {} has to be multiples of 16", buffer.size);
     }
     NAU_ASSERT(0 == (buffer.offset % 16), "DX12: Offset {} has to be multiples of 16", buffer.offset);
-    auto srvs = eastl::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(buffer.discardCount);
+    auto srvs = std::make_unique<D3D12_CPU_DESCRIPTOR_HANDLE[]>(buffer.discardCount);
     D3D12_SHADER_RESOURCE_VIEW_DESC desc;
     desc.Format = DXGI_FORMAT_R32_TYPELESS;
     desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;

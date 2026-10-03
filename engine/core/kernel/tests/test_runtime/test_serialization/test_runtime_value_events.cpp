@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_runtime_value.cpp
 
+#include <map>
+#include <vector>
 
 #include "nau/serialization/runtime_value_builder.h"
 #include "nau/serialization/runtime_value_events.h"
@@ -68,7 +70,7 @@ namespace nau::test
         ASSERT_TRUE(makeValueCopy(unsigned{77})->is<IRuntimeValueEvents>());
         ASSERT_TRUE(makeValueCopy(float{77.f})->is<IRuntimeValueEvents>());
         ASSERT_TRUE(makeValueCopy(bool{true})->is<IRuntimeValueEvents>());
-        //ASSERT_TRUE(makeValueCopy(std::string{})->is<IRuntimeValueEvents>());
+        // ASSERT_TRUE(makeValueCopy(std::string{})->is<IRuntimeValueEvents>());
         ASSERT_TRUE(makeValueCopy(std::optional<float>{77.f})->is<IRuntimeValueEvents>());
         ASSERT_TRUE(makeValueCopy(std::vector<float>{})->is<IRuntimeValueEvents>());
         ASSERT_TRUE(makeValueCopy(std::tuple<float, unsigned>{})->is<IRuntimeValueEvents>());
@@ -123,7 +125,7 @@ namespace nau::test
      */
     TEST_F(TestRuntimeValueEvents, ChangeCollection_Append)
     {
-        eastl::vector<float> collection;
+        std::vector<float> collection;
         const RuntimeCollection::Ptr runtimeValue = makeValueRefAndSubscribe(collection);
         runtimeValue->append(makeValueCopy(1.f)).ignore();
         ASSERT_TRUE(isChanged());
@@ -133,7 +135,7 @@ namespace nau::test
      */
     TEST_F(TestRuntimeValueEvents, ChangeCollection_Clear)
     {
-        eastl::vector<float> collection;
+        std::vector<float> collection;
         const RuntimeCollection::Ptr runtimeValue = makeValueRefAndSubscribe(collection);
         runtimeValue->append(makeValueCopy(1.f)).ignore();
 
@@ -147,7 +149,7 @@ namespace nau::test
      */
     TEST_F(TestRuntimeValueEvents, ChangeCollection_ChangeElement_1)
     {
-        eastl::vector<float> collection;
+        std::vector<float> collection;
         const RuntimeCollection::Ptr runtimeValue = makeValueRefAndSubscribe(collection);
         runtimeValue->append(makeValueCopy(1.f)).ignore();
         runtimeValue->append(makeValueCopy(2.f)).ignore();
@@ -167,7 +169,7 @@ namespace nau::test
      */
     TEST_F(TestRuntimeValueEvents, ChangeCollection_ChangeElement_2)
     {
-        eastl::vector<FooObject> collection;
+        std::vector<FooObject> collection;
         const RuntimeCollection::Ptr runtimeValue = makeValueRefAndSubscribe(collection);
         runtimeValue->append(makeValueCopy(FooObject{1})).ignore();
         runtimeValue->append(makeValueCopy(FooObject{2})).ignore();
@@ -192,8 +194,8 @@ namespace nau::test
      */
     TEST_F(TestRuntimeValueEvents, ChangeDictionary_Set)
     {
-        eastl::map<std::string, FooObject> dict;
-        
+        std::map<std::string, FooObject> dict;
+
         const RuntimeDictionary::Ptr runtimeValue = makeValueRefAndSubscribe(dict);
         runtimeValue->setValue("one", makeValueCopy(FooObject{1})).ignore();
         runtimeValue->setValue("two", makeValueCopy(FooObject{1})).ignore();
@@ -203,7 +205,7 @@ namespace nau::test
 
     TEST_F(TestRuntimeValueEvents, ChangeDictionary_ChangeElement)
     {
-        eastl::map<std::string, FooObject> dict;
+        std::map<std::string, FooObject> dict;
         const RuntimeDictionary::Ptr runtimeValue = makeValueRefAndSubscribe(dict);
         runtimeValue->setValue("one", makeValueCopy(FooObject{1})).ignore();
         runtimeValue->setValue("two", makeValueCopy(FooObject{1})).ignore();

@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <string_view>
+
 #include "drv3d_DX12/device.h"
 
 #if USE_PIX
@@ -136,7 +138,7 @@ void debug::pc::DeviceState::beginCommandBuffer(D3DDevice *device, ID3D12Graphic
 
 void debug::pc::DeviceState::endCommandBuffer(ID3D12GraphicsCommandList *cmd) { globalState->postmortemTrace().endCommandBuffer(cmd); }
 
-void debug::pc::DeviceState::beginSection(ID3D12GraphicsCommandList *cmd, eastl::string_view text)
+void debug::pc::DeviceState::beginSection(ID3D12GraphicsCommandList* cmd, std::string_view text)
 {
   auto eventText = event_marker::Tracker::beginEvent(text);
   globalState->captureTool().beginEvent(cmd, eventText);
@@ -150,7 +152,7 @@ void debug::pc::DeviceState::endSection(ID3D12GraphicsCommandList *cmd)
   globalState->postmortemTrace().endEvent(cmd, currentEventPath());
 }
 
-void debug::pc::DeviceState::marker(ID3D12GraphicsCommandList *cmd, eastl::string_view text)
+void debug::pc::DeviceState::marker(ID3D12GraphicsCommandList* cmd, std::string_view text)
 {
   auto markerText = event_marker::Tracker::marker(text);
   globalState->captureTool().marker(cmd, markerText);

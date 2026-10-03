@@ -3,9 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
 #include <stdint.h>
 
+#include <type_traits>
 
 // TODO: change to dabfg::detail
 namespace dabfg
@@ -13,7 +13,7 @@ namespace dabfg
 
 enum class NameSpaceNameId : uint16_t
 {
-  Invalid = static_cast<eastl::underlying_type_t<NameSpaceNameId>>(-1)
+    Invalid = static_cast<std::underlying_type_t<NameSpaceNameId>>(-1)
 };
 
 } // namespace dabfg

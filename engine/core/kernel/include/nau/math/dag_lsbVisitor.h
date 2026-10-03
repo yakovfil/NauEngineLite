@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <EASTL/iterator.h>
-#include <EASTL/type_traits.h>
+#include <iterator>
+#include <type_traits>
+
 #include "dag_intrin.h"
 
 namespace nau::math
@@ -26,9 +27,9 @@ namespace nau::math
     {
         struct Iterator
         {
-            using iterator_category = eastl::input_iterator_tag;
-            using value_type = eastl::conditional_t<is64Bit, uint64_t, uint32_t>;
-            using difference_type = eastl::conditional_t<is64Bit, int64_t, int32_t>;
+            using iterator_category = std::input_iterator_tag;
+            using value_type = std::conditional_t<is64Bit, uint64_t, uint32_t>;
+            using difference_type = std::conditional_t<is64Bit, int64_t, int32_t>;
             using pointer = value_type const*;
             using reference = const value_type&;
 
@@ -92,4 +93,3 @@ namespace nau::math
     LsbVisitor(T value) -> LsbVisitor<sizeof(T) == 8>;
 
 }  // namespace nau::math
-

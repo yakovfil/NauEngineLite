@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <array>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3d_buffers.h"
 //#include <generic/dag_carray.h>
@@ -10,14 +12,14 @@
 IMMEDIATE_CB_NAMESPACE
 {
 #endif
-  static eastl::array<Sbuffer *, STAGE_MAX> immediate_cb;
-  bool init_immediate_cb()
-  {
-    immediate_cb[STAGE_CS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_cs");
-    immediate_cb[STAGE_PS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_ps");
-    immediate_cb[STAGE_VS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_vs");
-    return immediate_cb[STAGE_CS] && immediate_cb[STAGE_PS] && immediate_cb[STAGE_VS];
-  }
+    static std::array<Sbuffer*, STAGE_MAX> immediate_cb;
+    bool init_immediate_cb()
+    {
+        immediate_cb[STAGE_CS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_cs");
+        immediate_cb[STAGE_PS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_ps");
+        immediate_cb[STAGE_VS] = d3d::buffers::create_persistent_cb(1, "_immediate_cb_vs");
+        return immediate_cb[STAGE_CS] && immediate_cb[STAGE_PS] && immediate_cb[STAGE_VS];
+    }
 
   void term_immediate_cb()
   {

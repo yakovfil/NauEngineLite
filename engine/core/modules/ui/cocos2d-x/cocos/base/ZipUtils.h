@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 #include "platform/CCPlatformMacros.h"
 #include "platform/CCFileUtils.h"
-#include <EASTL/string.h>
+#include <string>
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
 #include "platform/android/CCFileUtils-android.h"

@@ -4,11 +4,11 @@
 
 #include "render/daBfg/nameSpace.h"
 
-#include <EASTL/fixed_string.h>
+#include <span>
+
 #include "dabfg/runtime/runtime.h"
 #include "nau/diag/logging.h"
 #include "nau/math/math.h"
-
 
 namespace dabfg
 {
@@ -90,7 +90,7 @@ void NameSpace::fillSlot(NamedSlot slot, NameSpace res_name_space, const char *r
   Runtime::get().markStageDirty(CompilationStage::REQUIRES_NAME_RESOLUTION);
 }
 
-void NameSpace::updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names)
+void NameSpace::updateExternallyConsumedResourceSet(std::span<const char* const> res_names)
 {
   auto &registry = Runtime::get().getInternalRegistry();
 

@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/asset_tools/compilers/texture_compilers.h"
+
+#include <string_view>
+#include <vector>
 
 #include "nau/asset_tools/asset_compiler.h"
 #include "nau/asset_tools/asset_info.h"
@@ -28,11 +30,11 @@ namespace nau
 {
     namespace compilers
     {
-        IAssetContainerLoader* getTextureLoader(eastl::string_view extension)
+        IAssetContainerLoader* getTextureLoader(std::string_view extension)
         {
             for (auto* const loader : getServiceProvider().getAll<IAssetContainerLoader>())
             {
-                eastl::vector<eastl::string_view> supportedExtensions = loader->getSupportedAssetKind();
+                std::vector<std::string_view> supportedExtensions = loader->getSupportedAssetKind();
                 if (std::find(supportedExtensions.begin(), supportedExtensions.end(), extension) != supportedExtensions.end())
                 {
                     return loader;

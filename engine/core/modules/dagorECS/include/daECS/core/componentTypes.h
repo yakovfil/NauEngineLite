@@ -3,8 +3,6 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>       //for ecs::string type
-#include <EASTL/type_traits.h>  //for true type
 #include <daECS/core/baseComponentTypes/arrayType.h>
 #include <daECS/core/baseComponentTypes/listType.h>
 #include <daECS/core/baseComponentTypes/objectType.h>
@@ -14,10 +12,13 @@
 #include <nau/math/math.h>
 #include <nau/math/transform.h>
 
+#include <string>       //for ecs::string type
+#include <type_traits>  //for true type
+
 // all basic types
 ECS_DECLARE_TYPE(bool);
-ECS_DECLARE_TYPE_ALIAS(eastl::true_type, bool);
-ECS_DECLARE_TYPE_ALIAS(eastl::false_type, bool);
+ECS_DECLARE_TYPE_ALIAS(std::true_type, bool);
+ECS_DECLARE_TYPE_ALIAS(std::false_type, bool);
 ECS_DECLARE_TYPE(uint8_t);
 ECS_DECLARE_TYPE(uint16_t);
 ECS_DECLARE_TYPE(uint32_t);
@@ -45,8 +46,8 @@ ECS_DECLARE_TYPE(nau::math::Transform);  // mat44f
 //ECS_DECLARE_TYPE(Vectormath::SSE::bbox3f);   // bbox3f
 ECS_DECLARE_TYPE(nau::math::E3DCOLOR);
 
-ECS_DECLARE_RELOCATABLE_TYPE(ecs::Array);
-ECS_DECLARE_RELOCATABLE_TYPE(ecs::Object);
+ECS_DECLARE_BOXED_TYPE(ecs::Array);
+ECS_DECLARE_BOXED_TYPE(ecs::Object);
 
 #define ECS_DECL_LIST_TYPES                 \
     DECL_LIST_TYPE(UInt8List, uint8_t)      \
@@ -81,6 +82,6 @@ namespace ecs
 #undef DECL_LIST_TYPE
 }  // namespace ecs
 
-#define DECL_LIST_TYPE(type_alias, T) ECS_DECLARE_RELOCATABLE_TYPE(ecs::type_alias);
+#define DECL_LIST_TYPE(type_alias, T) ECS_DECLARE_BOXED_TYPE(ecs::type_alias);
 ECS_DECL_LIST_TYPES
 #undef DECL_LIST_TYPE

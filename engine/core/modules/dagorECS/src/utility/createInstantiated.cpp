@@ -7,7 +7,7 @@
 #include <daECS/core/template.h>
 #include <daECS/utility/createInstantiated.h>
 
-#include <EASTL/utility.h>
+#include <utility>
 
 namespace ecs
 {
@@ -15,12 +15,12 @@ namespace ecs
 EntityId createInstantiatedEntitySync(EntityManager &mgr, const char *name, ComponentsInitializer &&initializer)
 {
   const template_t t = mgr.getTemplateDB().getInstantiatedTemplateByName(name);
-  if (EASTL_UNLIKELY(t == ecs::INVALID_TEMPLATE_INDEX))
+  if (NAU_UNLIKELY(t == ecs::INVALID_TEMPLATE_INDEX))
   {
     logerr("Template '{}' hasn't been instantiated", name);
     return INVALID_ENTITY_ID;
   }
-  return mgr.createEntitySync(name, eastl::move(initializer));
+  return mgr.createEntitySync(name, std::move(initializer));
 }
 
 } // namespace ecs

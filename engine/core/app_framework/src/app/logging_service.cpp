@@ -3,6 +3,8 @@
 
 #include "logging_service.h"
 
+#include <string_view>
+
 #include "nau/diag/log_subscribers.h"
 
 namespace nau
@@ -32,7 +34,7 @@ namespace nau
         diag::setLogger(nullptr);
     }
 
-    void LoggingService::addFileOutput(eastl::string_view filename)
+    void LoggingService::addFileOutput(std::string_view filename)
     {
         using namespace nau::diag;
         m_logSubscriptions.push_back(getLogger().subscribe(createFileOutputLogSubscriber(filename)));

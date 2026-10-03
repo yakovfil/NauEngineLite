@@ -1,18 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "usd_animation_clip_composer.h"
 
-#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
-#include "nau/NauAnimationClipAsset/nauAnimationTrack.h"
-
-#include <pxr/usd/usd/attribute.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/base/vt/array.h>
+#include <pxr/usd/usd/attribute.h>
 
 #include <string>
+#include <vector>
+
+#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
+#include "nau/NauAnimationClipAsset/nauAnimationTrack.h"
 
 namespace UsdTranslator
 {
@@ -79,7 +79,7 @@ namespace UsdTranslator
         }
     }
 
-    const eastl::vector<nau::AnimationDataDescriptor>& AnimationClipComposer::getAnimationDataDescriptors() const noexcept
+    const std::vector<nau::AnimationDataDescriptor>& AnimationClipComposer::getAnimationDataDescriptors() const noexcept
     {
         return m_descriptors;
     }
@@ -124,11 +124,11 @@ namespace UsdTranslator
         }
     }
 
-    eastl::vector<nau::math::quat> AnimationClipComposer::convertToQuatVec(size_t animationIndex) const
+    std::vector<nau::math::quat> AnimationClipComposer::convertToQuatVec(size_t animationIndex) const
     {
-        const eastl::vector<nau::math::vec3>& data = m_trackList[animationIndex].second;
+        const std::vector<nau::math::vec3>& data = m_trackList[animationIndex].second;
 
-        eastl::vector<nau::math::quat> quats;
+        std::vector<nau::math::quat> quats;
         quats.reserve(data.size());
 
         for (const auto& vec3f : data)

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 
+#include <memory>
+#include <string>
+#include <string>
 #include <nau/app/core_window_manager.h>
 #include <nau/app/run_application.h>
 
@@ -72,7 +75,7 @@ private:
         return nau::applyDefaultAppConfiguration();
     }
 
-    eastl::string getModulesListString() const override
+    std::string getModulesListString() const override
     {
 #if !defined(NAU_STATIC_RUNTIME)
         return NAU_MODULES_LIST;
@@ -93,7 +96,7 @@ private:
     void setupPhysicsWorld()
     {
         GlobalProperties& globalProperties = getServiceProvider().get<GlobalProperties>();
-        auto result = globalProperties.getValue<eastl::u8string>("projectDir");
+        auto result = globalProperties.getValue<std::u8string>("projectDir");
         NAU_ASSERT(result.has_value(), "Fail to get project dir value.");
 
         const std::filesystem::path& projectRootDir =
@@ -157,7 +160,7 @@ private:
 
 ApplicationDelegate::Ptr createSampleAppDelegate(Functor<async::Task<>()> startup)
 {
-    return eastl::make_unique<MainAppDelegate>(std::move(startup));
+    return std::make_unique<MainAppDelegate>(std::move(startup));
 }
 
 namespace

@@ -2,9 +2,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #pragma once
-
 #include <nau/math/dag_e3dColor.h>
 #include <nau/math/math.h>
+
+#include <type_traits>
 
 #include "nau/serialization/runtime_value_builder.h"
 
@@ -14,7 +15,7 @@ namespace nau::math
     NAU_FORCE_INLINE To bitwise_cast(const From& from)
     {
         static_assert(sizeof(To) == sizeof(From), "bitwise_cast: types of different sizes provided");
-        static_assert(eastl::is_pointer<To>::value == eastl::is_pointer<From>::value,
+        static_assert(std::is_pointer<To>::value == std::is_pointer<From>::value,
                       "bitwise_cast: can't cast between pointer and non-pointer types");
         static_assert(sizeof(From) <= 16, "bitwise_cast: can't cast types of size > 16");
         To result;
@@ -697,7 +698,6 @@ namespace nau::math
         Color4 m_color;
     };
 
-
     class Color3RuntimeValue : public ser_detail::NativePrimitiveRuntimeValueBase<RuntimeReadonlyCollection>,
                                public RuntimeReadonlyDictionary
     {
@@ -813,7 +813,6 @@ namespace nau::math
 
         Color3 m_color;
     };
-
 
     inline ::nau::RuntimeValue::Ptr
     makeValueRef(const Color4& color, ::nau::IMemAllocator::Ptr allocator = nullptr)

@@ -1,12 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/variant.h>
-
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "nau/dag_ioSys/dag_baseIo.h"
@@ -27,7 +24,7 @@ namespace nau::io_detail
         NAU_CLASS(StringWriterImpl<Char>, rtti::RCPolicy::StrictSingleThread, IStreamWriter)
 
     public:
-        using String = eastl::basic_string<Char>;
+        using String = std::basic_string<Char>;
 
         StringWriterImpl(String& outputString) :
             m_string(outputString)
@@ -107,7 +104,7 @@ namespace nau::io
     class InplaceStringWriter : public io_detail::InplaceStreamHolder<io_detail::StringWriterImpl<Char>, IStreamWriter>
     {
     public:
-        InplaceStringWriter(eastl::basic_string<Char>& outputString)
+        InplaceStringWriter(std::basic_string<Char>& outputString)
         {
             this->createStream(outputString);
         }
@@ -118,7 +115,7 @@ namespace nau::io
     class NAU_KERNEL_EXPORT GenLoadOverStream : public iosys::IBaseLoad
     {
     public:
-        GenLoadOverStream(IStreamReader::Ptr stream, eastl::string_view targetName = {});
+        GenLoadOverStream(IStreamReader::Ptr stream, std::string_view targetName = {});
         GenLoadOverStream(const GenLoadOverStream&) = delete;
         GenLoadOverStream(GenLoadOverStream&&) = default;
 
@@ -139,7 +136,7 @@ namespace nau::io
 
     private:
         IStreamReader::Ptr m_stream;
-        eastl::string m_targetName;
+        std::string m_targetName;
     };
 
 }  // namespace nau::io

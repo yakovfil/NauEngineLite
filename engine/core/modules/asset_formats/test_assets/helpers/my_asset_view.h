@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/assets/asset_view.h"
 #include "nau/rtti/rtti_impl.h"
 
@@ -15,17 +17,17 @@ namespace nau::test
         NAU_CLASS_(MyAssetView, IAssetView)
 
     public:
-        MyAssetView(eastl::string data) :
+        MyAssetView(std::string data) :
             m_data(std::move(data))
         {
         }
 
-        eastl::string getData() const
+        std::string getData() const
         {
             return m_data;
         }
 
     private:
-        eastl::string m_data;
+        std::string m_data;
     };
 }  // namespace nau::test

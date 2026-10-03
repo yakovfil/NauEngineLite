@@ -3,22 +3,21 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_map.h>
-#include "nau/utils/dag_relocatableFixedVector.h"
-#include "nau/utils/dag_FixedVectorSet.h"
-
-#include "render/daBfg/bfg.h"
-#include "render/daBfg/externalResources.h"
+#include <optional>
+#include <string>
+#include <variant>
 
 #include "dabfg/common/autoResolutionData.h"
 #include "dabfg/common/bindingType.h"
 #include "dabfg/frontend/resourceProvider.h"
-#include "dabfg/id/idIndexedMapping.h"
 #include "dabfg/id/idHierarchicalNameMap.h"
-#include <EASTL/optional.h>
-#include <EASTL/variant.h>
+#include "dabfg/id/idIndexedMapping.h"
+#include "nau/utils/dag_FixedVectorSet.h"
+#include "nau/utils/dag_relocatableFixedVector.h"
+#include "nau/utils/fixed_map.h"
+#include "render/daBfg/bfg.h"
 #include "render/daBfg/detail/access.h"
-
+#include "render/daBfg/externalResources.h"
 
 namespace dabfg
 {
@@ -77,11 +76,11 @@ struct NodeStateRequirements
   bool supportsWireframe = false;
 
   // Toggles VRS
-  eastl::optional<VrsStateRequirements> vrsState = {};
+  std::optional<VrsStateRequirements> vrsState = {};
 
   // Toggles C++ overrides for rendering pipeline state
   // (which is usually configured in dagor shader code)
-  eastl::optional<shaders::OverrideState> pipelineStateOverride = {};
+  std::optional<shaders::OverrideState> pipelineStateOverride = {};
 };
 
 struct Binding
@@ -95,7 +94,7 @@ struct Binding
 };
 
 //using BindingsMap = dag::FixedVectorMap<int, Binding, 8>;
-using BindingsMap = eastl::fixed_map<int, Binding, 8>;
+using BindingsMap = nau::FixedMap<int, Binding, 8>;
 
 struct NodeData
 {
@@ -118,12 +117,12 @@ struct NodeData
   dag::FixedVectorSet<ResNameId, 8> readResources;
   // Maps renamed resource to previous name.
   //dag::FixedVectorMap<ResNameId, ResNameId, 8> renamedResources;
-  eastl::fixed_map<ResNameId, ResNameId, 8> renamedResources;
+  nau::FixedMap<ResNameId, ResNameId, 8> renamedResources;
 
   // Every resource present in maps/sets above shall have a
   // corresponding element here.
   //dag::FixedVectorMap<ResNameId, ResourceRequest, 16> resourceRequests;
-  eastl::fixed_map<ResNameId, ResourceRequest, 16> resourceRequests;
+  nau::FixedMap<ResNameId, ResourceRequest, 16> resourceRequests;
 
   // History resources are handled separately with a crutch:
   // we only allow history reads and list them separately from
@@ -133,25 +132,25 @@ struct NodeData
   // storing an additional flag for all structs above.
   // This is implementable, but not worth it right now.
   //dag::FixedVectorMap<ResNameId, ResourceRequest, 16> historyResourceReadRequests;
-  eastl::fixed_map<ResNameId, ResourceRequest, 16> historyResourceReadRequests;
+  nau::FixedMap<ResNameId, ResourceRequest, 16> historyResourceReadRequests;
 
-  eastl::optional<NodeStateRequirements> stateRequirements;
-  eastl::optional<VirtualPassRequirements> renderingRequirements;
+  std::optional<NodeStateRequirements> stateRequirements;
+  std::optional<VirtualPassRequirements> renderingRequirements;
   BindingsMap bindings;
   ShaderBlockLayersInfo shaderBlockLayers;
 
   // For debug purposes only. Source location where this node was defined.
-  eastl::string nodeSource;
+  std::string nodeSource;
 };
 
-using ResourceCreationInfo = eastl::variant<eastl::monostate, ResourceDescription, BlobDescription, ExternalResourceProvider>;
+using ResourceCreationInfo = std::variant<std::monostate, ResourceDescription, BlobDescription, ExternalResourceProvider>;
 
 struct ResourceData
 {
-  ResourceCreationInfo creationInfo = eastl::monostate{};
-  eastl::optional<AutoResolutionData> resolution = eastl::nullopt;
-  ResourceType type = ResourceType::Invalid;
-  History history = History::No;
+    ResourceCreationInfo creationInfo = std::monostate{};
+    std::optional<AutoResolutionData> resolution = std::nullopt;
+    ResourceType type = ResourceType::Invalid;
+    History history = History::No;
 };
 
 struct AutoResType
@@ -177,7 +176,7 @@ struct InternalRegistry
   IdIndexedMapping<ResNameId, ResourceData> resources;
   IdIndexedMapping<NodeNameId, NodeData> nodes;
   IdIndexedMapping<AutoResTypeNameId, AutoResType> autoResTypes;
-  IdIndexedMapping<ResNameId, eastl::optional<SlotData>> resourceSlots;
+  IdIndexedMapping<ResNameId, std::optional<SlotData>> resourceSlots;
 
   // Set of external resources that are considered to be sinks and are
   // therefore never pruned.

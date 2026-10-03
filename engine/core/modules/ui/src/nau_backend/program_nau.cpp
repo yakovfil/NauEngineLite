@@ -23,8 +23,11 @@
  THE SOFTWARE.
  ****************************************************************************/
 
-
 #include "program_nau.h"
+
+#include <array>
+#include <string>
+#include <unordered_map>
 
 #include "base/CCDirector.h"
 #include "base/CCEventDispatcher.h"
@@ -87,7 +90,7 @@ void ProgramNau::computeLocations()
 }
 
 /// built-in attribute names
-eastl::unordered_map<eastl::string, const char*> ShadersToBuildInAttributeNames = {
+std::unordered_map<std::string, const char*> ShadersToBuildInAttributeNames = {
     { "POSITION",  cocos2d::backend::ATTRIBUTE_NAME_POSITION},
     {    "COLOR",     cocos2d::backend::ATTRIBUTE_NAME_COLOR},
     { "TEXCOORD",  cocos2d::backend::ATTRIBUTE_NAME_TEXCOORD},
@@ -196,7 +199,7 @@ PROGRAM ProgramNau::getHandler(VDECL vdecl)
         return _shadersPool[vdecl];
     }
 
-    eastl::array shaders = {m_vertexShader, m_pixelShader};
+    std::array shaders = {m_vertexShader, m_pixelShader};
 
     PROGRAM prog = ShaderAssetView::makeShaderProgram(shaders, vdecl);
     _shadersPool[vdecl] = prog;

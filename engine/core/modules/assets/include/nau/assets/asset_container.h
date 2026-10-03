@@ -3,17 +3,17 @@
 
 
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/asset_accessor.h"
+#include "nau/assets/asset_content_provider.h"
 #include "nau/async/task.h"
 #include "nau/io/stream.h"
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/serialization/runtime_value.h"
-#include "nau/assets/asset_content_provider.h"
 
 namespace nau
 {
@@ -32,14 +32,14 @@ namespace nau
          * @param [in] path Asset path within the container.
          * @return          Implementation-defined object for accessing the asset (e.g. an accessor or a view).
          */
-        virtual nau::Ptr<> getAsset(eastl::string_view path = {}) = 0;
+        virtual nau::Ptr<> getAsset(std::string_view path = {}) = 0;
 
         /**
          * @brief Retrieves a collection of names of the contained assets.
          * 
          * @return A collection of contained assets names.
          */
-        virtual eastl::vector<eastl::string> getContent() const = 0;
+        virtual std::vector<std::string> getContent() const = 0;
     };
 
     /*
@@ -59,7 +59,7 @@ namespace nau
          * 
          * @return A collection of asset kind names supported by the interface implementation.
          */
-        virtual eastl::vector<eastl::string_view> getSupportedAssetKind() const = 0;
+        virtual std::vector<std::string_view> getSupportedAssetKind() const = 0;
 
         /**
          * @brief Schedules asset load from a byte stream into a container.

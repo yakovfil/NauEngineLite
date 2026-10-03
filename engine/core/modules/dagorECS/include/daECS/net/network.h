@@ -1,13 +1,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <daNet/bitStream.h>
 #include <daNet/daNetTypes.h>
 #include <generic/dag_tab.h>
-#include <daNet/bitStream.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/unique_ptr.h>
+
+#include <memory>
+#include <vector>
+
 #include "connection.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 #include "netbase.h"
 
 namespace danet
@@ -59,7 +62,7 @@ public:
     const MessageNetDesc *msg_net_desc = nullptr);
 
   Connection *getServerConnection() { return serverConnection.get(); }
-  const eastl::vector<eastl::unique_ptr<Connection>> &getClientConnections() const // Warning: vector might contain NULLs!
+  const std::vector<std::unique_ptr<Connection>>& getClientConnections() const  // Warning: vector might contain NULLs!
   {
     return clientConnections;
   }
@@ -89,11 +92,11 @@ private:
 
 private:
   bool bServer; // cached value of 'drv->isServer()'
-  eastl::unique_ptr<INetDriver, DestroyDeleter<INetDriver>> drv;
+  std::unique_ptr<INetDriver, DestroyDeleter<INetDriver>> drv;
   INetworkObserver *observer;
-  eastl::unique_ptr<Connection> serverConnection;
-  eastl::vector<eastl::unique_ptr<Connection>> clientConnections; // might contain NULLs
-  eastl::unique_ptr<EncryptionCtx> encryptionCtx;
+  std::unique_ptr<Connection> serverConnection;
+  std::vector<std::unique_ptr<Connection>> clientConnections;  // might contain NULLs
+  std::unique_ptr<EncryptionCtx> encryptionCtx;
   Tab<RTTStat> rttstat; // rolling average per connection (server). Warning: doesn't include queue correcton therefore very rough!
   scope_query_cb_t scope_query;
   void *debugConnVtbl = nullptr;
@@ -107,13 +110,13 @@ private:
   struct ClientWaitMsg
   {
     ecs::entity_id_t server_id;
-    eastl::fixed_vector<ObjMsg, 1> msgs;
+    nau::InlineVector<ObjMsg, 1> msgs;
     bool operator<(const ClientWaitMsg &rhs) const { return server_id < rhs.server_id; }
   };
-  eastl::vector_set<ClientWaitMsg> clientWaitMsgs; // client side messages that waiting for objects to be created. TODO: timeout
+  nau::SortedVectorSet<ClientWaitMsg> clientWaitMsgs;  // client side messages that waiting for objects to be created. TODO: timeout
   uint32_t protocolVersion;
 #if _DEBUG
-  eastl::vector_set<NetStatRecord> rxNetStat, txNetStat;
+  nau::SortedVectorSet<NetStatRecord> rxNetStat, txNetStat;
 #endif
 };
 

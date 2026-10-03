@@ -29,6 +29,7 @@ THE SOFTWARE.
 #ifndef __CCSCHEDULER_H__
 #define __CCSCHEDULER_H__
 
+#include <string>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -100,10 +101,10 @@ public:
     TimerTargetCallback();
     
     // Initializes a timer with a target, a lambda and an interval in seconds, repeat in number of times to repeat, delay in seconds.
-    bool initWithCallback(Scheduler* scheduler, const ccSchedulerFunc& callback, void *target, const eastl::string& key, float seconds, unsigned int repeat, float delay);
+    bool initWithCallback(Scheduler* scheduler, const ccSchedulerFunc& callback, void *target, const std::string& key, float seconds, unsigned int repeat, float delay);
     
     const ccSchedulerFunc& getCallback() const { return _callback; }
-    const eastl::string& getKey() const { return _key; }
+    const std::string& getKey() const { return _key; }
     
     virtual void trigger(float dt) override;
     virtual void cancel() override;
@@ -111,7 +112,7 @@ public:
 protected:
     void* _target;
     ccSchedulerFunc _callback;
-    eastl::string _key;
+    std::string _key;
 };
 
 /**
@@ -210,7 +211,7 @@ public:
      @param key The key to identify the callback function, because there is not way to identify a std::function<>.
      @since v3.0
      */
-    void schedule(const ccSchedulerFunc& callback, void *target, float interval, unsigned int repeat, float delay, bool paused, const eastl::string& key);
+    void schedule(const ccSchedulerFunc& callback, void *target, float interval, unsigned int repeat, float delay, bool paused, const std::string& key);
 
     /** The scheduled method will be called every 'interval' seconds for ever.
      @param callback The callback function.
@@ -220,7 +221,7 @@ public:
      @param key The key to identify the callback function, because there is not way to identify a std::function<>.
      @since v3.0
      */
-    void schedule(const ccSchedulerFunc& callback, void *target, float interval, bool paused, const eastl::string& key);
+    void schedule(const ccSchedulerFunc& callback, void *target, float interval, bool paused, const std::string& key);
     
     
     /** The scheduled method will be called every `interval` seconds.
@@ -273,7 +274,7 @@ public:
      @param target The target to be unscheduled.
      @since v3.0
      */
-    void unschedule(const eastl::string& key, void *target);
+    void unschedule(const std::string& key, void *target);
 
     /** Unschedules a selector for a given target.
      If you want to unschedule the "update", use `unscheduleUpdate()`.
@@ -321,7 +322,7 @@ public:
      @return True if the specified callback is invoked, false if not.
      @since v3.0.0
      */
-    bool isScheduled(const eastl::string& key, const void *target) const;
+    bool isScheduled(const std::string& key, const void *target) const;
     
     /** Checks whether a selector for a given target is scheduled.
      @param selector The selector to be checked.

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include "vfx_component.h"
-#include "nau/vfx_manager.h"
-#include "nau/scene/scene_manager.h"
+
+#include <string>
+
 #include "nau/io/virtual_file_system.h"
+#include "nau/scene/scene_manager.h"
+#include "nau/vfx_manager.h"
 
 namespace nau::vfx
 {
@@ -67,7 +70,7 @@ namespace nau::vfx
         }
     }
 
-    void VFXComponent::setAssetPath(const eastl::string& assetPath)
+    void VFXComponent::setAssetPath(const std::string& assetPath)
     {
         m_assetPath = assetPath;
         m_cachedAssetPath = resolvePath(m_assetPath);
@@ -108,9 +111,9 @@ namespace nau::vfx
         return std::filesystem::path(projectPath) / "assets_database";
     }
 
-    eastl::string VFXComponent::resolvePath(const eastl::string& assetPath)
+    std::string VFXComponent::resolvePath(const std::string& assetPath)
     {
-        return eastl::string((dbPath().string() + "\\" + assetPath.c_str()).c_str());
+        return std::string((dbPath().string() + "\\" + assetPath.c_str()).c_str());
     }
 
 }  // namespace nau::physics

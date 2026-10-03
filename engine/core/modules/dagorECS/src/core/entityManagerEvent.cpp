@@ -2,12 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "entityManagerEvent.h"
-#include <daECS/core/entitySystem.h>
+
 #include <daECS/core/coreEvents.h>
+#include <daECS/core/entitySystem.h>
 #include <daECS/core/schemelessEvent.h>
-#include "tokenize_const_string.h"
+
+#include <algorithm>
+#include <string_view>
+#include <utility>
+
 #include "check_es_optional.h"
 #include "ecsPerformQueryInline.h"
+#include "tokenize_const_string.h"
 
 namespace ecs
 {
@@ -181,9 +187,15 @@ void EntityManager::broadcastEventImmediate(Event &evt)
     }
 }
 
-void EntityManager::sendEvent(EntityId eid, SchemelessEvent &&evt) { dispatchEvent(eid, eastl::move(evt)); }
+void EntityManager::sendEvent(EntityId eid, SchemelessEvent&& evt)
+{
+    dispatchEvent(eid, std::move(evt));
+}
 
-void EntityManager::broadcastEvent(SchemelessEvent &&evt) { dispatchEvent(INVALID_ENTITY_ID, eastl::move(evt)); }
+void EntityManager::broadcastEvent(SchemelessEvent&& evt)
+{
+    dispatchEvent(INVALID_ENTITY_ID, std::move(evt));
+}
 
 #if NAU_DEBUG
 static ska::flat_hash_set<event_type_t> subscribe_for_non_registered_errors;
@@ -281,19 +293,21 @@ void EntityManager::registerEsEvent(int j)
     else // we explicitly iterate over listed components
     {
       static_assert(sizeof(Archetype) <= 32);
-      tokenize_const_string(comps, ", ", [&](eastl::string_view comp_name) {
-        component_t comp = ecs_hash(comp_name);
-        esOnChangeEvents[comp].insert(j);
+      tokenize_const_string(comps, ", ", [&](std::string_view comp_name)
+      {
+          component_t comp = ecs_hash(comp_name);
+          esOnChangeEvents[comp].insert(j);
 
 #if NAU_DEBUG
-        if (!has_component(es->componentsRO, comp) && !has_component(es->componentsRW, comp) && !has_component(es->componentsRQ, comp))
-        {
-          logerr("Entity System <{}> signs for tracking of changing component <%.*s> "
-                 "which is not listed in any of it's list of required components.",
-            es->name, comp_name.length(), comp_name.data());
-        }
+          if (!has_component(es->componentsRO, comp) && !has_component(es->componentsRW, comp) && !has_component(es->componentsRQ, comp))
+          {
+              logerr(
+                  "Entity System <{}> signs for tracking of changing component <%.*s> "
+                  "which is not listed in any of it's list of required components.",
+                  es->name, comp_name.length(), comp_name.data());
+          }
 #endif
-        return true;
+          return true;
       });
     }
   }
@@ -351,8 +365,11 @@ void EntityManager::validateArchetypeES(archetype_t archetype)
         NAU_ASSERT(!cached, "{}:", esList[esIndex]->name);
         continue;
       }
-      auto it = eastl::lower_bound(archDesc.queriesBegin(), archDesc.queriesEnd(), archetype,
-        [](const auto &aq, const uint32_t arch) { return aq < arch; });
+      auto it = std::lower_bound(archDesc.queriesBegin(), archDesc.queriesEnd(), archetype,
+                                 [](const auto& aq, const uint32_t arch)
+      {
+          return aq < arch;
+      });
       if (it == archDesc.queriesEnd() || *it != archetype)
       {
         NAU_ASSERT(!cached, "{}:", esList[esIndex]->name);
@@ -383,7 +400,7 @@ static inline void ensure_size(Container &c, size_t to)
   if (c.size() > to)
     return;
   if (c.size() == to)
-    c.push_back(); // use exponential growth strategy
+      c.emplace_back();  // use exponential growth strategy
   else
     c.resize(to + 1);
 }
@@ -493,11 +510,11 @@ template void EntityManager::destroyEvents<decltype(EntityManager::eventsStorage
 
 void EntityManager::addEventForLoadingEntity(EntityId eid, Event &evt)
 {
-  auto it = eventsForLoadingEntities.find_as(eid, LoadingEntityEvents::Compare());
-  if (it == eventsForLoadingEntities.end())
-    it = eventsForLoadingEntities.insert(it, LoadingEntityEvents{eid});
+    auto it = eventsForLoadingEntities.find(eid);
+    if (it == eventsForLoadingEntities.end())
+        it = eventsForLoadingEntities.emplace_hint(it, LoadingEntityEvents{eid});
 
-  emplaceUntypedEvent(it->events, eid, evt);
+    emplaceUntypedEvent(it->events, eid, evt);
 }
 
 }; // namespace ecs

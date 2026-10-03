@@ -3,11 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector_set.h>
+#include <functional>
+#include <span>
+#include <utility>
 
 #include "dabfg/backend/intermediateRepresentation.h"
 #include "dabfg/id/idIndexedFlags.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace dabfg
 {
@@ -37,8 +41,8 @@ private:
 
   struct ValidityInfo
   {
-    IdIndexedFlags<ResNameId, nau::EastlFrameAllocator> resourceValid;
-    IdIndexedFlags<NodeNameId, nau::EastlFrameAllocator> nodeValid;
+      IdIndexedFlags<ResNameId, nau::FrameStdAllocator<nau::BitVectorWord>> resourceValid;
+      IdIndexedFlags<NodeNameId, nau::FrameStdAllocator<nau::BitVectorWord>> nodeValid;
   };
   bool validateResource(ResNameId resId) const;
   bool validateNode(NodeNameId resId) const;
@@ -46,20 +50,21 @@ private:
   ValidityInfo findValidResourcesAndNodes() const;
 
   // Result contains no edges yet
-  eastl::pair<intermediate::Graph, intermediate::Mapping> createDiscreteGraph(const ValidityInfo &validity,
-    multiplexing::Extents extents) const;
+  std::pair<intermediate::Graph, intermediate::Mapping> createDiscreteGraph(const ValidityInfo& validity,
+                                                                            multiplexing::Extents extents) const;
   void fixupFalseHistoryFlags(intermediate::Graph &graph) const;
   void setIrGraphDebugNames(intermediate::Graph &graph) const;
   // Actually adds the edges
   void addEdgesToIrGraph(intermediate::Graph &graph, const ValidityInfo &validity, const intermediate::Mapping &mapping) const;
 
-  using SinkSet = eastl::vector_set<intermediate::NodeIndex, eastl::less<intermediate::NodeIndex>, nau::EastlFrameAllocator>;
-  SinkSet findSinkIrNodes(const intermediate::Graph &graph, const intermediate::Mapping &mapping,
-    eastl::span<const ResNameId> sinkResources) const;
+  using SinkSet = nau::SortedVectorSet<intermediate::NodeIndex, std::less<intermediate::NodeIndex>, nau::FrameStdAllocator<intermediate::NodeIndex>>;
+  SinkSet findSinkIrNodes(const intermediate::Graph& graph, const intermediate::Mapping& mapping, std::span<const ResNameId> sinkResources) const;
 
   // Returns a displacement (old index -> new index) partial mapping
-  IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::EastlFrameAllocator> pruneGraph(const intermediate::Graph &graph,
-    const intermediate::Mapping &mapping, eastl::span<const intermediate::NodeIndex> sinkNodes, const ValidityInfo &validity) const;
+  IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> pruneGraph(const intermediate::Graph& graph,
+                                                                                                                                 const intermediate::Mapping& mapping,
+                                                                                                                                 std::span<const intermediate::NodeIndex> sinkNodes,
+                                                                                                                                 const ValidityInfo& validity) const;
 
   intermediate::RequiredNodeState calcNodeState(NodeNameId node_id, intermediate::MultiplexingIndex multi_index,
     const intermediate::Mapping &mapping) const;

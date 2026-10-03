@@ -3,15 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "render/daBfg/stateRequest.h"
-#include "render/daBfg/virtualPassRequest.h"
-#include "render/daBfg/multiplexing.h"
+#include <utility>
+
 #include "render/daBfg/externalResources.h"
+#include "render/daBfg/multiplexing.h"
+#include "render/daBfg/nameSpaceRequest.h"
 #include "render/daBfg/priority.h"
 #include "render/daBfg/sideEffects.h"
-#include "render/daBfg/nameSpaceRequest.h"
+#include "render/daBfg/stateRequest.h"
+#include "render/daBfg/virtualPassRequest.h"
 #include "render/daBfg/virtualResourceCreationSemiRequest.h"
-
 
 namespace dabfg
 {
@@ -163,9 +164,12 @@ public:
   template <class F>
   VirtualTextureRequest<NewRwRequestPolicy> registerTexture2d(const char *name, F &&texture_provider_callback)
   {
-    auto uid = registerTexture2dImpl(name,
-      [impl = eastl::forward<F>(texture_provider_callback)](const multiplexing::Index &mIdx) { return ExternalResource(impl(mIdx)); });
-    return {uid, nodeId, registry};
+      auto uid = registerTexture2dImpl(name,
+                                       [impl = std::forward<F>(texture_provider_callback)](const multiplexing::Index& mIdx)
+      {
+          return ExternalResource(impl(mIdx));
+      });
+      return {uid, nodeId, registry};
   }
 
   using NameSpaceRequest::historyFor;

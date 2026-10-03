@@ -3,8 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "render/daBfg/bfg.h"
-#include "dabfg/runtime/runtime.h"
 
+#include <utility>
+
+#include "dabfg/runtime/runtime.h"
 
 namespace dabfg
 {
@@ -22,7 +24,7 @@ detail::NodeUid detail::register_node(NameSpaceNameId nsId, const char *name, co
   tracker.registerNode(nullptr, nodeId);
 
   auto &nodeData = registry.nodes[nodeId];
-  nodeData.declare = eastl::move(declaration_callback);
+  nodeData.declare = std::move(declaration_callback);
   nodeData.nodeSource = node_source;
 
   return {nodeId, nodeData.generation, 1};

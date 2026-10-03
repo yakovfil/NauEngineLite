@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <span>
 
 #include "nau/scene/components/camera_component.h"
 #include "nau/scene/components/component_attributes.h"
@@ -16,7 +17,7 @@ namespace nau::test
     {
     protected:
         template <rtti::WithTypeInfo T>
-        static IClassDescriptor::Ptr findClass(eastl::span<const IClassDescriptor::Ptr> classes)
+        static IClassDescriptor::Ptr findClass(std::span<const IClassDescriptor::Ptr> classes)
         {
             for (auto& classDesc : classes)
             {

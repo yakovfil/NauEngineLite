@@ -4,16 +4,20 @@
 
 #include "nativeResourceScheduler.h"
 
+#include <limits>
+#include <tuple>
+#include <utility>
+#include <variant>
+
 #include "dabfg/debug/backendDebug.h"
-#include "nau/3d/dag_resizableTex.h"
-#include "nau/3d/dag_resPtr.h"
-#include "nau/3d/dag_drv3d.h"
-
-#include "render/daBfg/resourceCreation.h"
-
 #include "dabfg/id/idRange.h"
+#include "nau/3d/dag_drv3d.h"
+#include "nau/3d/dag_resPtr.h"
+#include "nau/3d/dag_resizableTex.h"
 #include "nau/diag/logging.h"
-
+#include "nau/utils/enum_utils.h"
+#include "nau/utils/inline_string.h"
+#include "render/daBfg/resourceCreation.h"
 
 namespace dabfg
 {
@@ -77,7 +81,7 @@ ManagedResView<typename ResType::BaseType> NativeResourceScheduler::getResource(
   const auto it = placedResources.find(resProp.key);
   NAU_ASSERT_RETURN(it != placedResources.end(), {});
 
-  ManagedResView<typename ResType::BaseType> resView = eastl::get<ResType>(it->second.resource);
+  ManagedResView<typename ResType::BaseType> resView = std::get<ResType>(it->second.resource);
   NAU_ASSERT_RETURN(resView, {});
   resView->setResName(reinterpret_cast<const char8_t*>(cachedIntermediateResourceNames[res_id].c_str()));
   return resView;
@@ -130,8 +134,8 @@ ResourceHeapGroupProperties NativeResourceScheduler::getResourceHeapGroupPropert
 
   ResourceHeapGroupProperties fakeHeapGroupProp{};
   fakeHeapGroupProp.flags = 0;
-  fakeHeapGroupProp.maxHeapSize = eastl::numeric_limits<uint64_t>::max();
-  fakeHeapGroupProp.maxResourceSize = eastl::numeric_limits<uint64_t>::max();
+  fakeHeapGroupProp.maxHeapSize = std::numeric_limits<uint64_t>::max();
+  fakeHeapGroupProp.maxResourceSize = std::numeric_limits<uint64_t>::max();
   return fakeHeapGroupProp;
 }
 
@@ -168,9 +172,9 @@ ResourceScheduler::DestroyedHeapSet NativeResourceScheduler::allocateHeaps(const
     if (allocatedHeaps.isMapped(i) && req.size <= allocatedHeaps[i].size &&
         static_cast<float>(req.size) / static_cast<float>(allocatedHeaps[i].size) > MIN_OCCUPANCY_RATIO)
     {
-      NAU_LOG_DEBUG("daBfg: Reusing heap {} of size {}KB instead of allocating a new {}KB heap", eastl::to_underlying(i),
-        allocatedHeaps[i].size >> 10, req.size >> 10);
-      continue;
+        NAU_LOG_DEBUG("daBfg: Reusing heap {} of size {}KB instead of allocating a new {}KB heap", nau::to_underlying(i),
+                      allocatedHeaps[i].size >> 10, req.size >> 10);
+        continue;
     }
 
     if (heaps[i] != nullptr)
@@ -179,17 +183,17 @@ ResourceScheduler::DestroyedHeapSet NativeResourceScheduler::allocateHeaps(const
       result.push_back(i);
       for (auto &heapHintedResources : hintedResources[i])
         heapHintedResources.clear();
-      d3d::destroy_resource_heap(eastl::exchange(heaps[i], nullptr));
-      NAU_LOG_DEBUG("daBfg: Destroyed heap {} because it was too small/big (size was {}KB, but {}KB are required)", eastl::to_underlying(i),
-        allocatedHeaps[i].size >> 10, req.size >> 10);
+      d3d::destroy_resource_heap(std::exchange(heaps[i], nullptr));
+      NAU_LOG_DEBUG("daBfg: Destroyed heap {} because it was too small/big (size was {}KB, but {}KB are required)", nau::to_underlying(i),
+                    allocatedHeaps[i].size >> 10, req.size >> 10);
     }
     if (req.size > 0)
     {
       heaps[i] = d3d::create_resource_heap(req.group, req.size, RHCF_REQUIRES_DEDICATED_HEAP);
-      if (EASTL_UNLIKELY(!heaps[i]))
-        NAU_FAILURE("daBfg: Failed to allocate resource heap {} of size {}KB", eastl::to_underlying(i), req.size >> 10);
+      if (NAU_UNLIKELY(!heaps[i]))
+          NAU_FAILURE("daBfg: Failed to allocate resource heap {} of size {}KB", nau::to_underlying(i), req.size >> 10);
       else
-        NAU_LOG_DEBUG("daBfg: Successfully allocated a new heap {} of size {}KB", eastl::to_underlying(i), req.size >> 10);
+          NAU_LOG_DEBUG("daBfg: Successfully allocated a new heap {} of size {}KB", nau::to_underlying(i), req.size >> 10);
     }
     allocatedHeaps[i].size = req.size;
   }
@@ -217,8 +221,8 @@ static auto generate_name(uint32_t heap_idx, size_t hash_value)
 {
   constexpr const char *HEX_DIGITS = "0123456789ABCDEF";
   // WARNING: sizes for the fixed string and the name template must match!
-  eastl::fixed_string<char, 32> result = "fg_resource_heap$$_hash$$$$$$$$";
-  if (EASTL_UNLIKELY(heap_idx >= 0xFF))
+  nau::InlineString<char, 32> result = "fg_resource_heap$$_hash$$$$$$$$";
+  if (NAU_UNLIKELY(heap_idx >= 0xFF))
   {
     NAU_LOG_ERROR("daBfg has allocated more than 255 resource heaps! This shouldn't be happening!");
     heap_idx &= 0xFF;
@@ -237,7 +241,7 @@ void NativeResourceScheduler::placeResource(int frame, intermediate::ResourceInd
   const ResourceDescription &desc, uint32_t offset, const ResourceAllocationProperties &properties)
 {
   const auto key = ResourceKey(desc, properties, offset);
-  const auto placedResName = generate_name(eastl::to_underlying(heap_idx), key.hash);
+  const auto placedResName = generate_name(nau::to_underlying(heap_idx), key.hash);
   if (desc.resType == RES3D_SBUF)
   {
     auto createBuf = [this, &key, &heap_idx, &placedResName, &offset, &properties]() -> UniqueBuf {
@@ -281,15 +285,16 @@ void NativeResourceScheduler::resizeTexture(intermediate::ResourceIndex res_idx,
   const auto scheduledResIdx = resourceIndexInCollection[frame][res_idx];
   const auto &resProp = placedProperties[scheduledResIdx];
   const auto key = ResourceKey(resProp.key, resolution);
-  auto createTex = [this, &key, resProp]() -> UniqueTex {
-    const auto placedResName = generate_name(eastl::to_underlying(resProp.heapIndex), key.hash);
-    const auto desc = fix_tex_params(key.desc);
-    const auto allocInfo = getResourceAllocationProperties(desc);
-    auto tex = dag::place_texture_in_resource_heap(heaps[resProp.heapIndex], desc, resProp.offset, allocInfo, placedResName.c_str());
+  auto createTex = [this, &key, resProp]() -> UniqueTex
+  {
+      const auto placedResName = generate_name(nau::to_underlying(resProp.heapIndex), key.hash);
+      const auto desc = fix_tex_params(key.desc);
+      const auto allocInfo = getResourceAllocationProperties(desc);
+      auto tex = dag::place_texture_in_resource_heap(heaps[resProp.heapIndex], desc, resProp.offset, allocInfo, placedResName.c_str());
 
-    NAU_ASSERT_RETURN(tex, {});
+      NAU_ASSERT_RETURN(tex, {});
 
-    return tex;
+      return tex;
   };
   placeResource<UniqueTex>(frame, res_idx, resProp.heapIndex, resProp.offset, key, createTex);
 }

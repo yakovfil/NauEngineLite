@@ -8,8 +8,6 @@
     "CoreAssetsCpu"
   ],
   "dependencies": [
-    "EABase",
-    "EASTL",
     "tiny-utf8",
     "fmt",
     "utfcpp",

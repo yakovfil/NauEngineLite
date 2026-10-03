@@ -3,8 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <type_traits>
+#include <utility>
+
 #include "nau/3d/dag_drv3d.h"
-#include <EASTL/type_traits.h>
 
 template <typename T>
 class LockedBuffer
@@ -31,17 +34,17 @@ public:
   LockedBuffer(const LockedBuffer &rhs) = delete;
   LockedBuffer(LockedBuffer &&rhs) noexcept
   {
-    eastl::swap(mLockedObject, rhs.mLockedObject);
-    eastl::swap(mData, rhs.mData);
-    eastl::swap(mCount, rhs.mCount);
+      std::swap(mLockedObject, rhs.mLockedObject);
+      std::swap(mData, rhs.mData);
+      std::swap(mCount, rhs.mCount);
   }
   LockedBuffer operator=(const LockedBuffer &rhs) = delete;
   LockedBuffer &operator=(LockedBuffer &&rhs) noexcept
   {
-    eastl::swap(mLockedObject, rhs.mLockedObject);
-    eastl::swap(mData, rhs.mData);
-    eastl::swap(mCount, rhs.mCount);
-    return *this;
+      std::swap(mLockedObject, rhs.mLockedObject);
+      std::swap(mData, rhs.mData);
+      std::swap(mCount, rhs.mCount);
+      return *this;
   }
   ~LockedBuffer()
   {
@@ -49,7 +52,10 @@ public:
       mLockedObject->unlock();
   }
 
-  void close() { LockedBuffer tmp(eastl::move(*this)); }
+  void close()
+  {
+      LockedBuffer tmp(std::move(*this));
+  }
 
   explicit operator bool() const { return mLockedObject != nullptr; }
 
@@ -66,7 +72,7 @@ public:
   void updateDataRange(size_t index, InputIterator data, size_t count_elements)
   {
     NAU_ASSERT(index + count_elements <= mCount);
-    eastl::copy_n(data, count_elements, &mData[index]);
+    std::copy_n(data, count_elements, &mData[index]);
   }
 };
 
@@ -94,9 +100,9 @@ template <typename T>
 LockedBuffer<T> lock_sbuffer(Sbuffer *buf, uint32_t ofs_bytes, uint32_t count, int flags)
 {
   NAU_ASSERT(buf);
-  if (eastl::is_const_v<T>)
-    flags |= VBLOCK_READONLY;
-  NAU_ASSERT(eastl::is_const_v<T> == !!(flags & VBLOCK_READONLY));
+  if (std::is_const_v<T>)
+      flags |= VBLOCK_READONLY;
+  NAU_ASSERT(std::is_const_v<T> == !!(flags & VBLOCK_READONLY));
   return LockedBuffer<T>(buf, ofs_bytes, count, flags);
 }
 

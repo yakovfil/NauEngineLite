@@ -3,16 +3,16 @@
 
 #pragma once
 
-#include "usd_translator/usd_translator_api.h"
-#include "usd_translator/usd_prim_adapter.h"
-
-#include "nau/math/math.h"
-#include "nau/assets/animation_asset_accessor.h"
-#include "nau/animation/components/animation_component.h"
-#include "nau/animation/playback/animation_instance.h"
-
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
+#include <vector>
+
+#include "nau/animation/components/animation_component.h"
+#include "nau/animation/playback/animation_instance.h"
+#include "nau/assets/animation_asset_accessor.h"
+#include "nau/math/math.h"
+#include "usd_translator/usd_prim_adapter.h"
+#include "usd_translator/usd_translator_api.h"
 
 namespace UsdTranslator
 {
@@ -21,11 +21,11 @@ namespace UsdTranslator
     public:
         AnimationClipComposer(const pxr::UsdPrim& prim);
 
-        const eastl::vector<nau::AnimationDataDescriptor>& getAnimationDataDescriptors() const noexcept;
+        const std::vector<nau::AnimationDataDescriptor>& getAnimationDataDescriptors() const noexcept;
         nau::animation::PlayMode getPlayMode() const noexcept;
 
         template <typename T>
-        void getTrackData(const nau::AnimationDataDescriptor& descriptor, eastl::vector<float>& times, eastl::vector<T>& data) const
+        void getTrackData(const nau::AnimationDataDescriptor& descriptor, std::vector<float>& times, std::vector<T>& data) const
         {
             const auto pred = [&descriptor](const nau::AnimationDataDescriptor& desc) { return descriptor == desc; };
             if (std::none_of(m_descriptors.begin(), m_descriptors.end(), pred))
@@ -44,13 +44,13 @@ namespace UsdTranslator
 
     private:
         void loadData(const nau::AnimationDataDescriptor& descriptor, const pxr::UsdPrim& trackPrim);
-        eastl::vector<nau::math::quat> convertToQuatVec(size_t animationIndex) const;
+        std::vector<nau::math::quat> convertToQuatVec(size_t animationIndex) const;
 
     private:
-        using TransformTrackPair = std::pair<eastl::vector<float>, eastl::vector<nau::math::vec3>>;
+        using TransformTrackPair = std::pair<std::vector<float>, std::vector<nau::math::vec3>>;
 
         nau::animation::PlayMode m_playMode{};
-        eastl::vector<nau::AnimationDataDescriptor> m_descriptors;
-        eastl::vector<TransformTrackPair> m_trackList;
+        std::vector<nau::AnimationDataDescriptor> m_descriptors;
+        std::vector<TransformTrackPair> m_trackList;
     };
 }

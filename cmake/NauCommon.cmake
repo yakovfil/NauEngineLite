@@ -39,7 +39,6 @@ function(nau_add_compile_options target)
     # if(${targetType} STREQUAL "EXECUTABLE")
     #     target_sources(${target} PRIVATE
     #         ${DAGOR_ROOT}/tools/util/natvis/dagor_types.natvis
-    #         ${DAGOR_ROOT}/tools/util/natvis/EASTL.natvis
     #     )
     # endif()
 

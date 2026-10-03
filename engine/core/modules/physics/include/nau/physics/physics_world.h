@@ -4,16 +4,17 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
+#include <optional>
+#include <string_view>
+#include <vector>
 
 #include "nau/debugRenderer/debug_render_system.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/physics/physics_defines.h"
 #include "nau/physics/physics_material.h"
 #include "nau/physics/physics_raycast.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/scene_object.h"
-
 
 namespace nau::physics
 {
@@ -80,27 +81,27 @@ namespace nau::physics
          * @brief Creates and registers a physical material.
          *
          * @param [in] name         Name to register the material under.
-         * @param [in] friction     Degree of how the body resists being dragged. It has to be between 0.0 (no friction) and 1.0 (the body will stick to the surface and stay immobile). You can pass `eastl::nullopt` if you don't want the material to override body default friction.
-         * @param [in] restitution  Degree of body tougheness on collision. It has to be between 0.0 (completely inelastic collision response) and 1.0 (completely elastic collision response). You can pass `eastl::nullopt` if you don't want the material to override body default restitution.
+         * @param [in] friction     Degree of how the body resists being dragged. It has to be between 0.0 (no friction) and 1.0 (the body will stick to the surface and stay immobile). You can pass `std::nullopt` if you don't want the material to override body default friction.
+         * @param [in] restitution  Degree of body tougheness on collision. It has to be between 0.0 (completely inelastic collision response) and 1.0 (completely elastic collision response). You can pass `std::nullopt` if you don't want the material to override body default restitution.
          * @return                  A pointer to the created material.
          */
-        virtual IPhysicsMaterial::Ptr createMaterial(eastl::string_view name,
-                                                     eastl::optional<TFloat> friction = eastl::nullopt,
-                                                     eastl::optional<TFloat> restitution = eastl::nullopt);
+        virtual IPhysicsMaterial::Ptr createMaterial(std::string_view name,
+                                                     std::optional<TFloat> friction = std::nullopt,
+                                                     std::optional<TFloat> restitution = std::nullopt);
 
         /**
          * @brief Allows to cast a ray between to points and check if it hits any physical bodies.
          *
          * @param [in] query    RayCasting properties.
-         * @result              Hit data or `eastl::nullopt` is no hit has occurred.
+         * @result              Hit data or `std::nullopt` is no hit has occurred.
          */
-        virtual eastl::optional<RayCastResult> castRay(const nau::physics::RayCastQuery& query) const = 0;
+        virtual std::optional<RayCastResult> castRay(const nau::physics::RayCastQuery& query) const = 0;
 
-        virtual async::Task<eastl::vector<RayCastResult>> castRaysAsync(eastl::vector<physics::RayCastQuery> queries) const = 0;
+        virtual async::Task<std::vector<RayCastResult>> castRaysAsync(std::vector<physics::RayCastQuery> queries) const = 0;
 
         inline async::Task<RayCastResult> castRayAsync(physics::RayCastQuery query) const
         {
-            eastl::vector<RayCastResult> result = co_await this->castRaysAsync({std::move(query)});
+            std::vector<RayCastResult> result = co_await this->castRaysAsync({std::move(query)});
             NAU_FATAL(!result.empty());
             co_return result.front();
         }

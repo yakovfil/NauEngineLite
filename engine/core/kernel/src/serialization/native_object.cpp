@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/serialization/native_runtime_value/native_object.h"
+
+#include <span>
 
 namespace nau::ser_detail
 {
@@ -45,13 +46,13 @@ namespace nau::ser_detail
 
     RuntimeFieldAccessor* RuntimeObjectState::findField(std::string_view key) const
     {
-        const eastl::span<RuntimeFieldAccessor> fields = getFields();
+        const std::span<RuntimeFieldAccessor> fields = getFields();
 
-        RuntimeFieldAccessor* const field = std::find_if(fields.begin(), fields.end(), [key](const RuntimeFieldAccessor& field)
+        const auto field = std::find_if(fields.begin(), fields.end(), [key](const RuntimeFieldAccessor& field)
         {
             return strings::icaseEqual(field.getName(), key);
         });
 
-        return field != fields.end() ? field : nullptr;
+        return field != fields.end() ? std::addressof(*field) : nullptr;
     }
 }  // namespace nau::ser_detail

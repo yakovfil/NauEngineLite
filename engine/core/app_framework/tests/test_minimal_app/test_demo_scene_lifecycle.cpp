@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <thread>
 
 #include "nau/app/application_lifecycle.h"
@@ -101,7 +102,7 @@ namespace nau::test
         {
             NauCheckResult(loadModulesList(NAU_MODULES_LIST));
             getServiceProvider().addClass<DemoLifecycleComponent>();
-            getServiceProvider().addService(eastl::make_unique<DemoSceneStartup>(state));
+            getServiceProvider().addService(std::make_unique<DemoSceneStartup>(state));
             return ResultSuccess;
         }
 

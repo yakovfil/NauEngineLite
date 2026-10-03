@@ -26,6 +26,7 @@
 #ifndef __cocos2d_libs__CCCustomEventListener__
 #define __cocos2d_libs__CCCustomEventListener__
 
+#include <string>
 #include "base/CCEventListener.h"
 
 /**
@@ -66,7 +67,7 @@ public:
      * @param callback The callback function when the specified event was emitted.
      * @return An autoreleased EventListenerCustom object.
      */
-    static EventListenerCustom* create(const eastl::string& eventName, const std::function<void(EventCustom*)>& callback);
+    static EventListenerCustom* create(const std::string& eventName, const std::function<void(EventCustom*)>& callback);
     
     /// Overrides
     virtual bool checkAvailable() override;

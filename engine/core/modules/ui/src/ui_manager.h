@@ -11,18 +11,20 @@
 #include <windef.h>
 
 #include <cstdint>
+#include <string>
 #include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "2d/CCScene.h"
-#include "EASTL/unordered_map.h"
-#include "EASTL/vector.h"
+#include "nau/3d/dag_tex3d.h"
 #include "nau/input.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/service/service.h"
 #include "nau/ui.h"
 #include "nau/utils/uid.h"
-#include "nau/3d/dag_tex3d.h"
 
 namespace nau::ui
 {
@@ -58,20 +60,20 @@ namespace nau::ui
         virtual void setReferenceResolution(float width, float height) override;
 
         virtual void addCanvas(Canvas* canvas) override;
-        virtual Canvas* getCanvas(const eastl::string& canvasName) override;
-        virtual void removeCanvas(const eastl::string& canvasName) override;
+        virtual Canvas* getCanvas(const std::string& canvasName) override;
+        virtual void removeCanvas(const std::string& canvasName) override;
         virtual void updateCanvases() override;
         virtual TCallbackHandle setOnCanvasLoadedCallback(TCanvasLoadedCallback&& callback) override;
         virtual bool setOnCanvasLoadedCallback(TCallbackHandle handle) override;
 
         virtual void configureResourcePath() override;
 
-        virtual eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override;
+        virtual std::vector<const rtti::TypeInfo*> getServiceDependencies() const override;
 
         virtual void setEngineScene(scene::IScene::WeakRef scene) override;
         virtual scene::IScene* getEngineScene() override;
 
-        virtual Node* getCanvasChildUnderCursor(const eastl::string& canvasName) override;
+        virtual Node* getCanvasChildUnderCursor(const std::string& canvasName) override;
         virtual void setElementChangedCallback(nau::Uid elementUid, TElementChangedCallback&& callback) override;
         virtual void removeElementChangedCallback(nau::Uid id) override;
 
@@ -88,14 +90,14 @@ namespace nau::ui
         void invokeElementChangedCallbacks(class Node* node);
         void cleanupCallbacks();
 
-        eastl::pair<float, float> getInputPosition(float axisX, float axisY) const;
+        std::pair<float, float> getInputPosition(float axisX, float axisY) const;
 
     private:
         // HINSTANCE m_instance;
         HACCEL m_accelTable;
         LARGE_INTEGER m_animationInterval;
-        eastl::string m_resourceRootPath;
-        eastl::string m_startupScriptFilename;
+        std::string m_resourceRootPath;
+        std::string m_startupScriptFilename;
 
         UINT wTimerRes = 0;
         LARGE_INTEGER m_nLast;
@@ -112,7 +114,7 @@ namespace nau::ui
         float m_screenHeightReference = -1.0f;
         float m_screenWidghtReference = -1.0f;
 
-        eastl::unordered_map<nau::input::MouseKey, cocos2d::EventMouse::MouseButton> m_mouseButtonRemap;
+        std::unordered_map<nau::input::MouseKey, cocos2d::EventMouse::MouseButton> m_mouseButtonRemap;
         bool m_touchCaptured = false;
 
         std::mutex m_cocosRenderMutex;
@@ -120,15 +122,15 @@ namespace nau::ui
         Canvas* m_currentScene = nullptr;
         cocos2d::Scene* m_cocoScene = nullptr;
 
-        eastl::unordered_map<eastl::string, Canvas*> m_canvases;
+        std::unordered_map<std::string, Canvas*> m_canvases;
 
-        eastl::unordered_map<TCallbackHandle, TCanvasLoadedCallback> m_canvasLoadedCbs;
-        eastl::vector<TCallbackHandle> freeCanvasLoadedCallbackHandles;
+        std::unordered_map<TCallbackHandle, TCanvasLoadedCallback> m_canvasLoadedCbs;
+        std::vector<TCallbackHandle> freeCanvasLoadedCallbackHandles;
         TCallbackHandle highestFreeCanvasLoadedCallbackHandle = 1;
         std::mutex m_canvasLoadedCbMutex {};
 
 #if NAU_UI_CALLBACK_ON_ELEMNT_CHANGE
-        eastl::vector<ElementChangedCallbackEntry> m_callbacks;
+        std::vector<ElementChangedCallbackEntry> m_callbacks;
         std::mutex m_elementChangedCbMutex {};
         bool m_needsCleanup {false};
 #endif

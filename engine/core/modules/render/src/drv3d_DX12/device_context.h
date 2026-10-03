@@ -2,29 +2,40 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include "drv3d_commonCode/drv_returnAddrStore.h"
-#include "query_manager.h"
-#include <EASTL/variant.h>
-#include <EASTL/fixed_vector.h>
-#include "nau/osApiWrappers/dag_events.h"
 #include <emmintrin.h>
-#include "nau/3d/dag_drvDecl.h"
-#include "nau/osApiWrappers/dag_threads.h"
-#include "nau/3d/dag_drv3dConsts.h"
-#include "nau/3d/tql.h"
-#include "variant_vector.h"
-#include "texture.h"
-#include "buffer.h"
-#include "resource_memory_heap.h"
-#include "tagged_handles.h"
-#include "bindless.h"
-#include "device_queue.h"
-#include "swapchain.h"
-#include "ngx_wrapper.h"
-#include "xess_wrapper.h"
-#include "fsr2_wrapper.h"
 
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <span>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "bindless.h"
+#include "buffer.h"
 #include "debug/device_context_state.h"
+#include "device_queue.h"
+#include "drv3d_commonCode/drv_returnAddrStore.h"
+#include "fsr2_wrapper.h"
+#include "nau/3d/dag_drv3dConsts.h"
+#include "nau/3d/dag_drvDecl.h"
+#include "nau/3d/tql.h"
+#include "nau/osApiWrappers/dag_events.h"
+#include "nau/osApiWrappers/dag_threads.h"
+#include "nau/utils/inline_vector.h"
+#include "ngx_wrapper.h"
+#include "query_manager.h"
+#include "resource_memory_heap.h"
+#include "swapchain.h"
+#include "tagged_handles.h"
+#include "texture.h"
+#include "variant_vector.h"
+#include "xess_wrapper.h"
 // #include "render_graph.h"
 
 #include "command_list.h"
@@ -346,7 +357,7 @@ struct BufferImageCopy
 
 BufferImageCopy calculate_texture_subresource_copy_info(const Image &texture, uint32_t subresource_index = 0, uint64_t offset = 0);
 
-using TextureMipsCopyInfo = eastl::fixed_vector<BufferImageCopy, MAX_MIPMAPS, false>;
+using TextureMipsCopyInfo = nau::InlineVector<BufferImageCopy, MAX_MIPMAPS, false>;
 
 TextureMipsCopyInfo calculate_texture_mips_copy_info(const Image &texture, uint32_t mip_levels, uint32_t array_slice = 0,
   uint32_t array_size = 1, uint64_t initial_offset = 0);
@@ -379,13 +390,13 @@ union FramebufferMask
   template <typename T>
   void iterateColorAttachments(T &&u)
   {
-    for_each_set_bit(colorAttachmentMask, eastl::forward<T>(u));
+      for_each_set_bit(colorAttachmentMask, std::forward<T>(u));
   }
 
   template <typename T>
   void iterateColorAttachments(uint32_t valid_mask, T &&u)
   {
-    for_each_set_bit(colorAttachmentMask & valid_mask, eastl::forward<T>(u));
+      for_each_set_bit(colorAttachmentMask & valid_mask, std::forward<T>(u));
   }
 
   void setColorAttachment(uint32_t index) { colorAttachmentMask |= 1u << index; }
@@ -467,14 +478,14 @@ struct FramebufferDescription
 
   void clear(D3D12_CPU_DESCRIPTOR_HANDLE null_color)
   {
-    eastl::fill(eastl::begin(colorAttachments), eastl::end(colorAttachments), null_color);
-    depthStencilAttachment.ptr = 0;
+      std::fill(std::begin(colorAttachments), std::end(colorAttachments), null_color);
+      depthStencilAttachment.ptr = 0;
   }
 
   bool contains(D3D12_CPU_DESCRIPTOR_HANDLE view) const
   {
-    using namespace eastl;
-    return (end(colorAttachments) != find(begin(colorAttachments), end(colorAttachments), view)) || (depthStencilAttachment == view);
+      using namespace std;
+      return (end(colorAttachments) != find(begin(colorAttachments), end(colorAttachments), view)) || (depthStencilAttachment == view);
   }
   friend bool operator==(const FramebufferDescription &l, const FramebufferDescription &r)
   {
@@ -585,7 +596,7 @@ struct GraphicsState
   uint32_t scissorRectCount = 0;
   D3D12_VIEWPORT viewports[Viewport::MAX_VIEWPORT_COUNT] = {};
   uint32_t viewportCount = 0;
-  eastl::bitset<COUNT> statusBits{0};
+  std::bitset<COUNT> statusBits{0};
 
   BufferResourceReferenceAndAddressRange indexBuffer;
   DXGI_FORMAT indexBufferFormat = DXGI_FORMAT_R16_UINT;
@@ -727,7 +738,7 @@ struct DeviceFeaturesConfig
     COUNT,
     INVLID = COUNT
   };
-  typedef eastl::bitset<COUNT> Type;
+  typedef std::bitset<COUNT> Type;
 };
 // very simple fifo queue with a fixed amount of slots
 template <typename T, size_t N>
@@ -748,8 +759,8 @@ public:
   template <typename U>
   void push_back(U &&v)
   {
-    store[(top + count) % N] = eastl::forward<U>(v);
-    ++count;
+      store[(top + count) % N] = std::forward<U>(v);
+      ++count;
   }
   void pop_front()
   {
@@ -792,7 +803,7 @@ template <typename CommandListResultType, D3D12_COMMAND_LIST_TYPE CommandListTyp
 struct CommandStreamSet
 {
   ComPtr<ID3D12CommandAllocator> pool;
-  eastl::vector<CommandListStoreType> lists;
+  std::vector<CommandListStoreType> lists;
   uint32_t listsInUse = 0;
 
   void init(ID3D12Device *device) { DX12_CHECK_RESULT(device->CreateCommandAllocator(CommandListTypeName, COM_ARGS(&pool))); }
@@ -814,8 +825,8 @@ struct CommandStreamSet
       if (newList.autoQuery([=](auto uuid, auto ptr) //
             { return DX12_DEBUG_OK(device->CreateCommandList(0, CommandListTypeName, this->pool.Get(), nullptr, uuid, ptr)); }))
       {
-        lists.push_back(eastl::move(newList));
-        result = lists[listsInUse++];
+          lists.push_back(std::move(newList));
+          result = lists[listsInUse++];
       }
       else
       {
@@ -847,10 +858,10 @@ struct FrameInfo
   CommandStreamSet<VersionedPtr<D3DCopyCommandList>, D3D12_COMMAND_LIST_TYPE_COPY> readBackCommands;
   uint64_t progress = 0;
   EventPointer progressEvent{};
-  eastl::vector<ProgramID> deletedPrograms;
-  eastl::vector<GraphicsProgramID> deletedGraphicPrograms;
-  eastl::vector<backend::ShaderModuleManager::AnyShaderModuleUniquePointer> deletedShaderModules;
-  eastl::vector<Query *> deletedQueries;
+  std::vector<ProgramID> deletedPrograms;
+  std::vector<GraphicsProgramID> deletedGraphicPrograms;
+  std::vector<backend::ShaderModuleManager::AnyShaderModuleUniquePointer> deletedShaderModules;
+  std::vector<Query*> deletedQueries;
   ShaderResourceViewDescriptorHeapManager resourceViewHeaps;
   SamplerDescriptorHeapManager samplerHeaps;
   BackendQueryManager backendQueryManager;
@@ -891,7 +902,7 @@ struct ExtraDataArray
   ExtraDataArray() = default;
   ExtraDataArray(size_t i) : index{i} {}
 
-  using RangeType = eastl::span<T>;
+  using RangeType = std::span<T>;
 };
 
 using StringIndexRef = ExtraDataArray<const char>;
@@ -943,8 +954,8 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
   template <typename T, typename... Args>
   T make_command(Args &&...args)
   {
-    T cmd = T{this->generateCommandData(), eastl::forward<Args>(args)...};
-    return cmd;
+      T cmd = T{this->generateCommandData(), std::forward<Args>(args)...};
+      return cmd;
   }
   // Warning: intentionally not spinlock, since it has extremely bad behaviour
   // in case of high contention (e.g. during several threads of loading etc...)
@@ -1030,33 +1041,36 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
     {
       ID3D12RootSignature *rootSignature;
     };
-    eastl::vector<SignatureInfo> signatures;
-    eastl::vector<SignatureInfoEx> signaturesEx;
+    std::vector<SignatureInfo> signatures;
+    std::vector<SignatureInfoEx> signaturesEx;
 
     ID3D12CommandSignature *getSignatureForStride(ID3D12Device *device, uint32_t stride, D3D12_INDIRECT_ARGUMENT_TYPE type)
     {
-      auto ref = eastl::find_if(begin(signatures), end(signatures),
-        [=](const SignatureInfo &si) { return si.type == type && si.stride == stride; });
-      if (end(signatures) == ref)
-      {
-        D3D12_INDIRECT_ARGUMENT_DESC arg;
-        D3D12_COMMAND_SIGNATURE_DESC desc;
-        desc.NumArgumentDescs = 1;
-        desc.pArgumentDescs = &arg;
-        desc.NodeMask = 0;
-
-        arg.Type = type;
-        desc.ByteStride = stride;
-
-        SignatureInfo info;
-        info.stride = stride;
-        info.type = type;
-        if (!DX12_CHECK_OK(device->CreateCommandSignature(&desc, nullptr, COM_ARGS(&info.signature))))
+        auto ref = std::find_if(begin(signatures), end(signatures),
+                                [=](const SignatureInfo& si)
         {
-          return nullptr;
+            return si.type == type && si.stride == stride;
+        });
+        if (end(signatures) == ref)
+        {
+            D3D12_INDIRECT_ARGUMENT_DESC arg;
+            D3D12_COMMAND_SIGNATURE_DESC desc;
+            desc.NumArgumentDescs = 1;
+            desc.pArgumentDescs = &arg;
+            desc.NodeMask = 0;
+
+            arg.Type = type;
+            desc.ByteStride = stride;
+
+            SignatureInfo info;
+            info.stride = stride;
+            info.type = type;
+            if (!DX12_CHECK_OK(device->CreateCommandSignature(&desc, nullptr, COM_ARGS(&info.signature))))
+            {
+                return nullptr;
+            }
+            ref = signatures.insert(ref, std::move(info));
         }
-        ref = signatures.insert(ref, eastl::move(info));
-      }
       return ref->signature.Get();
     }
     ID3D12CommandSignature *getSignatureForStride(ID3D12Device *device, uint32_t stride, D3D12_INDIRECT_ARGUMENT_TYPE type,
@@ -1071,8 +1085,11 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
         return getSignatureForStride(device, stride, type);
 
       ID3D12RootSignature *root_signature = signature.signature.Get();
-      auto ref = eastl::find_if(begin(signaturesEx), end(signaturesEx),
-        [=](const SignatureInfoEx &si) { return si.type == type && si.stride == stride && si.rootSignature == root_signature; });
+      auto ref = std::find_if(begin(signaturesEx), end(signaturesEx),
+                              [=](const SignatureInfoEx& si)
+      {
+          return si.type == type && si.stride == stride && si.rootSignature == root_signature;
+      });
       if (end(signaturesEx) == ref)
       {
         D3D12_INDIRECT_ARGUMENT_DESC args[2] = {};
@@ -1096,7 +1113,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
         {
           return nullptr;
         }
-        ref = signaturesEx.insert(ref, eastl::move(info));
+        ref = signaturesEx.insert(ref, std::move(info));
       }
       return ref->signature.Get();
     }
@@ -1124,7 +1141,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
     BufferAccessTracker bufferAccessTracker;
     ID3D12Resource *lastAliasBegin = nullptr;
     FramebufferLayoutManager framebufferLayouts;
-    eastl::vector<eastl::pair<Image *, SubresourceIndex>> textureReadBackSplitBarrierEnds;
+    std::vector<std::pair<Image*, SubresourceIndex>> textureReadBackSplitBarrierEnds;
     CopyCommandList<VersionedPtr<D3DCopyCommandList>> activeReadBackCommandList;
     CopyCommandList<VersionedPtr<D3DCopyCommandList>> activeEarlyUploadCommandList;
     CopyCommandList<VersionedPtr<D3DCopyCommandList>> activeLateUploadCommandList;
@@ -1139,7 +1156,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
     PipelineStageStateBase stageState[STAGE_MAX_EXT];
 
     StatefulCommandBuffer cmdBuffer = {};
-    eastl::vector<eastl::pair<size_t, size_t>> renderTargetSplitStarts;
+    std::vector<std::pair<size_t, size_t>> renderTargetSplitStarts;
 
     ActivePipeline activePipeline = ActivePipeline::Graphics;
 
@@ -1221,8 +1238,8 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
       DeviceContext *deviceContext;
       debug::call_stack::CommandData callStack;
       const char *lastCommandName;
-      eastl::string_view lastMarker;
-      eastl::string_view lastEventPath;
+      std::string_view lastMarker;
+      std::string_view lastEventPath;
     };
 
     static constexpr uint32_t extended_call_stack_capture_data_size_in_pointers =
@@ -1272,7 +1289,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
 
     AnyCommandListPtr allocAndBeginCommandBuffer();
     void readBackImagePrePhase();
-    bool checkDrawCallHasOutput(eastl::span<const char> info);
+    bool checkDrawCallHasOutput(std::span<const char> info);
     template <size_t N>
     bool checkDrawCallHasOutput(const char (&sl)[N])
     {
@@ -1522,7 +1539,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
     uint32_t frameId = 0;
   };
 
-  eastl::array<FrameCommandLog, NumFrameCommandLogs> frameLogs;
+  std::array<FrameCommandLog, NumFrameCommandLogs> frameLogs;
   uint32_t activeLogId = 0;
   uint64_t frameId = 0;
 
@@ -1561,7 +1578,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
   {
     uint64_t progress = 0;
     uint32_t frameIndex = 0;
-    eastl::vector<Query *> deletedQueries;
+    std::vector<Query*> deletedQueries;
   };
 
   struct Frontend
@@ -1574,10 +1591,10 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
     uint64_t nextWorkItemProgress = 2;
     uint64_t recordingWorkItemProgress = 1;
     uint64_t completedFrameProgress = 0;
-    eastl::vector<size_t> renderTargetIndices;
+    std::vector<size_t> renderTargetIndices;
     // atomic so multiple threads are able to safely check if the progress has been completed
     std::atomic<uint64_t> frontendFinishedWorkItem = {0};
-    eastl::vector<FrameEvents *> frameEventCallbacks;
+    std::vector<FrameEvents*> frameEventCallbacks;
 #if DX12_RECORD_TIMING_DATA
     Drv3dTimings timingHistory[timing_history_length]{};
     uint32_t completedFrameIndex = 0;
@@ -1595,15 +1612,15 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
 #endif
 #endif
     BindlessSetId lastBindlessSetId = BindlessSetId::Null();
-    eastl::vector<EventPointer> eventsPool;
+    std::vector<EventPointer> eventsPool;
     frontend::Swapchain swapchain;
   };
   struct Backend
   {
     // state used by any context
     ContextState sharedContextState;
-    eastl::vector<os_event_t> frameCompleteEvents;
-    eastl::vector<FrameEvents *> frameEventCallbacks;
+    std::vector<os_event_t> frameCompleteEvents;
+    std::vector<FrameEvents*> frameEventCallbacks;
 #if DX12_RECORD_TIMING_DATA
     int64_t gpuWaitDuration = 0;
     int64_t acquireBackBufferDuration = 0;
@@ -1611,7 +1628,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
 #endif
     ConstBufferStreamDescriptorHeap constBufferStreamDescriptors;
     backend::Swapchain swapchain{};
-    eastl::map<SWAPID, backend::AdditionalSwapchain> addSwapchains{};
+    std::map<SWAPID, backend::AdditionalSwapchain> addSwapchains{};
 
     // The backend has its own frame progress counter, as its simpler than syncing
     // it with the front end one.
@@ -1624,7 +1641,7 @@ class DeviceContext : protected ResourceUsageHistoryDataSetDebugger, public debu
   Device &device;
 
   AnyCommandStore commandStream;
-  eastl::unique_ptr<WorkerThread> worker;
+  std::unique_ptr<WorkerThread> worker;
 #if !FIXED_EXECUTION_MODE
   ExecutionMode executionMode = ExecutionMode::IMMEDIATE;
   bool isImmediateFlushSuppressed = false;
@@ -1745,7 +1762,7 @@ public:
   void clearRenderTargets(ViewportState vp, uint32_t clear_mask, const nau::math::E3DCOLOR *clear_color, float clear_depth,
     uint8_t clear_stencil);
 
-  void pushConstRegisterData(uint32_t stage, eastl::span<const ConstRegisterType> data);
+  void pushConstRegisterData(uint32_t stage, std::span<const ConstRegisterType> data);
 
   void setSRVTexture(uint32_t stage, size_t unit, BaseTex *texture, ImageViewState view, bool as_const_ds);
   void setSampler(uint32_t stage, size_t unit, D3D12_CPU_DESCRIPTOR_HANDLE sampler);
@@ -1764,7 +1781,7 @@ public:
   void setPolygonLine(bool enable);
   void setStencilRef(uint8_t ref);
   void setScissorEnable(bool enabled);
-  void setScissorRects(eastl::span<const D3D12_RECT> rects);
+  void setScissorRects(std::span<const D3D12_RECT> rects);
 
   void bindVertexDecl(InputLayoutID ident);
 
@@ -1793,7 +1810,7 @@ public:
   void clearBufferInt(BufferResourceReferenceAndClearView buffer, const unsigned values[4]);
   void pushEvent(const char *name);
   void popEvent();
-  void updateViewports(eastl::span<const ViewportState> viewports);
+  void updateViewports(std::span<const ViewportState> viewports);
   void clearDepthStencilImage(Image *image, const ImageSubresourceRange &area, const ClearDepthStencilValue &value);
   void clearColorImage(Image *image, const ImageSubresourceRange &area, const ClearColorValue &value);
   void copyImage(Image *src, Image *dst, const ImageCopy &copy);
@@ -1841,13 +1858,13 @@ public:
   void beginConditionalRender(int name);
   void endConditionalRender();
 
-  void addVertexShader(ShaderID id, eastl::unique_ptr<VertexShaderModule> shader);
-  void addPixelShader(ShaderID id, eastl::unique_ptr<PixelShaderModule> shader);
+  void addVertexShader(ShaderID id, std::unique_ptr<VertexShaderModule> shader);
+  void addPixelShader(ShaderID id, std::unique_ptr<PixelShaderModule> shader);
   void removeVertexShader(ShaderID id);
   void removePixelShader(ShaderID id);
 
   void addGraphicsProgram(GraphicsProgramID program, ShaderID vs, ShaderID ps);
-  void addComputeProgram(ProgramID id, eastl::unique_ptr<ComputeShaderModule> csm, CSPreloaded preloaded);
+  void addComputeProgram(ProgramID id, std::unique_ptr<ComputeShaderModule> csm, CSPreloaded preloaded);
   void removeProgram(ProgramID program);
 
 #if D3D_HAS_RAY_TRACING
@@ -1877,7 +1894,7 @@ public:
 #endif
 #if _TARGET_PC_WIN
   void preRecovery();
-  void recover(const eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &unbounded_samplers);
+  void recover(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& unbounded_samplers);
 #endif
   void deleteTexture(BaseTex *tex);
   void freeMemory(HostDeviceSharedMemoryRegion allocation);
@@ -1986,7 +2003,7 @@ public:
   void bindlessCopyResourceDescriptors(uint32_t src, uint32_t dst, uint32_t count);
 
   BaseTex* getSwapchainColorTexture(SWAPID id);
-  eastl::vector<BaseTex*> getSwapchainsColorTextures();
+  std::vector<BaseTex*> getSwapchainsColorTextures();
   BaseTex *getSwapchainColorTexture();
   BaseTex *getSwapchainSecondaryColorTexture();
   BaseTex *getSwapchainDepthStencilTexture(Extent2D ext);
@@ -2092,8 +2109,8 @@ public:
     uint32_t dst_mip_map_offset);
 
   void debugBreak();
-  void addDebugBreakString(eastl::string_view str);
-  void removeDebugBreakString(eastl::string_view str);
+  void addDebugBreakString(std::string_view str);
+  void removeDebugBreakString(std::string_view str);
 
 #if !_TARGET_XBOXONE
   void dispatchMesh(uint32_t x, uint32_t y, uint32_t z);

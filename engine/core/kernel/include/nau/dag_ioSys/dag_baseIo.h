@@ -2,10 +2,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
 #include <nau/dag_ioSys/dag_genIo.h>
 #include <nau/debug/dag_except.h>
 #include <nau/kernel/kernel_config.h>
+
+#include <vector>
 
 namespace nau::iosys
 {
@@ -41,7 +42,7 @@ namespace nau::iosys
             int ofs;
         };
 
-        eastl::vector<Block> blocks;
+        std::vector<Block> blocks;
         /// @endcond
     };
 
@@ -70,7 +71,7 @@ namespace nau::iosys
             int ofs, len;
         };
 
-        eastl::vector<Block> blocks;
+        std::vector<Block> blocks;
         /// @endcond
     };
 

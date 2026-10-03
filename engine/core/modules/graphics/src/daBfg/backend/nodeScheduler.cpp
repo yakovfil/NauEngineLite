@@ -3,16 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "nodeScheduler.h"
-#include <EASTL/fixed_vector.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/stack.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/numeric.h>
-#include <EASTL/sort.h>
+
+#include <algorithm>
+#include <numeric>
+#include <stack>
+#include <string>
+#include <vector>
+
 #include "dabfg/debug/backendDebug.h"
 #include "dabfg/id/idRange.h"
 #include "nau/diag/logging.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
 
 namespace dabfg
 {
@@ -31,13 +33,13 @@ auto NodeScheduler::schedule(const intermediate::Graph &graph) -> NodePermutatio
     GRAY,
     BLACK
   };
-  eastl::vector<Color, nau::EastlFrameAllocator> colors(graph.nodes.size(), Color::WHITE);
+  std::vector<Color, nau::FrameStdAllocator<Color>> colors(graph.nodes.size(), Color::WHITE);
 
   // NOTE: This is a crutch that forces different eyes to be run in-order.
   // Saves us while we have global state not tracked by framegraph yet.
   // TODO: Remove when DNG no longer has any global state (so basically never)
   auto orderRange = IdRange<intermediate::NodeIndex>(graph.nodes.size());
-  eastl::vector<intermediate::NodeIndex, nau::EastlFrameAllocator> dfsLaunchOrder(orderRange.begin(), orderRange.end());
+  std::vector<intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> dfsLaunchOrder(orderRange.begin(), orderRange.end());
 
   // We can use the same lambda to order descending using .rbegin()/.rend().
   auto orderComp = [&graph](intermediate::NodeIndex l, intermediate::NodeIndex r) {
@@ -46,7 +48,7 @@ auto NodeScheduler::schedule(const intermediate::Graph &graph) -> NodePermutatio
     return graph.nodes[l].priority < graph.nodes[r].priority;
   };
 
-  eastl::sort(dfsLaunchOrder.begin(), dfsLaunchOrder.end(), orderComp);
+  std::sort(dfsLaunchOrder.begin(), dfsLaunchOrder.end(), orderComp);
 
   uint32_t timer = 0;
   for (auto i : dfsLaunchOrder)
@@ -56,65 +58,65 @@ auto NodeScheduler::schedule(const intermediate::Graph &graph) -> NodePermutatio
 
     // This stack will be on top of the framemem stack throughout the dfs,
     // so expanding is FREE
-    eastl::stack<intermediate::NodeIndex, eastl::vector<intermediate::NodeIndex, nau::EastlFrameAllocator>> stack; // TODO: check if its fine: framemem_allocator
-    stack.push(i);
+    std::vector<intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> stack;  // TODO: check if its fine: framemem_allocator
+    stack.push_back(i);
 
     // Loop until all reachable nodes were visited
     while (!stack.empty())
     {
-      auto curr = stack.top();
+        auto curr = stack.back();
 
-      // If this is a fresh node that we haven't seen yet,
-      // mark it gray and enqueue all predecessors
-      // Note that we do NOT pop the curr node from the stack!!!
-      if (colors[curr] == Color::WHITE)
-      {
-        colors[curr] = Color::GRAY;
-
-        const auto &unsortedPreds = graph.nodes[curr].predecessors;
-
-        // This is a very important reservation, it makes frameemem
-        // allocation scopes nest. We first pre-allocate enough space
-        // in the stack for all predecessors and only then allocate a
-        // the `predecessors` vector. This guarantees that the following
-        // pushes don't need to allocate more memory inside the stack.
-        // Without this, pushing could cause a reallocation, which would
-        // force framemem to completely move the stack to different memory :(
-        stack.get_container().reserve(stack.size() + unsortedPreds.size());
-
-        // Our current hack for priorities. I don't like it, but can't
-        // think of anything better.
-        eastl::vector<intermediate::NodeIndex, nau::EastlFrameAllocator> predecessors(unsortedPreds.begin(), unsortedPreds.end());
-        eastl::sort(predecessors.rbegin(), predecessors.rend(), orderComp);
-
-        for (intermediate::NodeIndex next : predecessors)
+        // If this is a fresh node that we haven't seen yet,
+        // mark it gray and enqueue all predecessors
+        // Note that we do NOT pop the curr node from the stack!!!
+        if (colors[curr] == Color::WHITE)
         {
-          if (EASTL_UNLIKELY(colors[next] == Color::GRAY))
-          {
-            // We've found a cycle, the world is sort of broken, complain.
-            const auto &stackRaw = stack.get_container();
-            const auto it = eastl::find(stackRaw.begin(), stackRaw.end(), next);
+            colors[curr] = Color::GRAY;
 
-            eastl::string path;
-            eastl::bitvector<nau::EastlFrameAllocator> visited{graph.nodes.size(), false};
-            for (auto i = it; i != stackRaw.end(); ++i)
-              if (colors[*i] == Color::GRAY && !visited.test(*i, false))
-              {
-                visited.set(*i, true);
-                path += (graph.nodeNames[*i] + " -> ").c_str();
-              }
-            path += graph.nodeNames[*it].c_str();
-            graphDumper.dumpRawUserGraph();
-            NAU_LOG_ERROR("Cyclic dependency detected in framegraph IR: {}", path);
-            NAU_LOG_ERROR("For resource dependency dump look at debug log!");
-          }
+            const auto& unsortedPreds = graph.nodes[curr].predecessors;
 
-          if (colors[next] == Color::WHITE)
-            stack.push(next);
+            // This is a very important reservation, it makes frameemem
+            // allocation scopes nest. We first pre-allocate enough space
+            // in the stack for all predecessors and only then allocate a
+            // the `predecessors` vector. This guarantees that the following
+            // pushes don't need to allocate more memory inside the stack.
+            // Without this, pushing could cause a reallocation, which would
+            // force framemem to completely move the stack to different memory :(
+            stack.reserve(stack.size() + unsortedPreds.size());
+
+            // Our current hack for priorities. I don't like it, but can't
+            // think of anything better.
+            std::vector<intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> predecessors(unsortedPreds.begin(), unsortedPreds.end());
+            std::sort(predecessors.rbegin(), predecessors.rend(), orderComp);
+
+            for (intermediate::NodeIndex next : predecessors)
+            {
+                if (NAU_UNLIKELY(colors[next] == Color::GRAY))
+                {
+                    // We've found a cycle, the world is sort of broken, complain.
+                    const auto& stackRaw = stack;
+                    const auto it = std::find(stackRaw.begin(), stackRaw.end(), next);
+
+                    std::string path;
+                    nau::DynamicBitVector<nau::FrameStdAllocator<nau::BitVectorWord>> visited{graph.nodes.size(), false};
+                    for (auto i = it; i != stackRaw.end(); ++i)
+                        if (colors[*i] == Color::GRAY && !visited.test(*i, false))
+                        {
+                            visited.set(*i, true);
+                            path += (graph.nodeNames[*i] + " -> ").c_str();
+                        }
+                    path += graph.nodeNames[*it].c_str();
+                    graphDumper.dumpRawUserGraph();
+                    NAU_LOG_ERROR("Cyclic dependency detected in framegraph IR: {}", path);
+                    NAU_LOG_ERROR("For resource dependency dump look at debug log!");
+                }
+
+                if (colors[next] == Color::WHITE)
+                    stack.push_back(next);
+            }
+
+            continue;
         }
-
-        continue;
-      }
 
       // After all children of a node have been completely visited,
       // we will find this node at the top of the stack again,
@@ -143,7 +145,7 @@ auto NodeScheduler::schedule(const intermediate::Graph &graph) -> NodePermutatio
       // ABC
       // AB  <- B is black here, because it was already visited
       // A
-      stack.pop();
+      stack.pop_back();
     }
   }
 

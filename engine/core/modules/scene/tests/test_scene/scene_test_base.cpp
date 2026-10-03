@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "scene_test_base.h"
+
+#include <string>
 
 #include "./scene_test_components.h"
 #include "nau/assets/asset_container_builder.h"
@@ -147,7 +148,7 @@ namespace nau::test
         return str;
     }
 
-    IAssetContainer::Ptr SceneTestBase::loadSceneAssetContainerFromStream(io::IStreamReader& stream, eastl::string assetKind)
+    IAssetContainer::Ptr SceneTestBase::loadSceneAssetContainerFromStream(io::IStreamReader& stream, std::string assetKind)
     {
         using namespace nau::async;
         using namespace nau::io;
@@ -155,7 +156,7 @@ namespace nau::test
         IAssetContainerLoader* const assetLoader = findSceneLoader();
         NAU_FATAL(assetLoader);
 
-        Task<IAssetContainer::Ptr> assetContainerTask = async::run([](IAssetContainerLoader* loader, eastl::string assetKind, IStreamReader& stream) -> Task<IAssetContainer::Ptr>
+        Task<IAssetContainer::Ptr> assetContainerTask = async::run([](IAssetContainerLoader* loader, std::string assetKind, IStreamReader& stream) -> Task<IAssetContainer::Ptr>
         {
             AssetContentInfo assetInfo{
                 .kind = std::move(assetKind)};

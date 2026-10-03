@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/core/internal/eventsDb.h>
+
+#include <string>
+#include <utility>
 namespace ecs
 {
 
@@ -17,10 +20,10 @@ void EventsDB::dump() const
   {
     const auto &e = eventsInfo[em.second];
     NAU_UNUSED(e);
-    //ECS_LOG("registered {} {}Event <{}|0x{}> sz {}",
-    //  eastl::get<EventsDB::EVENT_FLAGS>(e) & EVFLG_DESTROY ? "non-trivially-destructible" : "",
-    //  EV_CAST_STR_TYPES[eastl::get<EventsDB::EVENT_FLAGS>(e) & EVFLG_CASTMASK], eastl::get<EventsDB::EVENT_NAME>(e).c_str(),
-    //  eastl::get<EventsDB::EVENT_TYPE>(e), eastl::get<EventsDB::EVENT_SIZE>(e));
+    // ECS_LOG("registered {} {}Event <{}|0x{}> sz {}",
+    //   std::get<EventsDB::EVENT_FLAGS>(e) & EVFLG_DESTROY ? "non-trivially-destructible" : "",
+    //   EV_CAST_STR_TYPES[std::get<EventsDB::EVENT_FLAGS>(e) & EVFLG_CASTMASK], std::get<EventsDB::EVENT_NAME>(e).c_str(),
+    //   std::get<EventsDB::EVENT_TYPE>(e), std::get<EventsDB::EVENT_SIZE>(e));
   }
 
   const event_scheme_t *schemes = eventsScheme.get<event_scheme_t>();
@@ -30,8 +33,8 @@ void EventsDB::dump() const
     if (hash == invalid_event_scheme_hash)
       continue;
     const event_scheme_t &scheme = schemes[em.second];
-    ECS_LOG("Event '{}' hash=0x{} scheme:", eastl::get<EventsDB::EVENT_NAME>(eventsInfo[em.second]).c_str(), hash);
-    const auto *names = scheme.get<eastl::string>();
+    ECS_LOG("Event '{}' hash=0x{} scheme:", std::get<EventsDB::EVENT_NAME>(eventsInfo[em.second]).c_str(), hash);
+    const auto* names = scheme.get<std::string>();
     const auto *types = scheme.get<component_type_t>();
     const auto *offsets = scheme.get<uint8_t>();
     for (int i = 0, n = (int)scheme.size(); i < n; ++i)
@@ -74,9 +77,9 @@ bool EventsDB::registerEvent(event_type_t type, event_size_t sz, event_flags_t f
   {
     id = eventsInfo.size();
     eventsMap[type] = id;
-    eventsInfo.emplace_back(eastl::move(sz), eastl::move(flags), eastl::move(type), eastl::string(name ? name : "#UnknownEvent#"));
+    eventsInfo.emplace_back(std::move(sz), std::move(flags), std::move(type), std::string(name ? name : "#UnknownEvent#"));
     event_scheme_hash_t schemeHash = invalid_event_scheme_hash;
-    eventsScheme.emplace_back(eastl::move(schemeHash), eastl::move(event_scheme_t{}));
+    eventsScheme.emplace_back(std::move(schemeHash), std::move(event_scheme_t{}));
   }
   else
   {
@@ -114,7 +117,7 @@ bool EventsDB::registerEventScheme(event_type_t type, event_scheme_hash_t scheme
   if (eventId != invalid_event_id)
   {
     eventsScheme.get<event_scheme_hash_t>()[eventId] = scheme_hash;
-    eventsScheme.get<event_scheme_t>()[eventId] = eastl::move(scheme);
+    eventsScheme.get<event_scheme_t>()[eventId] = std::move(scheme);
     return true;
   }
   return false;
@@ -149,7 +152,7 @@ void EventsDB::moveOut(void *__restrict to, Event &&e) const
   DAECS_EXT_FAST_ASSERT(e.getFlags() & EVFLG_DESTROY);
   auto it = eventsMoveMap.find(e.getType());
   DAECS_EXT_ASSERTF_RETURN(it != eventsMoveMap.end(), , "0x{}|{}", e.getType(), e.getName());
-  it->second(to, eastl::move(e));
+  it->second(to, std::move(e));
 }
 
 

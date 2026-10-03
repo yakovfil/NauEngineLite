@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
 
 #include "nau/serialization/json_utils.h"
 #include "scene_test_base.h"
@@ -154,7 +155,7 @@ namespace nau::test
             { 2,  3,  4}
         });
 
-        eastl::string jsonString;
+        std::string jsonString;
         {
             io::InplaceStringWriter<char> writer{jsonString};
             jsonWrite(writer, nau::Ptr{object1->getRootComponent().as<RuntimeValue*>()}, JsonSettings{}).ignore();

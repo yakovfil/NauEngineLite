@@ -3,13 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "dag_bindump.h"
 //#include <ioSys/dag_fileIo.h>
 //#include <ioSys/dag_zstdIo.h>
 //#include <generic/dag_span.h>
-#include <EASTL/string_view.h>
-#include <EASTL/string.h>
-#include <EASTL/span.h>
+#include <span>
+#include <string>
+#include <string_view>
 //#include <dag/dag_vector.h>
 
 #include <stdint.h>
@@ -50,13 +56,13 @@ struct MemoryWriterBase : IWriter
   {
     NAU_ASSERT(offset + src_size <= mData.size());
     const uint8_t *data_start = (const uint8_t *)src_data;
-    eastl::copy(data_start, data_start + src_size, mData.begin() + offset);
+    std::copy(data_start, data_start + src_size, mData.begin() + offset);
   }
 };
 
 // TODO: Should be removed as soon as we switch to `dag::Vector` in all places where the `MemoryWriter` is used
-using MemoryWriter = MemoryWriterBase<eastl::vector<uint8_t>>;
-using VectorWriter = MemoryWriterBase<eastl::vector<uint8_t>>;
+using MemoryWriter = MemoryWriterBase<std::vector<uint8_t>>;
+using VectorWriter = MemoryWriterBase<std::vector<uint8_t>>;
 
 class FileWriter : public IWriter
 {
@@ -73,7 +79,7 @@ public:
   uint64_t append(uint64_t size) override
   {
     uint64_t offset = mSaver.tell();
-    eastl::vector<char> empty_data(size);
+    std::vector<char> empty_data(size);
     mSaver.write(empty_data.data(), empty_data.size());
     return offset;
   }
@@ -101,7 +107,7 @@ public:
   void read(uint64_t offset, void *dest_data, uint64_t dest_size) override
   {
     NAU_ASSERT(offset + dest_size <= mSize);
-    eastl::copy(mData + offset, mData + offset + dest_size, (uint8_t *)dest_data);
+    std::copy(mData + offset, mData + offset + dest_size, (uint8_t*)dest_data);
   }
 };
 
@@ -150,7 +156,10 @@ struct StrHolderBase : public traits::List<char, 1, target>
   bool empty() const { return this->size() == 0; }
   uint64_t length() const { return !empty() ? this->size() - 1 : 0; }
   const char *c_str() const { return !empty() ? this->getDataPtr() : ""; }
-  operator eastl::string_view() const { return eastl::string_view(c_str(), length()); }
+  operator std::string_view() const
+  {
+      return std::string_view(c_str(), length());
+  }
   explicit operator const char *() const { return c_str(); }
 };
 
@@ -159,8 +168,14 @@ struct VecHolderBase : public traits::List<UserDataType, alignment, target>
 {
   bool empty() const { return this->size() == 0; }
 
-  operator eastl::span<const UserDataType>() const { return {data(), (intptr_t)this->size()}; }
-  operator eastl::span<UserDataType>() { return {data(), (intptr_t)this->size()}; }
+  operator std::span<const UserDataType>() const
+  {
+      return {data(), (intptr_t)this->size()};
+  }
+  operator std::span<UserDataType>()
+  {
+      return {data(), (intptr_t)this->size()};
+  }
 
   const UserDataType *begin() const { return this->getDataPtr(); }
   const UserDataType *end() const { return this->getDataPtr() + this->size(); }
@@ -181,7 +196,10 @@ public:
   uint32_t size() const { return mCount; }
   const UserDataType &operator[](uint64_t no) const { return *(data() + no); }
   UserDataType &operator[](uint64_t no) { return *(data() + no); }
-  operator eastl::span<const UserDataType>() const { return {data(), (intptr_t)size()}; }
+  operator std::span<const UserDataType>() const
+  {
+      return {data(), (intptr_t)size()};
+  }
   explicit operator const UserDataType *() const { return data(); }
 
   const UserDataType &back() const { return *(end() - 1); }
@@ -211,10 +229,10 @@ struct StrHolder<detail::MASTER> : public detail::StrHolderBase<detail::MASTER>
   template <enum detail::Target t>
   using MyLayout = StrHolder<t>;
 
-  StrHolder &operator=(eastl::string_view str)
+  StrHolder& operator=(std::string_view str)
   {
     this->resize(str.size() + 1);
-    eastl::copy(str.begin(), str.end(), this->mData.begin());
+    std::copy(str.begin(), str.end(), this->mData.begin());
     this->mData[str.size()] = 0;
     return *this;
   }
@@ -238,45 +256,57 @@ struct VecHolder<UserDataType, alignment, detail::MASTER> : public detail::VecHo
   VecHolder &operator=(const VecHolder &) = default;
   VecHolder &operator=(VecHolder &&other) noexcept
   {
-    this->mData = eastl::move(other.mData);
-    this->mListOffset = eastl::move(other.mListOffset);
-    return *this;
+      this->mData = std::move(other.mData);
+      this->mListOffset = std::move(other.mListOffset);
+      return *this;
   }
 
   VecHolder(const detail::traits::List<UserDataType, alignment, detail::MASTER> &vec)
   {
     detail::traits::List<UserDataType, alignment, detail::MASTER>::operator=(vec);
   }
-  VecHolder(const eastl::vector<UserDataType> &vec) { *this = vec; }
-  VecHolder(eastl::span<UserDataType> slice) { *this = slice; }
+  VecHolder(const std::vector<UserDataType>& vec)
+  {
+      *this = vec;
+  }
+  VecHolder(std::span<UserDataType> slice)
+  {
+      *this = slice;
+  }
 
-  VecHolder &operator=(const eastl::vector<UserDataType> &vec)
+  VecHolder& operator=(const std::vector<UserDataType>& vec)
   {
     this->mData = vec;
     return *this;
   }
 
-  VecHolder &operator=(eastl::vector<UserDataType> &&vec) noexcept
+  VecHolder& operator=(std::vector<UserDataType>&& vec) noexcept
   {
-    this->mData = eastl::move(vec);
-    return *this;
+      this->mData = std::move(vec);
+      return *this;
   }
 
-  VecHolder &operator=(eastl::span<UserDataType> slice)
-  {
-    this->mData.assign(slice.begin(), slice.end());
-    return *this;
-  }
-
-  VecHolder &operator=(eastl::span<const UserDataType> slice)
+  VecHolder& operator=(std::span<UserDataType> slice)
   {
     this->mData.assign(slice.begin(), slice.end());
     return *this;
   }
 
-  eastl::vector<UserDataType> &content() { return this->mData; }
+  VecHolder& operator=(std::span<const UserDataType> slice)
+  {
+    this->mData.assign(slice.begin(), slice.end());
+    return *this;
+  }
 
-  operator eastl::vector<UserDataType>() && { return eastl::move(this->mData); }
+  std::vector<UserDataType>& content()
+  {
+      return this->mData;
+  }
+
+  operator std::vector<UserDataType>() &&
+  {
+      return std::move(this->mData);
+  }
 };
 
 template <typename UserDataType, enum detail::Target target = detail::MASTER>
@@ -325,60 +355,60 @@ struct Compressed
     size_t compress(const DataTypeEx &data, int level, /*ZSTD_CCtx_s**/ void* ctx = nullptr, const /*ZSTD_CDict_s**/ void* dict = nullptr)
     {
         return 0;
-      //static_assert(eastl::is_base_of_v<DataType, DataTypeEx>, "DataTypeEx must be derived from DataType");
-      //static_assert(target == MASTER, "Unable to call compress() method on Mapper side");
-      //MemoryWriter writer;
-      //streamWriteLayout(data, writer);
-      //
-      //if (level < 0)
-      //{
-      //  compressedData = eastl::move(writer.mData);
-      //  return compressedData.size();
-      //}
-      //
-      //compressedData.resize(zstd_compress_bound(writer.mData.size()));
-      //size_t compressed_size = 0;
-      //if (dict)
-      //  compressed_size =
-      //    zstd_compress_with_dict(ctx, compressedData.data(), compressedData.size(), writer.mData.data(), writer.mData.size(), dict);
-      //else
-      //  compressed_size = zstd_compress(compressedData.data(), compressedData.size(), writer.mData.data(), writer.mData.size(), level);
-      //NAU_ASSERT(compressed_size <= compressedData.size());
-      //decompressedSize = writer.mData.size();
-      //compressedData.resize(compressed_size);
-      //return compressedData.size();
+        // static_assert(std::is_base_of_v<DataType, DataTypeEx>, "DataTypeEx must be derived from DataType");
+        // static_assert(target == MASTER, "Unable to call compress() method on Mapper side");
+        // MemoryWriter writer;
+        // streamWriteLayout(data, writer);
+        //
+        // if (level < 0)
+        //{
+        //   compressedData = std::move(writer.mData);
+        //   return compressedData.size();
+        // }
+        //
+        // compressedData.resize(zstd_compress_bound(writer.mData.size()));
+        // size_t compressed_size = 0;
+        // if (dict)
+        //   compressed_size =
+        //     zstd_compress_with_dict(ctx, compressedData.data(), compressedData.size(), writer.mData.data(), writer.mData.size(), dict);
+        // else
+        //   compressed_size = zstd_compress(compressedData.data(), compressedData.size(), writer.mData.data(), writer.mData.size(), level);
+        // NAU_ASSERT(compressed_size <= compressedData.size());
+        // decompressedSize = writer.mData.size();
+        // compressedData.resize(compressed_size);
+        // return compressedData.size();
     }
     template <typename Cont>
     DataType *decompress(Cont & out_data, BehaviorOnUncompressed bou, const /*ZSTD_DDict_s**/ void* dict = nullptr) const
     {
       static_assert(target == MAPPER, "Unable to call decompress() method on Master side");
       static_assert(sizeof(typename Cont::value_type) == 1, "The container must consist of single-byte elements");
-      //if (decompressedSize)
+      // if (decompressedSize)
       //{
-      //  out_data.resize(decompressedSize);
-      //  size_t decompressed_size = 0;
-      //  if (EASTL_LIKELY(dict))
-      //  {
-      //    ZSTD_DCtx_s *dctx = zstd_create_dctx(/*tmp*/ true); // tmp for framemem
-      //    decompressed_size =
-      //      zstd_decompress_with_dict(dctx, out_data.data(), out_data.size(), compressedData.data(), compressedData.size(), dict);
-      //    zstd_destroy_dctx(dctx);
-      //  }
-      //  else // TODO: use tmp context too
-      //    decompressed_size = zstd_decompress(out_data.data(), out_data.size(), compressedData.data(), compressedData.size());
-      //  if (decompressed_size != decompressedSize)
-      //    return nullptr;
-      //}
-      //else if (bou == BehaviorOnUncompressed::Reference)
+      //   out_data.resize(decompressedSize);
+      //   size_t decompressed_size = 0;
+      //   if (NAU_LIKELY(dict))
+      //   {
+      //     ZSTD_DCtx_s *dctx = zstd_create_dctx(/*tmp*/ true); // tmp for framemem
+      //     decompressed_size =
+      //       zstd_decompress_with_dict(dctx, out_data.data(), out_data.size(), compressedData.data(), compressedData.size(), dict);
+      //     zstd_destroy_dctx(dctx);
+      //   }
+      //   else // TODO: use tmp context too
+      //     decompressed_size = zstd_decompress(out_data.data(), out_data.size(), compressedData.data(), compressedData.size());
+      //   if (decompressed_size != decompressedSize)
+      //     return nullptr;
+      // }
+      // else if (bou == BehaviorOnUncompressed::Reference)
       //{
-      //  out_data.clear();
-      //  return map<DataType>((uint8_t *)compressedData.data());
-      //}
-      //else
+      //   out_data.clear();
+      //   return map<DataType>((uint8_t *)compressedData.data());
+      // }
+      // else
       //{
-      //  out_data.assign(compressedData.begin(), compressedData.end());
-      //}
-      //return map<DataType>(out_data.data());
+      //   out_data.assign(compressedData.begin(), compressedData.end());
+      // }
+      // return map<DataType>(out_data.data());
       return nullptr;
     }
   BINDUMP_END_LAYOUT()
@@ -404,7 +434,7 @@ using Compressed = typename detail::Compressed<UserDataType>::template Type<deta
   using Compressed = typename bindump::detail::Compressed<UserDataType>::template Type<target>;
 
 template <typename Type>
-class vector : public eastl::vector<Type>
+class vector : public std::vector<Type>
 {
   void serialize() const
   {
@@ -422,10 +452,10 @@ class vector : public eastl::vector<Type>
   void hashialize() const { stream::hash<Type>(); }
 
 public:
-  BINDUMP_ENABLE_STREAMING(vector, eastl::vector<Type>, vector);
+    BINDUMP_ENABLE_STREAMING(vector, std::vector<Type>, vector);
 };
 
-class string : public eastl::string
+class string : public std::string
 {
   void serialize() const
   {
@@ -438,26 +468,26 @@ class string : public eastl::string
     uint32_t count = 0;
     stream::readAux(count);
     this->resize(count);
-    stream::read(this->begin(), count);
+    stream::read(this->data(), count);
   }
   void hashialize() const { stream::hash<char>(); }
 
 public:
-  BINDUMP_ENABLE_STREAMING(string, eastl::string, string);
+    BINDUMP_ENABLE_STREAMING(string, std::string, string);
 };
 
 template <typename Type>
 class Ptr
 {
-  eastl::unique_ptr<Type> mData;
+    std::unique_ptr<Type> mData;
 
-  void serialize() const
-  {
-    uint8_t exist = mData ? 1 : 0;
-    stream::writeAux(exist);
-    if (exist)
-      stream::write(*mData);
-  }
+    void serialize() const
+    {
+        uint8_t exist = mData ? 1 : 0;
+        stream::writeAux(exist);
+        if (exist)
+            stream::write(*mData);
+    }
   void deserialize()
   {
     uint8_t exist = 0;
@@ -481,8 +511,8 @@ public:
   template <typename... Args>
   Type &create(Args &&...args)
   {
-    mData = eastl::make_unique<Type>(eastl::forward<Args>(args)...);
-    return *mData;
+      mData = std::make_unique<Type>(std::forward<Args>(args)...);
+      return *mData;
   }
   operator Type *() { return mData.get(); }
   operator const Type *() const { return mData.get(); }

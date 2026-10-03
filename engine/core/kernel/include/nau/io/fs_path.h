@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <EASTL/string_view.h>
-
 #include <compare>
 #include <string>
 #include <string_view>
@@ -70,28 +68,28 @@ namespace nau::io_detail
     }
 
     /**
-     * @brief Converts `eastl::string_view` to a `std::string` representation of a file path.
-     * @param str `eastl::string_view` representing the file path.
+     * @brief Converts `std::string_view` to a `std::string` representation of a file path.
+     * @param str `std::string_view` representing the file path.
      * @return `std::string` representation of the file path.
      */
-    inline std::string fsPathFromSource(const eastl::string_view str)
+    inline std::string fsPathFromSource(const std::string_view str)
     {
         return {str.data(), str.size()};
     }
 
     /**
-     * @brief Converts `eastl::u8string_view` to a `std::string` representation of a file path.
-     * @param str `eastl::u8string_view` representing the file path.
+     * @brief Converts `std::u8string_view` to a `std::string` representation of a file path.
+     * @param str `std::u8string_view` representing the file path.
      * @return `std::string` representation of the file path.
      */
-    inline std::string fsPathFromSource(const eastl::u8string_view str)
+    inline std::string fsPathFromSource(const std::u8string_view str)
     {
         return {reinterpret_cast<const char*>(str.data()), str.size()};
     }
 
     inline std::string fsPathFromSource(const std::wstring_view str)
     {
-        const eastl::u8string utfStr = strings::wstringToUtf8(eastl::wstring_view{str.data(), str.size()});
+        const std::u8string utfStr = strings::wstringToUtf8(std::wstring_view{str.data(), str.size()});
 
         return std::string{reinterpret_cast<const char*>(utfStr.data()), utfStr.size()};
     }
@@ -359,27 +357,7 @@ namespace nau::io
 
 }  // namespace nau::io
 
-namespace eastl
-{
-    /**
-     * @brief Specialization of the `hash` struct for `nau::io::FsPath`.
-     */
-    template <>
-    struct hash<::nau::io::FsPath>
-    {
-        /**
-         * @brief Computes the hash code of the given `FsPath` object.
-         * @param val The `FsPath` object.
-         * @return The hash code of the `FsPath` object.
-         */
-        [[nodiscard]]
-        size_t operator()(const ::nau::io::FsPath& val) const
-        {
-            return val.getHashCode();
-        }
-    };
-
-}  // namespace eastl
+// namespace eastl
 
 namespace std
 {

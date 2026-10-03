@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "graphics_nodes.h"
 #include "graphics_scene.h"
 #include "nau/async/work_queue.h"
@@ -33,12 +39,12 @@ namespace nau::render
         void getViewportSize(int32_t& width, int32_t& height) override;
 
         virtual void * getHwnd() const override;
-        eastl::string_view getName() const override;
+        std::string_view getName() const override;
 
-        virtual void initialize(eastl::string_view name, SWAPID swapchain, void* hwnd) override;
-        
+        virtual void initialize(std::string_view name, SWAPID swapchain, void* hwnd) override;
+
         virtual SWAPID getSwapchain() const override;
-        eastl::shared_ptr<nau::csm::CascadeShadows> getCSM();
+        std::shared_ptr<nau::csm::CascadeShadows> getCSM();
 
         void setDrawViewportGrid(bool isDrawGrid) override;
         bool getDrawViewportGrid() override;
@@ -67,7 +73,7 @@ namespace nau::render
         virtual async::Task<> enableRenderStages(::nau::TypedFlag<NauRenderStage> stages) override;
         virtual async::Task<> disableRenderStages(::nau::TypedFlag<NauRenderStage> stages) override;
 
-        void setRenderScene(eastl::shared_ptr<GraphicsScene> gScene);
+        void setRenderScene(std::shared_ptr<GraphicsScene> gScene);
 
     private:
         void createGBufferNodes();
@@ -76,12 +82,12 @@ namespace nau::render
         void resizeResolutions();
 
     private:
-        void setName(eastl::string_view name);
+        void setName(std::string_view name);
         void setRenderTarget();
 
         struct GraphNodes
         {
-            eastl::vector<dabfg::NodeHandle> m_frameGraphNodes;
+            std::vector<dabfg::NodeHandle> m_frameGraphNodes;
 
             bool m_isEnabled = true;
 
@@ -104,7 +110,7 @@ namespace nau::render
 
         dabfg::NodeHandle m_csmNode;
 
-        eastl::map<NauRenderStage, GraphNodes&> m_graphStages = {
+        std::map<NauRenderStage, GraphNodes&> m_graphStages = {
             {    NauRenderStage::GBufferStage,     m_gBufferNodes},
             {    NauRenderStage::OutlineStage,     m_outlineNodes},
             {NauRenderStage::EnvironmentStage, m_environmentNodes},
@@ -117,20 +123,20 @@ namespace nau::render
         std::optional<int32_t> m_activeCamera;
 
         nau::Uid m_world = nau::NullUid;
-        eastl::shared_ptr<GraphicsScene> m_graphicsScene = nullptr;
+        std::shared_ptr<GraphicsScene> m_graphicsScene = nullptr;
 
-        eastl::unique_ptr<render::PostFxRenderer> m_postFXRenderer;
-        eastl::unique_ptr<render::EnvironmentRenderer> m_environmentRenderer;
+        std::unique_ptr<render::PostFxRenderer> m_postFXRenderer;
+        std::unique_ptr<render::EnvironmentRenderer> m_environmentRenderer;
 
         void* m_windowHandle;
         SWAPID m_swapchain;
 
-        eastl::string m_name;
-        eastl::string m_resolutionName;
-        eastl::string m_displayName;
+        std::string m_name;
+        std::string m_resolutionName;
+        std::string m_displayName;
         WeakPtr<async::Executor> m_preRenderWorkQueueRef;
 
-        eastl::unique_ptr<render::DeferredRenderTarget> m_gBuffer;
+        std::unique_ptr<render::DeferredRenderTarget> m_gBuffer;
 
         nau::threading::SpinLock m_readWriteMutex;
         nau::threading::SpinLock m_resizeMutex;
@@ -148,7 +154,7 @@ namespace nau::render
             float depth;
         };
 
-        eastl::vector<VieportObjectRequest> m_viewportRequests;
+        std::vector<VieportObjectRequest> m_viewportRequests;
         MaterialAssetView::Ptr m_pixelDataExtractionMaterial;
 
         MaterialAssetView::Ptr m_gridMaterial;
@@ -156,10 +162,10 @@ namespace nau::render
 
         std::atomic<float> m_outlineWidth;
         std::atomic<math::Color4> m_outlineColor;
-        eastl::unique_ptr<render::PostFxRenderer> m_outlineRenderer;
+        std::unique_ptr<render::PostFxRenderer> m_outlineRenderer;
 
-        eastl::shared_ptr<nau::csm::CascadeShadows> m_csm;
-        
+        std::shared_ptr<nau::csm::CascadeShadows> m_csm;
+
         int32_t m_width;
         int32_t m_height;
 

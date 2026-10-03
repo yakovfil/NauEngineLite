@@ -1,17 +1,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/netbase.h>
-#include <daECS/net/time.h>
-#include <generic/dag_carray.h>
 #include <daECS/net/msgDecl.h>
 #include <daECS/net/msgSink.h>
+#include <daECS/net/netbase.h>
+#include <daECS/net/time.h>
 #include <daNet/getTime.h>
-#include <perfMon/dag_cpuFreq.h>
-#include <math.h>
-#include <stdlib.h> // abs
-#include <EASTL/algorithm.h>
 #include <debug/dag_debug.h>
-#include <memory.h>
+#include <generic/dag_carray.h>
 #include <limits.h>
+#include <math.h>
+#include <memory.h>
+#include <perfMon/dag_cpuFreq.h>
+#include <stdlib.h>  // abs
+
+#include <algorithm>
 
 #define INITIAL_TIME_SYNC_INTERVAL_MS 250
 #define NUM_INITIAL_TIME_PROBES       4
@@ -35,7 +36,7 @@ public:
       return;
     int skewDiff = (int)sqrtf(abs(timeSkewMs));
     if (timeSkewMs < 0)
-      skewDiff = -eastl::min(skewDiff, rdt_us / 1000);
+        skewDiff = -std::min(skewDiff, rdt_us / 1000);
     timeSkewMs -= skewDiff;
     srvOfsUs += skewDiff * 1000;
     // NAU_CORE_DEBUG_LF("%s skew=%d skd=%d offs=%d rdtus=%d", __FUNCTION__, timeSkewMs, skewDiff, (int)srvOfsUs, rdt_us);
@@ -74,7 +75,7 @@ public:
     int sentTime = rmsg->get<0>(), receivedServerTime = rmsg->get<1>();
     NAU_ASSERT(receivedServerTime >= 0);
 
-    int rtt = eastl::max(int(rmsg->rcvTime - sentTime), 1);
+    int rtt = std::max(int(rmsg->rcvTime - sentTime), 1);
     int localQueueCorrection = (int)danet::GetTime() - rmsg->rcvTime;
     int serverTime = receivedServerTime + localQueueCorrection + rtt / 2; // https://en.wikipedia.org/wiki/Cristian%27s_algorithm
 
@@ -88,9 +89,9 @@ public:
 
     // select record with lowest RTT for TIME_HISTORY_DEPTH*TIME_SYNC_INTERVAL_MS period
     TimeRec minTimeRec{INT_MAX / 2, INT_MAX / 2};
-    for (int i = 0, num = eastl::min(numTimeRec, (unsigned)TIME_HISTORY_DEPTH); i < num; ++i)
-      if (timeHistory[i] < minTimeRec)
-        minTimeRec = timeHistory[i];
+    for (int i = 0, num = std::min(numTimeRec, (unsigned)TIME_HISTORY_DEPTH); i < num; ++i)
+        if (timeHistory[i] < minTimeRec)
+            minTimeRec = timeHistory[i];
 
     if (memcmp(&bestTimeRec, &minTimeRec, sizeof(bestTimeRec)) != 0)
     {

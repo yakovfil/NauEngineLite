@@ -37,7 +37,7 @@ target_include_directories(gameLibs_daECS_net_dasevents PUBLIC
 )
 
 target_link_libraries(gameLibs_daECS_net_dasevents
-	eastl
+
 	NAU::dagorInclude
 )
 

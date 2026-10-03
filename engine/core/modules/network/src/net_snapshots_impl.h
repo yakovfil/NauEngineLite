@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <EASTL/map.h>
-#include <EASTL/string.h>
+#include <map>
+#include <string>
+#include <string_view>
 
 #include "nau/network/netsync/net_snapshots.h"
 #include "nau/rtti/rtti_impl.h"
@@ -26,7 +27,7 @@ namespace nau
         void onSceneActivated(IComponentNetScene* scene) override;
         void onSceneDectivated(IComponentNetScene* scene) override;
         void onSceneUpdated(IComponentNetScene* scene) override;
-        void setOnSceneMissing(nau::Functor<void(eastl::string_view peerId, eastl::string_view sceneName)> callback) override;
+        void setOnSceneMissing(nau::Functor<void(std::string_view peerId, std::string_view sceneName)> callback) override;
 
         void onComponentActivated(IComponentNetSync* component) override;
         void onComponentDeactivated(IComponentNetSync* component) override;
@@ -34,7 +35,7 @@ namespace nau
 
         void nextFrame() override;
         void applyPeerUpdates();
-        void applyFrameUpdate(const eastl::string& peerId, uint32_t frame);
+        void applyFrameUpdate(const std::string& peerId, uint32_t frame);
 
         // Debug
         void applyPeerUpdatesLocal(const char* srcPeerId, const char* dstPeerId);
@@ -50,7 +51,7 @@ namespace nau
 
             ComponentData() = default;
             ComponentData(IComponentNetSync* component);
-            eastl::string m_data;
+            std::string m_data;
         };
 
         // Seriazable
@@ -59,7 +60,7 @@ namespace nau
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(m_components))
 
-            eastl::map<eastl::string, ComponentData> m_components;
+            std::map<std::string, ComponentData> m_components;
             void writeComponent(IComponentNetSync* component);
         };
 
@@ -77,34 +78,34 @@ namespace nau
             {
             }
             uint32_t m_frame = 0;
-            eastl::map<eastl::string, SceneSnapshot> m_scenes;
-            void writeComponent(const eastl::string& sceneName, IComponentNetSync* component);
+            std::map<std::string, SceneSnapshot> m_scenes;
+            void writeComponent(const std::string& sceneName, IComponentNetSync* component);
         };
 
         // Local, not serializable
         struct PeerData
         {
             uint32_t m_currentFrame;
-            eastl::map<eastl::string, IComponentNetScene*> m_peerScenes;
-            eastl::map<uint32_t, FrameSnapshot> m_frames;
+            std::map<std::string, IComponentNetScene*> m_peerScenes;
+            std::map<uint32_t, FrameSnapshot> m_frames;
 
             void activateScene(IComponentNetScene* scene);
             void deactivateScene(IComponentNetScene* scene);
 
-            void writeComponent(const eastl::string& sceneName, IComponentNetSync* component);
+            void writeComponent(const std::string& sceneName, IComponentNetSync* component);
 
             void advanceToFrame(uint32_t frame);
             void purgeFrames(uint32_t frame);
 
-            void serializeFrame(uint32_t frame, eastl::string& str);
-            void deserializeFrame(const eastl::string& str);
+            void serializeFrame(uint32_t frame, std::string& str);
+            void deserializeFrame(const std::string& str);
         };
 
-        PeerData* getPeer(const eastl::string& sceneName);
+        PeerData* getPeer(const std::string& sceneName);
 
         uint32_t m_frame = 0;
-        eastl::map<eastl::string, PeerData> m_peers;
-        eastl::map<eastl::string, PeerData*> m_sceneToPeer;
-        nau::Functor<void(eastl::string_view peerId, eastl::string_view sceneName)> m_onSceneMissing;
+        std::map<std::string, PeerData> m_peers;
+        std::map<std::string, PeerData*> m_sceneToPeer;
+        nau::Functor<void(std::string_view peerId, std::string_view sceneName)> m_onSceneMissing;
     };
 }  // namespace nau

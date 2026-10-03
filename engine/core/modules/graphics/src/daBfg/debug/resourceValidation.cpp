@@ -2,15 +2,19 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <functional>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <string>
+#include <utility>
+#include <variant>
+
 #include "dabfg/backend/intermediateRepresentation.h"
-#include <EASTL/vector_set.h>
 #include "dabfg/frontend/internalRegistry.h"
 #include "dabfg/id/idRange.h"
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include "render/daBfg/bfg.h"
 #include "nau/diag/logging.h"
-#include "nau/memory/eastl_aliases.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/sorted_vector.h"
+#include "render/daBfg/bfg.h"
 
 // NOTE: this is defined inside scriptSElem.cpp
 //extern void (*scripted_shader_element_on_before_resource_used)(const D3dResource *, const char *);
@@ -21,29 +25,32 @@
 namespace dabfg
 {
 
-static eastl::vector_set<const D3dResource *> managed_resources;
-static eastl::vector_set<const D3dResource *> validated_external_resources;
-static eastl::vector_set<const D3dResource *> current_node_resources;
-static eastl::string current_node_name;
+    static nau::SortedVectorSet<const D3dResource*> managed_resources;
+    static nau::SortedVectorSet<const D3dResource*> validated_external_resources;
+    static nau::SortedVectorSet<const D3dResource*> current_node_resources;
+    static std::string current_node_name;
 
-static eastl::vector_set<eastl::pair<eastl::string, eastl::string>> found_errors;
+    static nau::SortedVectorSet<std::pair<std::string, std::string>> found_errors;
 
-struct ResKeyHash
-{
-  inline unsigned operator()(const D3DRESID &k) const { return eastl::hash<unsigned>{}(unsigned(k)); }
+    struct ResKeyHash
+    {
+        inline unsigned operator()(const D3DRESID& k) const
+        {
+            return std::hash<unsigned>{}(unsigned(k));
+        }
 };
 
-static eastl::string get_res_owning_shadervars(const D3dResource *res)
+static std::string get_res_owning_shadervars(const D3dResource* res)
 {
-  eastl::string message = "Shadervars bound to illegally accessed FG resource:";
-  //for (int varId = 0, n = VariableMap::getGlobalVariablesCount(); varId < n; ++varId)
-  //{
-  //  int varType = ShaderGlobal::get_var_type(varId);
-  //  if ((varType == SHVT_TEXTURE && D3dResManagerData::getD3dRes(ShaderGlobal::get_tex(varId)) == res) ||
-  //      (varType == SHVT_BUFFER && D3dResManagerData::getD3dRes(ShaderGlobal::get_buf(varId)) == res))
-  //    message.append_sprintf("\n  - '%s'", VariableMap::getVariableName(varId));
-  //} // TODO: fix it
-  return message;
+    std::string message = "Shadervars bound to illegally accessed FG resource:";
+    // for (int varId = 0, n = VariableMap::getGlobalVariablesCount(); varId < n; ++varId)
+    //{
+    //   int varType = ShaderGlobal::get_var_type(varId);
+    //   if ((varType == SHVT_TEXTURE && D3dResManagerData::getD3dRes(ShaderGlobal::get_tex(varId)) == res) ||
+    //       (varType == SHVT_BUFFER && D3dResManagerData::getD3dRes(ShaderGlobal::get_buf(varId)) == res))
+    //     message.append_sprintf("\n  - '%s'", VariableMap::getVariableName(varId));
+    // } // TODO: fix it
+    return message;
 }
 
 static void validate(const D3dResource *res, const char *current_shader_class)
@@ -96,15 +103,16 @@ void validation_set_current_node(const InternalRegistry &registry, NodeNameId no
   current_node_resources.reserve(
     registry.resourceProviderReference.providedResources.size() + registry.resourceProviderReference.providedHistoryResources.size());
 
-  auto addResource = [](const auto &var) {
-    if (auto tex = eastl::get_if<ManagedTexView>(&var); tex != nullptr && *tex)
-    {
-      current_node_resources.emplace(static_cast<const D3dResource *>(tex->getBaseTex()));
-    }
-    else if (auto buf = eastl::get_if<ManagedBufView>(&var); buf != nullptr && *buf)
-    {
-      current_node_resources.emplace(static_cast<const D3dResource *>(buf->getBuf()));
-    }
+  auto addResource = [](const auto& var)
+  {
+      if (auto tex = std::get_if<ManagedTexView>(&var); tex != nullptr && *tex)
+      {
+          current_node_resources.emplace(static_cast<const D3dResource*>(tex->getBaseTex()));
+      }
+      else if (auto buf = std::get_if<ManagedBufView>(&var); buf != nullptr && *buf)
+      {
+          current_node_resources.emplace(static_cast<const D3dResource*>(buf->getBuf()));
+      }
   };
 
   for (const auto &[id, res] : registry.resourceProviderReference.providedResources)
@@ -123,8 +131,8 @@ void validation_of_external_resources_duplication(
   static ska::flat_hash_set<D3DRESID, ResKeyHash> alreadyLoggedResources;
 
   //FRAMEMEM_VALIDATE; // Reserved amount DEFINITELY should be enough
-  ska::flat_hash_map<D3DRESID, intermediate::ResourceIndex, ResKeyHash, eastl::equal_to<D3DRESID>, nau::EastlFrameAllocator>
-    setOfExternalResources;
+  ska::flat_hash_map<D3DRESID, intermediate::ResourceIndex, ResKeyHash, std::equal_to<D3DRESID>, nau::FrameStdAllocator<std::pair<const D3DRESID, intermediate::ResourceIndex>>>
+      setOfExternalResources;
   setOfExternalResources.reserve(resources.size());
 
   for (const auto resIdx : IdRange<intermediate::ResourceIndex>(resources.size()))

@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include <memory>
+#include <optional>
 #include <shared_mutex>
 
+#include "nau/animation/components/skeleton_component.h"
 #include "nau/math/math.h"
 #include "nau/scene/camera/camera_manager.h"
 #include "nau/scene/components/billboard_component.h"
@@ -14,7 +17,6 @@
 #include "nau/scene/components/scene_component.h"
 #include "nau/scene/components/skinned_mesh_component.h"
 #include "nau/scene/components/static_mesh_component.h"
-#include "nau/animation/components/skeleton_component.h"
 #include "render_pipeline/skinned_mesh_manager.h"
 #include "render_pipeline/static_mesh_manager.h"
 
@@ -36,8 +38,8 @@ namespace nau
     struct StaticMeshNode : GraphicsSceneNode  // TODO: get rid of this nodes and left only handles
     {
         nau::Ptr<MaterialAssetView> material;
-        eastl::unique_ptr<nau::MeshHandle> handle;
-        eastl::optional<MaterialAssetRef> materialOverride;
+        std::unique_ptr<nau::MeshHandle> handle;
+        std::optional<MaterialAssetRef> materialOverride;
 
         nau::math::Transform transform;
 
@@ -82,9 +84,9 @@ namespace nau
     struct SkinnedMeshNode : GraphicsSceneNode
     {
         Uid skeletonComponentUid;
-        eastl::shared_ptr<nau::SkinnedMeshInstance> instance;
+        std::shared_ptr<nau::SkinnedMeshInstance> instance;
 
-        eastl::optional<MaterialAssetRef> materialOverride;
+        std::optional<MaterialAssetRef> materialOverride;
 
         explicit operator bool() const
         {
@@ -97,14 +99,14 @@ namespace nau
     struct BillboardNode : GraphicsSceneNode
     {
         nau::BillboardHandle::Ptr billboardHandle;
-        eastl::optional<nau::TextureAssetRef> overrideTexture;
+        std::optional<nau::TextureAssetRef> overrideTexture;
     };
 
     struct EnvironmentNode
     {
         Uid componentUid;
         float envIntensity = 1.0f;
-        eastl::optional<nau::TextureAssetRef> newTextureRef;
+        std::optional<nau::TextureAssetRef> newTextureRef;
 
         ReloadableAssetView::Ptr textureView;
 

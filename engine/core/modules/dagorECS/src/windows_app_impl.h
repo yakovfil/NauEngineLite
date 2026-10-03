@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "./windows_window_impl.h"
 #include "nau/app/platform_app.h"
 #include "nau/platform/windows/app/window_message_handler.h"
@@ -56,9 +58,9 @@ namespace nau
         std::atomic<bool> m_isDisposed = false;
         nau::Ptr<WindowsWindow> m_window;
 
-        eastl::vector<async::Executor::Invocation> m_asyncInvocations;
-        eastl::vector<IWindowMessageHandler*> m_windowMessageHandlers;
-        eastl::vector<IWindowsApplicationMessageHandler*> m_appMessageHandlers;
+        std::vector<async::Executor::Invocation> m_asyncInvocations;
+        std::vector<IWindowMessageHandler*> m_windowMessageHandlers;
+        std::vector<IWindowsApplicationMessageHandler*> m_appMessageHandlers;
         std::mutex m_mutex;
         std::atomic<bool> m_isProcessAsyncInvocations = false;
     };

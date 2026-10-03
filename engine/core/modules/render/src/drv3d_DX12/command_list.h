@@ -3,7 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <debug/dag_log.h>
+// #include <iterator>
+//  #include <debug/dag_log.h>
 #include "nau/supp/dag_comPtr.h"
 
 #include "driver.h"
@@ -619,7 +620,7 @@ protected:
       DXGI_FORMAT_B4G4R4A4_UNORM, DXGI_FORMAT_P208, DXGI_FORMAT_V208, DXGI_FORMAT_V408};
 
     // could use binary search, but probably not much (if at all) faster but much more complicated.
-    for (auto at = eastl::begin(typelessTable), lastAt = eastl::begin(typelessTable), endAt = eastl::end(typelessTable); at != endAt;
+    for (auto at = std::begin(typelessTable), lastAt = std::begin(typelessTable), endAt = std::end(typelessTable); at != endAt;
          lastAt = at++)
     {
       if (format == *at)

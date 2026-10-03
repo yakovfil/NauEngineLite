@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include "graphics_assets/skinned_mesh_asset.h"
+
+#include <vector>
+
 #include "nau/assets/asset_ref.h"
 #include "nau/assets/mesh_asset_accessor.h"
 
@@ -67,7 +70,7 @@ namespace nau
             const size_t boneWeightsBufferSize = meshDesc.vertexCount * sizeof(float[4]);
             const size_t boneIndicesBufferSize = meshDesc.vertexCount * sizeof(uint32_t[4]);
 
-            eastl::vector<OutputVertAttribDescription> outLayout;
+            std::vector<OutputVertAttribDescription> outLayout;
             outLayout.reserve(6);
 
             auto& posDesc = outLayout.emplace_back();

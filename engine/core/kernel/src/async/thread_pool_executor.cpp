@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/async/thread_pool_executor.h"
+
+#include <vector>
 
 #include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/internal/runtime_component.h"
@@ -154,7 +155,7 @@ namespace nau::async
             }
         }
 
-        void eraseInvocation(eastl::vector<Invocation>::iterator where)
+        void eraseInvocation(std::vector<Invocation>::iterator where)
         {
             if (auto& last = m_invocations.back(); &(*where) != &last)
             {
@@ -166,8 +167,8 @@ namespace nau::async
         }
 
         std::atomic_bool m_isActive{true};
-        eastl::vector<Invocation> m_invocations;
-        eastl::vector<std::thread> m_threads;
+        std::vector<Invocation> m_invocations;
+        std::vector<std::thread> m_threads;
         std::mutex m_mutex;
         std::condition_variable m_signal;
         std::atomic_size_t m_taskCounter = 0;

@@ -5,12 +5,12 @@
 #pragma once
 
 #include <limits>
+#include <vector>
 
 #include "nau/math/math.h"
 #include "nau/physics/physics_body.h"
 #include "nau/physics/physics_defines.h"
 #include "nau/scene/scene_object.h"
-
 
 namespace nau::physics
 {
@@ -36,14 +36,14 @@ namespace nau::physics
         /**
          * @brief Length of the ray. Anything beyond this length will not be reported as a hit.
          */
-        TFloat maxDistance = eastl::numeric_limits<TFloat>::max();
+        TFloat maxDistance = std::numeric_limits<TFloat>::max();
 
         /**
          * @brief List of channels the ray should hit.
          *
          * Empty list means the ray should hit any channel.
          */
-        eastl::vector<CollisionChannel> reactChannels;
+        std::vector<CollisionChannel> reactChannels;
 
         /**
          * @brief Indicates whether the ray should ignore or hit triggers.

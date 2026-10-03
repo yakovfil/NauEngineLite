@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/optional.h>
-#include <EASTL/string_view.h>
-#include <EASTL/utility.h>
-
+#include <optional>
+#include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include "nau/diag/logging.h"
 #include "nau/kernel/kernel_config.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/meta/attribute.h"
 #include "nau/serialization/runtime_value_builder.h"
 #include "nau/utils/tuple_utility.h"
@@ -33,24 +32,24 @@ namespace nau::meta
         /**
             @brief checks that an attribute with a given key exists in a collection
          */
-        virtual bool containsAttribute(eastl::string_view key) const = 0;
+        virtual bool containsAttribute(std::string_view key) const = 0;
 
         /**
             @brief get key name at index
          */
-        virtual eastl::string_view getKey(size_t index) const = 0;
+        virtual std::string_view getKey(size_t index) const = 0;
 
         /**
             @brief getting value associated with a key.
             If there is multiple attributes for that key - only first will be returned
          */
-        virtual RuntimeValue::Ptr getValue(eastl::string_view key) const = 0;
+        virtual RuntimeValue::Ptr getValue(std::string_view key) const = 0;
 
         /**
             @brief getting all values associated with a key.
          */
         virtual Vector<RuntimeValue::Ptr>
-        getAllValues(eastl::string_view key) const = 0;
+        getAllValues(std::string_view key) const = 0;
 
         /**
          */
@@ -64,12 +63,12 @@ namespace nau::meta
          */
         template <std::derived_from<Attribute> Key, typename T>
         requires(HasRuntimeValueRepresentation<T> && std::is_default_constructible_v<T>)
-        eastl::optional<T> get() const
+        std::optional<T> get() const
         {
             RuntimeValue::Ptr value = getValue(Key{}.strValue);
             if (!value)
             {
-                return eastl::nullopt;
+                return std::nullopt;
             }
 
             T result;
@@ -77,7 +76,7 @@ namespace nau::meta
             if (!assignResult)
             {
                 NAU_LOG_ERROR("Fail to assign attribute ({}) value:{}", Key{}.strValue, assignResult.getError()->getMessage());
-                return eastl::nullopt;
+                return std::nullopt;
             }
 
             return result;
@@ -111,23 +110,23 @@ namespace nau::meta
 
         size_t getSize() const override;
 
-        bool containsAttribute(eastl::string_view key) const override;
+        bool containsAttribute(std::string_view key) const override;
 
-        eastl::string_view getKey(size_t index) const override;
+        std::string_view getKey(size_t index) const override;
 
-        RuntimeValue::Ptr getValue(eastl::string_view key) const override;
+        RuntimeValue::Ptr getValue(std::string_view key) const override;
 
         Vector<RuntimeValue::Ptr>
-        getAllValues(eastl::string_view key) const override;
+        getAllValues(std::string_view key) const override;
 
     private:
         using AttributeEntry =
-            eastl::pair<eastl::string_view, RuntimeValue::Ptr>;
+            std::pair<std::string_view, RuntimeValue::Ptr>;
 
         void setupUniqueKeys();
 
         Vector<AttributeEntry> m_attributes;
-        Vector<eastl::string_view> m_uniqueKeys;
+        Vector<std::string_view> m_uniqueKeys;
     };
 
     template <typename T>

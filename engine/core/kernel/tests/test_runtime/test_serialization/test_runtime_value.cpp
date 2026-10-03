@@ -1,8 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-#include <EASTL/unordered_map.h>
 #include "nau/serialization/runtime_value_builder.h"
 #include "nau/string/string_utils.h"
 #include "nau/utils/scope_guard.h"
@@ -130,12 +136,12 @@ namespace nau::test
 
             if (rtValue->isSigned() != std::is_signed_v<NativeType>)
             {
-                return testing::AssertionFailure() << "Invalid runtime value sign: " << typeid(NativeType).name();
+                return testing::AssertionFailure() << "Invalid runtime value sign: " << testing::internal::GetTypeName<NativeType>();
             }
 
             if (rtValue->getBitsCount() != sizeof(NativeType))
             {
-                return testing::AssertionFailure() << "Invalid runtime value bits:" << typeid(NativeType).name();
+                return testing::AssertionFailure() << "Invalid runtime value bits:" << testing::internal::GetTypeName<NativeType>();
             }
 
             if (rtValue->getInt64() != static_cast<int64_t>(val))
@@ -160,7 +166,7 @@ namespace nau::test
 
             if (rtValue->getBitsCount() != sizeof(NativeType))
             {
-                return testing::AssertionFailure() << "Invalid runtime value bits:" << typeid(NativeType).name();
+                return testing::AssertionFailure() << "Invalid runtime value bits:" << testing::internal::GetTypeName<NativeType>();
             }
 
             return testing::AssertionSuccess();
@@ -213,7 +219,7 @@ namespace nau::test
 
     TYPED_TEST(TestMakeRuntimeValue, EastlStringValue)
     {
-        DeclValue<TypeParam, eastl::string> str;
+        DeclValue<TypeParam, std::string> str;
         auto rtValue1 = this->m_valueFactory(str);
 
         ASSERT_TRUE(rtValue1->template is<RuntimeStringValue>());
@@ -295,13 +301,13 @@ namespace nau::test
     TEST(TestRuntimeValue, CollectionValue_Eastl)
     {
         {
-            eastl::vector<int> arr;
+            std::vector<int> arr;
             auto value = nau::makeValueRef(arr);
             static_assert(std::is_assignable_v<nau::RuntimeCollection&, typename decltype(value)::type&>);
             ASSERT_TRUE(value->isMutable());
         }
         {
-            eastl::list<int> arr;
+            std::list<int> arr;
             constexpr bool IsList = LikeStdList<decltype(arr)>;
             static_assert(IsList);
 
@@ -310,7 +316,7 @@ namespace nau::test
         }
 
         {
-            eastl::set<int> arr;
+            std::set<int> arr;
             static_assert(LikeSet<decltype(arr)>);
 
             auto value = nau::makeValueRef(arr);
@@ -318,7 +324,7 @@ namespace nau::test
         }
 
         {
-            eastl::unordered_set<int> arr;
+            std::unordered_set<int> arr;
             static_assert(LikeSet<decltype(arr)>);
 
             auto value = nau::makeValueRef(arr);
@@ -357,14 +363,14 @@ namespace nau::test
     TEST(TestRuntimeValue, DictionaryValue_Eastl)
     {
         {
-            eastl::map<eastl::string, int> arr;
+            std::map<std::string, int> arr;
             auto value = nau::makeValueRef(arr);
             static_assert(std::is_assignable_v<nau::RuntimeDictionary&, decltype(value)::type&>);
             ASSERT_TRUE(value->isMutable());
         }
 
         {
-            const eastl::map<std::string, int> arr;
+            const std::map<std::string, int> arr;
             auto value = nau::makeValueRef(arr);
             static_assert(std::is_assignable_v<nau::RuntimeDictionary&, decltype(value)::type&>);
             ASSERT_FALSE(value->isMutable());
@@ -450,8 +456,8 @@ namespace nau::test
 
         static_assert(HasRuntimeValueRepresentation<std::set<unsigned, float>>);
         static_assert(HasRuntimeValueRepresentation<std::unordered_set<unsigned, float>>);
-        static_assert(HasRuntimeValueRepresentation<eastl::set<unsigned, float>>);
-        static_assert(HasRuntimeValueRepresentation<eastl::unordered_set<unsigned, float>>);
+        static_assert(HasRuntimeValueRepresentation<std::set<unsigned, float>>);
+        static_assert(HasRuntimeValueRepresentation<std::unordered_set<unsigned, float>>);
     }
 
     TEST(TestRuntimeValue, HasNoRepresentation)
@@ -468,7 +474,7 @@ namespace nau::test
     {
         auto runtimeValueProps = EXPR_Block->RuntimeValue::Ptr
         {
-            eastl::unordered_map<eastl::string, RuntimeValue::Ptr> properties;
+            std::unordered_map<std::string, RuntimeValue::Ptr> properties;
             properties["field1"] = makeValueCopy(77);
 
             return makeValueCopy(std::move(properties));
@@ -487,9 +493,9 @@ namespace nau::test
     {
         auto runtimeValueProps = EXPR_Block->RuntimeValue::Ptr
         {
-            eastl::unordered_map<eastl::string, RuntimeValue::Ptr> properties;
+            std::unordered_map<std::string, RuntimeValue::Ptr> properties;
 
-            properties["fieldArr"] = makeValueCopy(eastl::vector<unsigned>{100, 200});
+            properties["fieldArr"] = makeValueCopy(std::vector<unsigned>{100, 200});
             return makeValueCopy(std::move(properties));
         };
 
@@ -508,10 +514,10 @@ namespace nau::test
     {
         auto runtimeValueProps = EXPR_Block->RuntimeValue::Ptr
         {
-            eastl::unordered_map<eastl::string, RuntimeValue::Ptr> objectProperties;
+            std::unordered_map<std::string, RuntimeValue::Ptr> objectProperties;
             objectProperties["field"] = makeValueCopy(99);
 
-            eastl::unordered_map<eastl::string, RuntimeValue::Ptr> properties;
+            std::unordered_map<std::string, RuntimeValue::Ptr> properties;
             properties["fieldObj"] = makeValueCopy(std::move(objectProperties));
             return makeValueCopy(std::move(properties));
         };
@@ -529,7 +535,7 @@ namespace nau::test
     {
         auto runtimeValueProps = EXPR_Block->RuntimeValue::Ptr
         {
-            eastl::unordered_map<eastl::string, RuntimeValue::Ptr> properties;
+            std::unordered_map<std::string, RuntimeValue::Ptr> properties;
             properties["key1"] = makeValueCopy(77);
             properties["key2"] = makeValueCopy(88.f);
             properties["key3"] = makeValueCopy(std::optional<unsigned>{99});
@@ -551,8 +557,8 @@ namespace nau::test
     {
         static_assert(LikeSet<std::set<unsigned, std::less<>>>);
         static_assert(LikeSet<std::unordered_set<unsigned>>);
-        static_assert(LikeSet<eastl::set<unsigned>>);
-        static_assert(LikeSet<eastl::unordered_set<unsigned>>);
+        static_assert(LikeSet<std::set<unsigned>>);
+        static_assert(LikeSet<std::unordered_set<unsigned>>);
     }
 
     namespace
@@ -574,12 +580,12 @@ namespace nau::test
     }  // namespace
 
     /**
-        Test: eastl::set collection
+        Test: std::set collection
     */
 
     TEST(TestRuntimeValue, EastlSet)
     {
-        eastl::set<unsigned> values = {2, 1, 4, 3, 5, 7, 6, 0};
+        std::set<unsigned> values = {2, 1, 4, 3, 5, 7, 6, 0};
         {
             auto runtimeCollection = makeValueRef(values);
             ASSERT_EQ(runtimeCollection->getSize(), 8);
@@ -602,11 +608,11 @@ namespace nau::test
     }
 
     /**
-        Test: eastl::unordered_set collection
+        Test: std::unordered_set collection
     */
     TEST(TestRuntimeValue, EastlUnorderedSet)
     {
-        eastl::unordered_set<unsigned> values = {2, 1, 4, 3, 5, 7, 6, 0};
+        std::unordered_set<unsigned> values = {2, 1, 4, 3, 5, 7, 6, 0};
         {
             auto runtimeCollection = makeValueRef(values);
             ASSERT_EQ(runtimeCollection->getSize(), 8);
@@ -710,7 +716,7 @@ namespace nau::test
         auto collection = makeValueCopy(rtti::makeTypeInfoCollection<TypeWithInfo1, TypeWithInfo2>());
         ASSERT_TRUE(collection);
 
-        auto types = *runtimeValueCast<eastl::vector<rtti::TypeInfo>>(collection);
+        auto types = *runtimeValueCast<std::vector<rtti::TypeInfo>>(collection);
 
         ASSERT_EQ(types.size(), 2);
         ASSERT_EQ(types[0], rtti::getTypeInfo<TypeWithInfo1>());

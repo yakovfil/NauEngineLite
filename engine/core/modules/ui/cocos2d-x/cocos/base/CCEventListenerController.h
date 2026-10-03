@@ -27,6 +27,7 @@
 #ifndef __cocos2d_libs__EventListenerController__
 #define __cocos2d_libs__EventListenerController__
 
+#include <string>
 #include "platform/CCPlatformMacros.h"
 #include "base/CCEventListener.h"
 
@@ -47,7 +48,7 @@ class Controller;
 class CC_DLL EventListenerController : public EventListener
 {
 public:
-    static const eastl::string LISTENER_ID;
+    static const std::string LISTENER_ID;
     
     /** Create a controller event listener.
      *

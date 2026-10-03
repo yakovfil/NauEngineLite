@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <memory>
+
 #include "nau/3d/dag_ICrashFallback.h"
 
-eastl::unique_ptr<ICrashFallback> crash_fallback_helper = nullptr;
+std::unique_ptr<ICrashFallback> crash_fallback_helper = nullptr;

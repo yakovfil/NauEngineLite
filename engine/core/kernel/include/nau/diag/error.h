@@ -1,14 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <EASTL/string.h>
 #include <fmt/format.h>
 
 #include <exception>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "nau/diag/source_info.h"
@@ -35,9 +34,9 @@ namespace nau
 
         [[nodiscard]] virtual diag::SourceInfo getSource() const = 0;
 
-        [[nodiscard]] virtual eastl::string getMessage() const = 0;
+        [[nodiscard]] virtual std::string getMessage() const = 0;
 
-        [[nodiscard]] eastl::string getDiagMessage() const;
+        [[nodiscard]] std::string getDiagMessage() const;
     };
 
     /**
@@ -48,7 +47,7 @@ namespace nau
         NAU_RTTI_CLASS(nau::DefaultError<T>, T)
 
     public:
-        DefaultError(const diag::SourceInfo& sourceInfo, eastl::string message) :
+        DefaultError(const diag::SourceInfo& sourceInfo, std::string message) :
             m_sourceInfo(sourceInfo),
             m_message(std::move(message))
         {
@@ -59,7 +58,7 @@ namespace nau
             return m_sourceInfo;
         }
 
-        eastl::string getMessage() const override
+        std::string getMessage() const override
         {
             return m_message;
         }
@@ -71,7 +70,7 @@ namespace nau
 
     private:
         const diag::SourceInfo m_sourceInfo;
-        const eastl::string m_message;
+        const std::string m_message;
     };
 
     template <typename T>
@@ -143,12 +142,12 @@ namespace nau
         }
 
         template <typename StringView, typename... Args>
-        requires(std::is_constructible_v<eastl::string_view, StringView>)
+        requires(std::is_constructible_v<std::string_view, StringView>)
         Error::Ptr operator()(StringView message, Args&&... args)
         {
-            eastl::string_view sview{message};
+            std::string_view sview{message};
 
-            eastl::string formattedMessage;
+            std::string formattedMessage;
             if constexpr (sizeof...(Args) == 0)
             {
                 formattedMessage.assign(sview.data(), sview.size());

@@ -2,8 +2,13 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <EASTL/fixed_vector.h>
+#include <algorithm>
+#include <memory>
+#include <span>
+#include <utility>
+
 #include "device.h"
+#include "nau/utils/inline_vector.h"
 #include "nau/utils/span.h"
 
 using namespace drv3d_dx12;
@@ -123,8 +128,8 @@ StageShaderModule drv3d_dx12::shader_layout_to_module(const bindump::Mapper<dxil
 {
   StageShaderModule result;
   result.header = layout->shaderHeader;
-  result.byteCode = eastl::make_unique<uint8_t[]>(layout->bytecode.size());
-  eastl::copy(layout->bytecode.begin(), layout->bytecode.end(), result.byteCode.get());
+  result.byteCode = std::make_unique<uint8_t[]>(layout->bytecode.size());
+  std::copy(layout->bytecode.begin(), layout->bytecode.end(), result.byteCode.get());
   result.byteCodeSize = layout->bytecode.size();
   return result;
 }
@@ -202,45 +207,53 @@ StageShaderModule drv3d_dx12::decode_shader_binary(const void *data, uint32_t si
   result.ident.shaderHash = shaderModuleHash;
   result.ident.shaderSize = shaderModuleSize;
   result.header = *shaderHeader;
-  result.byteCode = eastl::make_unique<uint8_t[]>(shaderModuleSize);
-  eastl::copy(shaderModule, shaderModule + shaderModuleSize, result.byteCode.get());
+  result.byteCode = std::make_unique<uint8_t[]>(shaderModuleSize);
+  std::copy(shaderModule, shaderModule + shaderModuleSize, result.byteCode.get());
   result.byteCodeSize = shaderModuleSize;
   if (shaderName)
     result.debugName = shaderName; //(shaderName, shaderName + shaderNameLength);
   return result;
 }
 
-eastl::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const void *data, uint32_t size)
+std::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const void* data, uint32_t size)
 {
-  eastl::unique_ptr<VertexShaderModule> vs;
-  auto fileHeader = reinterpret_cast<const dxil::FileHeader *>(data);
-  if (fileHeader->ident == dxil::COMBINED_SHADER_UNCOMPRESSED_IDENT)
-  {
-    auto sectionChunksHeaders = reinterpret_cast<const dxil::CombinedChunk *>(fileHeader + 1);
-    auto dataStart = reinterpret_cast<const uint8_t *>(sectionChunksHeaders + fileHeader->chunkCount);
-
-    eastl::unique_ptr<StageShaderModule> gs, hs, ds;
-    for (auto &&sHeader : eastl::span<const dxil::CombinedChunk>(sectionChunksHeaders, fileHeader->chunkCount))
+    std::unique_ptr<VertexShaderModule> vs;
+    auto fileHeader = reinterpret_cast<const dxil::FileHeader*>(data);
+    if (fileHeader->ident == dxil::COMBINED_SHADER_UNCOMPRESSED_IDENT)
     {
-      auto basicModule = decode_shader_binary(dataStart + sHeader.offset, sHeader.size);
-      if (!basicModule)
-      {
-        vs.reset();
-        break;
-      }
-      auto shaderType = static_cast<dxil::ShaderStage>(basicModule.header.shaderType);
-      switch (shaderType)
-      {
+        auto sectionChunksHeaders = reinterpret_cast<const dxil::CombinedChunk*>(fileHeader + 1);
+        auto dataStart = reinterpret_cast<const uint8_t*>(sectionChunksHeaders + fileHeader->chunkCount);
+
+        std::unique_ptr<StageShaderModule> gs, hs, ds;
+        for (auto&& sHeader : std::span<const dxil::CombinedChunk>(sectionChunksHeaders, fileHeader->chunkCount))
+        {
+            auto basicModule = decode_shader_binary(dataStart + sHeader.offset, sHeader.size);
+            if (!basicModule)
+            {
+                vs.reset();
+                break;
+            }
+            auto shaderType = static_cast<dxil::ShaderStage>(basicModule.header.shaderType);
+            switch (shaderType)
+            {
 #if !_TARGET_XBOXONE
         case dxil::ShaderStage::MESH:
 #endif
-        case dxil::ShaderStage::VERTEX: vs = eastl::make_unique<VertexShaderModule>(eastl::move(basicModule)); break;
+        case dxil::ShaderStage::VERTEX:
+            vs = std::make_unique<VertexShaderModule>(std::move(basicModule));
+            break;
 #if !_TARGET_XBOXONE
         case dxil::ShaderStage::AMPLIFICATION:
 #endif
-        case dxil::ShaderStage::GEOMETRY: gs = eastl::make_unique<StageShaderModule>(eastl::move(basicModule)); break;
-        case dxil::ShaderStage::DOMAIN: ds = eastl::make_unique<StageShaderModule>(eastl::move(basicModule)); break;
-        case dxil::ShaderStage::HULL: hs = eastl::make_unique<StageShaderModule>(eastl::move(basicModule)); break;
+        case dxil::ShaderStage::GEOMETRY:
+            gs = std::make_unique<StageShaderModule>(std::move(basicModule));
+            break;
+        case dxil::ShaderStage::DOMAIN:
+            ds = std::make_unique<StageShaderModule>(std::move(basicModule));
+            break;
+        case dxil::ShaderStage::HULL:
+            hs = std::make_unique<StageShaderModule>(std::move(basicModule));
+            break;
         case dxil::ShaderStage::PIXEL:
         case dxil::ShaderStage::COMPUTE:
         default:
@@ -253,9 +266,9 @@ eastl::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const voi
 
     if (vs)
     {
-      vs->geometryShader = eastl::move(gs);
-      vs->hullShader = eastl::move(hs);
-      vs->domainShader = eastl::move(ds);
+        vs->geometryShader = std::move(gs);
+        vs->hullShader = std::move(hs);
+        vs->domainShader = std::move(ds);
     }
   }
   else if (fileHeader->ident == dxil::SHADER_UNCOMPRESSED_IDENT)
@@ -263,7 +276,7 @@ eastl::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const voi
     auto basicModule = decode_shader_binary(data, size);
     if (basicModule)
     {
-      vs = eastl::make_unique<VertexShaderModule>(eastl::move(basicModule));
+        vs = std::make_unique<VertexShaderModule>(std::move(basicModule));
     }
   }
   else
@@ -271,7 +284,7 @@ eastl::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const voi
     auto basicModule = decode_shader_layout<VertexShaderModule>((const uint8_t *)data);
     if (basicModule)
     {
-      vs = eastl::make_unique<VertexShaderModule>(eastl::move(basicModule));
+        vs = std::make_unique<VertexShaderModule>(std::move(basicModule));
     }
     else
     {
@@ -282,24 +295,24 @@ eastl::unique_ptr<VertexShaderModule> drv3d_dx12::decode_vertex_shader(const voi
   return vs;
 }
 
-eastl::unique_ptr<PixelShaderModule> drv3d_dx12::decode_pixel_shader(const void *data, uint32_t size)
+std::unique_ptr<PixelShaderModule> drv3d_dx12::decode_pixel_shader(const void* data, uint32_t size)
 {
-  eastl::unique_ptr<PixelShaderModule> ps;
-  auto fileHeader = reinterpret_cast<const dxil::FileHeader *>(data);
-  if (fileHeader->ident == dxil::SHADER_UNCOMPRESSED_IDENT)
-  {
-    auto basicModule = decode_shader_binary(data, size);
-    if (basicModule)
+    std::unique_ptr<PixelShaderModule> ps;
+    auto fileHeader = reinterpret_cast<const dxil::FileHeader*>(data);
+    if (fileHeader->ident == dxil::SHADER_UNCOMPRESSED_IDENT)
     {
-      ps = eastl::make_unique<PixelShaderModule>(eastl::move(basicModule));
-    }
+        auto basicModule = decode_shader_binary(data, size);
+        if (basicModule)
+        {
+            ps = std::make_unique<PixelShaderModule>(std::move(basicModule));
+        }
   }
   else
   {
     auto basicModule = decode_shader_layout<PixelShaderModule>((const uint8_t *)data);
     if (basicModule)
     {
-      ps = eastl::make_unique<VertexShaderModule>(eastl::move(basicModule));
+        ps = std::make_unique<VertexShaderModule>(std::move(basicModule));
     }
     else
     {
@@ -408,7 +421,7 @@ VertexShaderModuleInBinaryRef drv3d_dx12::decode_vertex_shader_ref(const void *d
     auto &gs = vs.geometryShader;
     auto &hs = vs.hullShader;
     auto &ds = vs.domainShader;
-    for (auto &&sHeader : eastl::span<const dxil::CombinedChunk>(sectionChunksHeaders, fileHeader->chunkCount))
+    for (auto&& sHeader : std::span<const dxil::CombinedChunk>(sectionChunksHeaders, fileHeader->chunkCount))
     {
       auto basicModule = decode_shader_binary_ref(dataStart + sHeader.offset, sHeader.size);
       if (basicModule.byteCode.empty())
@@ -507,99 +520,96 @@ void ShaderProgramDatabase::initNullPixelShader(DeviceContext &ctx)
   nullPixelShader = nPSH;
 }
 
-ShaderID ShaderProgramDatabase::newRawVertexShader(DeviceContext &ctx, const dxil::ShaderHeader &header,
-  eastl::span<const uint8_t> byte_code)
+ShaderID ShaderProgramDatabase::newRawVertexShader(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code)
 {
-  auto module = eastl::make_unique<VertexShaderModule>();
-  module->ident.shaderHash = dxil::HashValue::calculate(byte_code.data(), byte_code.size());
-  module->ident.shaderSize = static_cast<uint32_t>(byte_code.size());
-  module->header = header;
-  module->byteCode = eastl::make_unique<uint8_t[]>(byte_code.size());
-  eastl::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
-  module->byteCodeSize = byte_code.size();
-  auto id = shaderProgramGroups.addVertexShader();
-  ctx.addVertexShader(id, eastl::move(module));
-  return id;
+    auto module = std::make_unique<VertexShaderModule>();
+    module->ident.shaderHash = dxil::HashValue::calculate(byte_code.data(), byte_code.size());
+    module->ident.shaderSize = static_cast<uint32_t>(byte_code.size());
+    module->header = header;
+    module->byteCode = std::make_unique<uint8_t[]>(byte_code.size());
+    std::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
+    module->byteCodeSize = byte_code.size();
+    auto id = shaderProgramGroups.addVertexShader();
+    ctx.addVertexShader(id, std::move(module));
+    return id;
 }
 
 ShaderID ShaderProgramDatabase::newRawVHDGShaders(DeviceContext &ctx, const VsHsDsGsGroup& group)
 {
-    auto module = eastl::make_unique<VertexShaderModule>();
-  
+    auto module = std::make_unique<VertexShaderModule>();
+
     // Vertex shader
     module->ident.shaderHash = dxil::HashValue::calculate(group.vs_byte_code.data(), group.vs_byte_code.size());
     module->ident.shaderSize = static_cast<uint32_t>(group.vs_byte_code.size());
     module->header = group.vsHeader;
-    module->byteCode = eastl::make_unique<uint8_t[]>(group.vs_byte_code.size());
-    eastl::copy(group.vs_byte_code.begin(), group.vs_byte_code.end(), module->byteCode.get());
+    module->byteCode = std::make_unique<uint8_t[]>(group.vs_byte_code.size());
+    std::copy(group.vs_byte_code.begin(), group.vs_byte_code.end(), module->byteCode.get());
     module->byteCodeSize = group.vs_byte_code.size();
 
     // Hull shader
     if(!group.hs_byte_code.empty())
     {
-        module->hullShader = eastl::make_unique<StageShaderModule>();
+        module->hullShader = std::make_unique<StageShaderModule>();
         module->hullShader->ident.shaderHash = dxil::HashValue::calculate(group.hs_byte_code.data(), group.hs_byte_code.size());
         module->hullShader->ident.shaderSize = static_cast<uint32_t>(group.hs_byte_code.size());
         module->hullShader->header = group.hsHeader;
         module->hullShader->byteCodeSize = group.hs_byte_code.size();
-        module->hullShader->byteCode = eastl::make_unique<uint8_t[]>(group.hs_byte_code.size());
-        eastl::copy(group.hs_byte_code.begin(), group.hs_byte_code.end(), module->hullShader->byteCode.get());
+        module->hullShader->byteCode = std::make_unique<uint8_t[]>(group.hs_byte_code.size());
+        std::copy(group.hs_byte_code.begin(), group.hs_byte_code.end(), module->hullShader->byteCode.get());
     }
 
     // Domain shader
     if(!group.ds_byte_code.empty())
     {
-        module->domainShader = eastl::make_unique<StageShaderModule>();
+        module->domainShader = std::make_unique<StageShaderModule>();
         module->domainShader->ident.shaderHash = dxil::HashValue::calculate(group.ds_byte_code.data(), group.ds_byte_code.size());
         module->domainShader->ident.shaderSize = static_cast<uint32_t>(group.ds_byte_code.size());
         module->domainShader->header = group.dsHeader;
         module->domainShader->byteCodeSize = group.ds_byte_code.size();
-        module->domainShader->byteCode = eastl::make_unique<uint8_t[]>(group.ds_byte_code.size());
-        eastl::copy(group.ds_byte_code.begin(), group.ds_byte_code.end(), module->domainShader->byteCode.get());
+        module->domainShader->byteCode = std::make_unique<uint8_t[]>(group.ds_byte_code.size());
+        std::copy(group.ds_byte_code.begin(), group.ds_byte_code.end(), module->domainShader->byteCode.get());
     }
 
     // Geometry shader
     if(!group.gs_byte_code.empty())
     {
-        module->geometryShader = eastl::make_unique<StageShaderModule>();
+        module->geometryShader = std::make_unique<StageShaderModule>();
         module->geometryShader->ident.shaderHash = dxil::HashValue::calculate(group.gs_byte_code.data(), group.gs_byte_code.size());
         module->geometryShader->ident.shaderSize = static_cast<uint32_t>(group.gs_byte_code.size());
         module->geometryShader->header = group.gsHeader;
         module->geometryShader->byteCodeSize = group.gs_byte_code.size();
-        module->geometryShader->byteCode = eastl::make_unique<uint8_t[]>(group.gs_byte_code.size());
-        eastl::copy(group.gs_byte_code.begin(), group.gs_byte_code.end(), module->geometryShader->byteCode.get());
+        module->geometryShader->byteCode = std::make_unique<uint8_t[]>(group.gs_byte_code.size());
+        std::copy(group.gs_byte_code.begin(), group.gs_byte_code.end(), module->geometryShader->byteCode.get());
     }
 
   auto id = shaderProgramGroups.addVertexShader();
-  ctx.addVertexShader(id, eastl::move(module));
+  ctx.addVertexShader(id, std::move(module));
   return id;
 }
 
-ShaderID ShaderProgramDatabase::newRawPixelShader(DeviceContext &ctx, const dxil::ShaderHeader &header,
-  eastl::span<const uint8_t> byte_code)
+ShaderID ShaderProgramDatabase::newRawPixelShader(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code)
 {
-  auto module = eastl::make_unique<PixelShaderModule>();
-  module->ident.shaderHash = dxil::HashValue::calculate(byte_code.data(), byte_code.size());
-  module->ident.shaderSize = static_cast<uint32_t>(byte_code.size());
-  module->header = header;
-  module->byteCode = eastl::make_unique<uint8_t[]>(byte_code.size());
-  eastl::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
-  module->byteCodeSize = byte_code.size();
-  auto id = shaderProgramGroups.addPixelShader();
-  ctx.addPixelShader(id, eastl::move(module));
-  return id;
+    auto module = std::make_unique<PixelShaderModule>();
+    module->ident.shaderHash = dxil::HashValue::calculate(byte_code.data(), byte_code.size());
+    module->ident.shaderSize = static_cast<uint32_t>(byte_code.size());
+    module->header = header;
+    module->byteCode = std::make_unique<uint8_t[]>(byte_code.size());
+    std::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
+    module->byteCodeSize = byte_code.size();
+    auto id = shaderProgramGroups.addPixelShader();
+    ctx.addPixelShader(id, std::move(module));
+    return id;
 }
 
-
-ProgramID drv3d_dx12::ShaderProgramDatabase::newRawComputeProgram(DeviceContext& ctx, const dxil::ShaderHeader &header, eastl::span<const uint8_t> byte_code, CSPreloaded preloaded)
+ProgramID drv3d_dx12::ShaderProgramDatabase::newRawComputeProgram(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code, CSPreloaded preloaded)
 {
-    auto module = eastl::make_unique<ComputeShaderModule>();
+    auto module = std::make_unique<ComputeShaderModule>();
 
     module->ident.shaderHash = dxil::HashValue::calculate(byte_code.data(), byte_code.size());
     module->ident.shaderSize = static_cast<uint32_t>(byte_code.size());
     module->header = header;
-    module->byteCode = eastl::make_unique<uint8_t[]>(byte_code.size());
-    eastl::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
+    module->byteCode = std::make_unique<uint8_t[]>(byte_code.size());
+    std::copy(byte_code.begin(), byte_code.end(), module->byteCode.get());
     module->byteCodeSize = byte_code.size();
 
     ProgramID program;
@@ -607,7 +617,7 @@ ProgramID drv3d_dx12::ShaderProgramDatabase::newRawComputeProgram(DeviceContext&
         nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
         program = shaderProgramGroups.addComputeShaderProgram();
     }
-    ctx.addComputeProgram(program, eastl::move(module), preloaded);
+    ctx.addComputeProgram(program, std::move(module), preloaded);
 
     return program;
 }
@@ -625,14 +635,14 @@ ProgramID ShaderProgramDatabase::newComputeProgram(DeviceContext &ctx, const voi
     }
   }
 
-  auto module = eastl::make_unique<ComputeShaderModule>(eastl::move(basicModule));
+  auto module = std::make_unique<ComputeShaderModule>(std::move(basicModule));
 
   ProgramID program;
   {
     nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
     program = shaderProgramGroups.addComputeShaderProgram();
   }
-  ctx.addComputeProgram(program, eastl::move(module), preloaded);
+  ctx.addComputeProgram(program, std::move(module), preloaded);
 
   return program;
 }
@@ -687,15 +697,15 @@ GraphicsProgramUsageInfo ShaderProgramDatabase::getGraphicsProgramForStateUpdate
 
 InputLayoutID ShaderProgramDatabase::registerInputLayoutInternal(DeviceContext &ctx, const InputLayout &layout)
 {
-  auto ref = eastl::find(begin(publicImputLayoutTable), end(publicImputLayoutTable), layout);
+    auto ref = std::find(begin(publicImputLayoutTable), end(publicImputLayoutTable), layout);
 
-  InputLayoutID ident;
-  if (ref == end(publicImputLayoutTable))
-  {
-    ref = publicImputLayoutTable.emplace(ref, layout);
-    ident = InputLayoutID{int(ref - begin(publicImputLayoutTable))};
-    ctx.registerInputLayout(ident, layout);
-  }
+    InputLayoutID ident;
+    if (ref == end(publicImputLayoutTable))
+    {
+        ref = publicImputLayoutTable.emplace(ref, layout);
+        ident = InputLayoutID{int(ref - begin(publicImputLayoutTable))};
+        ctx.registerInputLayout(ident, layout);
+    }
   else
   {
     ident = InputLayoutID{int(ref - begin(publicImputLayoutTable))};
@@ -770,7 +780,7 @@ ShaderID ShaderProgramDatabase::newVertexShader(DeviceContext &ctx, const void *
       nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
       id = shaderProgramGroups.addVertexShader();
     }
-    ctx.addVertexShader(id, eastl::move(vs));
+    ctx.addVertexShader(id, std::move(vs));
   }
   return id;
 }
@@ -787,7 +797,7 @@ ShaderID ShaderProgramDatabase::newPixelShader(DeviceContext &ctx, const void *d
       id = shaderProgramGroups.addPixelShader();
     }
 
-    ctx.addPixelShader(id, eastl::move(ps));
+    ctx.addPixelShader(id, std::move(ps));
   }
   return id;
 }
@@ -828,7 +838,7 @@ void ShaderProgramDatabase::deleteVertexShader(DeviceContext &ctx, ShaderID shad
   if (shader.getGroup() > 0)
     return;
 
-  eastl::fixed_vector<GraphicsProgramID, 2, true> toRemove;
+  nau::InlineVector<GraphicsProgramID, 2, true> toRemove;
   {
     nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
     shaderProgramGroups.removeVertexShader(shader);
@@ -850,7 +860,7 @@ void ShaderProgramDatabase::deletePixelShader(DeviceContext &ctx, ShaderID shade
   if (shader.getGroup() > 0)
     return;
 
-  eastl::fixed_vector<GraphicsProgramID, 2, true> toRemove;
+  nau::InlineVector<GraphicsProgramID, 2, true> toRemove;
   {
     nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
     shaderProgramGroups.removePixelShader(shader);
@@ -881,9 +891,10 @@ ProgramID ShaderProgramDatabase::newRaytraceProgram(DeviceContext &ctx, const Sh
 {
   nau::hal::ScopedLockWriteTemplate<nau::hal::OSReadWriteLock> lock(dataGuard);
 
-  auto ref = eastl::find_if(begin(raytracePrograms), end(raytracePrograms), [](const RaytraceProgram &rp) {
-    // no shaders indicate empty slot
-    return nullptr == rp.shaders.get();
+  auto ref = std::find_if(begin(raytracePrograms), end(raytracePrograms), [](const RaytraceProgram& rp)
+  {
+      // no shaders indicate empty slot
+      return nullptr == rp.shaders.get();
   });
   if (ref == end(raytracePrograms))
   {
@@ -894,9 +905,9 @@ ProgramID ShaderProgramDatabase::newRaytraceProgram(DeviceContext &ctx, const Sh
   // only used to back addRaytraceProgram command of ctx
   auto &target = *ref;
   target.shaders.reset(new ShaderID[shader_count]);
-  eastl::copy(shader_ids, shader_ids + shader_count, target.shaders.get());
+  std::copy(shader_ids, shader_ids + shader_count, target.shaders.get());
   target.shaderGroups.reset(new RaytraceShaderGroup[group_count]);
-  eastl::copy(shader_groups, shader_groups + group_count, target.shaderGroups.get());
+  std::copy(shader_groups, shader_groups + group_count, target.shaderGroups.get());
   target.groupCount = group_count;
   target.shaderCount = shader_count;
   target.maxRecursionDepth = max_recursion_depth;
@@ -958,45 +969,45 @@ DynamicArray<InputLayoutID> ShaderProgramDatabase::loadInputLayoutFromBlk(Device
 
 void backend::ShaderModuleManager::addVertexShader(ShaderID id, VertexShaderModule *module)
 {
-  eastl::unique_ptr<VertexShaderModule> modulePtr{module};
+    std::unique_ptr<VertexShaderModule> modulePtr{module};
 
-  NAU_ASSERT_RETURN(0 == id.getGroup(), );
+    NAU_ASSERT_RETURN(0 == id.getGroup(), );
 
-  ensure_container_space(shaderGroupZero.vertex, id.getIndex() + 1);
-  auto &shader = shaderGroupZero.vertex[id.getIndex()];
-  shader = eastl::make_unique<GroupZeroVertexShaderModule>();
-  shader->header.hash = module->ident.shaderHash;
-  shader->header.header = module->header;
-  shader->header.debugName = module->debugName;
-  shader->bytecode.bytecode = eastl::move(module->byteCode);
-  shader->bytecode.bytecodeSize = module->byteCodeSize;
-  dxil::ShaderHeader subShaderHeaders[3];
-  StageShaderModuleBytecode subShaderBytecodes[3];
-  uint32_t subShaderCount = 0;
-  if (module->geometryShader)
-  {
-    auto &headerTarget = subShaderHeaders[subShaderCount];
-    auto &bytecodeTarget = subShaderBytecodes[subShaderCount++];
-    headerTarget = module->geometryShader->header;
-    bytecodeTarget.bytecode = eastl::move(module->geometryShader->byteCode);
-    bytecodeTarget.bytecodeSize = module->geometryShader->byteCodeSize;
+    ensure_container_space(shaderGroupZero.vertex, id.getIndex() + 1);
+    auto& shader = shaderGroupZero.vertex[id.getIndex()];
+    shader = std::make_unique<GroupZeroVertexShaderModule>();
+    shader->header.hash = module->ident.shaderHash;
+    shader->header.header = module->header;
+    shader->header.debugName = module->debugName;
+    shader->bytecode.bytecode = std::move(module->byteCode);
+    shader->bytecode.bytecodeSize = module->byteCodeSize;
+    dxil::ShaderHeader subShaderHeaders[3];
+    StageShaderModuleBytecode subShaderBytecodes[3];
+    uint32_t subShaderCount = 0;
+    if (module->geometryShader)
+    {
+        auto& headerTarget = subShaderHeaders[subShaderCount];
+        auto& bytecodeTarget = subShaderBytecodes[subShaderCount++];
+        headerTarget = module->geometryShader->header;
+        bytecodeTarget.bytecode = std::move(module->geometryShader->byteCode);
+        bytecodeTarget.bytecodeSize = module->geometryShader->byteCodeSize;
 
-    shader->header.hasGsOrAs = true;
-  }
+        shader->header.hasGsOrAs = true;
+    }
   if (module->hullShader && module->domainShader)
   {
     {
       auto &headerTarget = subShaderHeaders[subShaderCount];
       auto &bytecodeTarget = subShaderBytecodes[subShaderCount++];
       headerTarget = module->hullShader->header;
-      bytecodeTarget.bytecode = eastl::move(module->hullShader->byteCode);
+      bytecodeTarget.bytecode = std::move(module->hullShader->byteCode);
       bytecodeTarget.bytecodeSize = module->hullShader->byteCodeSize;
     }
     {
       auto &headerTarget = subShaderHeaders[subShaderCount];
       auto &bytecodeTarget = subShaderBytecodes[subShaderCount++];
       headerTarget = module->domainShader->header;
-      bytecodeTarget.bytecode = eastl::move(module->domainShader->byteCode);
+      bytecodeTarget.bytecode = std::move(module->domainShader->byteCode);
       bytecodeTarget.bytecodeSize = module->domainShader->byteCodeSize;
     }
 
@@ -1004,31 +1015,31 @@ void backend::ShaderModuleManager::addVertexShader(ShaderID id, VertexShaderModu
   }
   if (subShaderCount > 0)
   {
-    shader->header.subShaders = eastl::make_unique<dxil::ShaderHeader[]>(subShaderCount);
-    eastl::copy_n(subShaderHeaders, subShaderCount, shader->header.subShaders.get());
+      shader->header.subShaders = std::make_unique<dxil::ShaderHeader[]>(subShaderCount);
+      std::copy_n(subShaderHeaders, subShaderCount, shader->header.subShaders.get());
 
-    shader->bytecode.subShaders = eastl::make_unique<StageShaderModuleBytecode[]>(subShaderCount);
-    for (uint32_t i = 0; i < subShaderCount; ++i)
-    {
-      shader->bytecode.subShaders[i] = eastl::move(subShaderBytecodes[i]);
-    }
+      shader->bytecode.subShaders = std::make_unique<StageShaderModuleBytecode[]>(subShaderCount);
+      for (uint32_t i = 0; i < subShaderCount; ++i)
+      {
+          shader->bytecode.subShaders[i] = std::move(subShaderBytecodes[i]);
+      }
   }
 }
 
 void backend::ShaderModuleManager::addPixelShader(ShaderID id, PixelShaderModule *module)
 {
-  eastl::unique_ptr<PixelShaderModule> modulePtr{module};
+    std::unique_ptr<PixelShaderModule> modulePtr{module};
 
-  NAU_ASSERT_RETURN(0 == id.getGroup(), );
+    NAU_ASSERT_RETURN(0 == id.getGroup(), );
 
-  ensure_container_space(shaderGroupZero.pixel, id.getIndex() + 1);
-  auto &shader = shaderGroupZero.pixel[id.getIndex()];
-  shader = eastl::make_unique<GroupZeroPixelShaderModule>();
-  shader->header.hash = module->ident.shaderHash;
-  shader->header.header = module->header;
-  shader->header.debugName = module->debugName;
-  shader->bytecode.bytecode = eastl::move(module->byteCode);
-  shader->bytecode.bytecodeSize = module->byteCodeSize;
+    ensure_container_space(shaderGroupZero.pixel, id.getIndex() + 1);
+    auto& shader = shaderGroupZero.pixel[id.getIndex()];
+    shader = std::make_unique<GroupZeroPixelShaderModule>();
+    shader->header.hash = module->ident.shaderHash;
+    shader->header.header = module->header;
+    shader->header.debugName = module->debugName;
+    shader->bytecode.bytecode = std::move(module->byteCode);
+    shader->bytecode.bytecodeSize = module->byteCodeSize;
 }
 
 const dxil::HashValue &backend::ShaderModuleManager::getVertexShaderHash(ShaderID id) const
@@ -1041,7 +1052,7 @@ const dxil::HashValue &backend::ShaderModuleManager::getVertexShaderHash(ShaderI
   return shaderGroupZero.vertex[id.getIndex()]->header.hash;
 }
 
-void backend::ShaderModuleManager::setVertexShaderName(ShaderID id, eastl::span<const char> name)
+void backend::ShaderModuleManager::setVertexShaderName(ShaderID id, std::span<const char> name)
 {
   if (0 == id.getGroup())
   {
@@ -1063,7 +1074,7 @@ const dxil::HashValue &backend::ShaderModuleManager::getPixelShaderHash(ShaderID
   return shaderGroupZero.pixel[id.getIndex()]->header.hash;
 }
 
-void backend::ShaderModuleManager::setPixelShaderName(ShaderID id, eastl::span<const char> name)
+void backend::ShaderModuleManager::setPixelShaderName(ShaderID id, std::span<const char> name)
 {
   if (0 != id.getGroup())
   {
@@ -1127,11 +1138,11 @@ backend::VertexShaderModuleRefStore backend::ShaderModuleManager::getVertexShade
         }
         if (subShaderCount > 0)
         {
-          shader->header.subShaders = eastl::make_unique<dxil::ShaderHeader[]>(subShaderCount);
-          eastl::copy_n(subShaderHeaders, subShaderCount, shader->header.subShaders.get());
+            shader->header.subShaders = std::make_unique<dxil::ShaderHeader[]>(subShaderCount);
+            std::copy_n(subShaderHeaders, subShaderCount, shader->header.subShaders.get());
 
-          shader->bytecode.subShaders = eastl::make_unique<StageShaderModuleBytcodeInDumpOffsets[]>(subShaderCount);
-          eastl::copy_n(subShaderBytecodes, subShaderCount, shader->bytecode.subShaders.get());
+            shader->bytecode.subShaders = std::make_unique<StageShaderModuleBytcodeInDumpOffsets[]>(subShaderCount);
+            std::copy_n(subShaderBytecodes, subShaderCount, shader->bytecode.subShaders.get());
         }
       }
     }
@@ -1171,18 +1182,18 @@ backend::ShaderModuleManager::AnyShaderModuleUniquePointer backend::ShaderModule
 {
   if (0 != id.getGroup())
   {
-    return eastl::move(shaderGroup[id.getGroup() - 1].vertex[id.getIndex()]);
+      return std::move(shaderGroup[id.getGroup() - 1].vertex[id.getIndex()]);
   }
-  return eastl::move(shaderGroupZero.vertex[id.getIndex()]);
+  return std::move(shaderGroupZero.vertex[id.getIndex()]);
 }
 
 backend::ShaderModuleManager::AnyShaderModuleUniquePointer backend::ShaderModuleManager::releasePixelShader(ShaderID id)
 {
   if (0 != id.getGroup())
   {
-    return eastl::move(shaderGroup[id.getGroup() - 1].pixel[id.getIndex()]);
+      return std::move(shaderGroup[id.getGroup() - 1].pixel[id.getIndex()]);
   }
-  return eastl::move(shaderGroupZero.pixel[id.getIndex()]);
+  return std::move(shaderGroupZero.pixel[id.getIndex()]);
 }
 
 void backend::ShaderModuleManager::resetDumpOfGroup(uint32_t group_index)
@@ -1212,7 +1223,7 @@ void backend::ShaderModuleManager::setVertexShaderCompressionGroup(uint32_t grou
   auto &container = shaderGroup[group_index - 1].vertex;
   ensure_container_space(container, index + 1);
   auto &shader = container[index];
-  shader = eastl::make_unique<GroupVertexShaderModule>();
+  shader = std::make_unique<GroupVertexShaderModule>();
   shader->header.hash = hash;
   shader->bytecode.compressionGroup = compression_group;
   shader->bytecode.compressionIndex = compression_index;
@@ -1226,7 +1237,7 @@ void backend::ShaderModuleManager::setPixelShaderCompressionGroup(uint32_t group
   auto &container = shaderGroup[group_index - 1].pixel;
   ensure_container_space(container, index + 1);
   auto &shader = container[index];
-  shader = eastl::make_unique<GroupPixelShaderModule>();
+  shader = std::make_unique<GroupPixelShaderModule>();
   shader->header.hash = hash;
   shader->bytecode.compressionGroup = compression_group;
   shader->bytecode.compressionIndex = compression_index;

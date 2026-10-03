@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "texture_asset_container.h"
+
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/service/service_provider.h"
 #include "nau/string/string_conv.h"
@@ -14,17 +18,17 @@ namespace nau
     {
     }
 
-    nau::Ptr<> TextureAssetContainer::getAsset([[maybe_unused]] eastl::string_view path)
+    nau::Ptr<> TextureAssetContainer::getAsset([[maybe_unused]] std::string_view path)
     {
         return rtti::staticCast<IRefCounted*>(this);
     }
 
-    eastl::vector<eastl::string> TextureAssetContainer::getContent() const
+    std::vector<std::string> TextureAssetContainer::getContent() const
     {
         return {};
     }
 
-    eastl::vector<eastl::string_view> TextureAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> TextureAssetContainerLoader::getSupportedAssetKind() const
     {
         return {"Texture/*", "png", "jpg", "hdr"};
     }
@@ -41,7 +45,7 @@ namespace nau
         return texDescription;
     }
 
-    void TextureAssetContainer::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination)
+    void TextureAssetContainer::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination)
     {
         NAU_ASSERT(destination.size() == mipLevelsCount);
         m_textureData.copyTextureData(mipLevelStart, mipLevelsCount, destination);

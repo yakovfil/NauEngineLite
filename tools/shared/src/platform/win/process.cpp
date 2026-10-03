@@ -93,7 +93,9 @@ namespace nau
 
         CloseHandle(hStdOutRead);
         DWORD exit_code;
-        if (!GetExitCodeProcess(processInfo.hProcess, &exit_code))
+        // EOF on the output pipe can arrive before the child has exited.
+        if (WaitForSingleObject(processInfo.hProcess, INFINITE) != WAIT_OBJECT_0 ||
+            !GetExitCodeProcess(processInfo.hProcess, &exit_code))
         {
             LOG_ERROR("The process ended with an error {}", GetLastError());
             CloseHandle(processInfo.hThread);

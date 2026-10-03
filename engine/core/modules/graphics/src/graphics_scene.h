@@ -5,24 +5,24 @@
 #pragma once
 
 #include <shared_mutex>
+#include <span>
+#include <unordered_map>
+#include <vector>
 
+#include "graphics_assets/material_asset.h"
+#include "graphics_assets/skinned_mesh_asset.h"
+#include "graphics_assets/static_mesh_asset.h"
+#include "graphics_nodes.h"
 #include "nau/animation/components/skeleton_component.h"
 #include "nau/math/math.h"
 #include "nau/scene/camera/camera_manager.h"
 #include "nau/scene/components/scene_component.h"
 #include "nau/scene/scene_processor.h"
 #include "nau/shaders/shader_defines.h"
-
-#include "graphics_assets/material_asset.h"
-#include "graphics_assets/static_mesh_asset.h"
-#include "graphics_assets/skinned_mesh_asset.h"
-#include "render_pipeline/static_mesh_manager.h"
-#include "render_pipeline/skinned_mesh_manager.h"
-#include "render_pipeline/billboards_manager.h"
 #include "render/lights/clusteredLights.h"
-
-#include "graphics_nodes.h"
-
+#include "render_pipeline/billboards_manager.h"
+#include "render_pipeline/skinned_mesh_manager.h"
+#include "render_pipeline/static_mesh_manager.h"
 
 namespace nau::scene
 {
@@ -40,9 +40,9 @@ namespace nau
 
         async::Task<> initialize();
 
-        async::Task<> activateComponents(eastl::span<const scene::Component*> components, async::Task<> barrier);
+        async::Task<> activateComponents(std::span<const scene::Component*> components, async::Task<> barrier);
 
-        async::Task<> deactivateComponents(eastl::span<const scene::DeactivatedComponentData> components);
+        async::Task<> deactivateComponents(std::span<const scene::DeactivatedComponentData> components);
 
         async::Task<> update();
 
@@ -62,7 +62,7 @@ namespace nau
         bool hasMainCamera() const;
 
         bool hasDirectionalLight();
-        const eastl::vector<DirectionalLightNode>& getDirectionalLights() const;
+        const std::vector<DirectionalLightNode>& getDirectionalLights() const;
 
         bool hasEnvironmentNode();
         EnvironmentNode& getEnvironmentNode();
@@ -76,13 +76,13 @@ namespace nau
 
         const Uid m_worldUid;
 
-        eastl::vector<StaticMeshNode> m_staticMeshes;
-        eastl::vector<BillboardNode> m_billboards;
-        eastl::vector<SkinnedMeshNode> m_skinnedMeshes;
-        eastl::vector<DirectionalLightNode> m_directionalLights;
-        eastl::vector<EnvironmentNode> m_envNodes;
-        eastl::vector<LightNode> m_lightNodes;
-        eastl::unordered_map<Uid, CameraNode> m_cameras;
+        std::vector<StaticMeshNode> m_staticMeshes;
+        std::vector<BillboardNode> m_billboards;
+        std::vector<SkinnedMeshNode> m_skinnedMeshes;
+        std::vector<DirectionalLightNode> m_directionalLights;
+        std::vector<EnvironmentNode> m_envNodes;
+        std::vector<LightNode> m_lightNodes;
+        std::unordered_map<Uid, CameraNode> m_cameras;
 
         render::ClusteredLights m_lights;
         

@@ -3,8 +3,10 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "nau/assets/scene_asset.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_factory.h"
@@ -39,7 +41,7 @@ namespace nau::scene
         ObjectUniquePtr<SceneObject> m_prefabObject;
         const CreateSceneOptionFlag m_options;
         const bool m_buildPrefabMode;
-        eastl::unordered_map<Uid, SceneObject*> m_allObjects;
+        std::unordered_map<Uid, SceneObject*> m_allObjects;
         //
     };
 }  // namespace nau::scene

@@ -4,6 +4,8 @@
 #include "nau/runtime/internal/runtime_state.h"
 
 #include <iostream>
+#include <memory>
+#include <span>
 
 #include "nau/async/async_timer.h"
 #include "nau/async/thread_pool_executor.h"
@@ -59,7 +61,7 @@ namespace nau
 
             m_state = State::ShutdownProcessed;
 
-            RuntimeObjectRegistry::getInstance().visitObjects<IDisposable>([](eastl::span<IRttiObject*> objects)
+            RuntimeObjectRegistry::getInstance().visitObjects<IDisposable>([](std::span<IRttiObject*> objects)
             {
                 for (auto& object : objects)
                 {
@@ -121,7 +123,7 @@ namespace nau
             bool hasReferencedNonExecutors = false;
 
             RuntimeObjectRegistry::getInstance().visitObjects<IRuntimeComponent>(
-                [&](eastl::span<IRttiObject*> objects)
+                [&](std::span<IRttiObject*> objects)
             {
                 for (auto& object : objects)
                 {
@@ -195,7 +197,7 @@ namespace nau
 
     RuntimeState::Ptr RuntimeState::create()
     {
-        return eastl::make_unique<RuntimeStateImpl>();
+        return std::make_unique<RuntimeStateImpl>();
     }
 
 }  // namespace nau

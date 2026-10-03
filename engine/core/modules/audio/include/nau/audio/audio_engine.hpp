@@ -3,10 +3,11 @@
 
 #pragma once
 
-#include "audio_source.hpp"
-#include "audio_container.hpp"
-#include "audio_asset.hpp"
+#include <string>
 
+#include "audio_asset.hpp"
+#include "audio_container.hpp"
+#include "audio_source.hpp"
 
 NAU_AUDIO_BEGIN
 
@@ -57,9 +58,9 @@ public:
 	 * @param [in] path Path to the audio file.
 	 * @return			A pointer to the created asset.
 	 */
-	virtual AudioAssetPtr loadSound(const eastl::string& path) = 0;
+    virtual AudioAssetPtr loadSound(const std::string& path) = 0;
 
-	/**
+    /**
 	 * @brief Creates an audio asset from the streamed audio file.
 	 * 
 	 * @param [in] path Path to the audio file to stream.
@@ -68,14 +69,14 @@ public:
 	 * @note	When a large audio file (e.g. a music track) is to be loaded, it is more efficent to stream it then to boldly load the entire file.
 	 *			When an audio file is streamed, it is loaded in pieces of 2 seconds length. If the audio is short, use standard loadSound function.
 	 */
-	virtual AudioAssetPtr loadStream(const eastl::string& path) = 0;
+    virtual AudioAssetPtr loadStream(const std::string& path) = 0;
 
-	/**
+    /**
 	 * @brief
 	 */
-	virtual AudioAssetContainerPtr createContainer(const eastl::string& name);
+    virtual AudioAssetContainerPtr createContainer(const std::string& name);
 
-	// Asset access
+    // Asset access
 	virtual AudioAssetList audioAssets() = 0;
 	virtual AudioAssetContainerList containerAssets();
 	virtual AudioAssetList assets();

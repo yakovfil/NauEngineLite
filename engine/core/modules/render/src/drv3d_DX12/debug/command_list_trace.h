@@ -3,14 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <variant>
+#include <vector>
 //#include <debug/dag_log.h>
-#include <EASTL/string.h>
+#include <string>
 
-#include "driver.h"
-#include "pipeline_resource_reporter.h"
 #include "call_stack.h"
+#include "driver.h"
 #include "pipeline.h"
-
+#include "pipeline_resource_reporter.h"
 
 inline const char *to_string(D3D12_AUTO_BREADCRUMB_OP op)
 {
@@ -111,29 +113,38 @@ class CommandListTrace : public CommandListTraceBase
 
   struct BeginEventTrace : EventTraceBase
   {
-    eastl::string path;
+      std::string path;
 
-    static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT;
+      static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT;
 
-    void report(call_stack::Reporter &, CompletionStatus status) const { NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path); }
+      void report(call_stack::Reporter&, CompletionStatus status) const
+      {
+          NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path);
+      }
   };
 
   struct EndEventTrace : EventTraceBase
   {
-    eastl::string path;
+      std::string path;
 
-    static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_ENDEVENT;
+      static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_ENDEVENT;
 
-    void report(call_stack::Reporter &, CompletionStatus status) const { NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path); }
+      void report(call_stack::Reporter&, CompletionStatus status) const
+      {
+          NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path);
+      }
   };
 
   struct MarkerTrace : EventTraceBase
   {
-    eastl::string path;
+      std::string path;
 
-    static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_SETMARKER;
+      static constexpr D3D12_AUTO_BREADCRUMB_OP OpCode = D3D12_AUTO_BREADCRUMB_OP_SETMARKER;
 
-    void report(call_stack::Reporter &, CompletionStatus status) const { NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path); }
+      void report(call_stack::Reporter&, CompletionStatus status) const
+      {
+          NAU_LOG_DEBUG("DX12: {} <{}>", prefix(status), path);
+      }
   };
 
   struct DrawTrace : OperationTraceBase, CallStackData
@@ -350,10 +361,9 @@ class CommandListTrace : public CommandListTraceBase
   };
 
   using AnyTraceEvent =
-    eastl::variant<NullTrace, BeginEventTrace, EndEventTrace, MarkerTrace, DrawTrace, DrawIndexedTrace, DrawIndirectTrace,
-      DrawIndexedIndirectTrace, DispatchIndirectTrace, DispatchTrace, DispatchMeshTrace, DispatchMeshIndirectTrace, BlitTrace>;
+      std::variant<NullTrace, BeginEventTrace, EndEventTrace, MarkerTrace, DrawTrace, DrawIndexedTrace, DrawIndirectTrace, DrawIndexedIndirectTrace, DispatchIndirectTrace, DispatchTrace, DispatchMeshTrace, DispatchMeshIndirectTrace, BlitTrace>;
 
-  eastl::vector<AnyTraceEvent> traces;
+  std::vector<AnyTraceEvent> traces;
 
   static bool isTracedOp(D3D12_AUTO_BREADCRUMB_OP op)
   {
@@ -386,20 +396,21 @@ class CommandListTrace : public CommandListTraceBase
   {
     for (; index < traces.size(); ++index)
     {
-      bool wasEvent = eastl::visit(
-        [&reporter, status](auto &trace) -> bool {
-          if (!isEventOp(trace.OpCode))
-          {
-            return false;
-          }
-          trace.report(reporter, status);
-          return true;
+        bool wasEvent = std::visit(
+            [&reporter, status](auto& trace) -> bool
+        {
+            if (!isEventOp(trace.OpCode))
+            {
+                return false;
+            }
+            trace.report(reporter, status);
+            return true;
         },
-        traces[index]);
-      if (!wasEvent)
-      {
-        break;
-      }
+            traces[index]);
+        if (!wasEvent)
+        {
+            break;
+        }
     }
     return index;
   }
@@ -408,27 +419,28 @@ class CommandListTrace : public CommandListTraceBase
   {
     for (; index < traces.size(); ++index)
     {
-      bool keepGoing = eastl::visit(
-        [&reporter, until_op, status](auto &trace) -> bool {
-          if (isEventOp(trace.OpCode))
-          {
-            NAU_LOG_WARNING("DX12: Unexpected event trace encountered!");
-            return true;
-          }
-          else if (trace.OpCode != until_op)
-          {
-            NAU_LOG_WARNING("DX12: Expected next trace op to be {} but report for {} was requested", to_string(trace.OpCode),
-              to_string(until_op));
-            return true;
-          }
-          trace.report(reporter, status);
-          return false;
+        bool keepGoing = std::visit(
+            [&reporter, until_op, status](auto& trace) -> bool
+        {
+            if (isEventOp(trace.OpCode))
+            {
+                NAU_LOG_WARNING("DX12: Unexpected event trace encountered!");
+                return true;
+            }
+            else if (trace.OpCode != until_op)
+            {
+                NAU_LOG_WARNING("DX12: Expected next trace op to be {} but report for {} was requested", to_string(trace.OpCode),
+                                to_string(until_op));
+                return true;
+            }
+            trace.report(reporter, status);
+            return false;
         },
-        traces[index]);
-      if (!keepGoing)
-      {
-        break;
-      }
+            traces[index]);
+        if (!keepGoing)
+        {
+            break;
+        }
     }
     return index;
   }
@@ -440,12 +452,15 @@ class CommandListTrace : public CommandListTraceBase
     uint32_t lastEndPoint = index;
     for (; index < traces.size(); ++index)
     {
-      auto result = eastl::visit([&data](auto &trace) -> TraceCompareResult { return trace.compare(data); }, traces[index]);
+        auto result = std::visit([&data](auto& trace) -> TraceCompareResult
+        {
+            return trace.compare(data);
+        }, traces[index]);
 
-      if (TraceCompareResult::Matching == result)
-      {
-        break;
-      }
+        if (TraceCompareResult::Matching == result)
+        {
+            break;
+        }
       if (TraceCompareResult::Mismatching == result)
       {
         lastEndPoint = index;
@@ -460,12 +475,15 @@ class CommandListTrace : public CommandListTraceBase
     uint32_t lastEndPoint = index;
     for (; index < traces.size(); ++index)
     {
-      auto result = eastl::visit([&data](auto &trace) -> TraceCompareResult { return trace.compare(data); }, traces[index]);
+        auto result = std::visit([&data](auto& trace) -> TraceCompareResult
+        {
+            return trace.compare(data);
+        }, traces[index]);
 
-      if (TraceCompareResult::Mismatching == result)
-      {
-        break;
-      }
+        if (TraceCompareResult::Mismatching == result)
+        {
+            break;
+        }
       if (TraceCompareResult::Matching == result)
       {
         lastEndPoint = index;
@@ -477,17 +495,26 @@ class CommandListTrace : public CommandListTraceBase
 public:
   void beginTrace() { traces.clear(); }
   void endTrace() {}
-  void beginEvent(const EventTraceData &etd, eastl::span<const char>, eastl::span<const char> full_path)
+  void beginEvent(const EventTraceData& etd, std::span<const char>, std::span<const char> full_path)
   {
-    traces.emplace_back(BeginEventTrace{etd, {begin(full_path), end(full_path)}});
+      traces.emplace_back(BeginEventTrace{
+          etd,
+          {full_path.data(), full_path.size()}
+      });
   }
-  void endEvent(const EventTraceData &etd, eastl::span<const char> full_path)
+  void endEvent(const EventTraceData& etd, std::span<const char> full_path)
   {
-    traces.push_back(EndEventTrace{etd, {begin(full_path), end(full_path)}});
+      traces.push_back(EndEventTrace{
+          etd,
+          {full_path.data(), full_path.size()}
+      });
   }
-  void marker(const EventTraceData &etd, eastl::span<const char> text)
+  void marker(const EventTraceData& etd, std::span<const char> text)
   {
-    traces.emplace_back(MarkerTrace{etd, {begin(text), end(text)}});
+      traces.emplace_back(MarkerTrace{
+          etd,
+          {text.data(), text.size()}
+      });
   }
   void draw(const OperationTraceData &otd, const call_stack::CommandData &debug_info, const PipelineStageStateBase &vs,
     const PipelineStageStateBase &ps, BasePipeline &pipeline_base, PipelineVariant &pipeline, uint32_t count, uint32_t instance_count,
@@ -593,7 +620,10 @@ public:
     uint32_t index = ctx.index;
     for (; index < endPos; ++index)
     {
-      eastl::visit([&reporter](auto &trace) { trace.report(reporter, CompletionStatus::Completed); }, traces[index]);
+        std::visit([&reporter](auto& trace)
+        {
+            trace.report(reporter, CompletionStatus::Completed);
+        }, traces[index]);
     }
     ctx.index = endPos;
   }
@@ -604,7 +634,10 @@ public:
     uint32_t index = ctx.index;
     for (; index < endPos; ++index)
     {
-      eastl::visit([&reporter](auto &trace) { trace.report(reporter, CompletionStatus::LastCompleted); }, traces[index]);
+        std::visit([&reporter](auto& trace)
+        {
+            trace.report(reporter, CompletionStatus::LastCompleted);
+        }, traces[index]);
     }
     ctx.index = endPos;
   }
@@ -616,7 +649,10 @@ public:
     uint32_t index = ctx.index;
     for (; index < endPos; ++index)
     {
-      eastl::visit([&reporter](auto &trace) { trace.report(reporter, CompletionStatus::NotCompleted); }, traces[index]);
+        std::visit([&reporter](auto& trace)
+        {
+            trace.report(reporter, CompletionStatus::NotCompleted);
+        }, traces[index]);
     }
     ctx.index = endPos;
   }
@@ -625,7 +661,10 @@ public:
     auto index = ctx.index;
     for (; index < traces.size(); ++index)
     {
-      eastl::visit([&reporter](auto &trace) { trace.report(reporter, CompletionStatus::NotCompleted); }, traces[index]);
+        std::visit([&reporter](auto& trace)
+        {
+            trace.report(reporter, CompletionStatus::NotCompleted);
+        }, traces[index]);
     }
     ctx.index = index;
   }

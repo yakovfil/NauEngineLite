@@ -2,6 +2,10 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include "nau/string/string.h"
+
+
+#include <vector>
 
 #include "nau/utils/dag_baseDef.h"
 //#include <generic/dag_tab.h>
@@ -159,7 +163,7 @@ static inline bool parse_url(const char *url, char *host_buffer, int host_buffer
   return true;
 }
 
-static inline int parse_string_list(eastl::vector<nau::string> &list, const char *str, const char *prefix = "", const char *suffix = "")
+static inline int parse_string_list(std::vector<nau::string>& list, const char* str, const char* prefix = "", const char* suffix = "")
 {
   list.clear();
   while (const char *p = strchr(str, '|'))

@@ -1,10 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nanim_animation_accessor.h"
 
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nanim_asset_container.h"
 #include "nau/assets/asset_manager.h"
@@ -95,8 +97,8 @@ namespace nau
             animationTrackAssetPath = blk.getStr("animation");
         }
 
-        eastl::string skeletonAssetPath;
-        eastl::string animationTrackAssetPath;
+        std::string skeletonAssetPath;
+        std::string animationTrackAssetPath;
     };
 
     struct NanimAnimationAssetAccessor::SkeletalTracksData
@@ -131,8 +133,8 @@ namespace nau
             }
         }
 
-        eastl::vector<SkeletalTrackData> skeletalTracks;
-        eastl::vector<nau::math::mat4> bindMatrices;
+        std::vector<SkeletalTrackData> skeletalTracks;
+        std::vector<nau::math::mat4> bindMatrices;
         int32_t jointsCount = 0;
     };
 
@@ -256,7 +258,7 @@ namespace nau
 
     void NanimAnimationAssetAccessor::fromBlk(const class DataBlock& blk)
     {
-        m_skeletalData = eastl::make_unique<SkeletalTracksData>();
+        m_skeletalData = std::make_unique<SkeletalTracksData>();
         m_skeletalData->fromBlk(blk);
 
         for (int animationBlockIndex = 0; animationBlockIndex < blk.blockCount(); ++animationBlockIndex)
@@ -264,7 +266,7 @@ namespace nau
             if (const auto* animationBlock = blk.getBlock(animationBlockIndex); animationBlock && !strcmp("track", blk.getName(animationBlock->getNameId())))
             {
                 m_descriptor = readDescriptor(*animationBlock);
-                m_data = eastl::make_unique<KeyFramesData>();
+                m_data = std::make_unique<KeyFramesData>();
                 auto* rawData = m_data.get();
 
                 if (rawData && m_descriptor.dataType != AnimationDataDescriptor::DataType::Unsupported)
@@ -316,7 +318,7 @@ namespace nau
         return descriptor;
     }
 
-    void NanimAnimationAssetAccessor::copyInverseBindMatrices(eastl::vector<math::mat4>& data) const
+    void NanimAnimationAssetAccessor::copyInverseBindMatrices(std::vector<math::mat4>& data) const
     {
         data.clear();
 

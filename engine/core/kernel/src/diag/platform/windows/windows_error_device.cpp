@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
 
 #include "nau/debug/debugger.h"
 #include "nau/diag/assertion.h"
@@ -22,15 +23,15 @@ namespace nau::diag
         {
             nau::string message;
 
-            if(!data.message.empty())
+            if (!data.message.empty())
             {
                 message = nau::utils::format("Failed \"{}\". At [{}] {}({}). Error: {}.\nMessage: \"{}\"",
-                                              data.condition.data(),
-                                              data.source.functionName.data(),
-                                              data.source.filePath.data(),
-                                              data.source.line.value_or(0),
-                                              data.error,
-                                              data.message.data());
+                                             data.condition.data(),
+                                             data.source.functionName.data(),
+                                             data.source.filePath.data(),
+                                             data.source.line.value_or(0),
+                                             data.error,
+                                             data.message.data());
             }
             else
             {
@@ -56,7 +57,7 @@ namespace nau::diag
 
     IDeviceError::Ptr createDefaultDeviceError()
     {
-        return eastl::make_unique<WindowsDeviceError>();
+        return std::make_unique<WindowsDeviceError>();
     }
 
 }  // namespace nau::diag

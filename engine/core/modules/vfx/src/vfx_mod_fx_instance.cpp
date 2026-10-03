@@ -3,20 +3,18 @@
 
 #include "vfx_mod_fx_instance.h"
 
-#include "nau/shaders/shader_globals.h"
+#include <algorithm>
 
 #include "math/vfx_random.h"
-
 #include "modfx/emitter/emitter_utils.h"
-
-#include "modfx/modfx_sim.h"
-
-#include "modfx/modfx_life.h"
-#include "modfx/modfx_radius.h"
-#include "modfx/modfx_velocity.h"
 #include "modfx/modfx_color.h"
-#include "modfx/modfx_texture.h"
+#include "modfx/modfx_life.h"
 #include "modfx/modfx_position.h"
+#include "modfx/modfx_radius.h"
+#include "modfx/modfx_sim.h"
+#include "modfx/modfx_texture.h"
+#include "modfx/modfx_velocity.h"
+#include "nau/shaders/shader_globals.h"
 
 namespace nau::vfx::modfx
 {
@@ -25,7 +23,6 @@ namespace nau::vfx::modfx
         , m_normalBuffer(nullptr)
         , m_texCoordBuffer(nullptr)
         , m_quadIndexBuffer(nullptr)
-        , m_instanceData(nullptr)
         , m_material(material)
         , m_actualParticlePoolSize(0)
         , m_transform(nau::math::Matrix4::identity())
@@ -201,8 +198,8 @@ namespace nau::vfx::modfx
 
         // Texture
         m_texture.enabled = blk->getBool("textureEnabled", false);
-        m_texture.frames_y = eastl::max(blk->getInt("columns", 1), 1);
-        m_texture.frames_x = eastl::max(blk->getInt("rows", 1), 1);
+        m_texture.frames_y = std::max(blk->getInt("columns", 1), 1);
+        m_texture.frames_x = std::max(blk->getInt("rows", 1), 1);
         //
 
         // Color
@@ -494,8 +491,8 @@ namespace nau::vfx::modfx
         m_emitterData.burstData.lifeLimit = m_life.part_life_max;
         m_emitterData.burstData.elemLimit = MaxParticleCount;
 
-        m_emitterData.fixedData.count = eastl::min<int>(m_spawn.fixed.count, MaxParticleCount);
-    
+        m_emitterData.fixedData.count = std::min<int>(m_spawn.fixed.count, MaxParticleCount);
+
         emitter_utils::create_emitter_state(m_emitterState, m_emitterData, MaxParticleCount, 1.0f);
     }
 

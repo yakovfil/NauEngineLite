@@ -1,6 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "helpers/my_asset_view.h"
 #include "nau/assets/asset_container.h"
 #include "nau/assets/asset_content_provider.h"
@@ -18,12 +22,12 @@ namespace nau::test
         {
             NAU_CLASS_(TestAssetContainer, IAssetContainer)
 
-            nau::Ptr<> getAsset(eastl::string_view path) override
+            nau::Ptr<> getAsset(std::string_view path) override
             {
-                return rtti::createInstance<MyAssetView>(eastl::string(path));
+                return rtti::createInstance<MyAssetView>(std::string(path));
             }
 
-            eastl::vector<eastl::string> getContent() const override
+            std::vector<std::string> getContent() const override
             {
                 return {};
             }
@@ -80,7 +84,7 @@ namespace nau::test
       */
     TEST_F(TestDescriptorFactory, RemoveAssetContainer)
     {
-        const eastl::string_view AssetContainerPath = "test:my_container1";
+        const std::string_view AssetContainerPath = "test:my_container1";
 
         IAssetContainer::Ptr myContainer = rtti::createInstance<TestAssetContainer>();
         {

@@ -5,8 +5,10 @@
 // Core assert system header.
 
 #pragma once
-
+#include <atomic>
 #include <format>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "nau/debug/debugger.h"
@@ -39,56 +41,34 @@ namespace nau::diag
 namespace nau::diag_detail
 {
     template <typename... Args>
-    consteval inline eastl::string_view makeFailureMessage()
+    consteval inline std::string_view makeFailureMessage()
     {
         return "";
     }
 
     template <typename T>
-    requires(!std::is_constructible_v<eastl::string_view, T>) &&
-            (!std::is_constructible_v<std::string_view, T>)
-    inline auto makeFormatableArgs(T&& arg)
+    inline decltype(auto) makeFormatableArgs(T&& arg)
     {
-        return std::forward<T>(arg);
-    }
-
-    template <typename T>
-    requires std::is_constructible_v<eastl::string_view, T>
-    inline const char* makeFormatableArgs(T&& arg)
-    {
-        const char* res =eastl::string_view{std::forward<T>(arg)}.data();
-        if(!res)
+        if constexpr (std::is_same_v<std::remove_cvref_t<T>, std::nullptr_t>)
         {
-            return "NULLPTR";
+            return std::string_view{"NULLPTR"};
         }
-        return res;
-    }
-
-    template <typename T>
-    requires(!std::is_constructible_v<eastl::string_view, T>) &&
-            std::is_constructible_v<std::string_view, T>
-    inline const char* makeFormatableArgs(T&& arg)
-    {
-        const char* res = std::string_view{std::forward<T>(arg)}.data();
-        if(!res)
+        else if constexpr (std::is_convertible_v<T, const char*> && std::is_pointer_v<std::remove_cvref_t<T>>)
         {
-            return "NULLPTR";
+            return arg ? std::string_view{arg} : std::string_view{"NULLPTR"};
         }
-        return res;
-    }
-
-    template <typename T>
-    inline const char* makeFormatableArgs(nullptr_t)
-    {
-        return "NULLPTR";
+        else
+        {
+            return std::forward<T>(arg);
+        }
     }
 
     template <typename... Args>
-    inline eastl::string makeFailureMessage(eastl::u8string_view text, Args&&... formatArgs)
+    inline std::string makeFailureMessage(std::u8string_view text, Args&&... formatArgs)
     {
-        if constexpr(sizeof...(Args) == 0)
+        if constexpr (sizeof...(Args) == 0)
         {
-            return reinterpret_cast<const char*>(text.data());
+            return std::string(reinterpret_cast<const char*>(text.data()), text.size());
         }
         else
         {
@@ -97,69 +77,69 @@ namespace nau::diag_detail
     }
 
     template <typename... Args>
-    inline eastl::string makeFailureMessage(eastl::string_view text, Args&&... formatArgs)
+    inline std::string makeFailureMessage(std::string_view text, Args&&... formatArgs)
     {
-        if constexpr(sizeof...(Args) == 0)
+        if constexpr (sizeof...(Args) == 0)
         {
-            return eastl::string{text.data(), text.size()};
+            return std::string{text.data(), text.size()};
         }
         else
         {
-            return nau::utils::format(text.data(), makeFormatableArgs<Args>(std::forward<Args>(formatArgs))...);
+            return nau::utils::format(text, makeFormatableArgs<Args>(std::forward<Args>(formatArgs))...);
         }
     }
 
     template <typename... Args>
-    inline eastl::string makeFailureMessage(eastl::wstring_view text, const Args&... formatArgs)
+    inline std::string makeFailureMessage(std::wstring_view text, const Args&... formatArgs)
     {
-        if constexpr(sizeof...(Args) == 0)
+        if constexpr (sizeof...(Args) == 0)
         {
             return makeFailureMessage(strings::wstringToUtf8(text));
         }
         else
         {
             const std::wstring formattedMessage = ::fmt::vformat(fmt::wstring_view{text.data(), text.size()}, fmt::make_format_args<fmt::buffered_context<wchar_t>>(formatArgs...));
-            return makeFailureMessage(strings::wstringToUtf8(eastl::wstring_view{formattedMessage.data(), formattedMessage.size()}));
+            return makeFailureMessage(strings::wstringToUtf8(std::wstring_view{formattedMessage.data(), formattedMessage.size()}));
         }
     }
 
     /**
      */
     NAU_KERNEL_EXPORT
-    diag::FailureActionFlag raiseFailure(uint32_t error, diag::AssertionKind kind, diag::SourceInfo source, eastl::string_view condition, eastl::string_view message);
+    diag::FailureActionFlag raiseFailure(uint32_t error, diag::AssertionKind kind, diag::SourceInfo source, std::string_view condition, std::string_view message);
 
 }  // namespace nau::diag_detail
 
 #define NAU_ASSERT_IMPL(error, kind, condition, ...)                                                                                                                         \
     do                                                                                                                                                                       \
     {                                                                                                                                                                        \
-        if(!(condition)) [[unlikely]]                                                                                                                                        \
+        if (!(condition)) [[unlikely]]                                                                                                                                       \
         {                                                                                                                                                                    \
             const auto errorFlags = ::nau::diag_detail::raiseFailure(error, kind, NAU_INLINED_SOURCE_INFO, #condition, ::nau::diag_detail::makeFailureMessage(__VA_ARGS__)); \
-            if(errorFlags.has(::nau::diag::FailureAction::DebugBreak) && ::nau::debug::isRunningUnderDebugger())                                                             \
+            if (errorFlags.has(::nau::diag::FailureAction::DebugBreak) && ::nau::debug::isRunningUnderDebugger())                                                            \
             {                                                                                                                                                                \
                 NAU_PLATFORM_BREAK;                                                                                                                                          \
             }                                                                                                                                                                \
-            if(errorFlags.has(::nau::diag::FailureAction::Abort))                                                                                                            \
+            if (errorFlags.has(::nau::diag::FailureAction::Abort))                                                                                                           \
             {                                                                                                                                                                \
                 NAU_PLATFORM_ABORT;                                                                                                                                          \
             }                                                                                                                                                                \
         }                                                                                                                                                                    \
-    } while(0)
+    } while (0)
 
-#define NAU_FAILURE_IMPL(error, kind, ...)                                                                                                                            \
-    do                                                                                                                                                                \
-    {                                                                                                                                                                 \
+#define NAU_FAILURE_IMPL(error, kind, ...)                                                                                                                              \
+    do                                                                                                                                                                  \
+    {                                                                                                                                                                   \
         const auto errorFlags = ::nau::diag_detail::raiseFailure(error, kind, NAU_INLINED_SOURCE_INFO, "Failure", ::nau::diag_detail::makeFailureMessage(__VA_ARGS__)); \
-        if(errorFlags.has(::nau::diag::FailureAction::DebugBreak) && ::nau::debug::isRunningUnderDebugger())                                                          \
-        {                                                                                                                                                             \
-            NAU_PLATFORM_BREAK;                                                                                                                                       \
-        }                                                                                                                                                             \
-        if(errorFlags.has(::nau::diag::FailureAction::Abort))                                                                                                         \
-        {                                                                                                                                                             \
-            NAU_PLATFORM_ABORT;                                                                                                                                       \
-        }                                                                                                                                                             \
-    } while(0)
+        if (errorFlags.has(::nau::diag::FailureAction::DebugBreak) && ::nau::debug::isRunningUnderDebugger())                                                           \
+        {                                                                                                                                                               \
+            NAU_PLATFORM_BREAK;                                                                                                                                         \
+        }                                                                                                                                                               \
+        if (errorFlags.has(::nau::diag::FailureAction::Abort))                                                                                                          \
+        {                                                                                                                                                               \
+            NAU_PLATFORM_ABORT;                                                                                                                                         \
+        }                                                                                                                                                               \
+    } while (0)
 
 #ifdef NAU_ASSERT_ENABLED
 
@@ -174,44 +154,44 @@ namespace nau::diag_detail
     #define NAU_ENSURE(condition, ...)                                                                  \
         do                                                                                              \
         {                                                                                               \
-            static eastl::atomic<bool> s_wasTrigered = false;                                           \
-            bool value = s_wasTrigered.load(eastl::memory_order_relaxed);                               \
-            if(!value && (!(condition)))                                                                \
+            static std::atomic<bool> s_wasTrigered = false;                                             \
+            bool value = s_wasTrigered.load(std::memory_order_relaxed);                                 \
+            if (!value && (!(condition)))                                                               \
             {                                                                                           \
-                if(!value && !s_wasTrigered.compare_exchange_strong(value, true))                       \
+                if (!value && !s_wasTrigered.compare_exchange_strong(value, true))                      \
                 {                                                                                       \
-                    if(!s_wasTrigered && !s_wasTrigered.compare_exchange_strong(false, true))           \
+                    if (!s_wasTrigered && !s_wasTrigered.compare_exchange_strong(false, true))          \
                     {                                                                                   \
                         NAU_ASSERT_IMPL(1, nau::diag::AssertionKind::Default, condition, ##__VA_ARGS__) \
                     }                                                                                   \
                 }                                                                                       \
             }                                                                                           \
-        } while(0)
+        } while (0)
 
     #define NAU_ENSURE_ALWAYS(condition, ...)                                                           \
         do                                                                                              \
         {                                                                                               \
-            static eastl::atomic<bool> s_wasTrigered = false;                                           \
-            bool value = s_wasTrigered.load(eastl::memory_order_relaxed);                               \
-            if((!(condition)))                                                                          \
+            static std::atomic<bool> s_wasTrigered = false;                                             \
+            bool value = s_wasTrigered.load(std::memory_order_relaxed);                                 \
+            if ((!(condition)))                                                                         \
             {                                                                                           \
-                if(!value && !s_wasTrigered.compare_exchange_strong(value, true))                       \
+                if (!value && !s_wasTrigered.compare_exchange_strong(value, true))                      \
                 {                                                                                       \
-                    if(!s_wasTrigered && !s_wasTrigered.compare_exchange_strong(false, true))           \
+                    if (!s_wasTrigered && !s_wasTrigered.compare_exchange_strong(false, true))          \
                     {                                                                                   \
                         NAU_ASSERT_IMPL(1, nau::diag::AssertionKind::Default, condition, ##__VA_ARGS__) \
                     }                                                                                   \
                 }                                                                                       \
             }                                                                                           \
-        } while(0)
-    #define NAU_FAST_ASSERT(expr)       \
-        do                              \
-        {                               \
-            if(EASTL_UNLIKELY(!(expr))) \
-            {                           \
-                NAU_PLATFORM_BREAK;     \
-            }                           \
-        } while(0)
+        } while (0)
+    #define NAU_FAST_ASSERT(expr)      \
+        do                             \
+        {                              \
+            if (NAU_UNLIKELY(!(expr))) \
+            {                          \
+                NAU_PLATFORM_BREAK;    \
+            }                          \
+        } while (0)
 #else
     #define NAU_ASSERT(condition, ...)
 
@@ -227,7 +207,7 @@ namespace nau::diag_detail
 
 #define NAU_FAILURE_ALWAYS(...) NAU_FAILURE_IMPL(1, ::nau::diag::AssertionKind::Default, ##__VA_ARGS__)
 
-#if((_MSC_VER >= 1600 && !defined(__INTEL_COMPILER)) || (__cplusplus > 199711L))
+#if ((_MSC_VER >= 1600 && !defined(__INTEL_COMPILER)) || (__cplusplus > 199711L))
     #define HAVE_STATIC_ASSERT 1
 #else
     #define HAVE_STATIC_ASSERT 0
@@ -238,9 +218,9 @@ namespace nau::diag_detail
 #endif
 
 #ifndef NAU_STATIC_ASSERT
-    #define NAU_STATIC_ASSERT(x)                  \
-        if(sizeof(char[2 * (((x) ? 1 : 0) - 1)])) \
-            ;                                     \
+    #define NAU_STATIC_ASSERT(x)                   \
+        if (sizeof(char[2 * (((x) ? 1 : 0) - 1)])) \
+            ;                                      \
         else
 #endif
 
@@ -251,7 +231,7 @@ namespace nau::diag_detail
     {                                                          \
         const bool g_assert_result_do_ = !!(expr);             \
         NAU_ASSERT(g_assert_result_do_, #expr, ##__VA_ARGS__); \
-        if(EASTL_UNLIKELY(!g_assert_result_do_))               \
+        if (NAU_UNLIKELY(!g_assert_result_do_))                \
         {                                                      \
             cmd;                                               \
         }                                                      \
@@ -261,7 +241,7 @@ namespace nau::diag_detail
     do                                                         \
     {                                                          \
         NAU_ASSERT_AND_DO_UNHYGIENIC(expr, cmd, ##__VA_ARGS__) \
-    } while(0)
+    } while (0)
 
 #define NAU_RETURN_FIRST_ARG(returnValue, ...) returnValue
 #define NAU_RETURN_RESTS_ARG(returnValue, ...) __VA_OPT__(, ) __VA_ARGS__

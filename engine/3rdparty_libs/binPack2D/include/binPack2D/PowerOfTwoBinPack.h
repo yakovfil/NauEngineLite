@@ -2,7 +2,7 @@
 //written in style of other binpack
 #pragma once
 
-#include <EASTL/vector.h>
+#include <vector>
 
 #include <nau/math/dag_adjpow2.h>
 //#include <debug/dag_assert.h>
@@ -82,9 +82,9 @@ private:
   void freeUsedRectInternal(Rect rect, uint32_t logSize);
   /// Stores a list of rectangles that represents the free area of the bin. This rectangles in this list are disjoint.
   //from bigger to smaller size. Biggest one is never coalesced
-  eastl::vector< eastl::vector<Rect> > sizeBucket;
+  std::vector< std::vector<Rect> > sizeBucket;
   #if RBP_DEBUG_OVERLAP
-  eastl::vector< Rect > allocated;
+  std::vector< Rect > allocated;
   #endif
   Rect popBucketUnsafe(int logSize)
   {

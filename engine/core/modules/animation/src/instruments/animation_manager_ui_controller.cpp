@@ -1,17 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "animation_manager_ui_controller.h"
 
 #include <imgui.h>
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
-#include "nau/animation/controller/animation_controller.h"
 #include "nau/animation/animation_manager.h"
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/components/skeleton_component.h"
+#include "nau/animation/controller/animation_controller.h"
 #include "nau/animation/playback/animation_instance.h"
 #include "nau/memory/stack_allocator.h"
 #include "nau/scene/scene.h"
@@ -232,16 +233,16 @@ namespace nau::animation
     {
         if (const auto* scene = owner.getParentObject().getScene())
         {
-            m_name = eastl::string{ scene->getName() };
+            m_name = std::string{scene->getName()};
 
             if (m_name.empty())
             {
-                m_name = eastl::string{ toString(scene->getUid()).c_str() };
+                m_name = std::string{toString(scene->getUid()).c_str()};
             }
         }
     }
 
-    void AnimationManagerImguiController::drawGui(const eastl::vector<scene::ObjectWeakRef<AnimationComponent>>& animComponents)
+    void AnimationManagerImguiController::drawGui(const std::vector<scene::ObjectWeakRef<AnimationComponent>>& animComponents)
     {
         if (ImGui::Begin("Animation system"))
         {
@@ -254,7 +255,7 @@ namespace nau::animation
 
                 if (!animComponents.empty() && ImGui::CollapsingHeader("Objects control"))
                 {
-                    eastl::vector<const AnimationComponent*> existingComponents;
+                    std::vector<const AnimationComponent*> existingComponents;
 
                     for (auto& animComponentRef : animComponents)
                     {
@@ -325,7 +326,7 @@ namespace nau::animation
 
                 if (ImGui::CollapsingHeader("Skeleton"))
                 {
-                    eastl::vector<SkeletonComponent*> existingAnimatedSkeletons;
+                    std::vector<SkeletonComponent*> existingAnimatedSkeletons;
 
                     for (auto& animComponentRef : animComponents)
                     {

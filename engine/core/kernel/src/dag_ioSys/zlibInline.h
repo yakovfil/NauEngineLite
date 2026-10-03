@@ -8,6 +8,8 @@
 #include <nau/osApiWrappers/dag_files.h>
 #include <nau/utils/dag_globDef.h>
 
+#include <vector>
+
 #include "nau/memory/mem_allocator.h"
 
 // #if !defined(USE_ZLIB_VER)
@@ -32,13 +34,13 @@ namespace nau::iosys
             int err = raw_inflate
                           ? deflateInit2(&strm, level, Z_DEFLATED, -MAX_WBITS, MAX_MEM_LEVEL >= 8 ? 8 : MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY)
                           : deflateInit(&strm, level);
-            if(err != Z_OK)
+            if (err != Z_OK)
                 NAU_FAILURE("zlib error {} in {}", err, u8"deflateInit");
         }
         ~ZLibPacker()
         {
             int err = deflateEnd(&strm);
-            if(err != Z_OK)
+            if (err != Z_OK)
                 NAU_FAILURE("zlib error {} in {}", err, u8"deflateEnd");
         }
         // returns Z_OK or Z_STREAM_END
@@ -53,7 +55,7 @@ namespace nau::iosys
             insz = strm.avail_in;
             outp = strm.next_out;
             outsz = strm.avail_out;
-            if(err != Z_OK && err != Z_STREAM_END)
+            if (err != Z_OK && err != Z_STREAM_END)
                 NAU_FAILURE("zlib error {} in {}", err, u8"deflate");
             return err;
         }
@@ -62,7 +64,7 @@ namespace nau::iosys
     class ZLibGeneralWriter : public ZLibPacker
     {
     protected:
-        eastl::vector<char> buf;
+        std::vector<char> buf;
 
     public:
         IGenSave* callback;
@@ -82,41 +84,41 @@ namespace nau::iosys
         {
             uncompressedTotal += sz;
 
-            while(sz || finish)
+            while (sz || finish)
             {
                 void* op = &buf[0];
                 unsigned osz = buf.size() * sizeof(decltype(buf)::value_type);
                 int err = ZLibPacker::pack(inp, sz, op, osz, finish ? Z_FINISH : Z_NO_FLUSH);
                 unsigned l = buf.size() * sizeof(decltype(buf)::value_type) - osz;
-                if(l != 0)
+                if (l != 0)
                 {
                     callback->write(&buf[0], l);
                     compressedTotal += l;
                 }
 
-                while(err == Z_OK && osz == 0)
+                while (err == Z_OK && osz == 0)
                 {
                     op = &buf[0];
                     osz = buf.size() * sizeof(decltype(buf)::value_type);
                     err = ZLibPacker::pack(inp, sz, op, osz, finish ? Z_FINISH : Z_NO_FLUSH);
                     l = buf.size() * sizeof(decltype(buf)::value_type) - osz;
-                    if(l != 0)
+                    if (l != 0)
                     {
                         callback->write(&buf[0], l);
                         compressedTotal += l;
                     }
                 }
 
-                if(err == Z_STREAM_END)
+                if (err == Z_STREAM_END)
                     break;
-                if(err != Z_OK)
+                if (err != Z_OK)
                     NAU_FAILURE("pack error {}", err);
             }
         }
 
         float getCompressionRatio()
         {
-            if(uncompressedTotal)
+            if (uncompressedTotal)
                 return (float)compressedTotal / uncompressedTotal;
             else
                 return 0;

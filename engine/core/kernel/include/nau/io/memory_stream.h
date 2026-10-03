@@ -7,9 +7,8 @@
  * @brief Provides definitions for the `IMemoryStream` interface and functions to create memory streams.
  */
 
-#include <EASTL/span.h>
-
 #include <optional>
+#include <span>
 
 #include "nau/io/stream.h"
 #include "nau/memory/bytes_buffer.h"
@@ -33,9 +32,9 @@ namespace nau::io
          * @brief Gets a span of the memory buffer.
          * @param offset The starting offset from which to obtain the span. Defaults to 0.
          * @param size The size of the span to obtain. If not provided, the span will include all available data from the offset.
-         * @return An `eastl::span` representing the portion of the memory buffer.
+         * @return An `std::span` representing the portion of the memory buffer.
          */
-        virtual eastl::span<const std::byte> getBufferAsSpan(size_t offset = 0, std::optional<size_t> size = std::nullopt) const = 0;
+        virtual std::span<const std::byte> getBufferAsSpan(size_t offset = 0, std::optional<size_t> size = std::nullopt) const = 0;
     };
 
     /**
@@ -54,7 +53,7 @@ namespace nau::io
      * @return A smart pointer to the created `IMemoryStream` instance.
      */
     NAU_KERNEL_EXPORT
-    IMemoryStream::Ptr createReadonlyMemoryStream(eastl::span<const std::byte> buffer, IMemAllocator::Ptr allocator = nullptr);
+    IMemoryStream::Ptr createReadonlyMemoryStream(std::span<const std::byte> buffer, IMemAllocator::Ptr allocator = nullptr);
 
     /**
      * @brief Creates a new in-memory stream from a `BytesBuffer` with specified access modes.

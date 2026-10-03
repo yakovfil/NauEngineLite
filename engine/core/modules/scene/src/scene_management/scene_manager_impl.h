@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <functional>
+#include <list>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "nau/async/work_queue.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/internal/scene_listener.h"
 #include "nau/scene/internal/scene_manager_internal.h"
@@ -97,7 +102,7 @@ namespace nau::scene
 
         async::Task<> deactivateComponentsInternal(Vector<Component*> components);
 
-        eastl::list<SceneEntry>::iterator getSceneIter(IScene* scene);
+        std::list<SceneEntry>::iterator getSceneIter(IScene* scene);
 
         void notifyListenerBeginScene();
         void notifyListenerEndScene();
@@ -109,11 +114,11 @@ namespace nau::scene
 
         ObjectWeakRef<> lookupSceneObject(const SceneQuery& query);
 
-        eastl::list<ObjectUniquePtr<WorldImpl>> m_worlds;
-        eastl::list<SceneEntry> m_scenes;
-        eastl::list<UpdatableComponentEntry> m_updatableComponents;
-        eastl::unordered_map<Uid, SceneObject*> m_activeObjects;
-        eastl::unordered_map<Uid, Component*> m_activeComponents;
+        std::list<ObjectUniquePtr<WorldImpl>> m_worlds;
+        std::list<SceneEntry> m_scenes;
+        std::list<UpdatableComponentEntry> m_updatableComponents;
+        std::unordered_map<Uid, SceneObject*> m_activeObjects;
+        std::unordered_map<Uid, Component*> m_activeComponents;
 
         bool m_insideUpdate = false;
         async::TaskCollection m_asyncTasks;
@@ -123,8 +128,8 @@ namespace nau::scene
         ISceneListener* m_sceneListener = nullptr;
 
         // TODO: The allocator is currently being used incorrectly (there is single allocator that is being used from the graphics thread)
-        // eastl::unordered_set<const Component*, eastl::hash<const Component*>, eastl::equal_to<const Component*>, EastlFrameAllocator> m_changedComponents;
-        eastl::unordered_set<const Component*> m_changedComponents;
+        // std::unordered_set<const Component*, std::hash<const Component*>, std::equal_to<const Component*>, EastlFrameAllocator> m_changedComponents;
+        std::unordered_set<const Component*> m_changedComponents;
 
         friend struct SceneListenerRegistration;
     };

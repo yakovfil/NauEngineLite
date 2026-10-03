@@ -3,20 +3,11 @@
 
 #include "usd_skeleton_animation_adapter.h"
 
-#include "usd_translator/usd_prim_translator.h"
-#include "usd_translator/usd_stage_translator.h"
-
-#include "nau/animation/assets/skeleton_asset.h"
-#include "nau/animation/components/skeleton_component.h"
-#include "nau/shared/file_system.h"
-
-#include "nau/NauAnimationClipAsset/nauAnimationSkeleton.h"
-
 #include <pxr/usd/sdf/primSpec.h>
-#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/animation.h>
 #include <pxr/usd/usdSkel/bindingAPI.h>
 #include <pxr/usd/usdSkel/cache.h>
@@ -24,11 +15,20 @@
 #include <pxr/usd/usdSkel/skeleton.h>
 #include <pxr/usd/usdSkel/skeletonQuery.h>
 
+#include <string>
+#include <vector>
+
+#include "nau/NauAnimationClipAsset/nauAnimationSkeleton.h"
+#include "nau/animation/assets/skeleton_asset.h"
+#include "nau/animation/components/skeleton_component.h"
+#include "nau/shared/file_system.h"
+#include "usd_translator/usd_prim_translator.h"
+#include "usd_translator/usd_stage_translator.h"
 
 namespace UsdTranslator
 {
-	eastl::vector<eastl::string> UsdAnimationSkelAccessor::getOzzAnimationPaths(const pxr::UsdPrim& skelPrim, const std::string& assetPath)
-	{
+    std::vector<std::string> UsdAnimationSkelAccessor::getOzzAnimationPaths(const pxr::UsdPrim& skelPrim, const std::string& assetPath)
+    {
 		constexpr std::string_view OZZ_FILE_EXT = ".ozz";
 
 		pxr::UsdSkelRoot skelRoot{ skelPrim };
@@ -52,8 +52,8 @@ namespace UsdTranslator
 		const size_t pathSize = nameEnd.base() - assetPath.begin() - pathStartIndex - 1ull;
 		std::string ozzAssetPath = assetPath.substr(pathStartIndex, pathSize);
 
-		eastl::vector<eastl::string> result;
-		result.reserve(bindings.size());
+        std::vector<std::string> result;
+        result.reserve(bindings.size());
 
 		for (const auto& binding : bindings)
 		{
@@ -67,8 +67,8 @@ namespace UsdTranslator
 		return result;
 	}
 
-	eastl::string UsdAnimationSkelAccessor::getOzzSkeletonPath(const std::string& assetPath)
-	{
+    std::string UsdAnimationSkelAccessor::getOzzSkeletonPath(const std::string& assetPath)
+    {
 		std::string_view assetPathView = assetPath;
 		auto nameStart = std::find_if(assetPathView.rbegin(), assetPathView.rend(), [](char c)
 		{
@@ -135,8 +135,8 @@ namespace UsdTranslator
 		return m_skeletonDesc;
 	}
 
-	void UsdAnimationSkelAccessor::copyInverseBindMatrices(eastl::vector<nau::math::mat4>& data) const
-	{
+    void UsdAnimationSkelAccessor::copyInverseBindMatrices(std::vector<nau::math::mat4>& data) const
+    {
 		data.clear();
 		data.reserve(m_bindMatrixList.size());
 		std::for_each(m_bindMatrixList.begin(), m_bindMatrixList.end(), [&data](const auto& matrix)

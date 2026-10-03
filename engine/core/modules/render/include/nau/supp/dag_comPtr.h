@@ -5,9 +5,10 @@
 
 #if _TARGET_PC_WIN || _TARGET_XBOX
 
-#include <Guiddef.h>
-#include <unknwn.h>
-#include <EASTL/type_traits.h>
+    #include <Guiddef.h>
+    #include <unknwn.h>
+
+    #include <type_traits>
 //#include <util/dag_globDef.h>
 
 // copy paste (with some small changes) from wrl/client.h
@@ -112,8 +113,8 @@ public:
 
   // copy constructor that allows to instantiate class when U* is convertible to T*
   template <class U>
-  ComPtr(const ComPtr<U> &other, typename eastl::enable_if<__is_convertible_to(U *, T *), void *>::type * = 0) throw() :
-    ptr_(other.ptr_)
+  ComPtr(const ComPtr<U>& other, typename std::enable_if<__is_convertible_to(U*, T*), void*>::type* = 0) throw() :
+      ptr_(other.ptr_)
   {
     InternalAddRef();
   }
@@ -128,8 +129,8 @@ public:
 
   // Move constructor that allows instantiation of a class when U* is convertible to T*
   template <class U>
-  ComPtr(_Inout_ ComPtr<U> &&other, typename eastl::enable_if<__is_convertible_to(U *, T *), void *>::type * = 0) throw() :
-    ptr_(other.ptr_)
+  ComPtr(_Inout_ ComPtr<U>&& other, typename std::enable_if<__is_convertible_to(U*, T*), void*>::type* = 0) throw() :
+      ptr_(other.ptr_)
   {
     other.ptr_ = nullptr;
   }
@@ -262,8 +263,8 @@ public:
   // downcast.
   template <typename U>
   HRESULT CopyTo(ComPtrRef<ComPtr<U>> ptr,
-    typename eastl::enable_if<(eastl::is_same<T, IUnknown>::value) && !eastl::is_same<U *, T *>::value, void *>::type * = 0) const
-    throw()
+                 typename std::enable_if<(std::is_same<T, IUnknown>::value) && !std::is_same<U*, T*>::value, void*>::type* = 0) const
+      throw()
   {
     return ptr_->QueryInterface(__uuidof(U), ptr);
   }

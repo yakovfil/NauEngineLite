@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <EASTL/functional.h>
+#include <functional>
 
 namespace nau
 {
@@ -19,7 +19,7 @@ enum class ImGuiState
   _COUNT, // For iteration purposes only, do not use!
 };
 
-using OnStateChangeHandlerFunc = eastl::function<void(ImGuiState, ImGuiState)>;
+using OnStateChangeHandlerFunc = std::function<void(ImGuiState, ImGuiState)>;
 
 bool init_on_demand();
 //void imgui_set_override_blk(const nau::DataBlock &imgui_blk); // call this before init_on_demand() called
@@ -43,7 +43,7 @@ bool imgui_window_is_visible(const char *group, const char *name);
 void imgui_perform_registered();
 void imgui_cascade_windows();
 
-typedef eastl::function<void(void)> ImGuiFuncPtr;
+typedef std::function<void(void)> ImGuiFuncPtr;
 
 struct ImGuiFunctionQueue
 {

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/messaging/async_message_stream.h
 
-
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <string_view>
 
 #include "nau/async/task.h"
 #include "nau/kernel/kernel_config.h"
@@ -36,7 +34,7 @@ namespace nau
 
         explicit operator bool() const;
 
-        eastl::string_view getStreamName() const;
+        std::string_view getStreamName() const;
 
         async::Task<RuntimeValue::Ptr> getNextMessage();
 
@@ -97,13 +95,13 @@ namespace nau
 
         virtual void setCancellation(Cancellation) = 0;
 
-        virtual bool hasSubscribers(eastl::string_view) const = 0;
+        virtual bool hasSubscribers(std::string_view) const = 0;
 
-        virtual AsyncMessageStream getStream(eastl::string_view streamName) = 0;
+        virtual AsyncMessageStream getStream(std::string_view streamName) = 0;
 
         // virtual subscribeInplace(Functor<void (const Runtime::Ptr&)) = 0;
 
-        virtual void post(eastl::string_view streamName, RuntimeValue::Ptr = nullptr) = 0;
+        virtual void post(std::string_view streamName, RuntimeValue::Ptr = nullptr) = 0;
 
         /**
                 template <typename T>

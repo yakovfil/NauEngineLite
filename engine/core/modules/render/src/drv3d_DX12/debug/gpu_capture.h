@@ -3,14 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/variant.h>
-#include <EASTL/span.h>
-#include "nau/supp/dag_comPtr.h"
+#include <span>
+#include <utility>
+#include <variant>
 
-#include "driver.h"
 #include "configuration.h"
+#include "driver.h"
+#include "nau/supp/dag_comPtr.h"
 #include "winapi_helpers.h"
-
 
 struct RENDERDOC_API_1_5_0;
 
@@ -39,9 +39,13 @@ public:
   void endCapture() {}
   void onPresent() {}
   void captureFrames(const wchar_t *, int) {}
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
   void endEvent(ID3D12GraphicsCommandList *) {}
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
 };
 
 class RenderDoc
@@ -58,9 +62,9 @@ public:
   void endCapture();
   void onPresent();
   void captureFrames(const wchar_t *, int);
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
   void endEvent(ID3D12GraphicsCommandList *cmd);
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &, T &target)
@@ -87,7 +91,10 @@ class LegacyPIX
 
   static ComPtr<IDXGraphicsAnalysis> try_connect_interface(Direct3D12Enviroment &d3d_env);
 
-  LegacyPIX(ComPtr<IDXGraphicsAnalysis> &&iface) : api{eastl::move(iface)} {}
+  LegacyPIX(ComPtr<IDXGraphicsAnalysis>&& iface) :
+      api{std::move(iface)}
+  {
+  }
 
 public:
   void configure();
@@ -95,9 +102,9 @@ public:
   void endCapture();
   void onPresent();
   void captureFrames(const wchar_t *, int);
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
   void endEvent(ID3D12GraphicsCommandList *cmd);
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &d3d_env, T &target)
@@ -111,7 +118,7 @@ public:
     }
 
     NAU_LOG_DEBUG("DX12: ...found, using legacy PIX interface for frame capturing");
-    target = LegacyPIX{eastl::move(iface)};
+    target = LegacyPIX{std::move(iface)};
     return true;
   }
 };
@@ -125,7 +132,9 @@ class PIX
   static LibPointer try_connect_capture_interface();
   static LibPointer try_load_capture_interface();
 
-  PIX(LibPointer &&runtime_lib, LibPointer &&capture_lib) : runtimeLib{eastl::move(runtime_lib)}, captureLib{eastl::move(capture_lib)}
+  PIX(LibPointer&& runtime_lib, LibPointer&& capture_lib) :
+      runtimeLib{std::move(runtime_lib)},
+      captureLib{std::move(capture_lib)}
   {}
 
 public:
@@ -134,9 +143,9 @@ public:
   void endCapture();
   void onPresent();
   void captureFrames(const wchar_t *, int);
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
   void endEvent(ID3D12GraphicsCommandList *cmd);
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &, T &target)
@@ -156,7 +165,7 @@ public:
     }
 
     NAU_LOG_DEBUG("DX12: ...found, using PIX interface for frame capturing");
-    target = PIX{eastl::move(runtime), eastl::move(capture)};
+    target = PIX{std::move(runtime), std::move(capture)};
     return true;
   }
 
@@ -179,7 +188,7 @@ public:
     }
 
     NAU_LOG_DEBUG("DX12: ...success, using PIX interface for frame capturing");
-    target = PIX{eastl::move(runtime), eastl::move(capture)};
+    target = PIX{std::move(runtime), std::move(capture)};
     return true;
   }
 };
@@ -198,9 +207,9 @@ public:
   void endCapture();
   void onPresent();
   void captureFrames(const wchar_t *, int);
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>);
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>);
   void endEvent(ID3D12GraphicsCommandList *);
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>);
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>);
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &, T &target)
@@ -228,9 +237,13 @@ public:
   void endCapture() {}
   void onPresent() {}
   void captureFrames(const wchar_t *, int) {}
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
   void endEvent(ID3D12GraphicsCommandList *) {}
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &, T &)
@@ -250,9 +263,13 @@ public:
   void endCapture() {}
   void onPresent() {}
   void captureFrames(const wchar_t *, int) {}
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
   void endEvent(ID3D12GraphicsCommandList *) {}
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
 
   template <typename T>
   static bool connect(const Configuration &, Direct3D12Enviroment &, T &)
@@ -271,22 +288,22 @@ template <typename NoT, typename... Ts>
 class ToolSet
 {
 public:
-  using StorageType = eastl::variant<NoT, Ts...>;
-  using DefaultType = NoT;
+    using StorageType = std::variant<NoT, Ts...>;
+    using DefaultType = NoT;
 
-  template <typename... Is>
-  static bool connect(StorageType &store, Is &&...is)
-  {
-    for (auto connector : {try_to_connect<Ts, Is...>...})
+    template <typename... Is>
+    static bool connect(StorageType& store, Is&&... is)
     {
-      if (connector(is..., store))
-      {
-        return true;
-      }
+        for (auto connector : {try_to_connect<Ts, Is...>...})
+        {
+            if (connector(is..., store))
+            {
+                return true;
+            }
+        }
+        store = DefaultType{};
+        return false;
     }
-    store = DefaultType{};
-    return false;
-  }
 
 private:
   template <typename T, typename... Is>
@@ -322,64 +339,91 @@ public:
 #endif
 
     // Some tools may need some one time configuration step we have to do after we are done with the setup.
-    eastl::visit([](auto &tool) { tool.configure(); }, tool);
+    std::visit([](auto& tool)
+    {
+        tool.configure();
+    }, tool);
   }
   void teardown() { tool = ToolTableType::DefaultType{}; }
   void beginCapture()
   {
     if (isAnyActive())
     {
-      eastl::visit([](auto &tool) { tool.beginCapture(); }, tool);
+        std::visit([](auto& tool)
+        {
+            tool.beginCapture();
+        }, tool);
     }
   }
   void endCapture()
   {
     if (isAnyActive())
     {
-      eastl::visit([](auto &tool) { tool.endCapture(); }, tool);
+        std::visit([](auto& tool)
+        {
+            tool.endCapture();
+        }, tool);
     }
   }
   void onPresent()
   {
     if (isAnyActive())
     {
-      eastl::visit([](auto &tool) { tool.onPresent(); }, tool);
+        std::visit([](auto& tool)
+        {
+            tool.onPresent();
+        }, tool);
     }
   }
   void captureFrames(const wchar_t *file_name, int count)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tool) { tool.captureFrames(file_name, count); }, tool);
+        std::visit([=](auto& tool)
+        {
+            tool.captureFrames(file_name, count);
+        }, tool);
     }
   }
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tool) { tool.beginEvent(cmd, text); }, tool);
+        std::visit([=](auto& tool)
+        {
+            tool.beginEvent(cmd, text);
+        }, tool);
     }
   }
   void endEvent(ID3D12GraphicsCommandList *cmd)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tool) { tool.endEvent(cmd); }, tool);
+        std::visit([=](auto& tool)
+        {
+            tool.endEvent(cmd);
+        }, tool);
     }
   }
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tool) { tool.marker(cmd, text); }, tool);
+        std::visit([=](auto& tool)
+        {
+            tool.marker(cmd, text);
+        }, tool);
     }
   }
   template <typename T>
   bool isActive() const
   {
-    return eastl::holds_alternative<T>(tool);
+      return std::holds_alternative<T>(tool);
   }
-  bool isAnyActive() const { return !eastl::holds_alternative<gpu_capture::NoTool>(tool); }
+  bool isAnyActive() const
+  {
+      return !std::holds_alternative<gpu_capture::NoTool>(tool);
+  }
   // PIX has current and legacy mode, to make it easier to check if any is active, have this meta method.
   bool isAnyPIXActive() const { return isActive<gpu_capture::PIX>() || isActive<gpu_capture::LegacyPIX>(); }
 };

@@ -5,6 +5,9 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/shader.h"
 #include "nau/io/file_system.h"
@@ -18,13 +21,13 @@ namespace nau
     public:
         explicit ShaderPack(io::IStreamReader::Ptr stream);
 
-        Result<Shader> getShader(eastl::string_view name);
-        Result<eastl::vector<Shader>> getShaders(const eastl::vector<eastl::string>& names);
+        Result<Shader> getShader(std::string_view name);
+        Result<std::vector<Shader>> getShaders(const std::vector<std::string>& names);
 
     private:
         struct ShaderBytecodeEntry
         {
-            eastl::string shaderName;
+            std::string shaderName;
             size_t blobOffset;
             size_t blobSize;
 
@@ -37,8 +40,8 @@ namespace nau
 
         struct ShaderPackContainerData
         {
-            eastl::vector<Shader> shaders;
-            eastl::vector<ShaderBytecodeEntry> byteCode;
+            std::vector<Shader> shaders;
+            std::vector<ShaderBytecodeEntry> byteCode;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(shaders),
@@ -46,7 +49,7 @@ namespace nau
             )
         };
 
-        Shader* findShader(eastl::string_view shaderName);
+        Shader* findShader(std::string_view shaderName);
 
         ShaderPackContainerData m_shadersPackData;
         io::IStreamReader::Ptr m_stream;

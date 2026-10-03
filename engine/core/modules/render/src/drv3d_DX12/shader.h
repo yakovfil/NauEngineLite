@@ -3,30 +3,37 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/sort.h>
-#include <EASTL/variant.h>
-#include <EASTL/unordered_set.h>
-#include <EASTL/vector_set.h>
-#include "nau/generic/dag_bitset.h"
-#include "nau/threading/critical_section.h"
-#include "nau/osApiWrappers/dag_rwLock.h"
-#include "nau/utils/dag_hashedKeyMap.h"
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <span>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <unordered_set>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "bitfield.h"
+#include "byte_units.h"
+#include "driver.h"
+#include "dynamic_array.h"
 #include "nau/dxil/compiled_shader_header.h"
 #include "nau/dxil/utility.h"
-#include "nau/threading/dag_atomic.h"
-#include "shaders/shadersBinaryData.h"
-
+#include "nau/generic/dag_bitset.h"
+#include "nau/osApiWrappers/dag_rwLock.h"
 #include "nau/string/string.h"
-
-#include "driver.h"
-#include "shader_program_id.h"
-#include "tagged_handles.h"
-#include "dynamic_array.h"
-#include "byte_units.h"
-#include "bitfield.h"
+#include "nau/threading/critical_section.h"
+#include "nau/threading/dag_atomic.h"
+#include "nau/utils/dag_hashedKeyMap.h"
+#include "nau/utils/sorted_vector.h"
 #include "render_state.h"
-
+#include "shader_program_id.h"
+#include "shaders/shadersBinaryData.h"
+#include "tagged_handles.h"
 
 inline constexpr uint32_t MAX_VERTEX_ATTRIBUTES = 16;
 inline constexpr uint32_t MAX_VERTEX_INPUT_STREAMS = 8;
@@ -240,8 +247,8 @@ struct InputLayout
 
 inline bool operator==(const InputLayout::VertexAttributesDesc &l, const InputLayout::VertexAttributesDesc &r)
 {
-  return l.locationMask == r.locationMask && l.locationSourceStream == r.locationSourceStream &&
-         eastl::equal(eastl::begin(l.compactedFormatAndOffset), eastl::end(l.compactedFormatAndOffset),eastl::begin(r.compactedFormatAndOffset));
+    return l.locationMask == r.locationMask && l.locationSourceStream == r.locationSourceStream &&
+           std::equal(std::begin(l.compactedFormatAndOffset), std::end(l.compactedFormatAndOffset), std::begin(r.compactedFormatAndOffset));
 }
 
 inline bool operator!=(const InputLayout::VertexAttributesDesc &l, const InputLayout::VertexAttributesDesc &r) { return !(l == r); }
@@ -275,10 +282,13 @@ struct StageShaderModuleHeader
 
 struct StageShaderModule : StageShaderModuleHeader
 {
-  eastl::unique_ptr<uint8_t[]> byteCode;
-  size_t byteCodeSize = 0;
+    std::unique_ptr<uint8_t[]> byteCode;
+    size_t byteCodeSize = 0;
 
-  explicit operator bool() const { return 0 != byteCodeSize; }
+    explicit operator bool() const
+    {
+        return 0 != byteCodeSize;
+    }
 };
 
 struct VertexShaderModule : StageShaderModule
@@ -289,10 +299,13 @@ struct VertexShaderModule : StageShaderModule
   VertexShaderModule(VertexShaderModule &&) = default;
   VertexShaderModule &operator=(VertexShaderModule &&) = default;
 
-  VertexShaderModule(StageShaderModule &&module) : StageShaderModule{eastl::move(module)} {}
-  eastl::unique_ptr<StageShaderModule> geometryShader;
-  eastl::unique_ptr<StageShaderModule> hullShader;
-  eastl::unique_ptr<StageShaderModule> domainShader;
+  VertexShaderModule(StageShaderModule&& module) :
+      StageShaderModule{std::move(module)}
+  {
+  }
+  std::unique_ptr<StageShaderModule> geometryShader;
+  std::unique_ptr<StageShaderModule> hullShader;
+  std::unique_ptr<StageShaderModule> domainShader;
 };
 
 #if _TARGET_XBOXONE
@@ -311,11 +324,11 @@ using ComputeShaderModule = StageShaderModule;
 #if D3D_HAS_RAY_TRACING
 struct RaytraceProgram
 {
-  eastl::unique_ptr<ShaderID[]> shaders;
-  eastl::unique_ptr<RaytraceShaderGroup[]> shaderGroups;
-  uint32_t groupCount = 0;
-  uint32_t shaderCount = 0;
-  uint32_t maxRecursionDepth = 0;
+    std::unique_ptr<ShaderID[]> shaders;
+    std::unique_ptr<RaytraceShaderGroup[]> shaderGroups;
+    uint32_t groupCount = 0;
+    uint32_t shaderCount = 0;
+    uint32_t maxRecursionDepth = 0;
 };
 using RaytraceShaderModule = StageShaderModule;
 #endif
@@ -376,9 +389,9 @@ struct GraphicsProgramUsageInfo
 class IdManager
 {
   uint32_t lastAllocatedId = 0;
-  eastl::vector<uint32_t> freeIds;
+  std::vector<uint32_t> freeIds;
 
-public:
+  public:
   uint32_t allocate()
   {
     uint32_t id;
@@ -401,11 +414,11 @@ public:
       --lastAllocatedId;
 
       // try to tidy up the free id list
-      auto at = eastl::find(begin(freeIds), end(freeIds), lastAllocatedId);
+      auto at = std::find(begin(freeIds), end(freeIds), lastAllocatedId);
       while (at != end(freeIds))
       {
         freeIds.erase(at);
-        at = eastl::find(begin(freeIds), end(freeIds), --lastAllocatedId);
+        at = std::find(begin(freeIds), end(freeIds), --lastAllocatedId);
       }
     }
     else
@@ -423,7 +436,7 @@ public:
   void iterateAllocated(T t)
   {
     // to be reasonable fast, we iterate between free slots until we reach last allocated id
-    eastl::sort(begin(freeIds), end(freeIds));
+    std::sort(begin(freeIds), end(freeIds));
     uint32_t at = 1;
     for (auto se : freeIds)
     {
@@ -455,24 +468,24 @@ inline void set_at(C &c, size_t i, V v)
 {
   if (c.size() == i)
   {
-    c.push_back(eastl::move(v));
+      c.push_back(std::move(v));
   }
   else
   {
     ensure_container_space(c, i + 1);
-    c[i] = eastl::move(v);
+    c[i] = std::move(v);
   }
 }
 
 struct VsHsDsGsGroup {
     dxil::ShaderHeader vsHeader;
-    eastl::span<const uint8_t> vs_byte_code;
+    std::span<const uint8_t> vs_byte_code;
     dxil::ShaderHeader hsHeader;
-    eastl::span<const uint8_t> hs_byte_code;
+    std::span<const uint8_t> hs_byte_code;
     dxil::ShaderHeader dsHeader;
-    eastl::span<const uint8_t> ds_byte_code;
+    std::span<const uint8_t> ds_byte_code;
     dxil::ShaderHeader gsHeader;
-    eastl::span<const uint8_t> gs_byte_code;
+    std::span<const uint8_t> gs_byte_code;
 };
 
 struct GraphicsProgramTemplate
@@ -512,7 +525,7 @@ void inspect_scripted_shader_bin_dump(ScriptedShadersBinDumpOwner *dump, T inspe
   }
   inspector.vertexShaderCount(v2->vprId.size());
   inspector.pixelOrComputeShaderCount(v2->fshId.size());
-  eastl::conditional_t<VisitOnce, eastl::vector_set<uint32_t, eastl::less<uint32_t> , EASTLAllocatorType>, uint32_t> visited;
+  std::conditional_t<VisitOnce, nau::SortedVectorSet<uint32_t, std::less<uint32_t>, std::allocator<uint32_t>>, uint32_t> visited;
   for (auto &cls : v2->classes)
   {
     if constexpr (VisitOnce)
@@ -546,8 +559,8 @@ class ShaderProgramGroup
 {
   friend class ShaderProgramGroups;
   ScriptedShadersBinDumpOwner *dump = nullptr;
-  eastl::vector<eastl::variant<eastl::monostate, ShaderID, ProgramID>> pixelShaderComputeProgramIDMap;
-  eastl::vector<GraphicsProgramTemplate> graphicsProgramTemplates;
+  std::vector<std::variant<std::monostate, ShaderID, ProgramID>> pixelShaderComputeProgramIDMap;
+  std::vector<GraphicsProgramTemplate> graphicsProgramTemplates;
   uint32_t vertexShaderCount = 0;
   uint32_t pixelShaderCount = 0;
   uint32_t computeShaderCount = 0;
@@ -562,7 +575,7 @@ class ShaderProgramGroup
     void addGraphicsProgram(uint16_t vs_index, uint16_t ps_index)
     {
       ShaderID psID;
-      if (auto shader = eastl::get_if<ShaderID>(&target->pixelShaderComputeProgramIDMap[ps_index]))
+      if (auto shader = std::get_if<ShaderID>(&target->pixelShaderComputeProgramIDMap[ps_index]))
       {
         psID = *shader;
       }
@@ -572,8 +585,11 @@ class ShaderProgramGroup
         target->pixelShaderComputeProgramIDMap[ps_index] = psID;
       }
       auto vsID = ShaderID::make(groupID, vs_index);
-      auto ref = eastl::find_if(begin(target->graphicsProgramTemplates), end(target->graphicsProgramTemplates),
-        [vsID, psID](auto &prog) { return vsID == prog.vertexShader && psID == prog.pixelShader; });
+      auto ref = std::find_if(begin(target->graphicsProgramTemplates), end(target->graphicsProgramTemplates),
+                              [vsID, psID](auto& prog)
+      {
+          return vsID == prog.vertexShader && psID == prog.pixelShader;
+      });
       if (end(target->graphicsProgramTemplates) == ref)
       {
         GraphicsProgramTemplate prog{vsID, psID};
@@ -584,8 +600,11 @@ class ShaderProgramGroup
     {
       auto psID = nullPixelShader;
       auto vsID = ShaderID::make(groupID, vs_index);
-      auto ref = eastl::find_if(begin(target->graphicsProgramTemplates), end(target->graphicsProgramTemplates),
-        [vsID, psID](auto &prog) { return vsID == prog.vertexShader && psID == prog.pixelShader; });
+      auto ref = std::find_if(begin(target->graphicsProgramTemplates), end(target->graphicsProgramTemplates),
+                              [vsID, psID](auto& prog)
+      {
+          return vsID == prog.vertexShader && psID == prog.pixelShader;
+      });
       if (end(target->graphicsProgramTemplates) == ref)
       {
         GraphicsProgramTemplate prog{vsID, psID};
@@ -594,10 +613,10 @@ class ShaderProgramGroup
     }
     void addComputeProgram(uint32_t shader_index)
     {
-      if (!eastl::holds_alternative<ProgramID>(target->pixelShaderComputeProgramIDMap[shader_index]))
-      {
-        target->pixelShaderComputeProgramIDMap[shader_index] = ProgramID::asComputeProgram(groupID, target->computeShaderCount++);
-      }
+        if (!std::holds_alternative<ProgramID>(target->pixelShaderComputeProgramIDMap[shader_index]))
+        {
+            target->pixelShaderComputeProgramIDMap[shader_index] = ProgramID::asComputeProgram(groupID, target->computeShaderCount++);
+        }
     }
   };
 
@@ -638,10 +657,10 @@ protected:
   {
     for (const auto &e : pixelShaderComputeProgramIDMap)
     {
-      if (eastl::holds_alternative<ProgramID>(e))
-      {
-        clb(eastl::get<ProgramID>(e));
-      }
+        if (std::holds_alternative<ProgramID>(e))
+        {
+            clb(std::get<ProgramID>(e));
+        }
     }
   }
 
@@ -650,29 +669,35 @@ protected:
   {
     for (const auto &e : pixelShaderComputeProgramIDMap)
     {
-      if (eastl::holds_alternative<ShaderID>(e))
-      {
-        clb(eastl::get<ShaderID>(e));
-      }
+        if (std::holds_alternative<ShaderID>(e))
+        {
+            clb(std::get<ShaderID>(e));
+        }
     }
   }
 
   GraphicsProgramID findGraphicsProgram(const ShaderProgramGroup *base, ShaderID vs, ShaderID ps) const
   {
-    auto ref = eastl::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
-      [vs, ps](const auto &prog) { return vs == prog.vertexShader && ps == prog.pixelShader; });
-    if (ref != end(graphicsProgramTemplates))
-    {
-      return GraphicsProgramID::make(getGroupID(base), ref - begin(graphicsProgramTemplates));
-    }
+      auto ref = std::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
+                              [vs, ps](const auto& prog)
+      {
+          return vs == prog.vertexShader && ps == prog.pixelShader;
+      });
+      if (ref != end(graphicsProgramTemplates))
+      {
+          return GraphicsProgramID::make(getGroupID(base), ref - begin(graphicsProgramTemplates));
+      }
     return GraphicsProgramID::Null();
   }
 
   GraphicsProgramID addGraphicsProgram(const ShaderProgramGroup *base, ShaderID vs, ShaderID ps)
   {
     GraphicsProgramID id;
-    auto ref = eastl::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
-      [](const auto &prog) { return ShaderID::Null() == prog.vertexShader; });
+    auto ref = std::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
+                            [](const auto& prog)
+    {
+        return ShaderID::Null() == prog.vertexShader;
+    });
     if (ref == end(graphicsProgramTemplates))
     {
       id = GraphicsProgramID::make(getGroupID(base), graphicsProgramTemplates.size());
@@ -744,12 +769,12 @@ protected:
       return dxil::ShaderStage::VERTEX;
     }
     NAU_ASSERT_RETURN(shader_index < pixelShaderComputeProgramIDMap.size(), dxil::ShaderStage::VERTEX);
-    if (auto shaderID = eastl::get_if<ShaderID>(&pixelShaderComputeProgramIDMap[shader_index]))
+    if (auto shaderID = std::get_if<ShaderID>(&pixelShaderComputeProgramIDMap[shader_index]))
     {
       *static_cast<FSHADER *>(ident) = shaderID->exportValue();
       return dxil::ShaderStage::PIXEL;
     }
-    if (auto programID = eastl::get_if<ProgramID>(&pixelShaderComputeProgramIDMap[shader_index]))
+    if (auto programID = std::get_if<ProgramID>(&pixelShaderComputeProgramIDMap[shader_index]))
     {
       *static_cast<FSHADER *>(ident) = programID->exportValue();
       return dxil::ShaderStage::COMPUTE;
@@ -761,7 +786,7 @@ protected:
 class ShaderProgramGroups
 {
   // shaderGroup 0 is always to "global" shaderGroup and is not handled by groups
-  eastl::array<ShaderProgramGroup, max_scripted_shaders_bin_groups - 1> groups{};
+  std::array<ShaderProgramGroup, max_scripted_shaders_bin_groups - 1> groups{};
   // For shaders we only track used ids. When new shaders are created or
   // shaders are deleted we just manage the ids and hand over ownership
   // to the device context backend with the appropriate commands.
@@ -772,8 +797,8 @@ class ShaderProgramGroups
   typedef uint64_t hash_key_t;
   dag::HashedKeyMap<hash_key_t, uint32_t, hash_key_t(0), oa_hashmap_util::MumStepHash<hash_key_t>> graphicsProgramsHashMap;
 
-  eastl::vector<GraphicsProgramTemplate> graphicsProgramTemplates;
-  eastl::vector<GraphicsProgramInstance> graphicsProgramInstances;
+  std::vector<GraphicsProgramTemplate> graphicsProgramTemplates;
+  std::vector<GraphicsProgramInstance> graphicsProgramInstances;
   uint32_t graphicsProgramsHashMapDead = 0;
 
   ShaderProgramGroup *getShaderGroupForShader(ShaderID id)
@@ -927,8 +952,11 @@ public:
     {
       return shaderGroup->findGraphicsProgram(groups.data(), vs, ps);
     }
-    auto ref = eastl::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
-      [vs, ps](const auto &pair) { return vs == pair.vertexShader && ps == pair.pixelShader; });
+    auto ref = std::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
+                            [vs, ps](const auto& pair)
+    {
+        return vs == pair.vertexShader && ps == pair.pixelShader;
+    });
     if (ref == end(graphicsProgramTemplates))
     {
       return GraphicsProgramID::Null();
@@ -946,8 +974,11 @@ public:
       return shaderGroup->addGraphicsProgram(groups.data(), vs, ps);
     }
     GraphicsProgramID id;
-    auto ref = eastl::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
-      [](const auto &pair) { return ShaderID::Null() == pair.vertexShader; });
+    auto ref = std::find_if(begin(graphicsProgramTemplates), end(graphicsProgramTemplates),
+                            [](const auto& pair)
+    {
+        return ShaderID::Null() == pair.vertexShader;
+    });
     if (ref == end(graphicsProgramTemplates))
     {
       id = GraphicsProgramID::make(0, graphicsProgramTemplates.size());
@@ -1057,10 +1088,11 @@ public:
   ProgramID instanciateGraphicsProgram(hash_key_t key, GraphicsProgramID gp, InputLayoutID il)
   {
     auto refEmpty = end(graphicsProgramInstances);
-    auto refSame = eastl::find_if(begin(graphicsProgramInstances), end(graphicsProgramInstances), [&](auto &instance) {
-      if (GraphicsProgramID::Null() == instance.internalProgram)
-        refEmpty = &instance;
-      return instance.internalProgram == gp && instance.inputLayout == il;
+    auto refSame = std::find_if(begin(graphicsProgramInstances), end(graphicsProgramInstances), [&](auto& instance)
+    {
+        if (GraphicsProgramID::Null() == instance.internalProgram)
+            refEmpty = graphicsProgramInstances.begin() + (&instance - graphicsProgramInstances.data());
+        return instance.internalProgram == gp && instance.inputLayout == il;
     });
     if (refSame != end(graphicsProgramInstances))
     {
@@ -1109,7 +1141,7 @@ public:
     if (graphicsProgramsHashMapDead == 0)
       return;
     decltype(graphicsProgramsHashMap) temp;
-    temp.reserve(eastl::max<int>(0, graphicsProgramsHashMap.size() - graphicsProgramsHashMapDead));
+    temp.reserve(std::max<int>(0, graphicsProgramsHashMap.size() - graphicsProgramsHashMapDead));
     graphicsProgramsHashMap.iterate([&](auto key, auto v) {
       if (v != ~uint32_t(0))
         temp.emplace_if_missing(key, v);
@@ -1138,7 +1170,7 @@ public:
       if (inst.internalProgram == templ)
       {
         inst.deleteAllReferences();
-        removeInstanceFromHashmap(&inst - begin(graphicsProgramInstances));
+        removeInstanceFromHashmap(&inst - graphicsProgramInstances.data());
       }
     }
   }
@@ -1155,7 +1187,7 @@ public:
       if (inst.internalProgram.getGroup() == index)
       {
         inst.deleteAllReferences();
-        removeInstanceFromHashmap(&inst - begin(graphicsProgramInstances));
+        removeInstanceFromHashmap(&inst - graphicsProgramInstances.data());
       }
     }
     // tidy up the hash map
@@ -1178,38 +1210,38 @@ inline ModuleType decode_shader_layout(const void *data)
 
   if (container->type == dxil::StoredShaderType::combinedVertexShader)
   {
-    if constexpr (eastl::is_same_v<ModuleType, VertexShaderModule>)
-    {
-      auto *combined = bindump::map<dxil::VertexShaderPipeline>(container->data.data());
-      result = shader_layout_to_module(&*combined->vertexShader);
-      result.ident.shaderHash = container->dataHash;
-      result.ident.shaderSize = container->data.size();
-      if (combined->geometryShader)
+      if constexpr (std::is_same_v<ModuleType, VertexShaderModule>)
       {
-        result.geometryShader = eastl::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->geometryShader));
-      }
-      if (combined->hullShader)
-      {
-        result.hullShader = eastl::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->hullShader));
-      }
-      if (combined->domainShader)
-      {
-        result.domainShader = eastl::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->domainShader));
-      }
+          auto* combined = bindump::map<dxil::VertexShaderPipeline>(container->data.data());
+          result = shader_layout_to_module(&*combined->vertexShader);
+          result.ident.shaderHash = container->dataHash;
+          result.ident.shaderSize = container->data.size();
+          if (combined->geometryShader)
+          {
+              result.geometryShader = std::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->geometryShader));
+          }
+          if (combined->hullShader)
+          {
+              result.hullShader = std::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->hullShader));
+          }
+          if (combined->domainShader)
+          {
+              result.domainShader = std::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->domainShader));
+          }
     }
   }
   else if (container->type == dxil::StoredShaderType::meshShader)
   {
-    if constexpr (eastl::is_same_v<ModuleType, VertexShaderModule>)
-    {
-      auto *combined = bindump::map<dxil::MeshShaderPipeline>(container->data.data());
-      result = shader_layout_to_module(&*combined->meshShader);
-      result.ident.shaderHash = container->dataHash;
-      result.ident.shaderSize = container->data.size();
-      if (combined->amplificationShader)
+      if constexpr (std::is_same_v<ModuleType, VertexShaderModule>)
       {
-        result.geometryShader = eastl::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->amplificationShader));
-      }
+          auto* combined = bindump::map<dxil::MeshShaderPipeline>(container->data.data());
+          result = shader_layout_to_module(&*combined->meshShader);
+          result.ident.shaderHash = container->dataHash;
+          result.ident.shaderSize = container->data.size();
+          if (combined->amplificationShader)
+          {
+              result.geometryShader = std::make_unique<StageShaderModule>(shader_layout_to_module(&*combined->amplificationShader));
+          }
     }
   }
   else
@@ -1222,12 +1254,12 @@ inline ModuleType decode_shader_layout(const void *data)
   return result;
 }
 StageShaderModule decode_shader_binary(const void *data, uint32_t size);
-eastl::unique_ptr<VertexShaderModule> decode_vertex_shader(const void *data, uint32_t size);
-eastl::unique_ptr<PixelShaderModule> decode_pixel_shader(const void *data, uint32_t size);
+std::unique_ptr<VertexShaderModule> decode_vertex_shader(const void* data, uint32_t size);
+std::unique_ptr<PixelShaderModule> decode_pixel_shader(const void* data, uint32_t size);
 
 struct StageShaderModuleInBinaryRef : StageShaderModuleHeader
 {
-  eastl::span<const uint8_t> byteCode;
+    std::span<const uint8_t> byteCode;
 };
 inline uint32_t offset_to_base(const void *base, const StageShaderModuleInBinaryRef &shader)
 {
@@ -1254,38 +1286,38 @@ inline ModuleType decode_shader_layout_ref(const void *data)
 
   if (container->type == dxil::StoredShaderType::combinedVertexShader)
   {
-    if constexpr (eastl::is_same_v<ModuleType, VertexShaderModuleInBinaryRef>)
-    {
-      auto *combined = bindump::map<dxil::VertexShaderPipeline>(container->data.data());
-      static_cast<StageShaderModuleInBinaryRef &>(result) = shader_layout_to_module_ref(&*combined->vertexShader);
-      result.ident.shaderHash = container->dataHash;
-      result.ident.shaderSize = container->data.size();
-      if (combined->geometryShader)
+      if constexpr (std::is_same_v<ModuleType, VertexShaderModuleInBinaryRef>)
       {
-        result.geometryShader = shader_layout_to_module_ref(&*combined->geometryShader);
-      }
-      if (combined->hullShader)
-      {
-        result.hullShader = shader_layout_to_module_ref(&*combined->hullShader);
-      }
-      if (combined->domainShader)
-      {
-        result.domainShader = shader_layout_to_module_ref(&*combined->domainShader);
-      }
+          auto* combined = bindump::map<dxil::VertexShaderPipeline>(container->data.data());
+          static_cast<StageShaderModuleInBinaryRef&>(result) = shader_layout_to_module_ref(&*combined->vertexShader);
+          result.ident.shaderHash = container->dataHash;
+          result.ident.shaderSize = container->data.size();
+          if (combined->geometryShader)
+          {
+              result.geometryShader = shader_layout_to_module_ref(&*combined->geometryShader);
+          }
+          if (combined->hullShader)
+          {
+              result.hullShader = shader_layout_to_module_ref(&*combined->hullShader);
+          }
+          if (combined->domainShader)
+          {
+              result.domainShader = shader_layout_to_module_ref(&*combined->domainShader);
+          }
     }
   }
   else if (container->type == dxil::StoredShaderType::meshShader)
   {
-    if constexpr (eastl::is_same_v<ModuleType, VertexShaderModuleInBinaryRef>)
-    {
-      auto *combined = bindump::map<dxil::MeshShaderPipeline>(container->data.data());
-      static_cast<StageShaderModuleInBinaryRef &>(result) = shader_layout_to_module_ref(&*combined->meshShader);
-      result.ident.shaderHash = container->dataHash;
-      result.ident.shaderSize = container->data.size();
-      if (combined->amplificationShader)
+      if constexpr (std::is_same_v<ModuleType, VertexShaderModuleInBinaryRef>)
       {
-        result.geometryShader = shader_layout_to_module_ref(&*combined->amplificationShader);
-      }
+          auto* combined = bindump::map<dxil::MeshShaderPipeline>(container->data.data());
+          static_cast<StageShaderModuleInBinaryRef&>(result) = shader_layout_to_module_ref(&*combined->meshShader);
+          result.ident.shaderHash = container->dataHash;
+          result.ident.shaderSize = container->data.size();
+          if (combined->amplificationShader)
+          {
+              result.geometryShader = shader_layout_to_module_ref(&*combined->amplificationShader);
+          }
     }
   }
   else
@@ -1308,9 +1340,9 @@ class ShaderProgramDatabase
   mutable nau::hal::OSReadWriteLock dataGuard;
 
 #if D3D_HAS_RAY_TRACING
-  eastl::vector<RaytraceProgram> raytracePrograms;
+  std::vector<RaytraceProgram> raytracePrograms;
 #endif
-  eastl::vector<InputLayout> publicImputLayoutTable;
+  std::vector<InputLayout> publicImputLayoutTable;
 
   ProgramID debugProgram = ProgramID::Null();
   ShaderID nullPixelShader = ShaderID::Null();
@@ -1322,29 +1354,29 @@ class ShaderProgramDatabase
   void initNullPixelShader(DeviceContext &ctx);
 
 public:
-  ShaderID newRawVertexShader(DeviceContext &ctx, const dxil::ShaderHeader &header, eastl::span<const uint8_t> byte_code);
-  ShaderID newRawVHDGShaders(DeviceContext &ctx, const VsHsDsGsGroup& group);
-  ShaderID newRawPixelShader(DeviceContext &ctx, const dxil::ShaderHeader &header, eastl::span<const uint8_t> byte_code);
+    ShaderID newRawVertexShader(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code);
+    ShaderID newRawVHDGShaders(DeviceContext& ctx, const VsHsDsGsGroup& group);
+    ShaderID newRawPixelShader(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code);
 
-  ProgramID newRawComputeProgram(DeviceContext &ctx, const dxil::ShaderHeader &header, eastl::span<const uint8_t> byte_code, CSPreloaded preloaded);
+    ProgramID newRawComputeProgram(DeviceContext& ctx, const dxil::ShaderHeader& header, std::span<const uint8_t> byte_code, CSPreloaded preloaded);
 
-  ProgramID newComputeProgram(DeviceContext &ctx, const void *data, CSPreloaded preloaded);
-  ProgramID newGraphicsProgram(DeviceContext &ctx, InputLayoutID vdecl, ShaderID vs, ShaderID ps);
-  InputLayoutID getInputLayoutForGraphicsProgram(ProgramID program);
-  GraphicsProgramUsageInfo getGraphicsProgramForStateUpdate(ProgramID program);
-  InputLayoutID registerInputLayoutInternal(DeviceContext &ctx, const InputLayout &layout);
-  InputLayoutID registerInputLayout(DeviceContext &ctx, const InputLayout &layout);
-  InputLayout getInputLayout(InputLayoutID);
-  void setup(DeviceContext &ctx, bool disable_precache);
-  void shutdown(DeviceContext &ctx);
-  ShaderID newVertexShader(DeviceContext &ctx, const void *data);
-  ShaderID newPixelShader(DeviceContext &ctx, const void *data);
-  ProgramID getDebugProgram();
-  void removeProgram(DeviceContext &ctx, ProgramID prog);
-  void deleteVertexShader(DeviceContext &ctx, ShaderID shader);
-  void deletePixelShader(DeviceContext &ctx, ShaderID shader);
-  void updateVertexShaderName(DeviceContext &ctx, ShaderID shader, const char *name);
-  void updatePixelShaderName(DeviceContext &ctx, ShaderID shader, const char *name);
+    ProgramID newComputeProgram(DeviceContext& ctx, const void* data, CSPreloaded preloaded);
+    ProgramID newGraphicsProgram(DeviceContext& ctx, InputLayoutID vdecl, ShaderID vs, ShaderID ps);
+    InputLayoutID getInputLayoutForGraphicsProgram(ProgramID program);
+    GraphicsProgramUsageInfo getGraphicsProgramForStateUpdate(ProgramID program);
+    InputLayoutID registerInputLayoutInternal(DeviceContext& ctx, const InputLayout& layout);
+    InputLayoutID registerInputLayout(DeviceContext& ctx, const InputLayout& layout);
+    InputLayout getInputLayout(InputLayoutID);
+    void setup(DeviceContext& ctx, bool disable_precache);
+    void shutdown(DeviceContext& ctx);
+    ShaderID newVertexShader(DeviceContext& ctx, const void* data);
+    ShaderID newPixelShader(DeviceContext& ctx, const void* data);
+    ProgramID getDebugProgram();
+    void removeProgram(DeviceContext& ctx, ProgramID prog);
+    void deleteVertexShader(DeviceContext& ctx, ShaderID shader);
+    void deletePixelShader(DeviceContext& ctx, ShaderID shader);
+    void updateVertexShaderName(DeviceContext& ctx, ShaderID shader, const char* name);
+    void updatePixelShaderName(DeviceContext& ctx, ShaderID shader, const char* name);
 
 #if D3D_HAS_RAY_TRACING
   ProgramID newRaytraceProgram(DeviceContext &ctx, const ShaderID *shader_ids, uint32_t shader_count,
@@ -1367,12 +1399,12 @@ class InputLayoutManager
   struct ExternalToInternalMapEntry
   {
     InputLayout layout;
-    eastl::vector<MaskToInternalMapEntry> mapTable;
+    std::vector<MaskToInternalMapEntry> mapTable;
   };
-  eastl::vector<InputLayout> internalLayoutTable;
-  eastl::vector<ExternalToInternalMapEntry> externalToInternalMap;
+  std::vector<InputLayout> internalLayoutTable;
+  std::vector<ExternalToInternalMapEntry> externalToInternalMap;
 
-public:
+  public:
   void registerInputLayout(InputLayoutID id, const InputLayout &layout)
   {
     if (externalToInternalMap.size() <= id.get())
@@ -1388,7 +1420,10 @@ public:
     NAU_ASSERT(externalToInternalMap.size() > id.get(), "dx12: trying to use invalid input layout ID {} registered layouts {}",
       id.get(), externalToInternalMap.size());
     auto &e = externalToInternalMap[id.get()];
-    auto ref = eastl::find_if(begin(e.mapTable), end(e.mapTable), [layout_mask](auto &value) { return value.mask == layout_mask; });
+    auto ref = std::find_if(begin(e.mapTable), end(e.mapTable), [layout_mask](auto& value)
+    {
+        return value.mask == layout_mask;
+    });
     if (end(e.mapTable) != ref)
     {
       return ref->id;
@@ -1406,11 +1441,11 @@ public:
 
   InternalInputLayoutID addInternalLayout(const InputLayout &layout)
   {
-    auto ref = eastl::find(begin(internalLayoutTable), end(internalLayoutTable), layout);
-    if (ref == end(internalLayoutTable))
-    {
-      ref = internalLayoutTable.insert(end(internalLayoutTable), layout);
-    }
+      auto ref = std::find(begin(internalLayoutTable), end(internalLayoutTable), layout);
+      if (ref == end(internalLayoutTable))
+      {
+          ref = internalLayoutTable.insert(end(internalLayoutTable), layout);
+      }
     return InternalInputLayoutID{int(ref - begin(internalLayoutTable))};
   }
 };
@@ -1419,13 +1454,13 @@ class ScriptedShadersBinDumpManager
 {
   struct DecompressedGroup
   {
-    eastl::vector<uint8_t> uncompressed;
-    bindump::Mapper<shader_layout::ShGroup> *shaderGroup = nullptr;
+      std::vector<uint8_t> uncompressed;
+      bindump::Mapper<shader_layout::ShGroup>* shaderGroup = nullptr;
   };
   struct ScriptedShadersBinDumpState
   {
     ScriptedShadersBinDumpOwner *owner = nullptr;
-    eastl::unique_ptr<DecompressedGroup[]> decompressedGroups;
+    std::unique_ptr<DecompressedGroup[]> decompressedGroups;
   };
   ScriptedShadersBinDumpState dumps[max_scripted_shaders_bin_groups]{};
 
@@ -1462,7 +1497,7 @@ public:
   void setDumpOfGroup(uint32_t shaderGroup, ScriptedShadersBinDumpOwner *dump)
   {
     dumps[shaderGroup].owner = dump;
-    dumps[shaderGroup].decompressedGroups = eastl::make_unique<DecompressedGroup[]>(dump->getDump()->shGroups.size());
+    dumps[shaderGroup].decompressedGroups = std::make_unique<DecompressedGroup[]>(dump->getDump()->shGroups.size());
   }
   void resetDumpOfGroup(uint32_t shaderGroup)
   {
@@ -1470,12 +1505,12 @@ public:
     dumps[shaderGroup].decompressedGroups.reset();
   }
   // returned memory range is valid until the end of the frame, after that its undefined.
-  eastl::span<uint8_t> getShaderByteCode(uint32_t shaderGroup, uint32_t compression_group, uint32_t compression_index)
+  std::span<uint8_t> getShaderByteCode(uint32_t shaderGroup, uint32_t compression_group, uint32_t compression_index)
   {
     auto &dump = dumps[shaderGroup];
     if (!dump.decompressedGroups)
     {
-      return {nullptr, nullptr};
+        return {};
     }
     auto &compGroup = dump.decompressedGroups[compression_group];
     //if (!compGroup.shaderGroup)
@@ -1676,13 +1711,13 @@ public:
 
 struct StageShaderModuleBytecode
 {
-  eastl::unique_ptr<uint8_t[]> bytecode;
-  size_t bytecodeSize = 0;
+    std::unique_ptr<uint8_t[]> bytecode;
+    size_t bytecodeSize = 0;
 };
 
 struct VertexShaderModuleBytecode : StageShaderModuleBytecode
 {
-  eastl::unique_ptr<StageShaderModuleBytecode[]> subShaders;
+    std::unique_ptr<StageShaderModuleBytecode[]> subShaders;
 };
 
 using PixelShaderModuleBytecode = StageShaderModuleBytecode;
@@ -1711,7 +1746,7 @@ struct StageShaderModuleBytcodeInDump : StageShaderModuleBytcodeInDumpOffsets
 
 struct VertexShaderModuleBytcodeInDump : StageShaderModuleBytcodeInDump
 {
-  eastl::unique_ptr<StageShaderModuleBytcodeInDumpOffsets[]> subShaders;
+    std::unique_ptr<StageShaderModuleBytcodeInDumpOffsets[]> subShaders;
 };
 
 using PixelShaderModuleBytcodeInDump = StageShaderModuleBytcodeInDump;
@@ -1732,7 +1767,7 @@ struct VertexShaderModuleHeader
 {
   dxil::HashValue hash = {};
   dxil::ShaderHeader header = {};
-  eastl::unique_ptr<dxil::ShaderHeader[]> subShaders;
+  std::unique_ptr<dxil::ShaderHeader[]> subShaders;
   nau::string debugName;
   bool hasGsOrAs : 1;
   bool hasDsAndHs : 1;
@@ -1750,7 +1785,7 @@ struct PixelShaderModuleHeader
 struct VertexShaderModuleRefStore
 {
   VertexShaderModuleHeader &header;
-  eastl::variant<VertexShaderModuleBytecodeRef, VertexShaderModuleBytcodeInDumpRef> bytecode;
+  std::variant<VertexShaderModuleBytecodeRef, VertexShaderModuleBytcodeInDumpRef> bytecode;
 };
 
 inline const dxil::ShaderHeader *get_gs(const VertexShaderModuleRefStore &ref)
@@ -1786,7 +1821,7 @@ inline bool is_mesh(const VertexShaderModuleRefStore &ref)
 struct PixelShaderModuleRefStore
 {
   const PixelShaderModuleHeader &header;
-  eastl::variant<PixelShaderModuleBytecodeRef, PixelShaderModuleBytcodeInDumpRef> bytecode;
+  std::variant<PixelShaderModuleBytecodeRef, PixelShaderModuleBytcodeInDumpRef> bytecode;
 };
 
 class PipelineNameGenerator : public ScriptedShadersBinDumpManager
@@ -1804,12 +1839,15 @@ class PipelineNameGenerator : public ScriptedShadersBinDumpManager
     auto v2 = getDump(group)->getDumpV2();
     for (auto &cls : v2->classes)
     {
-      auto ref = eastl::find_if(eastl::begin(cls.shrefStorage), eastl::end(cls.shrefStorage),
-        [fsh = index](auto &def) { return fsh == def.fshId; });
-      if (ref == eastl::end(cls.shrefStorage))
-      {
-        continue;
-      }
+        auto ref = std::find_if(std::begin(cls.shrefStorage), std::end(cls.shrefStorage),
+                                [fsh = index](auto& def)
+        {
+            return fsh == def.fshId;
+        });
+        if (ref == std::end(cls.shrefStorage))
+        {
+            continue;
+        }
 
       for (uint32_t si = 0; si < cls.code.size(); ++si)
       {
@@ -1904,8 +1942,8 @@ class PipelineNameGenerator : public ScriptedShadersBinDumpManager
     for (auto &cls : v2->classes)
     {
       // shrefStorage stores all the unique combinations of shaders used by this class
-      auto ref = eastl::find_if(eastl::begin(cls.shrefStorage), eastl::end(cls.shrefStorage), clb);
-      if (ref == eastl::end(cls.shrefStorage))
+      auto ref = std::find_if(std::begin(cls.shrefStorage), std::end(cls.shrefStorage), clb);
+      if (ref == std::end(cls.shrefStorage))
       {
         continue;
       }
@@ -2197,7 +2235,7 @@ class PipelineNameGenerator : public ScriptedShadersBinDumpManager
   bool isNullPixelShader(const PixelShaderModuleRefStore &pixel_shader) const
   {
     // TODO: this assumption is not correct
-    return eastl::holds_alternative<PixelShaderModuleBytecodeRef>(pixel_shader.bytecode);
+    return std::holds_alternative<PixelShaderModuleBytecodeRef>(pixel_shader.bytecode);
   }
 
 public:
@@ -2214,10 +2252,10 @@ public:
     if (outName.empty())
     {
       // so engine gave it no name and we were unable to locate it in the bin dumps, we give it a hash name then
-      eastl::string eaName;
+      std::string eaName;
       eaName.resize(sizeof(dxil::HashValue) * 2, ' ');
       module.ident.shaderHash.convertToString((char*)eaName.data(), eaName.size() + 1);
-      outName = eaName.c_str(); // TODO: remove this after we move to eastl::string's in render module
+      outName = eaName.c_str();  // TODO: remove this after we move to std::string's in render module
     }
 
     return outName;
@@ -2242,12 +2280,12 @@ public:
       char buf[sizeof(dxil::HashValue) * 2 + 1];
       vertex_shader.header.hash.convertToString(buf, sizeof(buf));
       outName += buf;
-      bool isRaw = eastl::holds_alternative<VertexShaderModuleBytecodeRef>(vertex_shader.bytecode);
+      bool isRaw = std::holds_alternative<VertexShaderModuleBytecodeRef>(vertex_shader.bytecode);
       outName += isRaw ? "[raw]" : "[dump]";
       outName += "}{";
       pixel_shader.header.hash.convertToString(buf, sizeof(buf));
       outName += buf;
-      isRaw = eastl::holds_alternative<PixelShaderModuleBytecodeRef>(pixel_shader.bytecode);
+      isRaw = std::holds_alternative<PixelShaderModuleBytecodeRef>(pixel_shader.bytecode);
       outName += isRaw ? "[raw]" : "[dump]";
       outName += "}";
       //auto stateText = static_state.toString(); // TODO: fix it
@@ -2284,81 +2322,81 @@ class ShaderModuleManager : public PipelineNameGenerator
   };
   struct
   {
-    eastl::vector<eastl::unique_ptr<GroupZeroVertexShaderModule>> vertex;
-    eastl::vector<eastl::unique_ptr<GroupZeroPixelShaderModule>> pixel;
+      std::vector<std::unique_ptr<GroupZeroVertexShaderModule>> vertex;
+      std::vector<std::unique_ptr<GroupZeroPixelShaderModule>> pixel;
   } shaderGroupZero;
   struct
   {
-    eastl::vector<eastl::unique_ptr<GroupVertexShaderModule>> vertex;
-    eastl::vector<eastl::unique_ptr<GroupPixelShaderModule>> pixel;
+      std::vector<std::unique_ptr<GroupVertexShaderModule>> vertex;
+      std::vector<std::unique_ptr<GroupPixelShaderModule>> pixel;
   } shaderGroup[max_scripted_shaders_bin_groups - 1];
 
-  eastl::span<uint8_t> getBytecode(const PixelShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getBytecode(const PixelShaderModuleBytecodeRef& ref)
   {
     return {ref.bytecode->bytecode.get(), ref.bytecode->bytecode.get() + ref.bytecode->bytecodeSize};
   }
 
-  eastl::span<uint8_t> getBytecode(const PixelShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getBytecode(const PixelShaderModuleBytcodeInDumpRef& ref)
   {
     auto binary = getShaderByteCode(ref.shaderGroup, ref.bytecode->compressionGroup, ref.bytecode->compressionIndex);
     return binary.subspan(ref.bytecode->shaderOffset, ref.bytecode->shaderSize);
   }
 
-  eastl::span<uint8_t> getVsBytecode(const VertexShaderModuleHeader &, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getVsBytecode(const VertexShaderModuleHeader&, const VertexShaderModuleBytecodeRef& ref)
   {
     return {ref.bytecode->bytecode.get(), ref.bytecode->bytecode.get() + ref.bytecode->bytecodeSize};
   }
-  eastl::span<uint8_t> getVsBytecode(const VertexShaderModuleHeader &, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getVsBytecode(const VertexShaderModuleHeader&, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     auto binary = getShaderByteCode(ref.shaderGroup, ref.bytecode->compressionGroup, ref.bytecode->compressionIndex);
     return binary.subspan(ref.bytecode->shaderOffset, ref.bytecode->shaderSize);
   }
-  eastl::span<uint8_t> getMsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getMsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytecodeRef& ref)
   {
     return getVsBytecode(header, ref);
   }
-  eastl::span<uint8_t> getMsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getMsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     return getVsBytecode(header, ref);
   }
-  eastl::span<uint8_t> getGsBytecode(const VertexShaderModuleHeader &, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getGsBytecode(const VertexShaderModuleHeader&, const VertexShaderModuleBytecodeRef& ref)
   {
     return getSubShaderBytecode(0, ref);
   }
-  eastl::span<uint8_t> getGsBytecode(const VertexShaderModuleHeader &, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getGsBytecode(const VertexShaderModuleHeader&, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     return getSubShaderBytecode(0, ref);
   }
-  eastl::span<uint8_t> getAsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getAsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytecodeRef& ref)
   {
     return getGsBytecode(header, ref);
   }
-  eastl::span<uint8_t> getAsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getAsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     return getGsBytecode(header, ref);
   }
-  eastl::span<uint8_t> getHsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getHsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytecodeRef& ref)
   {
     return getSubShaderBytecode(header.hasGsOrAs ? 1 : 0, ref);
   }
-  eastl::span<uint8_t> getHsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getHsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     return getSubShaderBytecode(header.hasGsOrAs ? 1 : 0, ref);
   }
-  eastl::span<uint8_t> getDsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getDsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytecodeRef& ref)
   {
     return getSubShaderBytecode(header.hasGsOrAs ? 2 : 1, ref);
   }
-  eastl::span<uint8_t> getDsBytecode(const VertexShaderModuleHeader &header, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getDsBytecode(const VertexShaderModuleHeader& header, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     return getSubShaderBytecode(header.hasGsOrAs ? 2 : 1, ref);
   }
-  eastl::span<uint8_t> getSubShaderBytecode(uint32_t sub_shader_index, const VertexShaderModuleBytecodeRef &ref)
+  std::span<uint8_t> getSubShaderBytecode(uint32_t sub_shader_index, const VertexShaderModuleBytecodeRef& ref)
   {
     auto &subShader = ref.bytecode->subShaders[sub_shader_index];
     return {subShader.bytecode.get(), subShader.bytecode.get() + subShader.bytecodeSize};
   }
-  eastl::span<uint8_t> getSubShaderBytecode(uint32_t sub_shader_index, const VertexShaderModuleBytcodeInDumpRef &ref)
+  std::span<uint8_t> getSubShaderBytecode(uint32_t sub_shader_index, const VertexShaderModuleBytcodeInDumpRef& ref)
   {
     auto &subShader = ref.bytecode->subShaders[sub_shader_index];
     auto binary = getShaderByteCode(ref.shaderGroup, ref.bytecode->compressionGroup, ref.bytecode->compressionIndex);
@@ -2369,50 +2407,70 @@ public:
   void addVertexShader(ShaderID id, VertexShaderModule *module);
   void addPixelShader(ShaderID id, PixelShaderModule *module);
   const dxil::HashValue &getVertexShaderHash(ShaderID id) const;
-  void setVertexShaderName(ShaderID id, eastl::span<const char> name);
+  void setVertexShaderName(ShaderID id, std::span<const char> name);
   const dxil::HashValue &getPixelShaderHash(ShaderID id) const;
-  void setPixelShaderName(ShaderID id, eastl::span<const char> name);
+  void setPixelShaderName(ShaderID id, std::span<const char> name);
   VertexShaderModuleRefStore getVertexShader(ShaderID id);
   PixelShaderModuleRefStore getPixelShader(ShaderID id);
 
-  eastl::span<uint8_t> getBytecode(const PixelShaderModuleRefStore &ref)
+  std::span<uint8_t> getBytecode(const PixelShaderModuleRefStore& ref)
   {
-    return eastl::visit([this](auto &r) -> eastl::span<uint8_t> { return this->getBytecode(r); }, ref.bytecode);
+      return std::visit([this](auto& r) -> std::span<uint8_t>
+      {
+          return this->getBytecode(r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getVsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getVsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getVsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getVsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getMsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getMsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getMsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getMsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getGsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getGsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getGsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getGsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getAsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getAsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getAsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getAsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getHsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getHsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getHsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getHsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
-  eastl::span<uint8_t> getDsBytecode(const VertexShaderModuleRefStore &ref)
+  std::span<uint8_t> getDsBytecode(const VertexShaderModuleRefStore& ref)
   {
-    return eastl::visit([this, &ref](auto &r) -> eastl::span<uint8_t> { return this->getDsBytecode(ref.header, r); }, ref.bytecode);
+      return std::visit([this, &ref](auto& r) -> std::span<uint8_t>
+      {
+          return this->getDsBytecode(ref.header, r);
+      }, ref.bytecode);
   }
 
   using AnyShaderModuleUniquePointer =
-    eastl::variant<eastl::unique_ptr<GroupZeroVertexShaderModule>, eastl::unique_ptr<GroupVertexShaderModule>,
-      eastl::unique_ptr<GroupZeroPixelShaderModule>, eastl::unique_ptr<GroupPixelShaderModule>>;
+      std::variant<std::unique_ptr<GroupZeroVertexShaderModule>, std::unique_ptr<GroupVertexShaderModule>, std::unique_ptr<GroupZeroPixelShaderModule>, std::unique_ptr<GroupPixelShaderModule>>;
 
   AnyShaderModuleUniquePointer releaseVertexShader(ShaderID id);
   AnyShaderModuleUniquePointer releasePixelShader(ShaderID id);

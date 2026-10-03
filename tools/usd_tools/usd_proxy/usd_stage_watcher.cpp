@@ -31,7 +31,7 @@ namespace UsdProxy
 
     void StageObjectChangedWatcher::onObjectsChanged(UsdNotice::ObjectsChanged const& notice, UsdStageWeakPtr const& sender)
     {
-        if (!sender || sender != m_stage || m_blockNotifications)
+        if (!sender || get_pointer(sender) != get_pointer(m_stage) || m_blockNotifications)
             return;
 
         m_cb(notice);
@@ -48,7 +48,7 @@ namespace UsdProxy
 
     void StageEditTargetChangedWatcher::onStageEditTargetChanged(UsdNotice::StageEditTargetChanged const& notice, UsdStageWeakPtr const& sender)
     {
-        if (!sender || sender != m_stage)
+        if (!sender || get_pointer(sender) != get_pointer(m_stage))
             return;
 
         m_cb(notice);
@@ -73,7 +73,7 @@ namespace UsdProxy
 
     void SdfLayerDirtinessChangedWatcher::onChangeNotice(const SdfNotice::LayerDirtinessChanged& notice, const SdfLayerHandle& sender)
     {
-        if (!sender || sender != m_layer)
+        if (!sender || get_pointer(sender) != get_pointer(m_layer))
             return;
 
         m_cb(notice);

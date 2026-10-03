@@ -1,13 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/audio/audio_container.hpp"
 
-#include <random>
-#include <numeric>
 #include <chrono>
-
+#include <numeric>
+#include <random>
+#include <string>
+#include <vector>
 
 NAU_AUDIO_BEGIN
 
@@ -16,19 +16,19 @@ NAU_AUDIO_BEGIN
 class AudioAssetContainer::Impl
 {
 public:
-    AudioAssetContainer::Impl(const eastl::string& name);
+    Impl(const std::string& name);
 
     void add(AudioAssetPtr asset);
 
 public:
     AudioContainerKind    kind;
-    const eastl::string   name;
+    const std::string name;
     AudioAssetList        assets;
 };
 
-AudioAssetContainer::Impl::Impl(const eastl::string& name)
-    : kind(AudioContainerKind::Sequence)
-    , name(name)
+AudioAssetContainer::Impl::Impl(const std::string& name) :
+    kind(AudioContainerKind::Sequence),
+    name(name)
 {
 
 }
@@ -41,8 +41,8 @@ void AudioAssetContainer::Impl::add(AudioAssetPtr asset)
 
 // ** AudioAssetContainer
 
-AudioAssetContainer::AudioAssetContainer(const eastl::string& name)
-    : m_pimpl(std::make_unique<Impl>(name))
+AudioAssetContainer::AudioAssetContainer(const std::string& name) :
+    m_pimpl(std::make_unique<Impl>(name))
 {
 
 }
@@ -66,7 +66,7 @@ AudioSourcePtr AudioAssetContainer::instantiate()
         AudioAssetPtr randomAsset = m_pimpl->assets[uniform_dist(randomEngine)];
         result->addSource(randomAsset->instantiate());
     } else if (kind == AudioContainerKind::Shuffle) {
-        eastl::vector<int> indices(m_pimpl->assets.size());
+        std::vector<int> indices(m_pimpl->assets.size());
         std::iota(indices.begin(), indices.end(), 0);
         std::shuffle(indices.begin(), indices.end(), randomEngine);
         for (auto index : indices) {
@@ -79,17 +79,17 @@ AudioSourcePtr AudioAssetContainer::instantiate()
     return result;
 }
 
-eastl::string AudioAssetContainer::name() const
+std::string AudioAssetContainer::name() const
 {
     return m_pimpl->name;
 }
 
-eastl::vector<AudioAssetPtr>::iterator AudioAssetContainer::begin()
+std::vector<AudioAssetPtr>::iterator AudioAssetContainer::begin()
 {
     return m_pimpl->assets.begin();
 }
 
-eastl::vector<AudioAssetPtr>::iterator AudioAssetContainer::end()
+std::vector<AudioAssetPtr>::iterator AudioAssetContainer::end()
 {
     return m_pimpl->assets.end();
 }

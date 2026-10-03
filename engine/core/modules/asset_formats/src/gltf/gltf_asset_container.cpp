@@ -1,29 +1,31 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "gltf/gltf_asset_container.h"
+
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "animation/gltf_animation_accessor.h"
 #include "animation/nanim_animation_accessor.h"
-#include "gltf/gltf_skin_accessor.h"
 #include "gltf/gltf_mesh_accessor.h"
 #include "gltf/gltf_scene_asset.h"
+#include "gltf/gltf_skin_accessor.h"
+#include "nau/animation/assets/animation_asset.h"
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/components/skeleton_component.h"
+#include "nau/animation/controller/animation_controller_blend.h"
 #include "nau/animation/playback/animation_instance.h"
 #include "nau/animation/playback/animation_skeleton.h"
-#include "nau/animation/controller/animation_controller_blend.h"
-#include "nau/animation/assets/animation_asset.h"
 #include "nau/assets/asset_descriptor_factory.h"
 #include "nau/scene/components/camera_component.h"
-#include "nau/scene/components/static_mesh_component.h"
 #include "nau/scene/components/skinned_mesh_component.h"
+#include "nau/scene/components/static_mesh_component.h"
 #include "nau/scene/scene_factory.h"
 #include "nau/scene/scene_object.h"
 #include "nau/service/service_provider.h"
 #include "nau/string/string_conv.h"
-
 
 namespace nau
 {
@@ -49,7 +51,7 @@ namespace nau
         }
     }
 
-    nau::Ptr<> GltfAssetContainer::getAsset(eastl::string_view path)
+    nau::Ptr<> GltfAssetContainer::getAsset(std::string_view path)
     {
         if(path.empty())
         {
@@ -69,7 +71,7 @@ namespace nau
 
             if (auto animationsUidValue = extras.getValue("animationsUid"))
             {
-                const auto animationsUid = *runtimeValueCast<eastl::string>(animationsUidValue);
+                const auto animationsUid = *runtimeValueCast<std::string>(animationsUidValue);
                 io::FsPath animationsFilePath = m_gltfFilePath.getParentPath() / animationsUid;
 
                 return rtti::createInstance<NanimAnimationAssetAccessor, IAssetAccessor>(animationsFilePath, 0, 0);
@@ -156,12 +158,12 @@ namespace nau
         return nullptr;
     }
 
-    eastl::vector<eastl::string> GltfAssetContainer::getContent() const
+    std::vector<std::string> GltfAssetContainer::getContent() const
     {
         return {};
     }
 
-    eastl::vector<eastl::string_view> GltfAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> GltfAssetContainerLoader::getSupportedAssetKind() const
     {
         return {"Model/*", "gltf"};
     }

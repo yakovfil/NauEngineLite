@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <nau/assets/asset_db.h>
+
+#include <memory>
+#include <optional>
+#include <string>
 
 #include "nau/app/application_delegate.h"
 #include "nau/app/global_properties.h"
@@ -23,13 +26,13 @@ namespace nau
     class DefaultAppDelegate final : public ApplicationDelegate
     {
     public:
-        DefaultAppDelegate(eastl::string&& modulesList) :
+        DefaultAppDelegate(std::string&& modulesList) :
             m_modulesList(std::move(modulesList))
         {
         }
 
     private:
-        eastl::string getModulesListString() const override
+        std::string getModulesListString() const override
         {
 #if !defined(NAU_STATIC_RUNTIME)
             return m_modulesList;
@@ -64,7 +67,7 @@ namespace nau
             using namespace nau::scene;
 
             auto& props = getServiceProvider().get<GlobalProperties>();
-            const eastl::optional<eastl::string> startupSceneAssetPath = props.getValue<eastl::string>("mainScene");
+            const std::optional<std::string> startupSceneAssetPath = props.getValue<std::string>("mainScene");
             if (!startupSceneAssetPath)
             {
                 NAU_LOG_WARNING("mainScene property is not defined: do not known how start the application");
@@ -102,7 +105,7 @@ namespace nau
 
             auto& props = getServiceProvider().get<GlobalProperties>();
 
-            if (auto contentPath = props.getValue<eastl::string>("contentPath"); contentPath)
+            if (auto contentPath = props.getValue<std::string>("contentPath"); contentPath)
             {
                 const std::filesystem::path path = contentPath->c_str();
 #ifdef NAU_PACKAGE_BUILD
@@ -128,11 +131,11 @@ namespace nau
             }
         }
 
-        [[maybe_unused]] eastl::string m_modulesList;
+        [[maybe_unused]] std::string m_modulesList;
     };
 
-    ApplicationDelegate::Ptr createDefaultApplicationDelegate(eastl::string dynModulesList)
+    ApplicationDelegate::Ptr createDefaultApplicationDelegate(std::string dynModulesList)
     {
-        return eastl::make_unique<DefaultAppDelegate>(std::move(dynModulesList));
+        return std::make_unique<DefaultAppDelegate>(std::move(dynModulesList));
     }
 }  // namespace nau

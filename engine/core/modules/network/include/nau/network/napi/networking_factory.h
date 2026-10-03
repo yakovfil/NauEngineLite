@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <string>
 
 #include "nau/network/napi/networking.h"
 #include "nau/rtti/type_info.h"
@@ -26,6 +26,6 @@ namespace nau
          * @param [in] name Name of Network implementation 
          * @return          A pointer to an INetworking instance or `NULL` if creation failed.
          */
-        virtual eastl::unique_ptr<INetworking> create(const eastl::string& name) = 0;
+        virtual std::unique_ptr<INetworking> create(const std::string& name) = 0;
     };
 }  // namespace nau

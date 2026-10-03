@@ -4,6 +4,8 @@
 #include <daECS/core/baseIo.h>
 #include <daECS/core/entityManager.h>
 #include <daECS/core/internal/trackComponentAccess.h>
+
+#include <optional>
 namespace ecs
 {
 
@@ -147,8 +149,7 @@ bool deserialize_component_typeless(void *raw_data, component_type_t type_name, 
 // ChildComponent should be only for case of initial/template serialization (or object types, obviously)
 // if replication packet arrive before Entity is created, just store it is _packet_, no need to deserialize it
 // current version always make a lot of copies/allocations for no reason
-eastl::optional<ChildComponent> deserialize_init_component_typeless(component_type_t userType, ecs::component_index_t cidx,
-  const DeserializerCb &deserializer)
+std::optional<ChildComponent> deserialize_init_component_typeless(component_type_t userType, ecs::component_index_t cidx, const DeserializerCb& deserializer)
 {
   if (userType == 0)
     return ChildComponent(); // Assume that null type is not an error
@@ -170,7 +171,7 @@ eastl::optional<ChildComponent> deserialize_init_component_typeless(component_ty
   else
   {
     typeId = componentTypes.findType(userType); // hash lookup
-    if (EASTL_UNLIKELY(typeId == INVALID_COMPONENT_TYPE_INDEX))
+    if (NAU_UNLIKELY(typeId == INVALID_COMPONENT_TYPE_INDEX))
     {
       logerr("Attempt to deserialize component of invalid/unknown type 0x{}", userType);
       return MaybeChildComponent(); // We can't read unknown type of unknown size

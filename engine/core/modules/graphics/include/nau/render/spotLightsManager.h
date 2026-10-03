@@ -3,6 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <array>
+
 #include "nau/math/dag_bounds3.h"
 #include "nau/math/dag_frustum.h"
 #include "nau/render/spotLight.h"
@@ -12,8 +14,8 @@ namespace nau::render
 #include "nau/render/renderLights.hlsli"
 }
 
-#include <EASTL/bitset.h>
-#include <EASTL/vector.h>
+#include <bitset>
+#include <vector>
 
 #include "nau/utils/dag_relocatableFixedVector.h"
 
@@ -48,9 +50,9 @@ namespace nau::render
 
         template <bool use_small>
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_inside_plane,
-                     eastl::vector<uint16_t>& lights_outside_plane,
-                     eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                     std::vector<uint16_t>& lights_inside_plane,
+                     std::vector<uint16_t>& lights_outside_plane,
+                     std::bitset<MAX_LIGHTS>* visibleIdBitset,
                      Occlusion*,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -61,9 +63,9 @@ namespace nau::render
                      mask_type_t accept_mask) const;
 
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_inside_plane,
-                     eastl::vector<uint16_t>& lights_outside_plane,
-                     eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                     std::vector<uint16_t>& lights_inside_plane,
+                     std::vector<uint16_t>& lights_outside_plane,
+                     std::bitset<MAX_LIGHTS>* visibleIdBitset,
                      Occlusion* occ,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -88,9 +90,9 @@ namespace nau::render
         }
 
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_inside_plane,
-                     eastl::vector<uint16_t>& lights_outside_plane,
-                     eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                     std::vector<uint16_t>& lights_inside_plane,
+                     std::vector<uint16_t>& lights_outside_plane,
+                     std::bitset<MAX_LIGHTS>* visibleIdBitset,
                      Occlusion* occ,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -261,7 +263,9 @@ namespace nau::render
         {
             if (nonOptLightIds.any())
             {
-                id = nonOptLightIds.find_first();
+                for (id = 0; !nonOptLightIds.test(id); ++id)
+                {
+                }
                 return true;
             }
             return false;
@@ -283,16 +287,16 @@ namespace nau::render
         */
 
     private:
-        eastl::array<Light, MAX_LIGHTS> rawLights;                     //-V730_NOINIT
-        eastl::array<nau::math::Vector4, MAX_LIGHTS> boundingSpheres;  //-V730_NOINIT
-        eastl::array<nau::math::BBox3, MAX_LIGHTS> boundingBoxes;      //-V730_NOINIT
-        alignas(16) eastl::array<float, MAX_LIGHTS> cosHalfAngles;     //-V730_NOINIT
+        std::array<Light, MAX_LIGHTS> rawLights;                     //-V730_NOINIT
+        std::array<nau::math::Vector4, MAX_LIGHTS> boundingSpheres;  //-V730_NOINIT
+        std::array<nau::math::BBox3, MAX_LIGHTS> boundingBoxes;      //-V730_NOINIT
+        alignas(16) std::array<float, MAX_LIGHTS> cosHalfAngles;     //-V730_NOINIT
         // masks allows to ignore specific lights in specific cases
         // for example, we can ignore highly dynamic lights for GI
-        eastl::array<mask_type_t, MAX_LIGHTS> masks;  //-V730_NOINIT
+        std::array<mask_type_t, MAX_LIGHTS> masks;  //-V730_NOINIT
 
         dag::RelocatableFixedVector<uint16_t, MAX_LIGHTS> freeLightIds;  //-V730_NOINIT
-        eastl::bitset<MAX_LIGHTS> nonOptLightIds;
+        std::bitset<MAX_LIGHTS> nonOptLightIds;
         /* TODO: Support photometry
          IesTextureCollection* photometryTextures = nullptr;
         */

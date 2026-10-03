@@ -7,8 +7,10 @@
   common shader types & constants
 ************************************************************************/
 
-#include "nau/3d/dag_texMgr.h"
+#include <span>
+
 #include "nau/3d/dag_drv3dConsts.h"
+#include "nau/3d/dag_texMgr.h"
 //#include <generic/dag_span.h>
 #include "nau/shaders/dag_shaderVarType.h"
 
@@ -186,4 +188,4 @@ enum
 };
 
 struct Color4;
-typedef eastl::span<Color4> *VprArrayPtr;
+typedef std::span<Color4>* VprArrayPtr;

@@ -1,21 +1,22 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/assets/skeleton_asset.h"
 
-#include <ozz/base/io/archive.h>
-#include <ozz/base/io/stream.h>
 #include <ozz/animation/runtime/local_to_model_job.h>
 #include <ozz/base/containers/vector.h>
+#include <ozz/base/io/archive.h>
+#include <ozz/base/io/stream.h>
 #include <ozz/base/maths/simd_math.h>
+
+#include <vector>
 
 #include "nau/assets/animation_asset_accessor.h"
 #include "nau/assets/skeleton_asset_accessor.h"
 #include "nau/io/file_system.h"
 #include "nau/io/virtual_file_system.h"
-#include "nau/shaders/shader_defines.h"
 #include "nau/service/service_provider.h"
+#include "nau/shaders/shader_defines.h"
 
 namespace nau
 {
@@ -59,7 +60,7 @@ namespace nau
 
         const size_t fileSize = file->getSize();
 
-        eastl::vector<std::byte> fileData(fileSize);
+        std::vector<std::byte> fileData(fileSize);
         Result<size_t> readResult = nauFileStreamRead->read(fileData.data(), fileSize);
         if (!readResult)
         {
@@ -110,12 +111,12 @@ namespace nau
         co_return skeletonAssetView;
     }
 
-    const eastl::vector<nau::math::Matrix4>& SkeletonAssetView::getInverseBindTransforms() const
+    const std::vector<nau::math::Matrix4>& SkeletonAssetView::getInverseBindTransforms() const
     {
         return inverseBindTransforms;
     }
 
-    const eastl::vector<nau::math::Matrix4>& SkeletonAssetView::getDefaultPoseTransforms() const
+    const std::vector<nau::math::Matrix4>& SkeletonAssetView::getDefaultPoseTransforms() const
     {
         return defaultPoseTransforms;
     }
@@ -125,7 +126,7 @@ namespace nau
         return skeleton;
     }
 
-    const eastl::vector<SkeletonJoint>& SkeletonAssetView::getJoints() const
+    const std::vector<SkeletonJoint>& SkeletonAssetView::getJoints() const
     {
         return joints;
     }

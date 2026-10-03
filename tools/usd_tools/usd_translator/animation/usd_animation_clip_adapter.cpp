@@ -3,38 +3,11 @@
 
 #include "usd_animation_clip_adapter.h"
 
-#include "usd_translator/usd_prim_translator.h"
-#include "usd_translator/usd_stage_translator.h"
-#include "usd_animation_clip_composer.h"
-
-#include "nau/NauAnimationClipAsset/nauAnimationController.h"
-#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
-
-#include "nau/math/math.h"
-#include "nau/rtti/rtti_impl.h"
-#include "nau/service/service_provider.h"
-#include "nau/scene/scene_factory.h"
-#include "nau/scene/components/skinned_mesh_component.h"
-#include "nau/shared/file_system.h"
-#include "nau/animation/assets/animation_asset.h"
-#include "nau/animation/components/animation_component.h"
-#include "nau/animation/components/skeleton_component.h"
-#include "nau/animation/playback/animation_instance.h"
-#include "nau/animation/playback/animation_skeleton.h"
-#include "nau/animation/controller/animation_controller_blend.h"
-#include "nau/animation/controller/animation_controller_direct.h"
-#include "nau/asset_tools/db_manager.h"
-#include "nau/assets/asset_db.h"
-#include "nau/assets/asset_descriptor_factory.h"
-#include "nau/assets/skeleton_asset_accessor.h"
-#include "nau/io/file_system.h"
-#include "nau/io/virtual_file_system.h"
-
 #include <pxr/usd/sdf/primSpec.h>
-#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/animation.h>
 #include <pxr/usd/usdSkel/bindingAPI.h>
 #include <pxr/usd/usdSkel/cache.h>
@@ -43,6 +16,34 @@
 #include <pxr/usd/usdSkel/skeletonQuery.h>
 
 #include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
+#include "nau/NauAnimationClipAsset/nauAnimationController.h"
+#include "nau/animation/assets/animation_asset.h"
+#include "nau/animation/components/animation_component.h"
+#include "nau/animation/components/skeleton_component.h"
+#include "nau/animation/controller/animation_controller_blend.h"
+#include "nau/animation/controller/animation_controller_direct.h"
+#include "nau/animation/playback/animation_instance.h"
+#include "nau/animation/playback/animation_skeleton.h"
+#include "nau/asset_tools/db_manager.h"
+#include "nau/assets/asset_db.h"
+#include "nau/assets/asset_descriptor_factory.h"
+#include "nau/assets/skeleton_asset_accessor.h"
+#include "nau/io/file_system.h"
+#include "nau/io/virtual_file_system.h"
+#include "nau/math/math.h"
+#include "nau/rtti/rtti_impl.h"
+#include "nau/scene/components/skinned_mesh_component.h"
+#include "nau/scene/scene_factory.h"
+#include "nau/service/service_provider.h"
+#include "nau/shared/file_system.h"
+#include "usd_animation_clip_composer.h"
+#include "usd_translator/usd_prim_translator.h"
+#include "usd_translator/usd_stage_translator.h"
 
 using namespace nau;
 
@@ -53,8 +54,8 @@ namespace UsdTranslator
         constexpr std::string_view g_typeName = "NauAnimationController";
 
         void addKeyframeAnimationToComponent(
-            animation::AnimationComponent* component, 
-            eastl::string_view animationName, 
+            animation::AnimationComponent* component,
+            std::string_view animationName,
             nau::Ptr<nau::animation::Animation> animation,
             nau::animation::PlayMode playMode,
             const pxr::UsdPrim& clipPrim)
@@ -62,9 +63,10 @@ namespace UsdTranslator
             auto rootLayer = clipPrim.GetStage()->GetRootLayer();
             auto rootLayerId = rootLayer ? rootLayer->GetIdentifier() : "";
 
-            eastl::string animNameStr = eastl::string{ animationName };
-            eastl::string sourceTrackAssetPath = std::format("{}+[kfanimation]",
-                rootLayerId.empty() ? rootLayerId : FileSystemExtensions::getRelativeAssetPath(rootLayerId).string()).c_str();
+            std::string animNameStr = std::string{animationName};
+            std::string sourceTrackAssetPath = std::format("{}+[kfanimation]",
+                                                           rootLayerId.empty() ? rootLayerId : FileSystemExtensions::getRelativeAssetPath(rootLayerId).string())
+                                                   .c_str();
 
             auto& dbManager = AssetDatabaseManager::instance();
             auto sourceTrackAssetUid = dbManager.findIf(sourceTrackAssetPath.c_str());
@@ -103,10 +105,11 @@ namespace UsdTranslator
             auto rootLayer = clipPrim.GetStage()->GetRootLayer();
             auto rootLayerId = rootLayer ? rootLayer->GetIdentifier() : "";
 
-            eastl::string animNameStr{ clipPrim.GetName().GetString().c_str() };
-            eastl::string sourceTrackAssetPath = std::format("{}",//+[skanimation:{}]",
-                rootLayerId != "" ? FileSystemExtensions::getRelativeAssetPath(rootLayerId, true).string() : "").c_str();// ,
-                //animNameStr.c_str()).c_str();
+            std::string animNameStr{clipPrim.GetName().GetString().c_str()};
+            std::string sourceTrackAssetPath = std::format("{}",  //+[skanimation:{}]",
+                                                           rootLayerId != "" ? FileSystemExtensions::getRelativeAssetPath(rootLayerId, true).string() : "")
+                                                   .c_str();  // ,
+            // animNameStr.c_str()).c_str();
 
             auto& dbManager = AssetDatabaseManager::instance();
             auto sourceTrackAssetUid = dbManager.findIf(sourceTrackAssetPath.c_str());
@@ -137,7 +140,7 @@ namespace UsdTranslator
     }
 
     template <typename AnimationType, typename DataType>
-    static void setupAnimation(nau::Ptr<AnimationType> animation, float frameRate, const eastl::vector<float>& times, const eastl::vector<DataType>& data)
+    static void setupAnimation(nau::Ptr<AnimationType> animation, float frameRate, const std::vector<float>& times, const std::vector<DataType>& data)
     {
         auto editor = animation->createEditor();
         if (!editor)
@@ -324,9 +327,9 @@ namespace UsdTranslator
         const float frameRate = component->getController()->getFrameRate();
         for (const auto& descriptor : descriptors)
         {
-            eastl::vector<float> dataTimes;
-            eastl::vector<nau::math::vec3> dataVec3;
-            eastl::vector<nau::math::quat> dataQuat;
+            std::vector<float> dataTimes;
+            std::vector<nau::math::vec3> dataVec3;
+            std::vector<nau::math::quat> dataQuat;
 
             switch (descriptor.dataType)
             {
@@ -341,7 +344,7 @@ namespace UsdTranslator
                 break;
                 case nau::AnimationDataDescriptor::DataType::Rotation:
                 {
-                    eastl::vector<nau::math::quat> data;
+                    std::vector<nau::math::quat> data;
                     composer.getTrackData(descriptor, dataTimes, dataQuat);
 
                     auto animation = rtti::createInstance<nau::animation::RotationAnimation>();

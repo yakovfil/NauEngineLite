@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <span>
+#include <vector>
+
 #include "nau/dispatch/class_descriptor.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/internal/component_factory.h"
@@ -27,15 +30,15 @@ namespace nau::scene
 
         scene::SceneObject::Ptr createSceneObjectFromAssetWithOptions(const SceneAsset& sceneAsset, scene::CreateSceneOptionFlag options) override;
 
-        scene::ObjectUniquePtr<SceneObject> createSceneObject(const rtti::TypeInfo* rootComponentType, const eastl::span<const rtti::TypeInfo*>) override;
+        scene::ObjectUniquePtr<SceneObject> createSceneObject(const rtti::TypeInfo* rootComponentType, const std::span<const rtti::TypeInfo*>) override;
 
         scene::ObjectUniquePtr<Component> createComponent(const rtti::TypeInfo& type) override;
 
-        const eastl::vector<IClassDescriptor::Ptr>& getComponentTypes();
+        const std::vector<IClassDescriptor::Ptr>& getComponentTypes();
 
         const IClassDescriptor::Ptr& findComponentClass(const rtti::TypeInfo& type);
 
-        std::optional<eastl::vector<IClassDescriptor::Ptr>> m_objectComponentTypes;
+        std::optional<std::vector<IClassDescriptor::Ptr>> m_objectComponentTypes;
         const IClassDescriptor::Ptr m_emptyClassDescPtr = {};
     };
 

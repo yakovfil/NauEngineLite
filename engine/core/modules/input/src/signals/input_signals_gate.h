@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "input_signals_impl.h"
 #include "nau/utils/functor.h"
 
@@ -10,7 +14,7 @@ namespace nau
     class InputSignalGate : public InputSignalImpl
     {
     protected:
-        InputSignalGate(const eastl::string& name, unsigned maxInputs) :
+        InputSignalGate(const std::string& name, unsigned maxInputs) :
             InputSignalImpl(name),
             m_maxInputs(maxInputs)
         {
@@ -29,7 +33,7 @@ namespace nau
         virtual void deserializeProperties(const DataBlock* blk) override;
 
     private:
-        eastl::vector<eastl::shared_ptr<IInputSignal>> m_inputs;
+        std::vector<std::shared_ptr<IInputSignal>> m_inputs;
         unsigned m_maxInputs = 0;
     };
 }  // namespace nau

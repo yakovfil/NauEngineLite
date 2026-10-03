@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/string_view.h>
+#include <string_view>
 
 #include "nau/math/transform.h"
 #include "nau/meta/class_info.h"
@@ -22,7 +22,7 @@ namespace nau::scene
 
         virtual Uid getCameraUid() const = 0;
         virtual Uid getWorldUid() const = 0;
-        virtual eastl::string_view getCameraName() const = 0;
+        virtual std::string_view getCameraName() const = 0;
         virtual float getFov() const = 0;
         virtual float getClipNearPlane() const = 0;
         virtual float getClipFarPlane() const = 0;
@@ -35,7 +35,7 @@ namespace nau::scene
     {
         NAU_INTERFACE(nau::scene::ICameraControl, ICameraProperties, TransformControl)
 
-        virtual void setCameraName(eastl::string_view cameraName) = 0;
+        virtual void setCameraName(std::string_view cameraName) = 0;
         virtual void setFov(float fov) = 0;
         virtual void setClipNearPlane(float clipNearPlane) = 0;
         virtual void setClipFarPlane(float clipFarPlane) = 0;

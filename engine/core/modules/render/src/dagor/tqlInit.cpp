@@ -2,11 +2,13 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "nau/3d/tql.h"
-#include "nau/3d/dag_drv3d.h"
-#include "nau/dataBlock/dag_dataBlock.h"
-#include "nau/dag_ioSys/dag_memIo.h"
+#include <utility>
+
 #include "lib3d/texMgrData.h"
+#include "nau/3d/dag_drv3d.h"
+#include "nau/3d/tql.h"
+#include "nau/dag_ioSys/dag_memIo.h"
+#include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/utils/span.h"
 
 static void init_ddsx_loader_and_genmip();
@@ -214,13 +216,13 @@ static void init_ddsx_loader_and_genmip()
   //texmgr_internal::register_ddsx_load_implementation();
 
   auto [blockName, defaultValue] = d3d::get_driver_code()
-                                     .map<eastl::pair<const char *, int>>(d3d::dx11, "directx", 0)
-                                     .map(d3d::dx12, "dx12", 4 * 1024)
-                                     .map(d3d::vulkan, "vulkan", 0)
-                                     .map(d3d::metal, "video", 4096)
-                                     .map(d3d::ps4, "ps4", 0)
-                                     .map(d3d::ps5, "ps5", 2048)
-                                     .map(d3d::any, nullptr, 0);
+                                       .map<std::pair<const char*, int>>(d3d::dx11, "directx", 0)
+                                       .map(d3d::dx12, "dx12", 4 * 1024)
+                                       .map(d3d::vulkan, "vulkan", 0)
+                                       .map(d3d::metal, "video", 4096)
+                                       .map(d3d::ps4, "ps4", 0)
+                                       .map(d3d::ps5, "ps5", 2048)
+                                       .map(d3d::any, nullptr, 0);
   int max_genmip_sz = 0;
   if (blockName)
   {

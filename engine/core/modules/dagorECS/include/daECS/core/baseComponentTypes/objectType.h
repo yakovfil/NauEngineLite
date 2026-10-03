@@ -3,10 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <daECS/core/ecsHash.h>
 #include <daECS/core/component.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/vector.h>
+#include <daECS/core/ecsHash.h>
+
+#include <algorithm>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
@@ -18,17 +24,20 @@ public:
   // so we don't need capacity. actually, SimpleString (const char*) would be sufficient, but then there is no SSO
   // so optimal value_type would be 64/32-sizeof(ChildComponent) == 12/44 bytes of SSO buffer.
   // Most keys are smaller than 44, but some bigger than 12.
-  typedef eastl::pair<eastl::string, ecs::ChildComponent> value_type;
+    typedef std::pair<std::string, ecs::ChildComponent> value_type;
 
-  // also, size and capacity of hash_container_t and container_t is always same, so instead of 24*2 = 48 bytes we can have 32 bytes of
-  // data.
-  typedef eastl::vector<value_type> container_t;
-  typedef eastl::vector<ecs::hash_str_t> hash_container_t;
-  typedef container_t::iterator iterator;
-  typedef container_t::const_iterator const_iterator;
+    // also, size and capacity of hash_container_t and container_t is always same, so instead of 24*2 = 48 bytes we can have 32 bytes of
+    // data.
+    typedef std::vector<value_type> container_t;
+    typedef std::vector<ecs::hash_str_t> hash_container_t;
+    typedef container_t::iterator iterator;
+    typedef container_t::const_iterator const_iterator;
 
-  bool operator==(const Object &a) const;
-  bool operator!=(const Object &a) const { return !(*this == a); }
+    bool operator==(const Object& a) const;
+    bool operator!=(const Object& a) const
+    {
+        return !(*this == a);
+    }
   uint32_t size() const { return uint32_t(container.size()); }
   bool empty() const { return size() == 0; }
   iterator begin()
@@ -42,25 +51,25 @@ public:
 
   __forceinline const_iterator find_as(const HashedConstString str) const
   {
-    auto hashIt = eastl::lower_bound(hashContainer.begin(), hashContainer.end(), str.hash);
-    if (hashIt == hashContainer.end() || *hashIt != str.hash)
-      return end();
+      auto hashIt = std::lower_bound(hashContainer.begin(), hashContainer.end(), str.hash);
+      if (hashIt == hashContainer.end() || *hashIt != str.hash)
+          return end();
 
-    if (EASTL_LIKELY(noCollisions))
-    {
-      const_iterator it = container.begin() + (hashIt - hashContainer.begin());
-      return (!str.str || strcmp(it->first.c_str(), str.str) == 0) ? it : container.end();
-    }
+      if (NAU_LIKELY(noCollisions))
+      {
+          const_iterator it = container.begin() + (hashIt - hashContainer.begin());
+          return (!str.str || strcmp(it->first.c_str(), str.str) == 0) ? it : container.end();
+      }
     else
       return findAsWithCollision(hashIt, str);
   }
 
   iterator find_as(const HashedConstString s)
   {
-    auto it = const_cast<iterator>(((const Object *)this)->find_as(s));
-    if (it != end())
-      changeGen();
-    return it;
+      auto it = container.begin() + (((const Object*)this)->find_as(s) - container.cbegin());
+      if (it != end())
+          changeGen();
+      return it;
   }
 
   iterator find_as(const char *s) { return find_as(ECS_HASH_SLOW(s)); }
@@ -122,7 +131,7 @@ public:
   ChildComponent &insert(const HashedConstString str)
   {
     changeGen();
-    auto hashIt = eastl::lower_bound(hashContainer.begin(), hashContainer.end(), str.hash); //
+    auto hashIt = std::lower_bound(hashContainer.begin(), hashContainer.end(), str.hash);  //
     if (noCollisions) // todo: optimize it, use one lower_bound and then insert!
     {
       auto it = hashIt != hashContainer.end() ? container.begin() + (hashIt - hashContainer.begin()) : container.end();
@@ -178,15 +187,15 @@ public:
   // const ChildComponent& operator[](const char* name) const { return this->operator[](ECS_HASH_SLOW(name));}
   // ChildComponent& operator[](const char* name) { return this->operator[](ECS_HASH_SLOW(name));}
   // ecs20 compatibility:
-  template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T &&>::value, void>>
-  void addMember(const HashedConstString name, T &&val)
+  template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
+  void addMember(const HashedConstString name, T&& val)
   {
-    insert(name) = eastl::move(val);
+      insert(name) = std::move(val);
   }
-  template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T &&>::value, void>>
-  void addMember(const char *name, T &&val)
+  template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
+  void addMember(const char* name, T&& val)
   {
-    addMember(ECS_HASH_SLOW(name), eastl::move(val));
+      addMember(ECS_HASH_SLOW(name), std::move(val));
   }
   template <typename T>
   void addMember(const HashedConstString name, const T &val)
@@ -201,7 +210,10 @@ public:
 
   Object() = default;
   Object(const Object &a) : container(a.container), noCollisions(a.noCollisions), hashContainer(a.hashContainer) { changeGen(); }
-  Object(Object &&a) : container(eastl::move(a.container)), hashContainer(eastl::move(a.hashContainer)), noCollisions(a.noCollisions)
+  Object(Object&& a) :
+      container(std::move(a.container)),
+      hashContainer(std::move(a.hashContainer)),
+      noCollisions(a.noCollisions)
   {
     changeGen();
   }
@@ -215,11 +227,11 @@ public:
   }
   inline Object &operator=(Object &&a)
   {
-    eastl::swap(container, a.container);
-    eastl::swap(hashContainer, a.hashContainer);
-    noCollisions = a.noCollisions;
-    changeGen();
-    return *this;
+      std::swap(container, a.container);
+      std::swap(hashContainer, a.hashContainer);
+      noCollisions = a.noCollisions;
+      changeGen();
+      return *this;
   }
 
 #if NAU_DEBUG
@@ -255,17 +267,29 @@ protected:
 #endif
 };
 
-inline eastl::string &get_key_string(const ecs::Object::iterator &i) { return i->first; }
-inline const eastl::string &get_key_string(const ecs::Object::const_iterator &i) { return i->first; }
+inline std::string& get_key_string(const ecs::Object::iterator& i)
+{
+    return i->first;
+}
+inline const std::string& get_key_string(const ecs::Object::const_iterator& i)
+{
+    return i->first;
+}
 
-inline eastl::string &get_key_string(eastl::string &i) { return i; }
-inline const eastl::string &get_key_string(const eastl::string &i) { return i; }
+inline std::string& get_key_string(std::string& i)
+{
+    return i;
+}
+inline const std::string& get_key_string(const std::string& i)
+{
+    return i;
+}
 
 inline bool Object::operator==(const Object &a) const
 {
   if (size() != a.size() || noCollisions != a.noCollisions)
     return false;
-  if (EASTL_LIKELY(noCollisions))
+  if (NAU_LIKELY(noCollisions))
   {
     auto ahi = a.hashContainer.begin();
     auto bhi = hashContainer.begin();

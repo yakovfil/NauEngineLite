@@ -38,7 +38,7 @@ macro(nau_write_static_modules_initialization resVariable)
     string(APPEND entryContent "} //namespace nau\n\n")
 
     foreach (module ${ARGN})
-        string(APPEND entryContent "extern eastl::shared_ptr<nau::IModule> createModule_${module}()\;\n")
+        string(APPEND entryContent "extern std::shared_ptr<nau::IModule> createModule_${module}()\;\n")
     endforeach ()
 
     string(APPEND entryContent "\n\nnamespace nau::module_detail\n")
@@ -46,7 +46,7 @@ macro(nau_write_static_modules_initialization resVariable)
     string(APPEND entryContent "  void initializeAllStaticModules(nau::IModuleManager* manager)\n  {\n")
 
     foreach (module ${ARGN})
-        string(APPEND entryContent "    eastl::shared_ptr<nau::IModule> module_${module} = createModule_${module}()\;\n")
+        string(APPEND entryContent "    std::shared_ptr<nau::IModule> module_${module} = createModule_${module}()\;\n")
         string(APPEND entryContent "    manager->registerModule(\"${module}\", module_${module})\;\n")
     endforeach ()
 

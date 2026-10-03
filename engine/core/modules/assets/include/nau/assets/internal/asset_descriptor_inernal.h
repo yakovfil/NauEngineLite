@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
+#include <optional>
 
 #include "nau/assets/asset_view.h"
 #include "nau/rtti/type_info.h"
@@ -37,7 +37,7 @@ namespace nau::assets
     {
         NAU_TYPEID(nau::assets::IAssetDescriptorInternal)
 
-        virtual eastl::optional<AssetInternalState> getCachedAssetViewInternalState(const rtti::TypeInfo* viewType, InternalStateOptsFlag) = 0;
+        virtual std::optional<AssetInternalState> getCachedAssetViewInternalState(const rtti::TypeInfo* viewType, InternalStateOptsFlag) = 0;
     };
 
 }  // namespace nau::assets

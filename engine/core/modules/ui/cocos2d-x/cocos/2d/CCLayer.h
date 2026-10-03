@@ -27,6 +27,7 @@ THE SOFTWARE.
 ****************************************************************************/
 #pragma once
 
+#include <string>
 #include "2d/CCNode.h"
 #include "base/CCProtocols.h"
 #include "renderer/CCCustomCommand.h"
@@ -159,7 +160,7 @@ public:
     virtual void onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event);
 
     // Overrides
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
 
 CC_CONSTRUCTOR_ACCESS:
     Layer();
@@ -401,7 +402,7 @@ public:
      */
     const Vec2& getVector() const;
 
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
     
 CC_CONSTRUCTOR_ACCESS:
     LayerGradient();
@@ -584,7 +585,7 @@ public:
      */
     void switchToAndReleaseMe(int n);
 
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
     
 CC_CONSTRUCTOR_ACCESS:
     /**

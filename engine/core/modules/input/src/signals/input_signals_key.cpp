@@ -3,6 +3,8 @@
 
 #include "input_signals_key.h"
 
+#include <string>
+
 namespace nau
 {
     namespace
@@ -10,17 +12,17 @@ namespace nau
         constexpr auto DataKey = "key";
     }  // namespace
 
-    InputSignalKey::InputSignalKey(const eastl::string& type) :
+    InputSignalKey::InputSignalKey(const std::string& type) :
         InputSignalImpl(type)
     {
-        addProperty<eastl::string>(DataKey, "");
+        addProperty<std::string>(DataKey, "");
     }
 
     void InputSignalKey::update(float dt)
     {
         if (m_key == UINT_MAX || m_properties.isChanged())
         {
-            auto key = m_properties.get<eastl::string>(DataKey);
+            auto key = m_properties.get<std::string>(DataKey);
             if (key->empty())
             {
                 return;
@@ -36,13 +38,13 @@ namespace nau
 
     void InputSignalKey::serializeProperties(DataBlock* blk) const
     {
-        blk->addStr(DataKey, m_properties.get<eastl::string>(DataKey)->c_str());
+        blk->addStr(DataKey, m_properties.get<std::string>(DataKey)->c_str());
     }
 
     void InputSignalKey::deserializeProperties(const DataBlock* blk)
     {
         m_key = UINT_MAX;
-        m_properties.set<eastl::string>(DataKey, blk->getStr(DataKey));
+        m_properties.set<std::string>(DataKey, blk->getStr(DataKey));
     }
 
     namespace

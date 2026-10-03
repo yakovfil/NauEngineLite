@@ -3,11 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <utility>
+
+#include "daECS/core/ecsHash.h"
+#include "daECS/core/ecsQuery.h"
 #include "daECS/core/entityId.h"
 #include "daECS/core/event.h"
-#include "daECS/core/ecsQuery.h"
 #include "daECS/core/updateStage.h"
-#include "daECS/core/ecsHash.h"
 #include "nau/threading/dag_atomic.h"
 
 namespace ecs
@@ -34,24 +36,20 @@ extern void remove_system_from_list(EntitySystemDesc *desc);
 struct NAU_DAGORECS_EXPORT EntitySystemDesc : public NamedQueryDesc
 {
   typedef void (*DeleteHandler)(EntitySystemDesc *desc);
-  EntitySystemDesc(const char *n, const char *module, EntitySystemOps ops_, nau::ConstSpan<ComponentDesc> comps_rw,
-    nau::ConstSpan<ComponentDesc> comps_ro, nau::ConstSpan<ComponentDesc> comps_rq, nau::ConstSpan<ComponentDesc> comps_no,
-    EventSet &&evm, int stm, const char *tag_set = nullptr, const char *comp_set = nullptr, const char *before_set = nullptr,
-    const char *after_set = nullptr, void *user_data = nullptr, uint32_t def_quant = 0, bool dyn = false,
-    DeleteHandler on_delete = nullptr) :
-    NamedQueryDesc(n, comps_rw, comps_ro, comps_rq, comps_no),
-    ops(ops_),
-    evSet(eastl::move(evm)),
-    stageMask(stm),
-    userData(user_data),
-    quant(def_quant),
-    onDelete(on_delete),
-    tagSet(tag_set),
-    beforeSet(before_set),
-    afterSet(after_set),
-    compChangeSet(comp_set),
-    dynamic(dyn),
-    moduleName(module)
+  EntitySystemDesc(const char* n, const char* module, EntitySystemOps ops_, nau::ConstSpan<ComponentDesc> comps_rw, nau::ConstSpan<ComponentDesc> comps_ro, nau::ConstSpan<ComponentDesc> comps_rq, nau::ConstSpan<ComponentDesc> comps_no, EventSet&& evm, int stm, const char* tag_set = nullptr, const char* comp_set = nullptr, const char* before_set = nullptr, const char* after_set = nullptr, void* user_data = nullptr, uint32_t def_quant = 0, bool dyn = false, DeleteHandler on_delete = nullptr) :
+      NamedQueryDesc(n, comps_rw, comps_ro, comps_rq, comps_no),
+      ops(ops_),
+      evSet(std::move(evm)),
+      stageMask(stm),
+      userData(user_data),
+      quant(def_quant),
+      onDelete(on_delete),
+      tagSet(tag_set),
+      beforeSet(before_set),
+      afterSet(after_set),
+      compChangeSet(comp_set),
+      dynamic(dyn),
+      moduleName(module)
   {
     // check on intialization in entityManager
     emptyES = (comps_rw.size() == 0 && comps_ro.size() == 0 && comps_rq.size() == 0 && comps_no.size() == 0);
@@ -59,12 +57,8 @@ struct NAU_DAGORECS_EXPORT EntitySystemDesc : public NamedQueryDesc
     tail = this;
     generation++;
   }
-  EntitySystemDesc(const char *n, EntitySystemOps ops_, nau::ConstSpan<ComponentDesc> comps_rw, nau::ConstSpan<ComponentDesc> comps_ro,
-    nau::ConstSpan<ComponentDesc> comps_rq, nau::ConstSpan<ComponentDesc> comps_no, EventSet &&evm, int stm,
-    const char *tag_set = nullptr, const char *comp_set = nullptr, const char *before_set = nullptr, const char *after_set = nullptr,
-    void *user_data = nullptr, uint32_t def_quant = 0, bool dyn = false, DeleteHandler on_delete = nullptr) :
-    EntitySystemDesc(n, nullptr, ops_, comps_rw, comps_ro, comps_rq, comps_no, eastl::move(evm), stm, tag_set, comp_set, before_set,
-      after_set, user_data, def_quant, dyn, on_delete)
+  EntitySystemDesc(const char* n, EntitySystemOps ops_, nau::ConstSpan<ComponentDesc> comps_rw, nau::ConstSpan<ComponentDesc> comps_ro, nau::ConstSpan<ComponentDesc> comps_rq, nau::ConstSpan<ComponentDesc> comps_no, EventSet&& evm, int stm, const char* tag_set = nullptr, const char* comp_set = nullptr, const char* before_set = nullptr, const char* after_set = nullptr, void* user_data = nullptr, uint32_t def_quant = 0, bool dyn = false, DeleteHandler on_delete = nullptr) :
+      EntitySystemDesc(n, nullptr, ops_, comps_rw, comps_ro, comps_rq, comps_no, std::move(evm), stm, tag_set, comp_set, before_set, after_set, user_data, def_quant, dyn, on_delete)
   {}
 
   ~EntitySystemDesc()
@@ -105,7 +99,7 @@ protected:
   void cacheProfileTokensOnceOOL() const;
   void cacheProfileTokensOnce() const
   {
-      if(EASTL_UNLIKELY(!interlocked_relaxed_load(dapToken)))
+      if (NAU_UNLIKELY(!interlocked_relaxed_load(dapToken)))
       {
           cacheProfileTokensOnceOOL();
       }
@@ -142,8 +136,8 @@ protected:
 
 inline void EntitySystemDesc::setEvSet(EventSet &&evs)
 {
-  evSet = eastl::move(evs);
-  ++generation;
+    evSet = std::move(evs);
+    ++generation;
 }
 
 template <typename Lambda>

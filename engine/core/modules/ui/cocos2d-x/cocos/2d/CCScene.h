@@ -78,7 +78,7 @@ public:
     static Scene *createWithSize(const Size& size);
 
     using Node::addChild;
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
     
     /** Get all cameras.
      * 

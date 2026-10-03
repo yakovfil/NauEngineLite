@@ -3,6 +3,8 @@
 
 #include "nau/test/helpers/assert_catcher_guard.h"
 
+#include <memory>
+
 #include "nau/diag/device_error.h"
 #include "nau/rtti/rtti_impl.h"
 
@@ -36,7 +38,7 @@ namespace nau::test
 
     AssertCatcherGuard::AssertCatcherGuard()
     {
-        diag::setDeviceError(eastl::make_unique<AssertCatcherDeviceError>(*this));
+        diag::setDeviceError(std::make_unique<AssertCatcherDeviceError>(*this));
     }
 
     AssertCatcherGuard::~AssertCatcherGuard()

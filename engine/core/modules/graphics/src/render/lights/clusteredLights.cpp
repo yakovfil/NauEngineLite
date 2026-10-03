@@ -4,9 +4,16 @@
 
 #include "render/lights/clusteredLights.h"
 
+#include <array>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "nau/3d/dag_lockSbuffer.h"
 #include "nau/shaders/shader_globals.h"
 #include "nau/utils/dag_stlqsort.h"
+#include "nau/utils/fixed_function.h"
 
 namespace nau::render
 {
@@ -49,13 +56,13 @@ namespace nau::render
 
     bool isInvaliatingShadowsNeeded(const OmniLight& oldLight, const OmniLight& newLight)
     {
-        return !equalWithEps(oldLight.pos_radius, newLight.pos_radius, eastl::numeric_limits<float>::epsilon());
+        return !equalWithEps(oldLight.pos_radius, newLight.pos_radius, std::numeric_limits<float>::epsilon());
     }
 
     bool isInvaliatingShadowsNeeded(const SpotLight& oldLight, const SpotLight& newLight)
     {
-        return !equalWithEps(oldLight.pos_radius, newLight.pos_radius, eastl::numeric_limits<float>::epsilon()) ||
-               !equalWithEps(oldLight.dir_angle, newLight.dir_angle, eastl::numeric_limits<float>::epsilon());
+        return !equalWithEps(oldLight.pos_radius, newLight.pos_radius, std::numeric_limits<float>::epsilon()) ||
+               !equalWithEps(oldLight.dir_angle, newLight.dir_angle, std::numeric_limits<float>::epsilon());
     }
 
     void ClusteredLights::validateDensity(uint32_t words)
@@ -66,7 +73,7 @@ namespace nau::render
         /*
         for (int i = 0; i < lightsFullGridCB.size(); ++i)
         {
-            eastl::string name = nau::utils::format("lights_full_grid_{}", i);
+            std::string name = nau::utils::format("lights_full_grid_{}", i);
             lightsFullGridCB[i].close();
             lightsFullGridCB[i] = dag::create_sbuffer(sizeof(uint32_t),
                                                       CLUSTERS_PER_GRID * allocatedWords,
@@ -204,7 +211,7 @@ namespace nau::render
         BBox3 far_box, near_box;
         Vector4 unreachablePlane = Vector4(0, 0, 0, FLT_MAX);
 
-        eastl::vector<uint16_t> visibleFarOmniLightsId, cVisibleOmniLightsId;  // TODO: Use frame allocator
+        std::vector<uint16_t> visibleFarOmniLightsId, cVisibleOmniLightsId;  // TODO: Use frame allocator
         omniLights.prepare(frustum,
                            visibleFarOmniLightsId,
                            cVisibleOmniLightsId,
@@ -219,7 +226,7 @@ namespace nau::render
         NAU_ASSERT(visibleFarOmniLightsId.size() == 0);
         cVisibleOmniLightsId.resize(std::min<int>(cVisibleOmniLightsId.size(), MAX_OMNI_LIGHTS));
 
-        eastl::vector<uint16_t> visibleFarSpotLightsId, cVisibleSpotLightsId;  // TODO: Use frame allocator
+        std::vector<uint16_t> visibleFarSpotLightsId, cVisibleSpotLightsId;  // TODO: Use frame allocator
         spotLights.prepare(frustum,
                            visibleFarSpotLightsId,
                            cVisibleSpotLightsId,
@@ -244,7 +251,7 @@ namespace nau::render
         int baseIndex = 1;
         if (cVisibleSpotLightsId.size())
         {
-            eastl::vector<RenderSpotLight> outRenderSpotLights;  // TODO: Use frame allocator
+            std::vector<RenderSpotLight> outRenderSpotLights;  // TODO: Use frame allocator
             outRenderSpotLights.resize(cVisibleSpotLightsId.size());
             for (int i = 0; i < cVisibleSpotLightsId.size(); ++i)
                 outRenderSpotLights[i] = spotLights.getRenderLight(cVisibleSpotLightsId[i]);
@@ -269,7 +276,7 @@ namespace nau::render
         baseIndex += cVisibleSpotLightsId.size() * 4;
         if (cVisibleOmniLightsId.size())
         {
-            eastl::vector<OmniLightsManager::RawLight> outRenderOmniLights;  // TODO: Use frame allocator
+            std::vector<OmniLightsManager::RawLight> outRenderOmniLights;  // TODO: Use frame allocator
             outRenderOmniLights.resize(cVisibleOmniLightsId.size());
             /* TODO: Light shadows
             for (int i = 0; i < cVisibleOmniLightsId.size(); ++i)
@@ -342,7 +349,7 @@ namespace nau::render
 
         visibleOmniLightsIdSet.reset();
         visibleOmniLightsId.clear();
-        eastl::vector<uint16_t> visibleFarOmniLightsId;  // TODO: Use frame allocator
+        std::vector<uint16_t> visibleFarOmniLightsId;  // TODO: Use frame allocator
         omniLights.prepare(frustum,
                            visibleOmniLightsId,
                            visibleFarOmniLightsId,
@@ -381,7 +388,7 @@ namespace nau::render
         visibleSpotLightsId.clear();
         // spotLights.prepare(frustum, visibleSpotLightsId, occlusion);
 
-        eastl::vector<uint16_t> visibleFarSpotLightsId;  // TODO: Use frame allocator
+        std::vector<uint16_t> visibleFarSpotLightsId;  // TODO: Use frame allocator
         spotLights.prepare(frustum,
                            visibleSpotLightsId,
                            visibleFarSpotLightsId,
@@ -416,9 +423,9 @@ namespace nau::render
         }
         visibleSpotLightsId.resize(std::min<int>(visibleSpotLightsId.size(), MAX_SPOT_LIGHTS));
 
-        eastl::vector<SpotLightsManager::RawLight> visibleSpotLights;  // TODO: Use frame allocator
-        eastl::vector<Vector4> visibleSpotLightsBounds;                // TODO: Use frame allocator
-        eastl::vector<Vector4> visibleOmniLightsBounds;                // TODO: Use frame allocator
+        std::vector<SpotLightsManager::RawLight> visibleSpotLights;  // TODO: Use frame allocator
+        std::vector<Vector4> visibleSpotLightsBounds;                // TODO: Use frame allocator
+        std::vector<Vector4> visibleOmniLightsBounds;                // TODO: Use frame allocator
         visibleSpotLights.resize(visibleSpotLightsId.size());
         renderSpotLights.resize(visibleSpotLightsId.size());
         renderOmniLights.resize(visibleOmniLightsId.size());
@@ -640,7 +647,7 @@ namespace nau::render
             return;
         // TIME_D3D_PROFILE(clusteredFill);
         clusters.prepareFrustum(view, proj, znear, minDist, maxDist, use_occlusion);
-        eastl::unique_ptr<FrustumClusters::ClusterGridItemMasks> tempOmniItemsPtr, tempSpotItemsPtr;
+        std::unique_ptr<FrustumClusters::ClusterGridItemMasks> tempOmniItemsPtr, tempSpotItemsPtr;
 
         tempOmniItemsPtr.reset(new FrustumClusters::ClusterGridItemMasks());
 
@@ -726,9 +733,9 @@ namespace nau::render
         {
             dstReadbackLights.reset();
             lightShadows.reset();
-            lightShadows = eastl::make_unique<ShadowSystem>();
+            lightShadows = std::make_unique<ShadowSystem>();
             lightShadows->setOverrideState(depthBiasOverrideState);
-            dstReadbackLights = eastl::make_unique<DistanceReadbackLights>(lightShadows.get(), &spotLights);
+            dstReadbackLights = std::make_unique<DistanceReadbackLights>(lightShadows.get(), &spotLights);
         }
 
         if (lightShadows)
@@ -747,7 +754,7 @@ namespace nau::render
         if (!use_tiled)
             tiledLights.reset();
         else if (!tiledLights)
-            tiledLights = eastl::make_unique<TiledLights>(maxClusteredDist);
+            tiledLights = std::make_unique<TiledLights>(maxClusteredDist);
         */
     }
 
@@ -758,7 +765,7 @@ namespace nau::render
         /* TODO: support Shadows
         if (shadow_quality)
         {
-            lightShadows = eastl::make_unique<ShadowSystem>();
+            lightShadows = std::make_unique<ShadowSystem>();
             lightShadows->setOverrideState(depthBiasOverrideState);
             shadow_quality = min(shadow_quality, MAX_SHADOWS_QUALITY);
             lightShadows->changeResolution(512 << shadow_quality, 128 << shadow_quality, 16 << shadow_quality, 16 << shadow_quality, false);
@@ -780,7 +787,7 @@ namespace nau::render
 
         /* TODO: support Shadows
         if (lightShadows)
-            dstReadbackLights = eastl::make_unique<DistanceReadbackLights>(lightShadows.get(), &spotLights);
+            dstReadbackLights = std::make_unique<DistanceReadbackLights>(lightShadows.get(), &spotLights);
         */
 
         lights_full_gridVarId = "lights_full_grid";
@@ -791,7 +798,7 @@ namespace nau::render
         /* TODO: support tiledLights
         tiledLights.reset();
         if (use_tiled_lights)
-            tiledLights = eastl::make_unique<TiledLights>(maxClusteredDist);
+            tiledLights = std::make_unique<TiledLights>(maxClusteredDist);
         */
         co_return;
     }
@@ -888,8 +895,8 @@ namespace nau::render
         uint32_t i, j;
 
         // Sin/Cos caches
-        eastl::array<float, MAX_SPHERE_SLICES + 1> sinI, cosI;
-        eastl::array<float, MAX_SPHERE_STACKS + 1> sinJ, cosJ;
+        std::array<float, MAX_SPHERE_SLICES + 1> sinI, cosI;
+        std::array<float, MAX_SPHERE_STACKS + 1> sinJ, cosJ;
 
         for (i = 0; i <= slices; i++)
         {
@@ -1381,8 +1388,8 @@ namespace nau::render
                                          const math::Matrix4& globtm,
                                          float hk,
                                          nau::ConstSpan<BBox3> dynamicBoxes,
-                                         eastl::fixed_function<sizeof(void*) * 2, StaticRenderCallback> render_static,
-                                         eastl::fixed_function<sizeof(void*) * 2, DynamicRenderCallback> render_dynamic)
+                                         nau::FixedFunction<sizeof(void*) * 2, StaticRenderCallback> render_static,
+                                         nau::FixedFunction<sizeof(void*) * 2, DynamicRenderCallback> render_dynamic)
     {
         if ((visibleSpotLightsId.empty() && visibleOmniLightsId.empty()) || !lightShadows)
             return;
@@ -1516,7 +1523,7 @@ namespace nau::render
     /* TODO: Light shadows
     void ClusteredLights::updateShadowBuffers()
     {
-        Staticeastl::vector<Vector4, 1 + MAX_SPOT_LIGHTS * 4 + MAX_OMNI_LIGHTS> commonLightShadowData;
+        nau::InlineVector<Vector4, 1 + MAX_SPOT_LIGHTS * 4 + MAX_OMNI_LIGHTS, false> commonLightShadowData;
         int numSpotShadows = min<int>(visibleSpotLightsId.size(), MAX_SPOT_LIGHTS);
         int numOmniShadows = min<int>(visibleOmniLightsId.size(), MAX_OMNI_LIGHTS);
         commonLightShadowData.resize(1 + numSpotShadows * 4 + numOmniShadows);
@@ -1559,7 +1566,7 @@ namespace nau::render
 
         if (spotLightSsssShadowDescBuffer && numSpotShadows > 0)
         {
-            Staticeastl::vector<SpotlightShadowDescriptor, MAX_SPOT_LIGHTS> spotLightSsssShadowDesc;
+            nau::InlineVector<SpotlightShadowDescriptor, MAX_SPOT_LIGHTS, false> spotLightSsssShadowDesc;
             spotLightSsssShadowDesc.resize(numSpotShadows);
             for (int i = 0; i < visibleSpotLightsId.size(); ++i)
             {

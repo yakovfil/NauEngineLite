@@ -2,13 +2,16 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <array>
+#include <iterator>
+
 #include "nau/3d/dag_drv3d.h"
 //#include <generic/dag_carray.h>
-#include <EASTL/utility.h>
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <utility>
+
 #include "nau/osApiWrappers/dag_localConv.h"
 #include "nau/util/common.h"
-
 
 namespace drv3d_generic
 {
@@ -17,46 +20,46 @@ bool disableResEntryRealloc = false;
 
 // From https://github.com/WebKit/webkit/blob/main/Source/ThirdParty/ANGLE/src/libANGLE/renderer/driver_utils.h#L18 and
 // https://gamedev.stackexchange.com/a/31626
-static const eastl::pair<uint32_t, int> vendor_id_table[] = //
-  {
-    {0x10DE, D3D_VENDOR_NVIDIA},
+static const std::pair<uint32_t, int> vendor_id_table[] =  //
+    {
+        { 0x10DE,      D3D_VENDOR_NVIDIA},
 
-    {0x1002, D3D_VENDOR_AMD},
-    {0x1022, D3D_VENDOR_AMD},
+        { 0x1002,         D3D_VENDOR_AMD},
+        { 0x1022,         D3D_VENDOR_AMD},
 
-    {0x8086, D3D_VENDOR_INTEL},
-    {0x8087, D3D_VENDOR_INTEL},
-    {0x163C, D3D_VENDOR_INTEL},
+        { 0x8086,       D3D_VENDOR_INTEL},
+        { 0x8087,       D3D_VENDOR_INTEL},
+        { 0x163C,       D3D_VENDOR_INTEL},
 
-    {0x5143, D3D_VENDOR_QUALCOMM},
+        { 0x5143,    D3D_VENDOR_QUALCOMM},
 
-    {0x1010, D3D_VENDOR_IMGTEC},
+        { 0x1010,      D3D_VENDOR_IMGTEC},
 
-    {0x13B5, D3D_VENDOR_ARM},
+        { 0x13B5,         D3D_VENDOR_ARM},
 
-    {0x05AC, D3D_VENDOR_APPLE},
+        { 0x05AC,       D3D_VENDOR_APPLE},
 
-    {0x10005, D3D_VENDOR_MESA},
+        {0x10005,        D3D_VENDOR_MESA},
 
-    {0x0003, D3D_VENDOR_SHIM_DRIVER},
+        { 0x0003, D3D_VENDOR_SHIM_DRIVER},
 
-    {0x144D, D3D_VENDOR_SAMSUNG},
+        { 0x144D,     D3D_VENDOR_SAMSUNG},
 
-    {0x0000, D3D_VENDOR_NONE},
+        { 0x0000,        D3D_VENDOR_NONE},
 };
 
-static const eastl::array<const char *, D3D_VENDOR_COUNT> vendor_names = {
-  "Unknown",     // D3D_VENDOR_NONE
-  "Mesa",        // D3D_VENDOR_MESA
-  "ImgTec",      // D3D_VENDOR_IMGTEC
-  "AMD",         // D3D_VENDOR_AMD / D3D_VENDOR_ATI
-  "NVIDIA",      // D3D_VENDOR_NVIDIA
-  "Intel",       // D3D_VENDOR_INTEL
-  "Apple",       // D3D_VENDOR_APPLE
-  "Shim driver", // D3D_VENDOR_SHIM_DRIVER
-  "ARM",         // D3D_VENDOR_ARM
-  "Qualcomm",    // D3D_VENDOR_QUALCOMM
-  "Samsung",     // D3D_VENDOR_SAMSUNG
+static const std::array<const char*, D3D_VENDOR_COUNT> vendor_names = {
+    "Unknown",      // D3D_VENDOR_NONE
+    "Mesa",         // D3D_VENDOR_MESA
+    "ImgTec",       // D3D_VENDOR_IMGTEC
+    "AMD",          // D3D_VENDOR_AMD / D3D_VENDOR_ATI
+    "NVIDIA",       // D3D_VENDOR_NVIDIA
+    "Intel",        // D3D_VENDOR_INTEL
+    "Apple",        // D3D_VENDOR_APPLE
+    "Shim driver",  // D3D_VENDOR_SHIM_DRIVER
+    "ARM",          // D3D_VENDOR_ARM
+    "Qualcomm",     // D3D_VENDOR_QUALCOMM
+    "Samsung",      // D3D_VENDOR_SAMSUNG
 };
 
 void d3d_get_render_target(Driver3dRenderTarget &rt) { d3d::get_render_target(rt); }
@@ -100,9 +103,12 @@ int d3d_get_vendor(uint32_t vendor_id, const char *description)
 {
   int vendor = D3D_VENDOR_NONE;
   auto ref =
-    eastl::find_if(eastl::begin(vendor_id_table), eastl::end(vendor_id_table), [=](auto &ent) { return ent.first == vendor_id; });
-  if (ref != eastl::end(vendor_id_table))
-    vendor = ref->second;
+      std::find_if(std::begin(vendor_id_table), std::end(vendor_id_table), [=](auto& ent)
+  {
+      return ent.first == vendor_id;
+  });
+  if (ref != std::end(vendor_id_table))
+      vendor = ref->second;
   else if (description)
   {
     if (strstr(description, "ATI") || strstr(description, "AMD"))

@@ -4,6 +4,8 @@
 #include <daECS/core/componentType.h>
 #include <daECS/utility/ecs_asserts.h>
 
+#include <type_traits>
+
 namespace ecs
 {
 CompileComponentTypeRegister *CompileComponentTypeRegister::tail = 0;
@@ -38,7 +40,7 @@ type_index_t ComponentTypes::registerType(const char *name, component_type_t typ
                 (COMPONENT_TYPE_BOXED | COMPONENT_TYPE_NON_TRIVIAL_CREATE),
       "all boxed types should be creatable, inspect <{}>", name);
     flags = ComponentTypeFlags(
-      eastl::underlying_type_t<ComponentTypeFlags>(flags) | COMPONENT_TYPE_BOXED | COMPONENT_TYPE_NON_TRIVIAL_CREATE);
+        std::underlying_type_t<ComponentTypeFlags>(flags) | COMPONENT_TYPE_BOXED | COMPONENT_TYPE_NON_TRIVIAL_CREATE);
   }
   if (io)
     flags = ComponentTypeFlags(flags | COMPONENT_TYPE_HAS_IO);

@@ -11,6 +11,8 @@ Search for examples with "_ecs_query" keyword.
 
 #include <daECS/core/entityManager.h>
 
+#include <utility>
+
 namespace ecs
 {
 // use min_quant of more than 0 for parallel for execution (each job will take ata least min_quant of data)
@@ -30,11 +32,11 @@ template <typename Fn>
 NAU_FORCE_INLINE bool perform_query(EntityManager *__restrict em, ecs::EntityId eid, QueryId query, Fn &&__restrict fun,
   void *__restrict user_data)
 {
-  return em->performEidQuery(eid, query, eastl::move(fun), user_data);
+    return em->performEidQuery(eid, query, std::move(fun), user_data);
 }
 template <typename Fn>
 NAU_FORCE_INLINE bool perform_query(EntityManager *__restrict em, ecs::EntityId eid, QueryId query, Fn &&__restrict fun)
 {
-  return perform_query(em, eid, query, eastl::move(fun), nullptr);
+    return perform_query(em, eid, query, std::move(fun), nullptr);
 }
 } // namespace ecs

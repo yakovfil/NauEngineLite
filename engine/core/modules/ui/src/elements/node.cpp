@@ -1,23 +1,24 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/elements/node.h"
-#include <cstdint>
-#include "2d/CCNode.h"
-#include "EASTL/string.h"
-#include "EASTL/vector.h"
-#include "cocos2d.h"
-#include "nau/math/math.h"
-#include "nau/ui/elements/draw_node.h"
 
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <vector>
+
+#include "2d/CCNode.h"
+#include "cocos2d.h"
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/controller/animation_controller_direct.h"
 #include "nau/effects/node_animation.h"
+#include "nau/math/math.h"
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_factory.h"
 #include "nau/service/service_provider.h"
 #include "nau/ui.h"
+#include "nau/ui/elements/draw_node.h"
 
 namespace nau::ui
 {
@@ -191,10 +192,10 @@ void Node::addChild(Node* child)
     cocos2d::Node::addChild(child);
 }
 
-void Node::addChild(Node* child, const eastl::string& name)
+void Node::addChild(Node* child, const std::string& name)
 {
     markDirty();
-    eastl::hash<eastl::string> hashFunc;
+    std::hash<std::string> hashFunc;
     size_t hashKey = hashFunc(name);
 
     NAU_ASSERT(m_childNodesByName.find(hashKey) == m_childNodesByName.end() && "Node with this name already exists!");
@@ -204,14 +205,14 @@ void Node::addChild(Node* child, const eastl::string& name)
     cocos2d::Node::addChild(child);
 }
 
-Node* Node::getNestedNodeByName(const eastl::string& name)
+Node* Node::getNestedNodeByName(const std::string& name)
 {
     if (this->getName() == name) 
     {
         return this;
     }
 
-    eastl::vector<Node*> children;
+    std::vector<Node*> children;
     getChildren(children);
 
     for (Node* child : children) 
@@ -251,12 +252,12 @@ Node * Node::getChildByTag(int tag) const
     return dynamic_cast<Node*>(cocos2d::Node::getChildByTag(tag));
 }
 
-Node* Node::getChildByName(const eastl::string& name) const
+Node* Node::getChildByName(const std::string& name) const
 {
     return dynamic_cast<Node*>(cocos2d::Node::_getChildByName(name));
 }
 
-void Node::getChildren(eastl::vector<Node*>& children) const
+void Node::getChildren(std::vector<Node*>& children) const
 {
     auto internalChildren = cocos2d::Node::getChildren();
     children.reserve(internalChildren.size());
@@ -304,7 +305,7 @@ void Node::setTag(int tag)
     cocos2d::Node::setTag(tag);
 }
 
-void Node::nau_setName(const eastl::string& name)
+void Node::nau_setName(const std::string& name)
 {
     markDirty();
     cocos2d::Node::setName(name);
@@ -365,11 +366,11 @@ void Node::setOpacityModifyRGB(bool value)
     cocos2d::Node::setOpacityModifyRGB(value);
 }
 
-void Node::callRecursivly(eastl::function<void(Node*)> fn)
+void Node::callRecursivly(std::function<void(Node*)> fn)
 {
     fn(this);
 
-    eastl::vector<Node*> children;
+    std::vector<Node*> children;
     getChildren(children);
 
     for (const auto& child : children)

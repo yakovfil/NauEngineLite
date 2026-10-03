@@ -9,7 +9,7 @@
 #pragma once
 
 #include <float.h>
-#include <EASTL/vector.h>
+#include <vector>
 
 #define IMEMORY_FROM_HEADER
 //#include "../../../Interfaces/IMemory.h"
@@ -1733,7 +1733,7 @@ inline unsigned int toBGRA(const Vector4 &u)
 // Mesh generation helpers
 //----------------------------------------------------------------------------
 // Generates an array of vertices and normals for a sphere
-inline void generateSpherePoints(eastl::vector<float3>& ppPoints, int numberOfDivisions, float radius = 1.0f)
+inline void generateSpherePoints(std::vector<float3>& ppPoints, int numberOfDivisions, float radius = 1.0f)
 {
 	float numStacks = (float)numberOfDivisions;
 	float numSlices = (float)numberOfDivisions;
@@ -1781,7 +1781,7 @@ inline void generateSpherePoints(eastl::vector<float3>& ppPoints, int numberOfDi
 	}
 }
 
-inline void generateQuad(eastl::vector<float3>& ppPoints, float sideLength = 1.0f)
+inline void generateQuad(std::vector<float3>& ppPoints, float sideLength = 1.0f)
 {
 	uint32_t numberOfPoints = 4;
 	ppPoints.resize(numberOfPoints * 2);
@@ -1806,7 +1806,7 @@ inline void generateQuad(eastl::vector<float3>& ppPoints, float sideLength = 1.0
 
 
 // Generates an array of vertices and normals for a 3D rectangle (cuboid)
-inline void generateCuboidPoints(eastl::vector<float3>& ppPoints, float width = 1.f, float height = 1.f, float depth = 1.f, Vector3 center = Vector3{ 0.f,0.f,0.f })
+inline void generateCuboidPoints(std::vector<float3>& ppPoints, float width = 1.f, float height = 1.f, float depth = 1.f, Vector3 center = Vector3{ 0.f,0.f,0.f })
 {
 	uint32_t numberOfPoints = 6 * 6;
 	ppPoints.resize(numberOfPoints * 2);
@@ -1934,7 +1934,7 @@ inline void generateCuboidPoints(eastl::vector<float3>& ppPoints, float width = 
 
 
 // Generates an array of vertices and normals for a bone of length = 1.f and width = widthRatio
-inline void generateBonePoints(eastl::vector<float3>& ppPoints, float widthRatio)
+inline void generateBonePoints(std::vector<float3>& ppPoints, float widthRatio)
 {
 	uint32_t numberOfPoints = 8 * 3;
 	ppPoints.resize(numberOfPoints * 2);
@@ -2045,7 +2045,7 @@ struct IndexBonePoint
 	uint16_t jointIndices[4];
 };
 // Generates an array of vertices and normals for a bone of length = 1.f and width = widthRatio
-inline void generateIndexedBonePoints(eastl::vector<IndexBonePoint>& ppPoints, float widthRatio, uint32_t boneCount, const int16_t* parentIndices)
+inline void generateIndexedBonePoints(std::vector<IndexBonePoint>& ppPoints, float widthRatio, uint32_t boneCount, const int16_t* parentIndices)
 {
 	uint32_t numberOfPoints = 8 * 3 * boneCount;
 	ppPoints.resize(numberOfPoints);

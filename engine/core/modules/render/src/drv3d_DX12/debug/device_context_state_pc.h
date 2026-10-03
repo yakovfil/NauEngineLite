@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <string_view>
+
 #include "break_point.h"
 #include "device_state.h"
 
@@ -21,14 +24,22 @@ public:
   }
   void debugEndCommandBuffer(DeviceState &dds, ID3D12GraphicsCommandList *cmd) { dds.endCommandBuffer(cmd); }
   void debugFramePresent(DeviceState &dds) { dds.handlePresentToPresentCapture(); }
-  void debugEventBegin(DeviceState &dds, ID3D12GraphicsCommandList *cmd, eastl::string_view name) { dds.beginSection(cmd, name); }
+  void debugEventBegin(DeviceState& dds, ID3D12GraphicsCommandList* cmd, std::string_view name)
+  {
+      dds.beginSection(cmd, name);
+  }
   void debugEventEnd(DeviceState &dds, ID3D12GraphicsCommandList *cmd) { dds.endSection(cmd); }
-  void debugMarkerSet(DeviceState &dds, ID3D12GraphicsCommandList *cmd, eastl::string_view name) { dds.marker(cmd, name); }
+  void debugMarkerSet(DeviceState& dds, ID3D12GraphicsCommandList* cmd, std::string_view name)
+  {
+      dds.marker(cmd, name);
+  }
 
-  void debugFrameCaptureBegin(DeviceState &dds, ID3D12CommandQueue *, uint32_t, eastl::span<const wchar_t>) { dds.beginCapture(); }
+  void debugFrameCaptureBegin(DeviceState& dds, ID3D12CommandQueue*, uint32_t, std::span<const wchar_t>)
+  {
+      dds.beginCapture();
+  }
   void debugFrameCaptureEnd(DeviceState &dds, ID3D12CommandQueue *) { dds.endCapture(); }
-  void debugFrameCaptureQueueNextFrames(DeviceState &dds, ID3D12CommandQueue *, uint32_t, eastl::span<const wchar_t> filename,
-    int frame_count)
+  void debugFrameCaptureQueueNextFrames(DeviceState& dds, ID3D12CommandQueue*, uint32_t, std::span<const wchar_t> filename, int frame_count)
   {
     dds.captureNextFrames(filename.data(), frame_count);
   }

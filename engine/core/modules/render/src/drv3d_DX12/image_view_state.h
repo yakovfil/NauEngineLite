@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include "nau/3d/dag_drv3d.h"
+#include "nau/utils/dag_globDef.h"
+
 
 #include "bitfield.h"
 #include "format_store.h"

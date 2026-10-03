@@ -3,8 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-
+#include <type_traits>
 
 // duplicated in vulkan backend...
 // taken from https://github.com/preshing/cpp11-on-multicore/blob/master/common/
@@ -20,7 +19,7 @@ struct BitFieldMember
     BitCount = Bits
   };
 
-  static const T Maximum = (T(1) << T(Bits)) - ((typename eastl::make_signed<T>::type)(1));
+  static const T Maximum = (T(1) << T(Bits)) - ((typename std::make_signed<T>::type)(1));
   static const T Mask = Maximum << T(Offset);
   inline T maximum() const
   {

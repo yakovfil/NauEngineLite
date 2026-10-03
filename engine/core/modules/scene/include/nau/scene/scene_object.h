@@ -4,18 +4,17 @@
 
 #pragma once
 
-#include <EASTL/intrusive_list.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-
 #include <concepts>
+#include <string>
+#include <string_view>
 
 #include "nau/async/task_base.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/messaging/async_message_stream.h"
 #include "nau/scene/components/scene_component.h"
 #include "nau/scene/nau_object.h"
 #include "nau/scene/transform_control.h"
+#include "nau/utils/intrusive_list.h"
 #include "nau/utils/typed_flag.h"
 
 namespace nau::scene
@@ -41,7 +40,7 @@ namespace nau::scene
      */
     class NAU_CORESCENE_EXPORT SceneObject : public NauObject,
                                              public TransformControl,
-                                             public eastl::intrusive_list_node
+                                             public nau::IntrusiveListNode
 
     {
         NAU_OBJECT(nau::scene::SceneObject, NauObject, TransformControl)
@@ -92,14 +91,14 @@ namespace nau::scene
          *
          * @return Name of the scene object.
          */
-        eastl::string_view getName() const;
+        std::string_view getName() const;
 
         /**
          * @brief Assigns name to the scene object.
          *
          * @param [in] name name to assign.
          */
-        void setName(eastl::string_view name);
+        void setName(std::string_view name);
 
         /**
          * @brief Retrives the scene which the object is attached to.
@@ -506,9 +505,9 @@ namespace nau::scene
         SceneComponent* m_rootComponent = nullptr;
         SceneObject* m_parent = nullptr;
         IScene* m_scene = nullptr;
-        eastl::string m_name;
-        eastl::intrusive_list<scene_internal::ComponentListNode> m_components;
-        eastl::intrusive_list<SceneObject> m_children;
+        std::string m_name;
+        nau::IntrusiveList<scene_internal::ComponentListNode> m_components;
+        nau::IntrusiveList<SceneObject> m_children;
         nau::Ptr<AsyncMessageSource> m_messageSource;
 
         ActivationState m_activationState = ActivationState::Inactive;

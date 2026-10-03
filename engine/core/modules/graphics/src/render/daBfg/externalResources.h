@@ -3,12 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/variant.h>
+#include <variant>
 
+#include "nau/3d/dag_resPtr.h"
 #include "nau/generic/dag_fixedMoveOnlyFunction.h"
 #include "render/daBfg/multiplexing.h"
-#include "nau/3d/dag_resPtr.h"
-
 
 namespace dabfg
 {
@@ -17,7 +16,7 @@ namespace dabfg
  * \brief A concrete physical resource provided to daBfg for external
  * virtual resource on a particular multiplexing iteration.
  */
-using ExternalResource = eastl::variant<ManagedTexView, ManagedBufView>;
+using ExternalResource = std::variant<ManagedTexView, ManagedBufView>;
 
 /**
  * \brief A callback that provides a physical resource to daBfg for a

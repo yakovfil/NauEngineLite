@@ -5,7 +5,7 @@
 #include "nau/3d/dag_hangHandler.h"
 //#include <util/dag_globDef.h>
 #include <cstring>
-#include <EASTL/type_traits.h>
+#include <type_traits>
 
 namespace d3dhang
 {
@@ -29,8 +29,8 @@ void hang_gpu_on(const char *event)
   //G_UNUSED(event);
 
 #if DAGOR_DBGLEVEL > 0
-  NAU_ASSERT(strlen(event) < eastl::extent<decltype(hang_on_event)>::value);
-  strncpy(hang_on_event, event, eastl::extent<decltype(hang_on_event)>::value);
+  NAU_ASSERT(strlen(event) < std::extent<decltype(hang_on_event)>::value);
+  strncpy(hang_on_event, event, std::extent<decltype(hang_on_event)>::value);
 #endif // DAGOR_DBGLEVEL > 0
 }
 

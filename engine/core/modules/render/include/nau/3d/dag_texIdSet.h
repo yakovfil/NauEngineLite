@@ -4,10 +4,10 @@
 #pragma once
 
 #include "nau/3d/dag_resId.h"
-#include <EASTL/vector_set.h>
+#include "nau/utils/sorted_vector.h"
 //#include <generic/dag_span.h>
 
-class TextureIdSet : public eastl::vector_set<TEXTUREID>
+class TextureIdSet : public nau::SortedVectorSet<TEXTUREID>
 {
 public:
   void reset() { clear(); }

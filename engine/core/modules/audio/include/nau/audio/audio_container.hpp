@@ -1,11 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#pragma once 
+#pragma once
+
+#include <string>
+#include <vector>
 
 #include "audio_asset.hpp"
 #include "audio_source.hpp"
-
 #include "nau/utils/enum/enum_reflection.h"
 
 NAU_AUDIO_BEGIN
@@ -27,9 +29,9 @@ public:
 	 * 
 	 * @param [in] Container name.
 	 */
-	AudioAssetContainer(const eastl::string& name);
+    AudioAssetContainer(const std::string& name);
 
-	/**
+    /**
 	 * @brief Destructor.
 	 */
 	~AudioAssetContainer();
@@ -51,9 +53,9 @@ public:
 	 * 
 	 * @return Name of the audio asset container.
 	 */
-	eastl::string name() const override;
+    std::string name() const override;
 
-	/**
+    /**
 	 * @brief Retrieves an iterator to the first managed audio asset.
 	 * 
 	 * @return An iterator to the first managed audio asset.
@@ -108,8 +110,7 @@ private:
 };
 
 using AudioAssetContainerPtr = std::shared_ptr<AudioAssetContainer>;
-using AudioAssetContainerList = eastl::vector<AudioAssetContainerPtr>;
-
+using AudioAssetContainerList = std::vector<AudioAssetContainerPtr>;
 
 // ** AudioContainer
 

@@ -2,6 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <tuple>
+#include <vector>
+
 #include "device.h"
 
 using namespace drv3d_dx12;
@@ -76,7 +84,7 @@ struct RegistryKeyHandler
     }
   }
 };
-using RegistryKeyPtr = eastl::unique_ptr<HKEY, RegistryKeyHandler>;
+using RegistryKeyPtr = std::unique_ptr<HKEY, RegistryKeyHandler>;
 } // namespace
 
 #if DEBUG_REPORT_REGISTRY_INSPECTION
@@ -123,68 +131,68 @@ DriverVersion drv3d_dx12::get_driver_version_from_registry(LUID adapter_luid)
   DEBUG_REG("DX12: Found {} subkeys", subKeyCount);
   if (subKeyCount)
   {
-    eastl::vector<char> nameBuf;
-    nameBuf.resize(maxSubKeyLength + 1, '\0');
+      std::vector<char> nameBuf;
+      nameBuf.resize(maxSubKeyLength + 1, '\0');
 
-    for (DWORD k = 0; k < subKeyCount; ++k)
-    {
-      DEBUG_REG("DX12: Inspecting subkey {}...", k);
-
-      DWORD maxNameLength = static_cast<DWORD>(nameBuf.size());
-      if (ERROR_SUCCESS == RegEnumKeyEx(directXKey.get(), k, nameBuf.data(), &maxNameLength, nullptr, nullptr, nullptr, nullptr))
+      for (DWORD k = 0; k < subKeyCount; ++k)
       {
-        RegistryKeyPtr driverKey;
-        DEBUG_REG("DX12: Subkey name is <{}>", nameBuf.data());
-        if (ERROR_SUCCESS == RegOpenKeyExA(directXKey.get(), nameBuf.data(), 0, options, &key))
-        {
-          driverKey.reset(key);
-          DWORD valueCount = 0;
-          DWORD maxValueLength = 0;
-          RegQueryInfoKeyA(driverKey.get(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &valueCount, &maxValueLength,
-            nullptr, nullptr, nullptr);
-          nameBuf.resize(Vectormath::max<size_t>(nameBuf.size(), maxValueLength + 1));
-          LARGE_INTEGER adapterLUID{};
-          uint64_t driverVersion = 0;
-          DEBUG_REG("DX12: Found {} values", valueCount);
-          for (DWORD v = 0; v < valueCount && (0 == adapterLUID.QuadPart || 0 == driverVersion); ++v)
-          {
-            DEBUG_REG("DX12: Inspecting value {}...", v);
-            maxNameLength = static_cast<DWORD>(nameBuf.size());
-            if (ERROR_SUCCESS == RegEnumValueA(driverKey.get(), v, nameBuf.data(), &maxNameLength, nullptr, nullptr, nullptr, nullptr))
-            {
-              DEBUG_REG("DX12: value name is <{}>", nameBuf.data());
-              LPBYTE target = nullptr;
-              DWORD targetSize = sizeof(uint64_t);
-              if (0 == strcmp(nameBuf.data(), "AdapterLuid"))
-              {
-                target = reinterpret_cast<LPBYTE>(&adapterLUID.QuadPart);
-              }
-              else if (0 == strcmp(nameBuf.data(), "DriverVersion"))
-              {
-                target = reinterpret_cast<LPBYTE>(&driverVersion);
-              }
-              else
-              {
-                continue;
-              }
-              RegEnumValueA(driverKey.get(), v, nameBuf.data(), &maxNameLength, nullptr, nullptr, target, &targetSize);
-              DEBUG_REG("DX12: value was {}", *reinterpret_cast<uint64_t *>(target));
-              // if we just read LUID and it was 0, then the driver is installed but is not used for
-              // any device, so we can stop
-              if (target == reinterpret_cast<LPBYTE>(&adapterLUID.QuadPart) && 0 == adapterLUID.QuadPart)
-              {
-                break;
-              }
-            }
-          }
+          DEBUG_REG("DX12: Inspecting subkey {}...", k);
 
-          if (adapterLUID.LowPart == adapter_luid.LowPart && adapterLUID.HighPart == adapter_luid.HighPart)
+          DWORD maxNameLength = static_cast<DWORD>(nameBuf.size());
+          if (ERROR_SUCCESS == RegEnumKeyEx(directXKey.get(), k, nameBuf.data(), &maxNameLength, nullptr, nullptr, nullptr, nullptr))
           {
-            DEBUG_REG("DX12: Found entry with matching LUID, stopping");
-            return DriverVersion::fromRegistryValue(driverVersion);
+              RegistryKeyPtr driverKey;
+              DEBUG_REG("DX12: Subkey name is <{}>", nameBuf.data());
+              if (ERROR_SUCCESS == RegOpenKeyExA(directXKey.get(), nameBuf.data(), 0, options, &key))
+              {
+                  driverKey.reset(key);
+                  DWORD valueCount = 0;
+                  DWORD maxValueLength = 0;
+                  RegQueryInfoKeyA(driverKey.get(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &valueCount, &maxValueLength,
+                                   nullptr, nullptr, nullptr);
+                  nameBuf.resize(Vectormath::max<size_t>(nameBuf.size(), maxValueLength + 1));
+                  LARGE_INTEGER adapterLUID{};
+                  uint64_t driverVersion = 0;
+                  DEBUG_REG("DX12: Found {} values", valueCount);
+                  for (DWORD v = 0; v < valueCount && (0 == adapterLUID.QuadPart || 0 == driverVersion); ++v)
+                  {
+                      DEBUG_REG("DX12: Inspecting value {}...", v);
+                      maxNameLength = static_cast<DWORD>(nameBuf.size());
+                      if (ERROR_SUCCESS == RegEnumValueA(driverKey.get(), v, nameBuf.data(), &maxNameLength, nullptr, nullptr, nullptr, nullptr))
+                      {
+                          DEBUG_REG("DX12: value name is <{}>", nameBuf.data());
+                          LPBYTE target = nullptr;
+                          DWORD targetSize = sizeof(uint64_t);
+                          if (0 == strcmp(nameBuf.data(), "AdapterLuid"))
+                          {
+                              target = reinterpret_cast<LPBYTE>(&adapterLUID.QuadPart);
+                          }
+                          else if (0 == strcmp(nameBuf.data(), "DriverVersion"))
+                          {
+                              target = reinterpret_cast<LPBYTE>(&driverVersion);
+                          }
+                          else
+                          {
+                              continue;
+                          }
+                          RegEnumValueA(driverKey.get(), v, nameBuf.data(), &maxNameLength, nullptr, nullptr, target, &targetSize);
+                          DEBUG_REG("DX12: value was {}", *reinterpret_cast<uint64_t*>(target));
+                          // if we just read LUID and it was 0, then the driver is installed but is not used for
+                          // any device, so we can stop
+                          if (target == reinterpret_cast<LPBYTE>(&adapterLUID.QuadPart) && 0 == adapterLUID.QuadPart)
+                          {
+                              break;
+                          }
+                      }
+                  }
+
+                  if (adapterLUID.LowPart == adapter_luid.LowPart && adapterLUID.HighPart == adapter_luid.HighPart)
+                  {
+                      DEBUG_REG("DX12: Found entry with matching LUID, stopping");
+                      return DriverVersion::fromRegistryValue(driverVersion);
+                  }
+              }
           }
-        }
-      }
     }
   }
   NAU_LOG_WARNING("DX12: Unable to locate DirectX driver entry in registry for LUID {:08x}{:08x}", adapter_luid.HighPart, adapter_luid.LowPart);
@@ -232,7 +240,7 @@ struct RegistryKey
     return newKey;
   }
 
-  eastl::tuple<DWORD, DWORD> querySubKeyCountAndMaxLength() const
+  std::tuple<DWORD, DWORD> querySubKeyCountAndMaxLength() const
   {
     DWORD count = 0;
     DWORD length = 0;
@@ -240,10 +248,10 @@ struct RegistryKey
     RegQueryInfoKeyA(ptr.get(), nullptr, nullptr, nullptr, &count, &length, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     DEBUG_REG("DX12: querySubKeyCountAndMaxLength of {:p} -> {}, {}", ptr.get(), count, length);
 
-    return eastl::make_tuple(count, length);
+    return std::make_tuple(count, length);
   }
 
-  eastl::tuple<DWORD, DWORD, DWORD> queryValueCountMaxLengthAndSize() const
+  std::tuple<DWORD, DWORD, DWORD> queryValueCountMaxLengthAndSize() const
   {
     DWORD count = 0;
     DWORD length = 0;
@@ -252,10 +260,10 @@ struct RegistryKey
     RegQueryInfoKeyA(ptr.get(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &count, &length, &value, nullptr, nullptr);
     DEBUG_REG("DX12: queryValueCountMaxLengthAndSize of {:p} -> {}, {}, {}", ptr.get(), count, length, value);
 
-    return eastl::make_tuple(count, length, value);
+    return std::make_tuple(count, length, value);
   }
 
-  eastl::string_view enumKeyName(DWORD index, eastl::span<char> buffer)
+  std::string_view enumKeyName(DWORD index, std::span<char> buffer)
   {
     auto maxLength = static_cast<DWORD>(buffer.size());
     if (ERROR_SUCCESS == RegEnumKeyExA(ptr.get(), index, buffer.data(), &maxLength, nullptr, nullptr, nullptr, nullptr))
@@ -270,7 +278,7 @@ struct RegistryKey
     }
   }
 
-  eastl::string_view enumValueName(DWORD index, eastl::span<char> buffer)
+  std::string_view enumValueName(DWORD index, std::span<char> buffer)
   {
     auto maxNameLength = static_cast<DWORD>(buffer.size());
     if (ERROR_SUCCESS == RegEnumValueA(ptr.get(), index, buffer.data(), &maxNameLength, nullptr, nullptr, nullptr, nullptr))
@@ -285,8 +293,7 @@ struct RegistryKey
     }
   }
 
-  eastl::tuple<eastl::string_view, eastl::span<char>> enumValueNameAndValue(DWORD index, eastl::span<char> name_buffer,
-    eastl::span<char> data_buffer)
+  std::tuple<std::string_view, std::span<char>> enumValueNameAndValue(DWORD index, std::span<char> name_buffer, std::span<char> data_buffer)
   {
     auto maxNameLength = static_cast<DWORD>(name_buffer.size());
     auto maxDataLength = static_cast<DWORD>(data_buffer.size());
@@ -294,7 +301,7 @@ struct RegistryKey
                            reinterpret_cast<LPBYTE>(data_buffer.data()), &maxDataLength))
     {
       DEBUG_REG("DX12: enumValueNameAndValue of {:p} at {} -> <{}> {}", ptr.get(), index, name_buffer.data(), maxDataLength);
-      return eastl::make_tuple(eastl::string_view{name_buffer.data(), maxNameLength}, data_buffer.subspan(0, maxDataLength));
+      return std::make_tuple(std::string_view{name_buffer.data(), maxNameLength}, data_buffer.subspan(0, maxDataLength));
     }
     else
     {
@@ -306,15 +313,15 @@ struct RegistryKey
   explicit operator bool() const { return static_cast<bool>(ptr); }
 };
 
-bool is_this_application_config_name(eastl::string_view app_path, eastl::span<char> config)
+bool is_this_application_config_name(std::string_view app_path, std::span<char> config)
 {
-  eastl::string_view configPath{config.data(), strlen(config.data())};
-  NAU_LOG_DEBUG("DX12: Checking if <{}> is covering <{}>...", configPath.data(), app_path.data());
-  if (configPath.length() > app_path.length())
-  {
-    NAU_LOG_DEBUG("DX12: Config path is too long...");
-    return false;
-  }
+    std::string_view configPath{config.data(), strlen(config.data())};
+    NAU_LOG_DEBUG("DX12: Checking if <{}> is covering <{}>...", configPath.data(), app_path.data());
+    if (configPath.length() > app_path.length())
+    {
+        NAU_LOG_DEBUG("DX12: Config path is too long...");
+        return false;
+    }
   if (configPath == app_path)
   {
     NAU_LOG_DEBUG("DX12: Exact match...");
@@ -336,30 +343,30 @@ bool is_this_application_config_name(eastl::string_view app_path, eastl::span<ch
 // key values have the following format
 // <key>=<value>
 // pairs are separated by ;
-eastl::string_view find_key_value_in_behaviors(eastl::string_view config, eastl::string_view key)
+std::string_view find_key_value_in_behaviors(std::string_view config, std::string_view key)
 {
   auto pos = config.find(key);
-  if (eastl::string_view::npos == pos)
+  if (std::string_view::npos == pos)
   {
     return {};
   }
   auto valueStart = config.substr(pos + key.length() + 1);
-  return {begin(valueStart), static_cast<size_t>(eastl::find(begin(valueStart), end(valueStart), ';') - begin(valueStart))};
+  return {valueStart.data(), static_cast<size_t>(std::find(begin(valueStart), end(valueStart), ';') - begin(valueStart))};
 }
 
-eastl::tuple<eastl::optional<D3D12_DRED_ENABLEMENT>, eastl::optional<D3D12_DRED_ENABLEMENT>> parse_behavior(eastl::span<char> config)
+std::tuple<std::optional<D3D12_DRED_ENABLEMENT>, std::optional<D3D12_DRED_ENABLEMENT>> parse_behavior(std::span<char> config)
 {
-  eastl::string_view configView{config.data(), config.size()};
-  DEBUG_REG("DX12: parse_behavior <{}>...", config.data());
-  eastl::optional<D3D12_DRED_ENABLEMENT> breacrumbEnablement;
-  eastl::optional<D3D12_DRED_ENABLEMENT> pagefaultEnablement;
-  auto breadcumbsValue = find_key_value_in_behaviors(configView, "DredAutoBreadcrumbs");
-  if (!breadcumbsValue.empty())
-  {
-    // Values stored in config match enum indices
-    breacrumbEnablement = static_cast<D3D12_DRED_ENABLEMENT>(breadcumbsValue[0] - '0');
-    DEBUG_REG("DX12: ...found key <{}> value is {}...", "DredAutoBreadcrumbs", *breacrumbEnablement);
-  }
+    std::string_view configView{config.data(), config.size()};
+    DEBUG_REG("DX12: parse_behavior <{}>...", config.data());
+    std::optional<D3D12_DRED_ENABLEMENT> breacrumbEnablement;
+    std::optional<D3D12_DRED_ENABLEMENT> pagefaultEnablement;
+    auto breadcumbsValue = find_key_value_in_behaviors(configView, "DredAutoBreadcrumbs");
+    if (!breadcumbsValue.empty())
+    {
+        // Values stored in config match enum indices
+        breacrumbEnablement = static_cast<D3D12_DRED_ENABLEMENT>(breadcumbsValue[0] - '0');
+        DEBUG_REG("DX12: ...found key <{}> value is {}...", "DredAutoBreadcrumbs", *breacrumbEnablement);
+    }
   else
   {
     DEBUG_REG("DX12: ...missing key <{}>...", "DredAutoBreadcrumbs");
@@ -375,7 +382,7 @@ eastl::tuple<eastl::optional<D3D12_DRED_ENABLEMENT>, eastl::optional<D3D12_DRED_
   {
     DEBUG_REG("DX12: ...missing key <{}>...", "DredPageFault");
   }
-  return eastl::make_tuple(breacrumbEnablement, pagefaultEnablement);
+  return std::make_tuple(breacrumbEnablement, pagefaultEnablement);
 }
 } // namespace
 
@@ -387,7 +394,7 @@ D3D12_DRED_ENABLEMENT drv3d_dx12::get_application_DRED_enablement_from_registry(
   // TODO fails when app is located in a path with a very long name
   char thisAppPath[MAX_PATH]{};
   GetModuleFileNameA(nullptr, thisAppPath, sizeof(thisAppPath));
-  eastl::string_view thisAppPathView{thisAppPath, strlen(thisAppPath)};
+  std::string_view thisAppPathView{thisAppPath, strlen(thisAppPath)};
 
   D3D12_DRED_ENABLEMENT result = D3D12_DRED_ENABLEMENT_SYSTEM_CONTROLLED;
 
@@ -408,10 +415,10 @@ D3D12_DRED_ENABLEMENT drv3d_dx12::get_application_DRED_enablement_from_registry(
     return result;
   }
 
-  eastl::vector<char> nameBuf;
+  std::vector<char> nameBuf;
   nameBuf.resize(maxSubKeyLength + 1, '\0');
 
-  eastl::vector<char> valueBuf;
+  std::vector<char> valueBuf;
 
   for (DWORD k = 0; k < subKeyCount; ++k)
   {

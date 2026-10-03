@@ -110,7 +110,7 @@ if(MSVC)
         /Zc:wchar_t
         /Zp8
         /J
-        /JMC
+        $<$<NOT:$<CXX_COMPILER_ID:Clang>>:/JMC>
         /bigobj
         $<$<CONFIG:Debug>:${CrtRuntime_DEBUG}>
         $<$<CONFIG:Release>:${CrtRuntime_RELEASE}>

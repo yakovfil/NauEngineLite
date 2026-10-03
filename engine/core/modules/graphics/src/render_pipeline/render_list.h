@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include <EASTL/vector.h>
+#include <memory>
+#include <vector>
 
+#include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/math/dag_frustum.h"
-#include "graphics_assets/material_asset.h"
 #include "render_entity.h"
 
 namespace nau
@@ -16,13 +17,12 @@ namespace nau
     class RenderList
     {
     public:
-
-        using Ptr = eastl::shared_ptr<RenderList>;
+        using Ptr = std::shared_ptr<RenderList>;
 
         RenderList() = default;
-        RenderList(eastl::vector<RenderList::Ptr>&& vec);
+        RenderList(std::vector<RenderList::Ptr>&& vec);
 
-        inline eastl::vector<RenderEntity>& getEntities()
+        inline std::vector<RenderEntity>& getEntities()
         {
             return m_entities;
         }
@@ -53,7 +53,7 @@ namespace nau
         }
 
     protected:
-        eastl::vector<RenderEntity> m_entities;
+        std::vector<RenderEntity> m_entities;
     };
 
 } // namespace nau

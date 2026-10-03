@@ -36,9 +36,9 @@ MaybeChildComponent deserialize_init_component_typeless(ecs::component_type_t ty
 bool deserialize_component_typeless(EntityComponentRef &attr, const DeserializerCb &deserializer); // type is in EntityComponentRef
 bool deserialize_component_typeless(void *raw_data, component_type_t type_name, const DeserializerCb &deserializer);
 
-void serialize_child_component(const ChildComponent &comp, SerializerCb &serializer); // write type, than
+NAU_DAGORECS_EXPORT void serialize_child_component(const ChildComponent &comp, SerializerCb &serializer); // write type, than
                                                                                       // serialize_entity_component_ref_typeless
-MaybeChildComponent deserialize_child_component(const DeserializerCb &serializer); // Empty optional<> means non recoverable error (bad
+NAU_DAGORECS_EXPORT MaybeChildComponent deserialize_child_component(const DeserializerCb &serializer); // Empty optional<> means non recoverable error (bad
                                                                                    // stream, unknown component type, ...)
 
 void write_string(ecs::SerializerCb &cb, const char *pStr, uint32_t max_string_len);

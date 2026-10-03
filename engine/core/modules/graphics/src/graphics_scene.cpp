@@ -5,6 +5,12 @@
 
 #include <nau/service/service_provider.h>
 
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <span>
+#include <vector>
+
 #include "graphics_impl.h"
 #include "nau/animation/components/skeleton_component.h"
 #include "nau/debugRenderer/debug_render_system.h"
@@ -29,17 +35,17 @@ namespace nau
         m_worldUid(worldUid)
     {
         m_renderScene = nau::rtti::createInstance<nau::RenderScene>();
-        auto mainView = eastl::make_shared<nau::RenderView>("Main View");
+        auto mainView = std::make_shared<nau::RenderView>("Main View");
         mainView->addTag(nau::RenderScene::Tags::opaqueTag);
         m_renderScene->addView(mainView);
 
         for (int i = 0; i < nau::csm::CascadeShadows::MAX_CASCADES; ++i)
         {
-            auto csmView = eastl::make_shared<nau::RenderView>(nau::utils::format("{}_{}", "csmView", i).c_str());
+            auto csmView = std::make_shared<nau::RenderView>(nau::utils::format("{}_{}", "csmView", i).c_str());
             csmView->addTag(nau::RenderScene::Tags::shadowCascadeTag);
             csmView->setUserData((void*)i);
             nau::RenderView* csmViewPtr = csmView.get();
-            auto csmFilter = eastl::function<bool(const InstanceInfo&)>([csmViewPtr](const InstanceInfo& info)
+            auto csmFilter = std::function<bool(const InstanceInfo&)>([csmViewPtr](const InstanceInfo& info)
             {
                 return info.isCastShadow && csmViewPtr->getFrustum().testSphere(info.worldSphere) != 0;
             });
@@ -48,10 +54,10 @@ namespace nau
             m_renderScene->addView(csmView);
         }
 
-        auto translucentView = eastl::make_shared<nau::RenderView>("Main View (Translucent)");
+        auto translucentView = std::make_shared<nau::RenderView>("Main View (Translucent)");
         translucentView->addTag(nau::RenderScene::Tags::translucentTag);
 
-        auto translucentFilter = eastl::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr material)
+        auto translucentFilter = std::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr material)
         {
             nau::BlendMode mode = material->getBlendMode("default");
             return mode != nau::BlendMode::Opaque && mode != nau::BlendMode::Masked;
@@ -72,12 +78,12 @@ namespace nau
         co_return;
     }
 
-    async::Task<> GraphicsScene::activateComponents(eastl::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
+    async::Task<> GraphicsScene::activateComponents(std::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
     {
         using namespace nau::async;
         using namespace nau::scene;
 
-        const bool hasAcceptableComponents = eastl::any_of(components.begin(), components.end(), [](const scene::Component* component)
+        const bool hasAcceptableComponents = std::any_of(components.begin(), components.end(), [](const scene::Component* component)
         {
             return component->is<StaticMeshComponent>() ||
                    component->is<BillboardComponent>() ||
@@ -96,12 +102,12 @@ namespace nau
         ASYNC_SWITCH_EXECUTOR(Executor::getDefault())
 
         // Async objects creation step
-        eastl::vector<Task<StaticMeshNode>> staticMeshes;
-        eastl::vector<Task<SkinnedMeshNode>> skinnedMeshes;
-        eastl::vector<Task<BillboardNode>> billboards;
-        eastl::vector<DirectionalLightNode> directionalLights;
-        eastl::vector<EnvironmentNode> envNodes;
-        eastl::vector<LightNode> lights;
+        std::vector<Task<StaticMeshNode>> staticMeshes;
+        std::vector<Task<SkinnedMeshNode>> skinnedMeshes;
+        std::vector<Task<BillboardNode>> billboards;
+        std::vector<DirectionalLightNode> directionalLights;
+        std::vector<EnvironmentNode> envNodes;
+        std::vector<LightNode> lights;
 
         for (const Component* component : components)
         {
@@ -248,7 +254,7 @@ namespace nau
         }
     }
 
-    async::Task<> GraphicsScene::deactivateComponents(eastl::span<const scene::DeactivatedComponentData> components)
+    async::Task<> GraphicsScene::deactivateComponents(std::span<const scene::DeactivatedComponentData> components)
     {
         using namespace nau::scene;
 
@@ -257,7 +263,7 @@ namespace nau
 
         const auto componentRemoved = [&components](Uid uid)
         {
-            return eastl::any_of(components.begin(), components.end(), [&uid](const DeactivatedComponentData& c)
+            return std::any_of(components.begin(), components.end(), [&uid](const DeactivatedComponentData& c)
             {
                 return c.componentUid == uid;
             });
@@ -720,7 +726,7 @@ namespace nau
         return !m_directionalLights.empty();
     }
 
-    const eastl::vector<DirectionalLightNode>& GraphicsScene::getDirectionalLights() const
+    const std::vector<DirectionalLightNode>& GraphicsScene::getDirectionalLights() const
     {
         return m_directionalLights;
     }

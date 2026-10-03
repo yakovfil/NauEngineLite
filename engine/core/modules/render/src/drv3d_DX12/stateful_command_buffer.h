@@ -3,15 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "driver.h"
-#include "drv3d_commonCode/validation.h"
+#include <algorithm>
+#include <iterator>
+#include <span>
+
+#include "command_list.h"
 #include "constants.h"
 #include "d3d12_utils.h"
-#include "versioned_com_ptr.h"
-#include "render_state.h"
+#include "driver.h"
+#include "drv3d_commonCode/validation.h"
 #include "pipeline_cache.h"
-#include "command_list.h"
-
+#include "render_state.h"
+#include "versioned_com_ptr.h"
 
 namespace drv3d_dx12
 {
@@ -218,7 +221,7 @@ class StatefulCommandBuffer
 
     void resetActiveBindlessAddresses()
     {
-      eastl::fill(eastl::begin(activeBindlessHeapAddress), eastl::end(activeBindlessHeapAddress), D3D12_GPU_DESCRIPTOR_HANDLE{0});
+        std::fill(std::begin(activeBindlessHeapAddress), std::end(activeBindlessHeapAddress), D3D12_GPU_DESCRIPTOR_HANDLE{0});
     }
 
     bool needsBindlessSamplerSet() const { return bindlessHeapAddress[0] != activeBindlessHeapAddress[0]; }
@@ -836,26 +839,26 @@ public:
     graphicsState.markChange(GraphicsState::DirtySet::BLEND_CONSTANT_FACTOR, change);
   }
 
-  void setScissorRects(eastl::span<const D3D12_RECT> rects)
+  void setScissorRects(std::span<const D3D12_RECT> rects)
   {
-    if (rects.size() != graphicsState.dynamicState.scissorCount ||
-        !eastl::equal(rects.begin(), rects.end(), graphicsState.dynamicState.scissorRects))
-    {
-      graphicsState.markChange(GraphicsState::DirtySet::SCISSOR_RECT, true);
-      eastl::copy_n(rects.begin(), rects.size(), graphicsState.dynamicState.scissorRects);
-      graphicsState.dynamicState.scissorCount = rects.size();
-    }
+      if (rects.size() != graphicsState.dynamicState.scissorCount ||
+          !std::equal(rects.begin(), rects.end(), graphicsState.dynamicState.scissorRects))
+      {
+          graphicsState.markChange(GraphicsState::DirtySet::SCISSOR_RECT, true);
+          std::copy_n(rects.begin(), rects.size(), graphicsState.dynamicState.scissorRects);
+          graphicsState.dynamicState.scissorCount = rects.size();
+      }
   }
 
-  void setViewports(eastl::span<const D3D12_VIEWPORT> viewports)
+  void setViewports(std::span<const D3D12_VIEWPORT> viewports)
   {
-    if (viewports.size() != graphicsState.dynamicState.viewportCount ||
-        !eastl::equal(viewports.begin(), viewports.end(), graphicsState.dynamicState.viewports))
-    {
-      graphicsState.markChange(GraphicsState::DirtySet::VIEWPORT, true);
-      eastl::copy_n(viewports.begin(), viewports.size(), graphicsState.dynamicState.viewports);
-      graphicsState.dynamicState.viewportCount = viewports.size();
-    }
+      if (viewports.size() != graphicsState.dynamicState.viewportCount ||
+          !std::equal(viewports.begin(), viewports.end(), graphicsState.dynamicState.viewports))
+      {
+          graphicsState.markChange(GraphicsState::DirtySet::VIEWPORT, true);
+          std::copy_n(viewports.begin(), viewports.size(), graphicsState.dynamicState.viewports);
+          graphicsState.dynamicState.viewportCount = viewports.size();
+      }
   }
 
   void setRenderTargets(const D3D12_CPU_DESCRIPTOR_HANDLE rtvs[Driver3dRenderTarget::MAX_SIMRT], uint8_t rtv_count,
@@ -865,13 +868,13 @@ public:
     change = change || graphicsState.renderPassState.dsv != dsv;
     if (!change)
     {
-      change = !eastl::equal(eastl::begin(graphicsState.renderPassState.rtv), eastl::end(graphicsState.renderPassState.rtv), rtvs);
+        change = !std::equal(std::begin(graphicsState.renderPassState.rtv), std::end(graphicsState.renderPassState.rtv), rtvs);
     }
     if (change)
     {
       graphicsState.markChange(GraphicsState::DirtySet::RENDER_TARGETS, true);
 
-      eastl::copy(rtvs, rtvs + Driver3dRenderTarget::MAX_SIMRT, graphicsState.renderPassState.rtv);
+      std::copy(rtvs, rtvs + Driver3dRenderTarget::MAX_SIMRT, graphicsState.renderPassState.rtv);
       graphicsState.renderPassState.dsv = dsv;
       graphicsState.renderPassState.rtvCount = rtv_count;
     }

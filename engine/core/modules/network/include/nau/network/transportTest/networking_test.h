@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <string>
 
 #include "nau/network/napi/networking.h"
 
@@ -17,19 +18,19 @@ namespace nau
         NetworkingTest();
         ~NetworkingTest();
 
-        bool applyConfig(const eastl::string& data) override;
+        bool applyConfig(const std::string& data) override;
         bool init() override;
         bool shutdown() override;
         bool update() override;
 
         const INetworkingIdentity& identity() const override;
 
-        eastl::shared_ptr<INetworkingListener> createListener() override;
-        eastl::shared_ptr<INetworkingConnector> createConnector() override;
+        std::shared_ptr<INetworkingListener> createListener() override;
+        std::shared_ptr<INetworkingConnector> createConnector() override;
 
-        static eastl::unique_ptr<nau::INetworking> create()
+        static std::unique_ptr<nau::INetworking> create()
         {
-            return eastl::make_unique<NetworkingTest>();
+            return std::make_unique<NetworkingTest>();
         }
     };
 }  // namespace nau

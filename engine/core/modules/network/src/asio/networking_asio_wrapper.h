@@ -3,6 +3,7 @@
 
 #pragma once
 #include <asio.hpp>
+#include <string>
 
 #include "nau/memory/bytes_buffer.h"
 
@@ -21,8 +22,8 @@ namespace nau
         void write(const BytesBuffer& buffer);
         void read(BytesBuffer& buffer);
 
-        const eastl::string& localEndPoint() const;
-        const eastl::string& remoteEndPoint() const;
+        const std::string& localEndPoint() const;
+        const std::string& remoteEndPoint() const;
 
     private:
         void doWriteBuffer();
@@ -31,8 +32,8 @@ namespace nau
         asio::ip::tcp::socket m_socket;
         asio::streambuf m_read_buffer;
         asio::streambuf m_write_buffer;
-        mutable eastl::string m_localEndPoint;
-        mutable eastl::string m_remoteEndPoint;
+        mutable std::string m_localEndPoint;
+        mutable std::string m_remoteEndPoint;
     };
 
     class ASIO_Acceptor

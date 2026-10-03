@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "resourceScheduler.h"
-#include "nau/3d/dag_resourcePool.h"
+#include <span>
+#include <vector>
 
+#include "nau/3d/dag_resourcePool.h"
+#include "resourceScheduler.h"
 
 namespace dabfg
 {
@@ -44,9 +46,9 @@ private:
   void shutdownInternal() override;
 
   template <ResourceType RES_TYPE>
-  void prepareHeapType(eastl::span<uint32_t const> heapSizes);
+  void prepareHeapType(std::span<uint32_t const> heapSizes);
 
-private:
+  private:
   // We simulate a heap as a set of pre-allocated resources from pools,
   // stored in a separate contiguous container for every resource type.
   // This points to an offset of a simulated heap inside that container.
@@ -54,7 +56,7 @@ private:
 
   // We need to know which collection a resource is located in when
   // fetching it.
-  eastl::vector<PoolResourceType> resourceTypes;
+  std::vector<PoolResourceType> resourceTypes;
 };
 
 } // namespace dabfg

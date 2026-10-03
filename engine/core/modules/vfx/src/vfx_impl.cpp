@@ -3,8 +3,9 @@
 
 #include "vfx_impl.h"
 
-#include "vfx_mod_fx_instance.h"
+#include <string>
 
+#include "vfx_mod_fx_instance.h"
 
 namespace nau::vfx
 {
@@ -25,7 +26,7 @@ namespace nau::vfx
         return async::Task<>::makeResolved();
     }
 
-    void VFXManagerImpl::saveInstances(const eastl::string& filename) const
+    void VFXManagerImpl::saveInstances(const std::string& filename) const
     {
         nau::DataBlock rootBlock;
 
@@ -44,7 +45,7 @@ namespace nau::vfx
         }
     }
 
-    void VFXManagerImpl::loadInstances(const eastl::string& filename, const nau::MaterialAssetView::Ptr material)
+    void VFXManagerImpl::loadInstances(const std::string& filename, const nau::MaterialAssetView::Ptr material)
     {
         nau::DataBlock rootBlock;
 

@@ -6,13 +6,14 @@
 #include <nau/scene/scene.h>
 #include <pxr/usd/usd/stage.h>
 
+#include <string>
+
+#include "nau/assets/reloadable_asset_view.h"
+#include "nau/platform/windows/utils/uid.h"
+#include "nau/utils/result.h"
 #include "usd_prim_adapter.h"
 #include "usd_prim_translator.h"
 #include "usd_proxy/usd_proxy.h"
-#include "nau/platform/windows/utils/uid.h"
-#include "nau/utils/result.h"
-#include "nau/assets/reloadable_asset_view.h"
-
 
 namespace UsdTranslator
 {
@@ -36,7 +37,7 @@ namespace UsdTranslator
         uint64_t m_vfxTimeStamp;
         nau::Uid m_textureUID;
         nau::ReloadableAssetView::Ptr m_texture;
-        eastl::string m_path;
+        std::string m_path;
 
         nau::scene::ObjectWeakRef<nau::scene::SceneObject> m_obj;
     };

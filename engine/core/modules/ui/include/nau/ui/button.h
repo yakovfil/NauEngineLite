@@ -153,7 +153,7 @@ private:
 
     ButtonTransition m_transitionType {ButtonTransition::sprite};
     UIState m_currentStateType {UIState::normal};
-    std::unordered_map<UIState, eastl::unique_ptr<ButtonStateBase>> m_stateCache {};
+    std::unordered_map<UIState, std::unique_ptr<ButtonStateBase>> m_stateCache{};
 
     void InvokeClick();
 

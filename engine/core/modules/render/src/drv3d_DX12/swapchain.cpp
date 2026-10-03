@@ -2,8 +2,10 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "device.h"
+#include <algorithm>
+#include <utility>
 
+#include "device.h"
 #include "nau/3d/dag_lowLatency.h"
 
 using namespace drv3d_dx12;
@@ -17,7 +19,7 @@ using namespace drv3d_dx12;
 void frontend::Swapchain::setup(SetupInfo setup)
 {
 #if _TARGET_PC_WIN
-  waitableObject = eastl::move(setup.waitableObject);
+    waitableObject = std::move(setup.waitableObject);
 #endif
   if (!swapchainColorTex)
   {
@@ -257,7 +259,7 @@ bool backend::Swapchain::setup(Device &device, frontend::Swapchain &fe, DXGIFact
   {
     return false;
   }
-  output = eastl::move(sci.output);
+  output = std::move(sci.output);
 
   DX12_DEBUG_RESULT(factory->MakeWindowAssociation(sci.window, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_PRINT_SCREEN));
 
@@ -333,7 +335,7 @@ bool backend::Swapchain::setup(Device &device, frontend::Swapchain &fe, DXGIFact
 
   frontSetupInfo.colorImage = colorTarget.get();
   frontSetupInfo.presentMode = sci.presentMode;
-  fe.setup(eastl::move(frontSetupInfo));
+  fe.setup(std::move(frontSetupInfo));
 
   fe.waitForFrameStart();
 
@@ -432,12 +434,12 @@ bool backend::Swapchain::setGamma(float power)
   // Must be 0 and 1 on Xbox.
   gammaRamp.Offset.Red = gammaRamp.Offset.Green = gammaRamp.Offset.Blue = 0.f;
   gammaRamp.Scale.Red = gammaRamp.Scale.Green = gammaRamp.Scale.Blue = 1.f;
-  eastl::transform(gcc.ControlPointPositions, gcc.ControlPointPositions + gcc.NumGammaControlPoints, gammaRamp.GammaCurve,
-    [p = 1 / power](auto v) //
-    {
+  std::transform(gcc.ControlPointPositions, gcc.ControlPointPositions + gcc.NumGammaControlPoints, gammaRamp.GammaCurve,
+                 [p = 1 / power](auto v)  //
+  {
       auto f = powf(v, p);
       return DXGI_RGB{f, f, f};
-    });
+  });
 
   if (DX12_DEBUG_FAIL(output->SetGammaControl(&gammaRamp)))
   {
@@ -678,13 +680,13 @@ void backend::Swapchain::changeFullscreenExclusiveMode(bool is_exclusive)
 
 void backend::Swapchain::changeFullscreenExclusiveMode(bool is_exclusive, ComPtr<IDXGIOutput> in_output)
 {
-  eastl::swap(output, in_output);
-  changeFullscreenExclusiveMode(is_exclusive);
-  // when no output is explicitly set, we grab it from the swapchain
-  if (!output)
-  {
-    DX12_DEBUG_RESULT(swapchain->GetContainingOutput(&output));
-  }
+    std::swap(output, in_output);
+    changeFullscreenExclusiveMode(is_exclusive);
+    // when no output is explicitly set, we grab it from the swapchain
+    if (!output)
+    {
+        DX12_DEBUG_RESULT(swapchain->GetContainingOutput(&output));
+    }
   isInExclusiveFullscreenModeEnabled = isInExclusiveFullscreenMode();
 }
 #endif
@@ -820,7 +822,7 @@ bool drv3d_dx12::backend::AdditionalSwapchain::setup(Device& device, DXGIFactory
 
     DX12_DEBUG_RESULT(swapchain->SetMaximumFrameLatency(FRAME_LATENCY));
 
-    output = eastl::move(sci.output);
+    output = std::move(sci.output);
     // when no output is explicitly set, we grab it from the swapchain
     if (!output)
     {

@@ -1,10 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include "nau/memory/aligned_allocator.h"
 
 #include <memory>
+#include <unordered_map>
+#include <utility>
+
 #include "nau/utils/performance_profiling.h"
-#include "nau/memory/aligned_allocator.h"
 
 namespace nau
 {
@@ -29,7 +32,7 @@ namespace nau
                 info.m_unaligned = unaligned;
                 info.m_size = size;
                 info.m_alignment = alignment;
-// TODO Tracy                TracyAllocN(unaligned, reserved, m_name.value().c_str());
+                // TODO Tracy                TracyAllocN(unaligned, reserved, m_name.value().c_str());
                 return aligned;
             }
         }
@@ -64,7 +67,7 @@ namespace nau
         if (info.first != nullptr)
         {
             this->deallocate(info.first->m_unaligned);
-// TODO Tracy            TracyFreeN(info.first->m_unaligned, m_name.value().c_str());
+            // TODO Tracy            TracyFreeN(info.first->m_unaligned, m_name.value().c_str());
             info.second->erase(ptr);
         }
     }
@@ -98,24 +101,24 @@ namespace nau
         return isAligned(ptr);
     }
 
-    eastl::pair<IAlignedAllocator::AllocationInfo*, eastl::unordered_map<void*, IAlignedAllocator::AllocationInfo>*> IAlignedAllocator::getAllocationInfo(const void* ptr) const
+    std::pair<IAlignedAllocator::AllocationInfo*, std::unordered_map<void*, IAlignedAllocator::AllocationInfo>*> IAlignedAllocator::getAllocationInfo(const void* ptr) const
     {
         // Retreive allocation info
         // First, look in current thread data
         // If not, check in other threads
         // Not thread safe
         IAlignedAllocator::AllocationInfo* info = nullptr;
-        eastl::unordered_map<void*, IAlignedAllocator::AllocationInfo>* mapPtr = nullptr;
-        if (m_allocations.value().contains(ptr))
+        std::unordered_map<void*, IAlignedAllocator::AllocationInfo>* mapPtr = nullptr;
+        if (m_allocations.value().contains(const_cast<void*>(ptr)))
         {
             info = &m_allocations.value()[const_cast<void*>(ptr)];
             mapPtr = &m_allocations.value();
         }
         else
         {
-            m_allocations.visitAll([&info, &mapPtr, ptr](eastl::unordered_map<void*, AllocationInfo>& allocation)
+            m_allocations.visitAll([&info, &mapPtr, ptr](std::unordered_map<void*, AllocationInfo>& allocation)
             {
-                if (allocation.contains(ptr))
+                if (allocation.contains(const_cast<void*>(ptr)))
                 {
                     info = &allocation[const_cast<void*>(ptr)];
                     mapPtr = &allocation;

@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "frustumClusters.h"
 #include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
@@ -13,9 +16,10 @@
 #include "nau/render/spotLightsManager.h"
 // #include <render/lights/tiledLights.h>
 
-#include <EASTL/array.h>
-#include <EASTL/bitset.h>
-#include <EASTL/fixed_function.h>
+#include <array>
+#include <bitset>
+
+#include "nau/utils/fixed_function.h"
 namespace nau::render
 {
     class ShadowSystem;
@@ -183,8 +187,8 @@ namespace nau::render
                             const math::Matrix4& globtm,
                             float hk,
                             nau::ConstSpan<math::BBox3> dynamicBoxes,
-                            eastl::fixed_function<sizeof(void*) * 2, StaticRenderCallback> render_static,
-                            eastl::fixed_function<sizeof(void*) * 2, DynamicRenderCallback> render_dynamic);
+                            nau::FixedFunction<sizeof(void*) * 2, StaticRenderCallback> render_static,
+                            nau::FixedFunction<sizeof(void*) * 2, DynamicRenderCallback> render_dynamic);
         void updateShadowBuffers();
        */
 
@@ -210,10 +214,10 @@ namespace nau::render
         */
 
     protected:
-        eastl::vector<uint16_t> visibleSpotLightsId;
-        eastl::vector<uint16_t> visibleOmniLightsId;
-        eastl::bitset<OmniLightsManager::MAX_LIGHTS> visibleOmniLightsIdSet;
-        eastl::bitset<SpotLightsManager::MAX_LIGHTS> visibleSpotLightsIdSet;
+        std::vector<uint16_t> visibleSpotLightsId;
+        std::vector<uint16_t> visibleOmniLightsId;
+        std::bitset<OmniLightsManager::MAX_LIGHTS> visibleOmniLightsIdSet;
+        std::bitset<SpotLightsManager::MAX_LIGHTS> visibleSpotLightsIdSet;
 
         FrustumClusters clusters;  //-V730_NOINIT
         static constexpr int MAX_FRAMES = 2;
@@ -310,12 +314,12 @@ namespace nau::render
             return id;
         }
 
-        eastl::vector<RenderOmniLight> renderOmniLights, renderFarOmniLights, debugOmniLights;
-        eastl::vector<RenderSpotLight> renderSpotLights, renderFarSpotLights, debugSpotLights;
-        eastl::vector<math::Matrix4> renderSpotLightsShadows;
-        eastl::vector<uint32_t> clustersOmniGrid, clustersSpotGrid;
-        eastl::vector<SpotLightsManager::mask_type_t> visibleSpotLightsMasks;
-        eastl::vector<OmniLightsManager::mask_type_t> visibleOmniLightsMasks;
+        std::vector<RenderOmniLight> renderOmniLights, renderFarOmniLights, debugOmniLights;
+        std::vector<RenderSpotLight> renderSpotLights, renderFarSpotLights, debugSpotLights;
+        std::vector<math::Matrix4> renderSpotLightsShadows;
+        std::vector<uint32_t> clustersOmniGrid, clustersSpotGrid;
+        std::vector<SpotLightsManager::mask_type_t> visibleSpotLightsMasks;
+        std::vector<OmniLightsManager::mask_type_t> visibleOmniLightsMasks;
         ReallocatableConstantBuffer<sizeof(RenderOmniLight) / 16, true> visibleOmniLightsCB, visibleFarOmniLightsCB;
         ReallocatableConstantBuffer<sizeof(RenderSpotLight) / 16, true> visibleSpotLightsCB, visibleFarSpotLightsCB;
 
@@ -334,8 +338,8 @@ namespace nau::render
         ReallocatableConstantBuffer<sizeof(RenderSpotLight) / 16, true> outOfFrustumVisibleSpotLightsCB;
         ReallocatableConstantBuffer<1, false> outOfFrustumCommonLightsShadowsCB;
 
-        eastl::array<UniqueBuf, MAX_FRAMES> lightsFullGridCB;
-        eastl::array<uint32_t, MAX_FRAMES> currentIndicesSize;
+        std::array<UniqueBuf, MAX_FRAMES> lightsFullGridCB;
+        std::array<uint32_t, MAX_FRAMES> currentIndicesSize;
         enum
         {
             NO_CLUSTERED_LIGHTS,
@@ -362,12 +366,12 @@ namespace nau::render
         /* TODO: Light shadows
         int maxShadowsToUpdateOnFrame = 4;                 // quality param
         float maxShadowDist = 120.f;// quality and scene param
-        eastl::unique_ptr<ShadowSystem> lightShadows;
-        eastl::unique_ptr<DistanceReadbackLights> dstReadbackLights;
+        std::unique_ptr<ShadowSystem> lightShadows;
+        std::unique_ptr<DistanceReadbackLights> dstReadbackLights;
         */
         dag::RelocatableFixedVector<uint16_t, SpotLightsManager::MAX_LIGHTS> dynamicSpotLightsShadows;  //-V730_NOINIT
         dag::RelocatableFixedVector<uint16_t, OmniLightsManager::MAX_LIGHTS> dynamicOmniLightsShadows;  //-V730_NOINIT
-        eastl::bitset<SpotLightsManager::MAX_LIGHTS> dynamicLightsShadowsVolumeSet;
+        std::bitset<SpotLightsManager::MAX_LIGHTS> dynamicLightsShadowsVolumeSet;
         bool buffersFilled = false;
         bool lightsInitialized = false;
 
@@ -412,7 +416,7 @@ namespace nau::render
         void renderPrims(MaterialAssetView::Ptr material, const char* pipeline, Sbuffer* replaced_buffer, int inst_count, int vstart, int vcount, int index_start, int fcount);
 
         /* TODO: support TiledLight
-        eastl::unique_ptr<TiledLights> tiledLights;
+        std::unique_ptr<TiledLights> tiledLights;
         */
     };
 }  // namespace nau::render

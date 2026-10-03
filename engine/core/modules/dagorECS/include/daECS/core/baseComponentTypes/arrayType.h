@@ -3,123 +3,144 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <daECS/core/component.h>
 #include <daECS/core/ecsHash.h>
 #include <daECS/utility/ecs_asserts.h>
-#include <daECS/core/component.h>
+
+#include <utility>
+#include <vector>
 
 namespace ecs
 {
 
-typedef eastl::vector<ChildComponent> BaseArray;
-class Array : protected BaseArray
-{
-public:
-  typedef BaseArray base_type;
-  typedef base_type::iterator iterator;
-  typedef base_type::const_iterator const_iterator;
-  using base_type::capacity;
-  using base_type::cbegin;
-  using base_type::cend;
-  using base_type::reserve;
-  using base_type::shrink_to_fit;
-  uint32_t size() const { return uint32_t(base_type::size()); }
-  iterator begin()
-  {
-    changeGen();
-    return base_type::begin();
-  }
-  iterator end() { return base_type::end(); }
-  const_iterator begin() const { return base_type::begin(); }
-  const_iterator end() const { return base_type::end(); }
-
-  bool empty() const { return size() == 0; }
-  void clear()
-  {
-    changeGen();
-    base_type::clear();
-  }
-  bool operator==(const Array &a) const;
-
-  ChildComponent &push_back(ChildComponent &&v)
-  {
-    changeGen();
-    base_type::emplace_back(eastl::move(v));
-    return base_type::back();
-  }
-  template <class T>
-  ChildComponent &push_back(T &&v)
-  {
-    changeGen();
-    base_type::emplace_back(eastl::move(v));
-    return base_type::back();
-  }
-  template <class T>
-  ChildComponent &push_back(const T &v)
-  {
-    changeGen();
-    base_type::emplace_back(v);
-    return base_type::back();
-  }
-  void pop_back()
-  {
-    changeGen();
-    base_type::pop_back();
-  }
-
-  iterator insert(const_iterator pos, ChildComponent &&v)
-  {
-    changeGen();
-    return base_type::insert(pos, eastl::move(v));
-  }
-  template <class T>
-  iterator insert(const_iterator pos, T &v)
-  {
-    changeGen();
-    return base_type::insert(pos, v);
-  }
-
-  iterator erase(const_iterator pos)
-  {
-    changeGen();
-    return base_type::erase(pos);
-  }
-  iterator erase(const_iterator first, const_iterator last)
-  {
-    changeGen();
-    return base_type::erase(first, last);
-  }
-
-  ChildComponent &operator[](size_t i)
-  {
-    changeGen();
-    return (base_type::operator[])(i);
-  }
-  ChildComponent &at(size_t i)
-  {
-    if (i >= size())
+    typedef std::vector<ChildComponent> BaseArray;
+    class Array : protected BaseArray
     {
-      NAU_ASSERT(0, "out of bounds access {} {}", i, size());
-      return emptyAttrRO;
-    }
-    changeGen();
-    return (base_type::operator[])(i);
-  }
-  const ChildComponent &operator[](size_t i) const { return (base_type::operator[])(i); }
+    public:
+        typedef BaseArray base_type;
+        typedef base_type::iterator iterator;
+        typedef base_type::const_iterator const_iterator;
+        using base_type::capacity;
+        using base_type::cbegin;
+        using base_type::cend;
+        using base_type::reserve;
+        using base_type::shrink_to_fit;
+        uint32_t size() const
+        {
+            return uint32_t(base_type::size());
+        }
+        iterator begin()
+        {
+            changeGen();
+            return base_type::begin();
+        }
+        iterator end()
+        {
+            return base_type::end();
+        }
+        const_iterator begin() const
+        {
+            return base_type::begin();
+        }
+        const_iterator end() const
+        {
+            return base_type::end();
+        }
 
-  const ChildComponent &at(size_t i) const
-  {
-    if (i >= size())
-    {
-      NAU_ASSERT(0, "out of bounds access {} {}", i, size());
-      return emptyAttrRO;
-    }
-    return (base_type::operator[])(i);
-  }
+        bool empty() const
+        {
+            return size() == 0;
+        }
+        void clear()
+        {
+            changeGen();
+            base_type::clear();
+        }
+        bool operator==(const Array& a) const;
 
-  bool replicateCompare(const Array &o)
-  {
-    if (gen == o.gen)
-    {
+        ChildComponent& push_back(ChildComponent&& v)
+        {
+            changeGen();
+            base_type::emplace_back(std::move(v));
+            return base_type::back();
+        }
+        template <class T>
+        ChildComponent& push_back(T&& v)
+        {
+            changeGen();
+            base_type::emplace_back(std::move(v));
+            return base_type::back();
+        }
+        template <class T>
+        ChildComponent& push_back(const T& v)
+        {
+            changeGen();
+            base_type::emplace_back(v);
+            return base_type::back();
+        }
+        void pop_back()
+        {
+            changeGen();
+            base_type::pop_back();
+        }
+
+        iterator insert(const_iterator pos, ChildComponent&& v)
+        {
+            changeGen();
+            return base_type::insert(pos, std::move(v));
+        }
+        template <class T>
+        iterator insert(const_iterator pos, T& v)
+        {
+            changeGen();
+            return base_type::insert(pos, v);
+        }
+
+        iterator erase(const_iterator pos)
+        {
+            changeGen();
+            return base_type::erase(pos);
+        }
+        iterator erase(const_iterator first, const_iterator last)
+        {
+            changeGen();
+            return base_type::erase(first, last);
+        }
+
+        ChildComponent& operator[](size_t i)
+        {
+            changeGen();
+            return (base_type::operator[])(i);
+        }
+        ChildComponent& at(size_t i)
+        {
+            if (i >= size())
+            {
+                NAU_ASSERT(0, "out of bounds access {} {}", i, size());
+                return emptyAttrRO;
+            }
+            changeGen();
+            return (base_type::operator[])(i);
+        }
+        const ChildComponent& operator[](size_t i) const
+        {
+            return (base_type::operator[])(i);
+        }
+
+        const ChildComponent& at(size_t i) const
+        {
+            if (i >= size())
+            {
+                NAU_ASSERT(0, "out of bounds access {} {}", i, size());
+                return emptyAttrRO;
+            }
+            return (base_type::operator[])(i);
+        }
+
+        bool replicateCompare(const Array& o)
+        {
+            if (gen == o.gen)
+            {
 #if NAU_DEBUG
       if (*this != o)
         {
@@ -154,9 +175,9 @@ public:
   } // do not change generation
   inline Array &operator=(Array &&a)
   {
-    ((base_type &)*this) = (base_type &&) eastl::move(a);
-    changeGen();
-    return *this;
+      ((base_type&)*this) = (base_type&&)std::move(a);
+      changeGen();
+      return *this;
   } // do not change generation
 
 protected:

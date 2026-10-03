@@ -1,11 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/components/skeleton_component.h"
 
 #include <ozz/animation/runtime/local_to_model_job.h>
 #include <ozz/base/span.h>
+
+#include <string>
+#include <vector>
 
 #include "nau/math/math.h"
 #include "nau/scene/scene_object.h"
@@ -21,7 +23,7 @@ namespace nau
         m_name = "Skeleton Component";
     }
 
-    const eastl::string& SkeletonComponent::getName() const
+    const std::string& SkeletonComponent::getName() const
     {
         return m_name;
     }
@@ -54,7 +56,7 @@ namespace nau
 
     void SkeletonComponent::setSkeletonToDefaultPose()
     {
-        const eastl::vector<math::Matrix4>& bindPose = m_skeletonAssetView->getDefaultPoseTransforms();
+        const std::vector<math::Matrix4>& bindPose = m_skeletonAssetView->getDefaultPoseTransforms();
 
         static_assert(sizeof(decltype(*models.data())) == sizeof(decltype(*bindPose.data())));
         std::memcpy(models.data(), bindPose.data(), getSkeleton().num_joints() * sizeof(decltype(*models.data())));
@@ -65,12 +67,12 @@ namespace nau
         return m_skeletonAssetView->getSkeleton();
     }
 
-    const eastl::vector<SkeletonJoint>& SkeletonComponent::getJoints() const
+    const std::vector<SkeletonJoint>& SkeletonComponent::getJoints() const
     {
         return m_skeletonAssetView->getJoints();
     }
 
-    const eastl::vector<nau::math::Matrix4>& SkeletonComponent::getInverseBindTransforms() const
+    const std::vector<nau::math::Matrix4>& SkeletonComponent::getInverseBindTransforms() const
     {
         return m_skeletonAssetView->getInverseBindTransforms();
     }

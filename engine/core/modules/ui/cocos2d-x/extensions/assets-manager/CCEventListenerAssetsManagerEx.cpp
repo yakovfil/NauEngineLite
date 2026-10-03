@@ -23,6 +23,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "CCEventListenerAssetsManagerEx.h"
 #include "CCEventAssetsManagerEx.h"
 #include "AssetsManagerEx.h"
@@ -64,7 +65,7 @@ bool EventListenerAssetsManagerEx::init(const AssetsManagerEx *AssetsManagerEx, 
         EventAssetsManagerEx *eventAssetsManagerEx = dynamic_cast<EventAssetsManagerEx*>(event);
         _onAssetsManagerExEvent(eventAssetsManagerEx);
     };
-    eastl::string pointer = eastl::string(eastl::string::CtorSprintf{}, "%p", AssetsManagerEx);
+    std::string pointer = cocos2d::StringUtils::format("%p", AssetsManagerEx);
     if (EventListenerCustom::init(LISTENER_ID + pointer, func))
     {
         ret = true;

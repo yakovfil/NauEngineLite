@@ -4,11 +4,13 @@
 
 #pragma once
 
+#include <algorithm>
+#include <string_view>
+#include <vector>
+
 #include "nau/animation/edit/animation_editor.h"
 #include "nau/animation/playback/animation.h"
 #include "nau/dataBlock/dag_dataBlock.h"
-
-#include <EASTL/vector.h>
 
 namespace nau::animation
 {
@@ -72,10 +74,11 @@ namespace nau::animation
         }
         virtual bool deleteKeyFrame(int frame) override
         {
-            if (auto eraseIt = eastl::remove_if(m_keyFrames.begin(), m_keyFrames.end(), [frame](const auto& kf)
-                {
-                    return kf.getFrame() == frame;
-                }); eraseIt != m_keyFrames.end())
+            if (auto eraseIt = std::remove_if(m_keyFrames.begin(), m_keyFrames.end(), [frame](const auto& kf)
+            {
+                return kf.getFrame() == frame;
+            });
+                eraseIt != m_keyFrames.end())
             {
                 m_keyFrames.erase(eraseIt);
                 return true;
@@ -112,11 +115,11 @@ namespace nau::animation
         {
             if (auto* frameData = getFrameData(frame))
             {
-                frameData->events.erase(eastl::remove_if(frameData->events.begin(), frameData->events.end(),
-                    [eventId](const auto& event)
-                    {
-                        return strcmp(event.getId().c_str(), eventId) == 0;
-                    }));
+                frameData->events.erase(std::remove_if(frameData->events.begin(), frameData->events.end(),
+                                                       [eventId](const auto& event)
+                {
+                    return strcmp(event.getId().c_str(), eventId) == 0;
+                }));
 
                 return true;
             }
@@ -132,14 +135,14 @@ namespace nau::animation
 
             return 0;
         }
-        virtual eastl::string_view getEventId(int frame, int index) const override
+        virtual std::string_view getEventId(int frame, int index) const override
         {
             if (const auto* frameData = getFrameData(frame))
             {
                 return frameData->events[index].getId();
             }
 
-            return eastl::string_view();
+            return std::string_view();
         }
 
         virtual void commit() override

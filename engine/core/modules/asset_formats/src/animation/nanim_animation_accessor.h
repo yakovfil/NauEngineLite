@@ -3,7 +3,8 @@
 
 
 #pragma once
-#include <EASTL/vector.h>
+#include <memory>
+#include <vector>
 
 #include "gltf/gltf_file.h"
 #include "nau/animation/data/frame.h"
@@ -35,15 +36,15 @@ namespace nau
         virtual nau::Ptr<ISkeletonAssetAccessor> getSkeletonAsset() const override;
 
         virtual SkeletonDataDescriptor getDescriptor() const override;
-        virtual void copyInverseBindMatrices(eastl::vector<math::mat4>& data) const override;
+        virtual void copyInverseBindMatrices(std::vector<math::mat4>& data) const override;
 
     private:
         void fromBlk(const class DataBlock& blk);
 
     private:
         AnimationDataDescriptor m_descriptor;
-        eastl::unique_ptr<KeyFramesData> m_data;
-        eastl::unique_ptr<SkeletalTracksData> m_skeletalData;
+        std::unique_ptr<KeyFramesData> m_data;
+        std::unique_ptr<SkeletalTracksData> m_skeletalData;
     };
 
 }  // namespace nau

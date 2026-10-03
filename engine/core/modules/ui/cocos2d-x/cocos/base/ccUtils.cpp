@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include "base/ccUtils.h"
 
 #include <cmath>
@@ -220,7 +221,7 @@ void captureNode(Node* startNode, std::function<void(Image*)> imageCallback, flo
     s_captureNodeListener[startNode] = listener;
 }
 
-std::vector<Node*> findChildren(const Node &node, const eastl::string &name)
+std::vector<Node*> findChildren(const Node &node, const std::string &name)
 {
     std::vector<Node*> vec;
     
@@ -366,7 +367,7 @@ Sprite* createSpriteFromBase64(const char* base64String)
     return sprite;
 }
 
-Node* findChild(Node* levelRoot, const eastl::string& name)
+Node* findChild(Node* levelRoot, const std::string& name)
 {
     if (levelRoot == nullptr || name.empty())
         return nullptr;

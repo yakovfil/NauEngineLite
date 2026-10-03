@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/span.h>
-
+#include <array>
 #include <concepts>
+#include <span>
 
 #include "nau/assets/scene_asset.h"
 #include "nau/rtti/ptr.h"
@@ -37,7 +36,7 @@ namespace nau::scene
 
         virtual SceneObject::Ptr createSceneObjectFromAsset(const SceneAsset& sceneAsset) = 0;
 
-        virtual SceneObject::Ptr createSceneObject(const rtti::TypeInfo* rootComponentType = nullptr, const eastl::span<const rtti::TypeInfo*> components = {}) = 0;
+        virtual SceneObject::Ptr createSceneObject(const rtti::TypeInfo* rootComponentType = nullptr, const std::span<const rtti::TypeInfo*> components = {}) = 0;
 
         template <std::derived_from<SceneComponent> ComponentType, std::derived_from<Component>... MoreComponents>
         ObjectUniquePtr<SceneObject> createSceneObject()

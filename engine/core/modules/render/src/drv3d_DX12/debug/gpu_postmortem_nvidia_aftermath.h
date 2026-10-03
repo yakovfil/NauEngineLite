@@ -5,20 +5,22 @@
 
 #if defined(HAS_GF_AFTERMATH)
 
-#include <EASTL/span.h>
-#include "nau/threading/critical_section.h"
+    #include <memory>
+    #include <span>
+    #include <utility>
 
-#include "drv3d_DX12/driver.h"
-#include "drv3d_DX12/pipeline.h"
-#include "drv3d_DX12/winapi_helpers.h"
-#include "command_list_storage.h"
-#include "call_stack.h"
-#include "configuration.h"
+    #include "call_stack.h"
+    #include "command_list_storage.h"
+    #include "configuration.h"
+    #include "drv3d_DX12/driver.h"
+    #include "drv3d_DX12/pipeline.h"
+    #include "drv3d_DX12/winapi_helpers.h"
+    #include "nau/threading/critical_section.h"
 
-// These headers are not self-contained and need to be included after driver.h
-#include <GFSDK_Aftermath.h>
-#include <GFSDK_Aftermath_GpuCrashDump.h>
-#include <GFSDK_Aftermath_GpuCrashDumpDecoding.h>
+    // These headers are not self-contained and need to be included after driver.h
+    #include <GFSDK_Aftermath.h>
+    #include <GFSDK_Aftermath_GpuCrashDump.h>
+    #include <GFSDK_Aftermath_GpuCrashDumpDecoding.h>
 
 
 namespace drv3d_dx12
@@ -75,7 +77,7 @@ class Aftermath
       }
     }
   };
-  using ContextPointer = eastl::unique_ptr<GFSDK_Aftermath_ContextHandle, ContextDeletor>;
+  using ContextPointer = std::unique_ptr<GFSDK_Aftermath_ContextHandle, ContextDeletor>;
   LibPointer library;
   ApiTable api;
   CommandListStorage<ContextPointer> commandListTable;
@@ -100,7 +102,11 @@ public:
   // Have to delete move constructor, otherwise compiler / templated stuff of variant tries to be smart and results in compile errors.
   Aftermath(Aftermath &&) = delete;
   Aftermath &operator=(Aftermath &&) = delete;
-  Aftermath(LibPointer &&lib, const ApiTable &table) : library{eastl::move(lib)}, api{table} {}
+  Aftermath(LibPointer&& lib, const ApiTable& table) :
+      library{std::move(lib)},
+      api{table}
+  {
+  }
   ~Aftermath()
   {
     if (api.disableGpuCrashDumps)
@@ -113,9 +119,9 @@ public:
   void configure();
   void beginCommandBuffer(ID3D12Device *device, ID3D12GraphicsCommandList *cmd);
   void endCommandBuffer(ID3D12GraphicsCommandList *cmd);
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text, eastl::span<const char> full_path);
-  void endEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> full_path);
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text);
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text, std::span<const char> full_path);
+  void endEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> full_path);
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text);
   void draw(const call_stack::CommandData &debug_info, D3DGraphicsCommandList *cmd, const PipelineStageStateBase &vs,
     const PipelineStageStateBase &ps, BasePipeline &pipeline_base, PipelineVariant &pipeline, uint32_t count, uint32_t instance_count,
     uint32_t start, uint32_t first_instance, D3D12_PRIMITIVE_TOPOLOGY topology);
@@ -170,7 +176,7 @@ public:
     // Aftermath module.
     // This is done as the dump functions take a context pointer, we could
     // either allocate a pointer from the heap or use the pointer of this.
-    auto &tracer = target.template emplace<Aftermath>(eastl::move(lib), api);
+    auto& tracer = target.template emplace<Aftermath>(std::move(lib), api);
     if (!tracer.tryEnableDumps())
     {
       return false;

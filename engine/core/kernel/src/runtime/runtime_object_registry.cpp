@@ -3,6 +3,11 @@
 
 #include "nau/runtime/internal/runtime_object_registry.h"
 
+#include <algorithm>
+#include <memory>
+#include <span>
+#include <vector>
+
 #include "nau/memory/singleton_memop.h"
 #include "nau/threading/lock_guard.h"
 #include "nau/utils/scope_guard.h"
@@ -159,11 +164,11 @@ namespace nau
 
         void removeExpiredEntries();
 
-        void visitObjects(void (*callback)(eastl::span<IRttiObject*>, void*), const rtti::TypeInfo*, void*) override;
+        void visitObjects(void (*callback)(std::span<IRttiObject*>, void*), const rtti::TypeInfo*, void*) override;
 
         std::recursive_mutex m_mutex;
         ObjectId m_objectId = 0;
-        eastl::vector<ObjectEntry> m_objects;
+        std::vector<ObjectEntry> m_objects;
     };
 
     RuntimeObjectRegistryImpl::~RuntimeObjectRegistryImpl()
@@ -209,7 +214,7 @@ namespace nau
             return;
         }
 
-        eastl::vector<IRttiObject*> instances;
+        std::vector<IRttiObject*> instances;
 
         scope_on_leave
         {
@@ -280,7 +285,7 @@ namespace nau
 
     void RuntimeObjectRegistryImpl::removeExpiredEntries()
     {
-        eastl::erase_if(m_objects, [](const ObjectEntry& entry)
+        std::erase_if(m_objects, [](const ObjectEntry& entry)
         {
             return entry.isExpired();
         });
@@ -309,7 +314,7 @@ namespace nau
     {
         lock_(m_mutex);
 
-        auto iter = eastl::find_if(m_objects.begin(), m_objects.end(), [objectId](const ObjectEntry& entry)
+        auto iter = std::find_if(m_objects.begin(), m_objects.end(), [objectId](const ObjectEntry& entry)
         {
             return entry.getObjectId() == objectId;
         });
@@ -321,7 +326,7 @@ namespace nau
     {
         auto& getRuntimeObjectRegistryRef()
         {
-            static eastl::unique_ptr<RuntimeObjectRegistryImpl> s_runtimeObjectRegistry;
+            static std::unique_ptr<RuntimeObjectRegistryImpl> s_runtimeObjectRegistry;
 
             return (s_runtimeObjectRegistry);
         }
@@ -343,7 +348,7 @@ namespace nau
     {
         NAU_ASSERT(!getRuntimeObjectRegistryRef());
 
-        getRuntimeObjectRegistryRef() = eastl::make_unique<RuntimeObjectRegistryImpl>();
+        getRuntimeObjectRegistryRef() = std::make_unique<RuntimeObjectRegistryImpl>();
     }
 
     void RuntimeObjectRegistry::releaseInstance()

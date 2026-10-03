@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
+#include <optional>
+#include <span>
+#include <string>
+#include <vector>
 
 #include "nau/assets/asset_accessor.h"
 #include "nau/async/task.h"
@@ -44,7 +46,7 @@ namespace nau
         size_t channelIndex = 0;
         DataType dataType = DataType::Unsupported;
         InterpolationType interpolation = InterpolationType::No;
-        eastl::string name;
+        std::string name;
 
         bool operator==(const AnimationDataDescriptor& other) const
         {
@@ -66,7 +68,7 @@ namespace nau
         /**
          * @brief Event string identifier.
          */
-        eastl::string name;
+        std::string name;
 
         /**
          * @brief Event activation type.
@@ -91,7 +93,7 @@ namespace nau
     struct FrameData
     {
         int frame;
-        eastl::vector<FrameEventData> events;
+        std::vector<FrameEventData> events;
     };
 
     /**
@@ -111,14 +113,14 @@ namespace nau
         /**
          * @brief A type of keframes timestamps collection. 
          */
-        using TTimesContainer = eastl::vector<float>;
+        using TTimesContainer = std::vector<float>;
 
         /**
          * @brief A type of per-keyframe data extracted from the asset.
          */
-        template<typename TData>
-        using TDataContainer = eastl::vector<TData>;
-        
+        template <typename TData>
+        using TDataContainer = std::vector<TData>;
+
         /** 
          * @brief Retrieves vector frame data from the asset.
          * 

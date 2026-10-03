@@ -3,19 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_function.h>
+#include <string>
 
+#include "graphics_assets/material_asset.h"
+#include "nau/3d/dag_drv3d.h"
 #include "nau/math/dag_IBBox2.h"
 #include "nau/math/dag_IBBox3.h"
 #include "nau/math/dag_frustum.h"
-#include "nau/3d/dag_drv3d.h"
-#include "graphics_assets/material_asset.h"
-
+#include "nau/utils/fixed_function.h"
 
 namespace nau::csm
 {
-    typedef eastl::fixed_function<sizeof(void *) * 4, void(int num_cascades_to_render, bool clear_per_view)> csm_render_cascades_cb_t;
-
+    typedef nau::FixedFunction<sizeof(void*) * 4, void(int num_cascades_to_render, bool clear_per_view)> csm_render_cascades_cb_t;
 
     class ICascadeShadowsClient
     {
@@ -115,8 +114,7 @@ namespace nau::csm
         BaseTexture* getShadowsCascade() const;
         const nau::math::Vector2& getZnZf(int cascade_no) const;
 
-        const eastl::string& setShadowCascadeDistanceDbg(const nau::math::Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h,
-            float shadow_distance, float pow_weight);
+        const std::string& setShadowCascadeDistanceDbg(const nau::math::Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h, float shadow_distance, float pow_weight);
 
         void debugSetParams(float shadow_depth_bias, float shadow_const_depth_bias, float shadow_depth_slope_bias);
 

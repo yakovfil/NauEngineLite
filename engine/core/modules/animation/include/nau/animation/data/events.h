@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/messaging/messaging.h"
 #include "nau/meta/class_info.h"
-
-#include "EASTL/string.h"
 
 namespace nau::animation::events
 {
@@ -22,8 +22,8 @@ namespace nau::animation::events
             CLASS_FIELD(eventId)
         )
 
-        eastl::string trackName;
-        eastl::string eventId;
+        std::string trackName;
+        std::string eventId;
     };
 
     NAU_DECLARE_MESSAGE(AnimTrackPlaybackEvent, ANIMATION_FRAME_EVENTS_STREAM_NAME, FrameEventData);

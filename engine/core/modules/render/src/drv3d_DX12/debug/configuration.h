@@ -3,9 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string_view.h>
-#include "nau/dataBlock/dag_dataBlock.h"
+#include <string_view>
 
+#include "nau/dataBlock/dag_dataBlock.h"
 
 namespace drv3d_dx12::debug
 {
@@ -148,7 +148,7 @@ union Configuration
     enableGPUDumps = false;
   }
 
-  void applyDebugProfile(eastl::string_view profile)
+  void applyDebugProfile(std::string_view profile)
   {
     if (profile.empty())
     {

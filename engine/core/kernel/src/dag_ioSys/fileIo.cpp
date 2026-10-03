@@ -2,10 +2,11 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <EASTL/span.h>
 #include <nau/dag_ioSys/dag_fileIo.h>
 #include <nau/debug/dag_except.h>
 #include <nau/osApiWrappers/dag_files.h>
+
+#include <span>
 namespace nau::iosys
 {
     LFileGeneralSaveCB::LFileGeneralSaveCB(file_ptr_t handle) :
@@ -15,9 +16,9 @@ namespace nau::iosys
 
     void LFileGeneralSaveCB::write(const void* ptr, int size)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(SaveException("file not open", 0));
-        if(hal::df_write(fileHandle, (void*)ptr, size) != size)
+        if (hal::df_write(fileHandle, (void*)ptr, size) != size)
             NAU_THROW(SaveException("write error", tell()));
     }
 
@@ -28,33 +29,33 @@ namespace nau::iosys
 
     int LFileGeneralSaveCB::tell()
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(SaveException("file not open", 0));
         int o = hal::df_tell(fileHandle);
-        if(o == -1)
+        if (o == -1)
             NAU_THROW(SaveException("tell returns error", 0));
         return o;
     }
 
     void LFileGeneralSaveCB::seekto(int o)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(SaveException("file not open", 0));
-        if(hal::df_seek_to(fileHandle, o) == -1)
+        if (hal::df_seek_to(fileHandle, o) == -1)
             NAU_THROW(SaveException("seek error", tell()));
     }
 
     void LFileGeneralSaveCB::seektoend(int o)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(SaveException("file not open", 0));
-        if(hal::df_seek_end(fileHandle, o) == -1)
+        if (hal::df_seek_end(fileHandle, o) == -1)
             NAU_THROW(SaveException("seek error", tell()));
     }
 
     void LFileGeneralSaveCB::flush()
     {
-        if(fileHandle)
+        if (fileHandle)
             hal::df_flush(fileHandle);
     }
 
@@ -69,41 +70,41 @@ namespace nau::iosys
     }
     void LFileGeneralLoadCB::read(void* ptr, int size)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(LoadException("file not open", 0));
-        if(hal::df_read(fileHandle, ptr, size) != size)
+        if (hal::df_read(fileHandle, ptr, size) != size)
             NAU_THROW(LoadException("read error", tell()));
     }
     int LFileGeneralLoadCB::tryRead(void* ptr, int size)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             return 0;
         return hal::df_read(fileHandle, ptr, size);
     }
 
     int LFileGeneralLoadCB::tell()
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(LoadException("file not open", 0));
         int o = hal::df_tell(fileHandle);
-        if(o == -1)
+        if (o == -1)
             NAU_THROW(LoadException("tell returns error", 0));
         return o;
     }
 
     void LFileGeneralLoadCB::seekto(int o)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(LoadException("file not open", 0));
-        if(hal::df_seek_to(fileHandle, o) == -1)
+        if (hal::df_seek_to(fileHandle, o) == -1)
             NAU_THROW(LoadException("seek error", tell()));
     }
 
     void LFileGeneralLoadCB::seekrel(int o)
     {
-        if(!fileHandle)
+        if (!fileHandle)
             NAU_THROW(LoadException("file not open", 0));
-        if(hal::df_seek_rel(fileHandle, o) == -1)
+        if (hal::df_seek_rel(fileHandle, o) == -1)
             NAU_THROW(LoadException("seek error", tell()));
     }
 
@@ -118,7 +119,7 @@ namespace nau::iosys
         close();
         targetFilename = fname ? fname : "";
         targetDataSz = -1;
-        if(!fname)
+        if (!fname)
             return false;
         fileHandle = hal::df_open(fname, mode);
         targetDataSz = hal::df_length(fileHandle);
@@ -127,7 +128,7 @@ namespace nau::iosys
 
     void FullFileLoadCB::close()
     {
-        if(fileHandle)
+        if (fileHandle)
         {
             hal::df_close(fileHandle);
             fileHandle = NULL;
@@ -140,12 +141,12 @@ namespace nau::iosys
         blocks.emplace_back(Block{0, hal::df_length(fileHandle)});
     }
 
-    eastl::span<const char> FullFileLoadCB::getTargetRomData() const
+    std::span<const char> FullFileLoadCB::getTargetRomData() const
     {
         int data_sz = 0;
-        if(const char* data = hal::df_get_vromfs_file_data_for_file_ptr(fileHandle, data_sz))
+        if (const char* data = hal::df_get_vromfs_file_data_for_file_ptr(fileHandle, data_sz))
         {
-            const eastl::span<const char> res(data, data_sz);
+            const std::span<const char> res(data, data_sz);
             return res;
         }
         return {};
@@ -154,7 +155,7 @@ namespace nau::iosys
     FullFileSaveCB::FullFileSaveCB(const char* fname)
     {
         fileHandle = NULL;
-        open(fname, hal::DF_WRITE | hal:: DF_CREATE);
+        open(fname, hal::DF_WRITE | hal::DF_CREATE);
     }
 
     bool FullFileSaveCB::open(const char* fname, int mode)
@@ -167,7 +168,7 @@ namespace nau::iosys
 
     void FullFileSaveCB::close()
     {
-        if(fileHandle)
+        if (fileHandle)
         {
             hal::df_close(fileHandle);
             fileHandle = NULL;

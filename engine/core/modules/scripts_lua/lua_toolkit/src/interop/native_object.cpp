@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include <iostream>
+#include <memory>
 
 #include "lua_toolkit/lua_interop.h"
 #include "lua_toolkit/lua_utils.h"
-#include "EASTL/unique_ptr.h"
 
 namespace nau::lua_detail
 {
@@ -46,7 +46,7 @@ namespace nau::lua_detail
     class StdUniquePtrNativeObject final : public NativeObject
     {
     public:
-        StdUniquePtrNativeObject(eastl::unique_ptr<IRttiObject> obj) :
+        StdUniquePtrNativeObject(std::unique_ptr<IRttiObject> obj) :
             m_object(std::move(obj))
         {
             NAU_ASSERT(m_object);
@@ -58,7 +58,7 @@ namespace nau::lua_detail
         }
 
     private:
-        const eastl::unique_ptr<IRttiObject> m_object;
+        const std::unique_ptr<IRttiObject> m_object;
     };
 
     /**
@@ -288,7 +288,7 @@ namespace nau::lua
         return {};
     }
 
-    Result<> pushObject(lua_State* l, eastl::unique_ptr<IRttiObject> object, IClassDescriptor::Ptr classDescriptor)
+    Result<> pushObject(lua_State* l, std::unique_ptr<IRttiObject> object, IClassDescriptor::Ptr classDescriptor)
     {
         NAU_ASSERT(l);
         NAU_ASSERT(object);

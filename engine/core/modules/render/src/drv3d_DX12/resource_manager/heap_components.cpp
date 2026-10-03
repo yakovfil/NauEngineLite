@@ -2,6 +2,10 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <iterator>
+#include <utility>
+
 #include "drv3d_DX12/device.h"
 #include "nau/dataBlock/dag_dataBlock.h"
 
@@ -134,18 +138,21 @@ ResourceMemory first_allocate_from_heap(const D3D12_RESOURCE_ALLOCATION_INFO &al
 #if _TARGET_PC_WIN
 void MemoryBudgetObserver::updateBudgetLevelStatus()
 {
-  auto ref =
-    eastl::find_if(eastl::begin(poolBudgetLevels[device_local_memory_pool]), eastl::end(poolBudgetLevels[device_local_memory_pool]),
-      [budged = getAvailablePoolBudget(device_local_memory_pool)](auto level) //
-      { return level >= budged; });
-  poolBudgetLevelstatus[device_local_memory_pool] =
-    static_cast<BudgetPressureLevels>(ref - eastl::begin(poolBudgetLevels[device_local_memory_pool]));
+    auto ref =
+        std::find_if(std::begin(poolBudgetLevels[device_local_memory_pool]), std::end(poolBudgetLevels[device_local_memory_pool]),
+                     [budged = getAvailablePoolBudget(device_local_memory_pool)](auto level)  //
+    { return level >= budged;
+    });
+    poolBudgetLevelstatus[device_local_memory_pool] =
+        static_cast<BudgetPressureLevels>(ref - std::begin(poolBudgetLevels[device_local_memory_pool]));
 
-  ref = eastl::find_if(eastl::begin(poolBudgetLevels[host_local_memory_pool]), eastl::end(poolBudgetLevels[host_local_memory_pool]),
-    [budged = getAvailablePoolBudget(host_local_memory_pool)](auto level) //
-    { return level >= budged; });
-  poolBudgetLevelstatus[host_local_memory_pool] =
-    static_cast<BudgetPressureLevels>(ref - eastl::begin(poolBudgetLevels[host_local_memory_pool]));
+    ref = std::find_if(std::begin(poolBudgetLevels[host_local_memory_pool]), std::end(poolBudgetLevels[host_local_memory_pool]),
+                       [budged = getAvailablePoolBudget(host_local_memory_pool)](auto level)  //
+    {
+        return level >= budged;
+    });
+    poolBudgetLevelstatus[host_local_memory_pool] =
+        static_cast<BudgetPressureLevels>(ref - std::begin(poolBudgetLevels[host_local_memory_pool]));
 }
 
 void MemoryBudgetObserver::setup(const SetupInfo &info)
@@ -407,10 +414,12 @@ uint64_t MemoryBudgetObserver::getHeapSizeFromAllocationSize(uint64_t size, Reso
 
 void MemoryBudgetObserver::updateBudgetLevelStatus()
 {
-  auto ref = eastl::find_if(eastl::begin(poolBudgetLevels), eastl::end(poolBudgetLevels),
-    [budged = getDeviceLocalAvailablePoolBudget()](auto level) //
-    { return level >= budged; });
-  budgedPressureLevel = static_cast<BudgetPressureLevels>(ref - eastl::begin(poolBudgetLevels));
+    auto ref = std::find_if(std::begin(poolBudgetLevels), std::end(poolBudgetLevels),
+                            [budged = getDeviceLocalAvailablePoolBudget()](auto level)  //
+    {
+        return level >= budged;
+    });
+    budgedPressureLevel = static_cast<BudgetPressureLevels>(ref - std::begin(poolBudgetLevels));
 }
 
 void MemoryBudgetObserver::setup(const SetupInfo &info)
@@ -664,7 +673,7 @@ ResourceMemory ResourceMemoryHeapProvider::allocate(DXGIAdapter *adapter, ID3D12
     static const uint64_t budgetScaleNumerator = ::dgs_get_settings()->getBlockByNameEx("dx12")->getInt("budgetScaleNumerator", 2);
     static const uint64_t budgetScaleDenominator = ::dgs_get_settings()->getBlockByNameEx("dx12")->getInt("budgetScaleDenominator", 3);
     const uint64_t scaledBudget = budgetScaleNumerator * getDeviceLocalBudget() / budgetScaleDenominator;
-    const uint64_t budgetLimit = eastl::max(getDeviceLocalAvailableForReservation(), scaledBudget);
+    const uint64_t budgetLimit = std::max(getDeviceLocalAvailableForReservation(), scaledBudget);
     bool hasBudget = !flags.test(AllocationFlag::NEW_HEAPS_ONLY_WITH_BUDGET) || properties.isL0Pool || isUMASystem() ||
                      (poolStates[device_local_memory_pool].CurrentUsage < budgetLimit);
 #else
@@ -705,13 +714,13 @@ ResourceMemory ResourceMemoryHeapProvider::allocate(DXGIAdapter *adapter, ID3D12
           {
             continue;
           }
-          group[heapID.index] = eastl::move(newHeap);
+          group[heapID.index] = std::move(newHeap);
           break;
         }
 
         if (heapID.index == group.size())
         {
-          group.push_back(eastl::move(newHeap));
+            group.push_back(std::move(newHeap));
         }
 
         auto &heap = group[heapID.index];
@@ -771,8 +780,11 @@ void ResourceMemoryHeapProvider::free(ResourceMemory allocation)
   else
   {
     auto freeSize = getHeapGroupFreeMemorySize(heapID.group);
-    auto ref = eastl::find_if(begin(group), end(group),
-      [freeSize](auto &heap) { return static_cast<bool>(heap) && heap.totalSize <= freeSize; });
+    auto ref = std::find_if(begin(group), end(group),
+                            [freeSize](auto& heap)
+    {
+        return static_cast<bool>(heap) && heap.totalSize <= freeSize;
+    });
     if (ref != end(group))
     {
       updateHeapGroupNeedsDefragmentation(heapID.group, DefragmentationReason::FREE_UNUSED_HEAPS);

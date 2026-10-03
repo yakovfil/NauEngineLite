@@ -24,7 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 #include "base/CCNS.h"
-#include <EASTL/string.h>
+#include <string>
 #include <vector>
 #include <string.h>
 #include <stdlib.h>
@@ -43,10 +43,10 @@ static inline void split(const std::string& src, const std::string& token, strAr
     size_t nend = 0;
     size_t nbegin = 0;
     size_t tokenSize = token.size();
-    while(nend != eastl::string::npos)
+    while(nend != std::string::npos)
     {
         nend = src.find(token, nbegin);
-        if(nend == eastl::string::npos)
+        if(nend == std::string::npos)
             vect.push_back(src.substr(nbegin, src.length()-nbegin));
         else
             vect.push_back(src.substr(nbegin, nend-nbegin));
@@ -70,7 +70,7 @@ static bool splitWithForm(const std::string& content, strArray& strs)
         size_t nPosRight = content.find('}');
 
         // don't have '{' and '}'
-        CC_BREAK_IF(nPosLeft == eastl::string::npos || nPosRight == eastl::string::npos);
+        CC_BREAK_IF(nPosLeft == std::string::npos || nPosRight == std::string::npos);
         // '}' is before '{'
         CC_BREAK_IF(nPosLeft > nPosRight);
 
@@ -81,7 +81,7 @@ static bool splitWithForm(const std::string& content, strArray& strs)
         size_t nPos1 = pointStr.find('{');
         size_t nPos2 = pointStr.find('}');
         // contain '{' or '}' 
-        CC_BREAK_IF(nPos1 != eastl::string::npos || nPos2 != eastl::string::npos);
+        CC_BREAK_IF(nPos1 != std::string::npos || nPos2 != std::string::npos);
 
         split(pointStr, ",", strs);
         if (strs.size() != 2 || strs[0].length() == 0 || strs[1].length() == 0)
@@ -112,19 +112,19 @@ Rect RectFromString(const std::string& str)
         size_t nPosRight = content.find('}');
         for (int i = 1; i < 3; ++i)
         {
-            if (nPosRight == eastl::string::npos)
+            if (nPosRight == std::string::npos)
             {
                 break;
             }
             nPosRight = content.find('}', nPosRight + 1);
         }
-        CC_BREAK_IF(nPosLeft == eastl::string::npos || nPosRight == eastl::string::npos);
+        CC_BREAK_IF(nPosLeft == std::string::npos || nPosRight == std::string::npos);
 
         content = content.substr(nPosLeft + 1, nPosRight - nPosLeft - 1);
         size_t nPointEnd = content.find('}');
-        CC_BREAK_IF(nPointEnd == eastl::string::npos);
+        CC_BREAK_IF(nPointEnd == std::string::npos);
         nPointEnd = content.find(',', nPointEnd);
-        CC_BREAK_IF(nPointEnd == eastl::string::npos);
+        CC_BREAK_IF(nPointEnd == std::string::npos);
 
         // get the point string and size string
         const std::string pointStr = content.substr(0, nPointEnd);

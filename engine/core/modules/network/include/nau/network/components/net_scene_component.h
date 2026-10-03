@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+#include <string_view>
+
 #include "nau/async/task_base.h"
 #include "nau/diag/logging.h"
 #include "nau/network/components/net_component_api.h"
@@ -52,7 +55,7 @@ namespace nau
         /**
          * @brief Scene name setter
          */
-        void setSceneName(eastl::string_view name)
+        void setSceneName(std::string_view name)
         {
             m_sceneName = name;
         }
@@ -60,7 +63,7 @@ namespace nau
         /**
          * @brief Peer Id setter
          */
-        void setPeerId(eastl::string_view peerId)
+        void setPeerId(std::string_view peerId)
         {
             m_peerId = peerId;
         }
@@ -68,7 +71,7 @@ namespace nau
         /**
          * @brief Peer Id getter
          */
-        virtual eastl::string_view getPeerId() override
+        virtual std::string_view getPeerId() override
         {
             return m_peerId;
         }
@@ -76,7 +79,7 @@ namespace nau
         /**
          * @brief Scene name getter
          */
-        virtual eastl::string_view getSceneName() override
+        virtual std::string_view getSceneName() override
         {
             return m_sceneName;
         }
@@ -87,7 +90,7 @@ namespace nau
          * @param type - RTTI TypeInfo for component
          * @return Pointer to IComponentNetSync, valid until scene deactivation
          */
-        IComponentNetSync* getOrCreateComponent(eastl::string_view path, eastl::string_view type) override
+        IComponentNetSync* getOrCreateComponent(std::string_view path, std::string_view type) override
         {
             auto* sceneObject = findObjectByPath(&getParentObject(), path, "/");
             if (sceneObject != nullptr)
@@ -141,7 +144,7 @@ namespace nau
          * @brief Find child of specefied object by name
          * @return Pointer to SceneObject, valid until scene was changes
          */
-        inline scene::SceneObject* findObjectChild(scene::SceneObject* obj, const eastl::string_view childName)
+        inline scene::SceneObject* findObjectChild(scene::SceneObject* obj, const std::string_view childName)
         {
             auto childs = obj->getDirectChildObjects();
             for (auto* child : childs)
@@ -158,7 +161,7 @@ namespace nau
          * @brief Find child of specefied object by path
          * @return Pointer to SceneObject, valid until scene was changes
          */
-        scene::SceneObject* findObjectByPath(scene::SceneObject* root, const eastl::string_view path, const eastl::string_view delimiter)
+        scene::SceneObject* findObjectByPath(scene::SceneObject* root, const std::string_view path, const std::string_view delimiter)
         {
             if (path.empty())
             {
@@ -181,8 +184,8 @@ namespace nau
         }
 
         INetSnapshots* m_snapshots = nullptr;
-        eastl::string m_peerId = "PeerId";
-        eastl::string m_sceneName = "SceneName";
+        std::string m_peerId = "PeerId";
+        std::string m_sceneName = "SceneName";
         bool m_activated = false;
     };
 

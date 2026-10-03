@@ -57,7 +57,7 @@ namespace nau
                 std::cout << message.data.c_str() << std::endl;
 
                 g_consoleStyle.reset();
-            }, [&](const nau::diag::LoggerMessage& message) -> bool
+            }, [verbosity](const nau::diag::LoggerMessage& message) -> bool
             {
                 return verbosity ? true : message.level > nau::diag::LogLevel::Info;
             });

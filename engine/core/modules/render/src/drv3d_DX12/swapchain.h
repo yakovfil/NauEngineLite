@@ -3,8 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <vector>
 //#include <generic/dag_tab.h>
 #include "nau/supp/dag_comPtr.h"
 #include <atomic>
@@ -65,13 +65,13 @@ class Swapchain
   HandlePointer waitableObject;
 #endif
   PresentationMode presentMode = PresentationMode::UNSYNCED;
-  eastl::unique_ptr<BaseTex> swapchainColorTex;
+  std::unique_ptr<BaseTex> swapchainColorTex;
 #if _TARGET_XBOX
-  eastl::unique_ptr<BaseTex> swapchainSecondaryColorTex;
+  std::unique_ptr<BaseTex> swapchainSecondaryColorTex;
 #endif
-  eastl::unique_ptr<BaseTex> swapchainDepthStencilTex;
+  std::unique_ptr<BaseTex> swapchainDepthStencilTex;
 
-public:
+  public:
   struct SetupInfo
   {
 #if _TARGET_PC_WIN
@@ -161,14 +161,14 @@ class Swapchain
   struct SwapchainBufferInfo
   {
     ComPtr<ID3D12Resource> buffer;
-    eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> viewTable;
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> viewTable;
   };
-  eastl::vector<SwapchainBufferInfo> colorTargets;
-  eastl::unique_ptr<Image> colorTarget;
+  std::vector<SwapchainBufferInfo> colorTargets;
+  std::unique_ptr<Image> colorTarget;
 
 #if _TARGET_XBOX
-  eastl::vector<SwapchainBufferInfo> secondaryColorTargets;
-  eastl::unique_ptr<Image> secondaryColorTarget;
+  std::vector<SwapchainBufferInfo> secondaryColorTargets;
+  std::unique_ptr<Image> secondaryColorTarget;
 #endif
 
   bool isHdrEnabled = false;
@@ -178,9 +178,9 @@ class Swapchain
 
   DescriptorHeap<ShaderResouceViewStagingPolicy> swapchainBufferSRVHeap;
   DescriptorHeap<RenderTargetViewPolicy> swapchainBufferRTVHeap;
-  eastl::vector<ImageViewInfo> swapchainViewSet;
+  std::vector<ImageViewInfo> swapchainViewSet;
 #if _TARGET_XBOX
-  eastl::vector<ImageViewInfo> secondarySwapchainViewSet;
+  std::vector<ImageViewInfo> secondarySwapchainViewSet;
 #endif
 
 public:
@@ -277,13 +277,13 @@ public:
     struct SwapchainBufferInfo
     {
         ComPtr<ID3D12Resource> buffer;
-        //eastl::unique_ptr<Image> colorTarget;
+        // std::unique_ptr<Image> colorTarget;
         BaseTex* swapchainColorTex;
-        eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> viewTable;
+        std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> viewTable;
     };
 
-    eastl::vector<SwapchainBufferInfo> colorTargets;
-    eastl::vector<ImageViewInfo> swapchainViewSet;
+    std::vector<SwapchainBufferInfo> colorTargets;
+    std::vector<ImageViewInfo> swapchainViewSet;
 
     HANDLE waitableObject;
 

@@ -3,8 +3,11 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
 #include <thread>
 
+#include "main_loop/main_loop_service.h"
 #include "nau/app/application_lifecycle.h"
 #include "nau/app/application_services.h"
 #include "nau/app/main_loop/game_system.h"
@@ -53,7 +56,7 @@ namespace nau::test
         }
         Result<> configureApplication() override
         {
-            getServiceProvider().addService(eastl::make_unique<CreationResource>(disposed, destroyed));
+            getServiceProvider().addService(std::make_unique<CreationResource>(disposed, destroyed));
             return failConfiguration ? Result<>{NauMakeError("configuration diagnostic")} : Result<>{};
         }
         Result<> initializeApplication() override
@@ -85,8 +88,8 @@ namespace nau::test
         auto result = createApplicationChecked(delegate);
         ASSERT_FALSE(result);
         const auto message = result.getError()->getMessage();
-        EXPECT_NE(message.find("configuration diagnostic"), eastl::string::npos);
-        EXPECT_NE(message.find("cleanup diagnostic"), eastl::string::npos);
+        EXPECT_NE(message.find("configuration diagnostic"), std::string::npos);
+        EXPECT_NE(message.find("cleanup diagnostic"), std::string::npos);
         EXPECT_EQ(delegate.setupCalls, 0);
         EXPECT_EQ(delegate.disposed, 1);
         EXPECT_EQ(delegate.destroyed, 1);
@@ -98,7 +101,7 @@ namespace nau::test
         FailingCreation delegate(false);
         auto result = createApplicationChecked(delegate);
         ASSERT_FALSE(result);
-        EXPECT_NE(result.getError()->getMessage().find("module setup diagnostic"), eastl::string::npos);
+        EXPECT_NE(result.getError()->getMessage().find("module setup diagnostic"), std::string::npos);
         EXPECT_EQ(delegate.setupCalls, 1);
         EXPECT_EQ(delegate.disposed, 1);
         EXPECT_EQ(delegate.destroyed, 1);
@@ -169,7 +172,7 @@ namespace nau::test
         }
         Result<> initializeApplication() override
         {
-            getServiceProvider().addService(eastl::make_unique<StartupService>(m_state));
+            getServiceProvider().addService(std::make_unique<StartupService>(m_state));
             return {};
         }
 
@@ -259,7 +262,7 @@ namespace nau::test
         gate.reject(NauMakeError("deferred startup diagnostic"));
         EXPECT_TRUE(drainApplication(*app));
         ASSERT_TRUE(lifecycle.getLifecycleError());
-        EXPECT_NE(lifecycle.getLifecycleError()->getMessage().find("deferred startup diagnostic"), eastl::string::npos);
+        EXPECT_NE(lifecycle.getLifecycleError()->getMessage().find("deferred startup diagnostic"), std::string::npos);
         EXPECT_EQ(state.updates, 0);
         EXPECT_EQ(state.destroyed, 1);
         app.reset();
@@ -294,6 +297,51 @@ namespace nau::test
         expectCreationResourcesReleased();
     }
 
+    TEST(ApplicationFailures, StopDrainsDelegateStartupBeforeDestroyingServices)
+    {
+        StartupState state;
+        StartupDelegate delegate(state);
+        auto app = createApplication(delegate);
+        ASSERT_TRUE(app);
+        app->startupOnCurrentThread();
+        async::TaskSource<> gate;
+        getServiceProvider().get<MainLoopService>().setApplicationStartupTask(gate.getTask());
+        app->stop();
+        for (int i = 0; i < 10; ++i)
+        {
+            EXPECT_TRUE(app->step());
+        }
+        EXPECT_EQ(state.destroyed, 0);
+        EXPECT_EQ(state.updates, 0);
+        gate.resolve();
+        EXPECT_TRUE(drainApplication(*app));
+        EXPECT_EQ(state.destroyed, 1);
+        EXPECT_FALSE(app->as<ApplicationLifecycle&>().getLifecycleError());
+        app.reset();
+        expectCreationResourcesReleased();
+    }
+
+    TEST(ApplicationFailures, RejectedDelegateStartupStillCleansUpServices)
+    {
+        StartupState state;
+        StartupDelegate delegate(state);
+        auto app = createApplication(delegate);
+        ASSERT_TRUE(app);
+        app->startupOnCurrentThread();
+        async::TaskSource<> gate;
+        getServiceProvider().get<MainLoopService>().setApplicationStartupTask(gate.getTask());
+        app->stop();
+        EXPECT_TRUE(app->step());
+        gate.reject(NauMakeError("delegate startup diagnostic"));
+        EXPECT_TRUE(drainApplication(*app));
+        EXPECT_EQ(state.destroyed, 1);
+        auto error = app->as<ApplicationLifecycle&>().getLifecycleError();
+        ASSERT_TRUE(error);
+        EXPECT_NE(error->getMessage().find("delegate startup diagnostic"), std::string::npos);
+        app.reset();
+        expectCreationResourcesReleased();
+    }
+
     TEST(ApplicationFailures, PendingCleanupRetainsObjectsWithoutUpdatesOrDuplicateDisposal)
     {
         StartupState state;
@@ -301,7 +349,7 @@ namespace nau::test
         StartupDelegate delegate(state);
         auto app = createApplication(delegate);
         ASSERT_TRUE(app);
-        getServiceProvider().addService(eastl::make_unique<RegisteredCleanupResource>(cleanup));
+        getServiceProvider().addService(std::make_unique<RegisteredCleanupResource>(cleanup));
         app->startupOnCurrentThread();
         EXPECT_TRUE(app->step());
         const int updates = state.updates;

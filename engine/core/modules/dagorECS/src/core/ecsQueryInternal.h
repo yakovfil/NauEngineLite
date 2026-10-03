@@ -2,18 +2,24 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include <EASTL/vector.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/fixed_vector.h>
-#include <daECS/core/dataComponent.h> //for component_index_t
+#include <daECS/core/dataComponent.h>  //for component_index_t
+
+#include <bitset>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "nau/utils/dag_fixedVectorSet.h"
+#include "nau/utils/dynamic_bit_vector.h"
 
 namespace ecs
 {
     struct ArchetypesQuery;
 }
 
-DAG_DECLARE_RELOCATABLE(::ecs::ArchetypesQuery);
+// Owns a standard unique_ptr: use the move constructor, never byte relocation.
 
 namespace ecs
 {
@@ -42,7 +48,7 @@ struct ScheduledArchetypeComponentTrack // sizeof == 4, can be effectively hashe
 };
 
 static constexpr int MAX_OPTIONAL_PARAMETERS = 128;
-typedef eastl::bitset<MAX_OPTIONAL_PARAMETERS> OptionalMask;
+typedef std::bitset<MAX_OPTIONAL_PARAMETERS> OptionalMask;
 
 struct memfree_deleter
 {
@@ -86,17 +92,17 @@ struct alignas(16) ArchetypesQuery
   };
 
   typedef uint16_t offset_type_t;
-  static constexpr int INVALID_OFFSET = eastl::numeric_limits<offset_type_t>::max();
+  static constexpr int INVALID_OFFSET = std::numeric_limits<offset_type_t>::max();
   union
   {
     offset_type_t *allComponentsArchOffsets = nullptr; // if allocated externally, i.e. total amount of offsets is bigger than 4
     offset_type_t offsets[16]; // if allocated inline, i.e. maximum 8 offsets (2 archetype with 4 components, 4 with 2 or 8 archetypes
                                // with 1 component max)
   };
-  eastl::unique_ptr<ScheduledArchetypeComponentTrack[], memfree_deleter> trackedChanges; // todo:move out, used only if tracked changes
-                                                                                         // count is not 0. optimize 80% of cases where
-                                                                                         // it is not tracked, by allowing more data to
-                                                                                         // be stored inline
+  std::unique_ptr<ScheduledArchetypeComponentTrack[], memfree_deleter> trackedChanges;  // todo:move out, used only if tracked changes
+                                                                                        // count is not 0. optimize 80% of cases where
+                                                                                        // it is not tracked, by allowing more data to
+                                                                                        // be stored inline
   //-SoA
 
   size_t memUsage() const;
@@ -149,21 +155,25 @@ struct alignas(16) ArchetypesQuery
   }
   ~ArchetypesQuery() { reset(); }
   ArchetypesQuery() = default;
-  ArchetypesQuery(ArchetypesQuery &&a)  noexcept :
-    allComponentsArchOffsets(a.allComponentsArchOffsets),
-    roRW(a.roRW),
-    trackedChanges(eastl::move(a.trackedChanges)),
-    queriesCount(a.queriesCount),
-    trackedChangesCount(a.trackedChangesCount),
-    archSubQueriesCount(a.archSubQueriesCount),
-    queries(a.queries),
-    firstArch(a.firstArch),
-    secondArch(a.secondArch),
-    thirdArch(a.thirdArch)
+  ArchetypesQuery(ArchetypesQuery&& a) noexcept :
+      allComponentsArchOffsets(a.allComponentsArchOffsets),
+      roRW(a.roRW),
+      trackedChanges(std::move(a.trackedChanges)),
+      queriesCount(a.queriesCount),
+      trackedChangesCount(a.trackedChangesCount),
+      archSubQueriesCount(a.archSubQueriesCount),
+      queries(a.queries),
+      firstArch(a.firstArch),
+      secondArch(a.secondArch),
+      thirdArch(a.thirdArch)
   {
-    a.queries = nullptr;
-    a.queriesCount = 0;
-    a.allComponentsArchOffsets = nullptr;
+      if (a.isInplaceQueries())
+          std::memcpy(arches, a.arches, sizeof(arches));
+      if (a.isInplaceOffsets())
+          std::memcpy(offsets, a.offsets, sizeof(offsets));
+      a.queries = nullptr;
+      a.queriesCount = 0;
+      a.allComponentsArchOffsets = nullptr;
   }
 };
 
@@ -195,9 +205,9 @@ struct ResolvedQueryDesc // resolved query won't change ever (if it was successf
     uint16_t start, cnt;
     bool isInside(uint16_t a) const { return a >= start && a - start < cnt; }
   };
-  typedef dag::RelocatableFixedVector<component_index_t, 7, true, /* MidmemAlloc TODO Allocators.*/ EASTLAllocatorType, uint16_t> components_vec_t;
+  typedef dag::RelocatableFixedVector<component_index_t, 7, true, /* MidmemAlloc TODO Allocators.*/ nau::HeapByteAllocator, uint16_t> components_vec_t;
 
-private:
+  private:
   union
   {
     struct

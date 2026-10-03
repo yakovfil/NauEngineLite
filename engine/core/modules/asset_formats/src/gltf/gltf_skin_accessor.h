@@ -3,7 +3,8 @@
 
 
 #pragma once
-#include <EASTL/vector.h>
+#include <string_view>
+#include <vector>
 
 #include "gltf/gltf_file.h"
 #include "nau/assets/skeleton_asset_accessor.h"
@@ -30,10 +31,10 @@ namespace nau
         };
 
     public:
-        GltfSkinAssetAccessor(const GltfFile& file, size_t skinIndex, eastl::string_view skeletonPath, const eastl::vector<io::IFile::Ptr>& bufferFiles);
+        GltfSkinAssetAccessor(const GltfFile& file, size_t skinIndex, std::string_view skeletonPath, const std::vector<io::IFile::Ptr>& bufferFiles);
 
         virtual SkeletonDataDescriptor getDescriptor() const override;
-        virtual void copyInverseBindMatrices(eastl::vector<nau::math::Matrix4>& data) const override;
+        virtual void copyInverseBindMatrices(std::vector<nau::math::Matrix4>& data) const override;
 
     private:
         GltfSkinDataDescriptor m_descriptor;

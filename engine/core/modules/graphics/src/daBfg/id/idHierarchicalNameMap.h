@@ -3,12 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-#include <EASTL/fixed_string.h>
+#include <string_view>
+#include <type_traits>
+
+#include "dabfg/id/idIndexedMapping.h"
 #include "dabfg/id/idNameMap.h"
 #include "dabfg/id/idSparseNameMap.h"
-#include "dabfg/id/idIndexedMapping.h"
-
+#include "nau/utils/inline_string.h"
 
 namespace detail
 {
@@ -44,9 +45,9 @@ struct FirstOf<T, Ts...>
 template <class... Ts>
 class IdHierarchicalNameMap : private detail::PerTypeData<typename detail::FirstOf<Ts...>::Type, Ts>...
 {
-  static_assert((eastl::is_enum_v<Ts> && ...), "All Ts must be enum classes!");
+    static_assert((std::is_enum_v<Ts> && ...), "All Ts must be enum classes!");
 
-  using FolderT = typename detail::FirstOf<Ts...>::Type;
+    using FolderT = typename detail::FirstOf<Ts...>::Type;
 
 public:
   IdHierarchicalNameMap();
@@ -75,7 +76,7 @@ public:
   const char *getShortName(T id) const;
 
   template <class T>
-  T getNameId(eastl::string_view full_name) const;
+  T getNameId(std::string_view full_name) const;
 
   template <class T>
   uint32_t nameCount() const;
@@ -132,7 +133,7 @@ T IdHierarchicalNameMap<Ts...>::addNameId(FolderT folder, const char *name)
   if (const auto childId = folderChildren.get(name); childId != T::Invalid)
     return childId;
 
-  eastl::fixed_string<char, 256> fullPath;
+  nau::InlineString<char, 256> fullPath;
   fullPath.append(getName(folder));
   fullPath.append("/");
   fullPath.append(name);
@@ -141,8 +142,8 @@ T IdHierarchicalNameMap<Ts...>::addNameId(FolderT folder, const char *name)
   const auto childId = Data::fullPaths.addNameId(fullPath.c_str());
   Data::parents.set(childId, folder);
   folderChildren.add(name, childId);
-  if constexpr (eastl::is_same_v<T, FolderT>)
-    folders.expandMapping(childId);
+  if constexpr (std::is_same_v<T, FolderT>)
+      folders.expandMapping(childId);
 
   return childId;
 }
@@ -177,7 +178,7 @@ const char *IdHierarchicalNameMap<Ts...>::getShortName(T id) const
 
 template <class... Ts>
 template <class T>
-T IdHierarchicalNameMap<Ts...>::getNameId(eastl::string_view full_name) const
+T IdHierarchicalNameMap<Ts...>::getNameId(std::string_view full_name) const
 {
   using Data = detail::PerTypeData<FolderT, T>;
   return Data::fullPaths.getNameId(full_name);

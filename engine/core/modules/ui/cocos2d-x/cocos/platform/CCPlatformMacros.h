@@ -30,9 +30,12 @@ Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
 /**
  * Define some platform specific macros.
  */
+#include <string>
 #include "base/ccConfig.h"
 #include "platform/CCPlatformConfig.h"
 #include "platform/CCPlatformDefine.h"
+
+namespace cocos2d::StringUtils { std::string CC_DLL format(const char* format, ...); }
 
 /** @def CREATE_FUNC(__TYPE__)
  * Define a create function for a specific type, such as Layer.
@@ -207,7 +210,7 @@ private: varType varName; public: virtual inline varType get##funName() const { 
 #define CC_BREAK_IF(cond)           if(cond) break
 
 #define __CCLOGWITHFUNCTION(s, ...) \
-    cocos2d::log("%s : %s",__FUNCTION__, eastl::string(eastl::string::CtorSprintf{}, s, ##__VA_ARGS__).c_str())
+    cocos2d::log("%s : %s",__FUNCTION__, cocos2d::StringUtils::format(s, ##__VA_ARGS__).c_str())
 
 /// @name Cocos2d debug
 /// @{

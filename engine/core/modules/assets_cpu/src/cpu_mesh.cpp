@@ -4,6 +4,9 @@
 
 #include <cmath>
 #include <map>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "gltf/gltf_mesh_accessor.h"
 #include "nau/io/memory_stream.h"
@@ -82,7 +85,7 @@ namespace nau
                 return NauMakeError("CPU mesh: require glTF 2.0, one mesh and one external buffer");
             const auto& buffer = file.buffers.front();
             if (buffer.uri.empty() || buffer.uri == "." || buffer.uri == ".." ||
-                buffer.uri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-") != eastl::string::npos ||
+                buffer.uri.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-") != std::string::npos ||
                 buffer.byteLength == 0 || buffer.byteLength > 16 * 1024 * 1024)
                 return NauMakeError("CPU mesh: invalid external buffer URI or length");
             const auto& primitive = file.meshes.front().primitives.front();
@@ -94,7 +97,7 @@ namespace nau
             const auto count = file.accessors[pos->second].count;
             if (count == 0 || count > 65535)
                 return NauMakeError("CPU mesh: invalid vertex count");
-            const auto checkAccessor = [&](unsigned index, eastl::string_view type, unsigned format, unsigned components, unsigned expectedCount) -> Result<>
+            const auto checkAccessor = [&](unsigned index, std::string_view type, unsigned format, unsigned components, unsigned expectedCount) -> Result<>
             {
                 if (index >= file.accessors.size())
                     return NauMakeError("CPU mesh: accessor index out of range");
@@ -261,14 +264,14 @@ namespace nau
                 m_accessor(std::move(accessor))
             {
             }
-            nau::Ptr<> getAsset(eastl::string_view path) override
+            nau::Ptr<> getAsset(std::string_view path) override
             {
                 if (path == "mesh/0")
                     return m_accessor;
                 NAU_LOG_WARNING("CPU mesh: unsupported subresource {}", path);
                 return nullptr;
             }
-            eastl::vector<eastl::string> getContent() const override
+            std::vector<std::string> getContent() const override
             {
                 return {"mesh/0"};
             }
@@ -291,7 +294,7 @@ namespace nau
         return rtti::createInstance<CpuAssetFileSystem>(std::move(files));
     }
 
-    eastl::vector<eastl::string_view> CpuMeshContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> CpuMeshContainerLoader::getSupportedAssetKind() const
     {
         return {"gltf"};
     }
@@ -323,7 +326,7 @@ namespace nau
         auto copied = io::copyFromStream(bytes.data(), bytes.size(), *reader);
         if (!copied || *copied != bytes.size())
             co_return NauMakeError("CPU mesh: truncated buffer {}", binaryPath.getString());
-        eastl::vector<io::IFile::Ptr> buffers{rtti::createInstance<BufferFile>(binaryPath, std::move(bytes))};
+        std::vector<io::IFile::Ptr> buffers{rtti::createInstance<BufferFile>(binaryPath, std::move(bytes))};
         auto accessor = rtti::createInstance<GltfMeshAssetAccessor>(file, 0, buffers);
         co_return rtti::createInstance<CpuMeshContainer>(std::move(accessor));
     }
@@ -342,7 +345,7 @@ namespace nau
         co_return *std::move(result);
     }
 
-    eastl::vector<const rtti::TypeInfo*> CpuMeshViewFactory::getAssetViewTypes() const
+    std::vector<const rtti::TypeInfo*> CpuMeshViewFactory::getAssetViewTypes() const
     {
         return {&rtti::getTypeInfo<CpuMeshView>()};
     }

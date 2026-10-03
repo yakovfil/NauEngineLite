@@ -24,6 +24,7 @@ THE SOFTWARE.
 ****************************************************************************/
 
 
+#include <string>
 #include "2d/CCComponentContainer.h"
 #include "2d/CCComponent.h"
 #include "2d/CCNode.h"
@@ -39,7 +40,7 @@ ComponentContainer::~ComponentContainer()
 {  
 }
 
-Component* ComponentContainer::get(const eastl::string& name) const
+Component* ComponentContainer::get(const std::string& name) const
 {
     Component* ret = nullptr;
 
@@ -76,7 +77,7 @@ bool ComponentContainer::add(Component *com)
     return ret;
 }
 
-bool ComponentContainer::remove(const eastl::string& componentName)
+bool ComponentContainer::remove(const std::string& componentName)
 {
     bool ret = false;
     do 

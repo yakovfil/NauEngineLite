@@ -1,7 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
-
 #include "nau/async/work_queue.h"
+
+#include <chrono>
+#include <vector>
 
 #include "nau/async/task_base.h"
 #include "nau/rtti/rtti_impl.h"
@@ -26,7 +28,7 @@ namespace nau
     private:
         async::Task<> waitForWork() override;
 
-        void poll(std::optional<eastl::chrono::milliseconds> time = std::nullopt) override;
+        void poll(std::optional<std::chrono::milliseconds> time = std::nullopt) override;
 
         void notify() override;
 
@@ -67,7 +69,7 @@ namespace nau
         }
 
         std::mutex m_mutex;
-        eastl::vector<async::Executor::Invocation> m_invocations;
+        std::vector<async::Executor::Invocation> m_invocations;
         async::TaskSource<> m_signal;
         std::atomic<bool> m_isPolled = false;
         std::atomic<bool> m_isNotified = false;
@@ -107,11 +109,11 @@ namespace nau
         return m_signal.getTask();
     }
 
-    void WorkQueueImpl::poll(std::optional<eastl::chrono::milliseconds> timeout)
+    void WorkQueueImpl::poll(std::optional<std::chrono::milliseconds> timeout)
     {
         using namespace nau::async;
-        using namespace eastl::chrono;
-        using namespace eastl::chrono_literals;
+        using namespace std::chrono;
+        using namespace std::chrono_literals;
 
         using Timer = system_clock;
 
@@ -136,7 +138,7 @@ namespace nau
             return timeout->count() < dt.count();
         };
 
-        auto takeInvocations = [this](eastl::vector<Executor::Invocation>& invocations) mutable
+        auto takeInvocations = [this](std::vector<Executor::Invocation>& invocations) mutable
         {
             lock_(m_mutex);
             if (m_signal && m_signal.isReady())
@@ -158,7 +160,7 @@ namespace nau
             m_event.reset();
         };
 
-        eastl::vector<Executor::Invocation> invocations;
+        std::vector<Executor::Invocation> invocations;
 
         do
         {

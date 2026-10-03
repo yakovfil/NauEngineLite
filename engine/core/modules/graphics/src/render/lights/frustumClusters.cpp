@@ -4,6 +4,8 @@
 
 #include "frustumClusters.h"
 
+#include <array>
+
 #include "dag_occlusionTest.h"
 #include "lights_common.h"
 
@@ -545,7 +547,7 @@ namespace nau::render
             z1 != CLUSTERS_D - 1)  // it is very small, inside one cluster and so can't culled
             return items.itemsListCount;
 
-        eastl::array<uint8_t, (CLUSTERS_W + 1) * (CLUSTERS_H + 1) * (CLUSTERS_D + 1)> planeBits;
+        std::array<uint8_t, (CLUSTERS_W + 1) * (CLUSTERS_H + 1) * (CLUSTERS_D + 1)> planeBits;
         const int ez1 = min(z1 + 1, CLUSTERS_D);
         const int ey1 = min(y1 + 1, CLUSTERS_H + 1);
         const int ex1 = min(x1 + 1, CLUSTERS_W + 1);

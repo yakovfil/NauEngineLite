@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/algorithm.h>
+#include <algorithm>
 //#include <util/dag_globDef.h>
 
 #include "driver.h"
@@ -30,7 +30,7 @@ inline char *get_resource_name(ID3D12Resource *res, char (&cbuf)[N])
   wchar_t wcbuf[N];
   UINT cnt = sizeof(wcbuf);
   res->GetPrivateData(WKPDID_D3DDebugObjectNameW, &cnt, wcbuf);
-  eastl::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
+  std::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
   cbuf[Vectormath::min<uint32_t>(cnt, N - 1)] = '\0';
 #else
   G_UNUSED(res);

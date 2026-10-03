@@ -1,27 +1,27 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <fstream>
+#include <string>
+#include <vector>
 
+#include "material_creator.h"
 #include "nau/serialization/json_utils.h"
 #include "nau/serialization/serialization.h"
 #include "nau/string/string_conv.h"
-
-#include "material_creator.h"
 #include "shader_pack.h"
 
 struct Pipeline
 {
-    eastl::string name;
-    eastl::vector<eastl::string> shaders;
+    std::string name;
+    std::vector<std::string> shaders;
 };
 
 struct Arguments
 {
     fs::path material;
     fs::path shaderCache;
-    eastl::vector<Pipeline> pipelines;
+    std::vector<Pipeline> pipelines;
 };
 
 constexpr auto OutKey = "-o";
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    const eastl::u8string json = serialization::JsonUtils::stringify(*mat);
+    const std::u8string json = serialization::JsonUtils::stringify(*mat);
     file << strings::toStringView(json).data();
     if (!file)
     {
@@ -150,9 +150,9 @@ nau::Result<Arguments> parseArguments(int argc, char* argv[])
         {
             if (i + 1 < argc && argv[i + 1][0] != '-')
             {
-                eastl::string pipelineName = argv[++i];
+                std::string pipelineName = argv[++i];
 
-                eastl::vector<eastl::string> shaders;
+                std::vector<std::string> shaders;
                 while (i + 1 < argc && argv[i + 1][0] != '-')
                 {
                     shaders.emplace_back(argv[++i]);

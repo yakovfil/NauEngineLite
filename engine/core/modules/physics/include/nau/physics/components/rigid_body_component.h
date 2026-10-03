@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/meta/class_info.h"
 #include "nau/physics/components/colliders.h"
 #include "nau/physics/physics_body.h"
@@ -91,7 +93,7 @@ namespace nau::physics
         // TODO: Collision info must not present directly within RigidBodyComponent,
         // but instead it should be within
         using PhysicsBodyAction = Functor<void (IPhysicsBody& body)>;
-        using PhysicsBodyActions = eastl::vector<PhysicsBodyAction>;
+        using PhysicsBodyActions = std::vector<PhysicsBodyAction>;
 
         void applyPhysicsBodyActions(IPhysicsBody* body);
 

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_message_stream.cpp
 
+#include <string>
+#include <vector>
 
 #include "nau/async/task.h"
 #include "nau/messaging/async_message_stream.h"
@@ -14,13 +16,13 @@ namespace nau::test
     class Test_AsyncMessageStream : public ::testing::Test
     {
     protected:
-        static inline const eastl::string TestStream1Name = "test.stream_1";
+        static inline const std::string TestStream1Name = "test.stream_1";
 
         ~Test_AsyncMessageStream()
         {
             auto shutdown = m_runtime->shutdown();
 
-            while(shutdown())
+            while (shutdown())
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
@@ -121,34 +123,34 @@ namespace nau::test
 
         constexpr size_t Count = 1000;
 
-        eastl::vector<Task<>> subscriptionTasks;
+        std::vector<Task<>> subscriptionTasks;
         subscriptionTasks.reserve(Count);
 
         std::atomic<size_t> startCounter = 0;
         std::atomic<size_t> messageCounter = 0;
 
-        for(size_t i = 0; i < Count; ++i)
+        for (size_t i = 0; i < Count; ++i)
         {
             subscriptionTasks.emplace_back([](AsyncMessageSource& broadcaster, std::atomic<size_t>& startC, std::atomic<size_t>& messageC) -> Task<>
-                                           {
-                                               auto stream = broadcaster.getStream(TestStream1Name);
-                                               ++startC;
-                                               co_await stream.getNextMessage();
-                                               ++messageC;
-                                               stream = nullptr;
-                                           }(broadcaster(), startCounter, messageCounter));
+            {
+                auto stream = broadcaster.getStream(TestStream1Name);
+                ++startC;
+                co_await stream.getNextMessage();
+                ++messageC;
+                stream = nullptr;
+            }(broadcaster(), startCounter, messageCounter));
         }
 
         auto sender = [](AsyncMessageSource& broadcaster, std::atomic<size_t>& startC, std::atomic<size_t>& messageC, size_t count) -> Task<bool>
         {
             co_await Executor::getDefault();
-            while(startC < count)
+            while (startC < count)
             {
                 co_await 1ms;
             }
 
             broadcaster.post(TestStream1Name);
-            while(messageC < count)
+            while (messageC < count)
             {
                 co_await 1ms;
             }
@@ -191,15 +193,15 @@ namespace nau::test
 
         constexpr size_t Count = 1;
 
-        eastl::vector<AsyncMessageStream> subscribers;
-        eastl::vector<Task<RuntimeValue::Ptr>> subscriptionTasks;
+        std::vector<AsyncMessageStream> subscribers;
+        std::vector<Task<RuntimeValue::Ptr>> subscriptionTasks;
 
         subscribers.reserve(Count);
         subscriptionTasks.reserve(Count);
 
         auto testBroadcaster = AsyncMessageSource::create();
 
-        for(size_t i = 0; i < Count; ++i)
+        for (size_t i = 0; i < Count; ++i)
         {
             auto& stream = subscribers.emplace_back(testBroadcaster->getStream(TestStream1Name));
             subscriptionTasks.emplace_back(stream.getNextMessage()).detach();
@@ -208,9 +210,9 @@ namespace nau::test
         testBroadcaster.reset();
 
         const bool allAreRejected = std::all_of(subscriptionTasks.begin(), subscriptionTasks.end(), [](const auto& task)
-                                                {
-                                                    return task.isRejected();
-                                                });
+        {
+            return task.isRejected();
+        });
 
         ASSERT_TRUE(allAreRejected);
     }
@@ -226,7 +228,7 @@ namespace nau::test
 
         constexpr size_t Count = 1000;
 
-        eastl::vector<Task<>> subscriptionTasks;
+        std::vector<Task<>> subscriptionTasks;
         subscriptionTasks.reserve(Count);
 
         auto testBroadcaster = AsyncMessageSource::create();
@@ -234,23 +236,23 @@ namespace nau::test
         std::atomic_size_t counter = 0;
         std::atomic_bool mustNeverBeCalled = true;
 
-        for(size_t i = 0; i < Count; ++i)
+        for (size_t i = 0; i < Count; ++i)
         {
             subscriptionTasks.emplace_back([](AsyncMessageSource& broadcaster, std::atomic_size_t& c, std::atomic_bool& neverCalled) -> Task<>
-                                           {
-                                               auto stream = broadcaster.getStream(TestStream1Name);
-                                               ++c;
-                                               [[maybe_unused]]
-                                               auto message = co_await stream.getNextMessage();
+            {
+                auto stream = broadcaster.getStream(TestStream1Name);
+                ++c;
+                [[maybe_unused]]
+                auto message = co_await stream.getNextMessage();
 
-                                               neverCalled = false;
-                                           }(*testBroadcaster, counter, mustNeverBeCalled));
+                neverCalled = false;
+            }(*testBroadcaster, counter, mustNeverBeCalled));
         }
 
         auto sender = [](AsyncMessageSource::Ptr broadcaster, std::atomic_size_t& c, size_t count) mutable -> Task<>
         {
             co_await Executor::getDefault();
-            while(c < count)
+            while (c < count)
             {
                 co_await 1ms;
             }
@@ -262,9 +264,9 @@ namespace nau::test
         async::waitResult(async::whenAll(subscriptionTasks)).ignore();
 
         const bool allAreRejected = std::all_of(subscriptionTasks.begin(), subscriptionTasks.end(), [](const auto& task)
-                                                {
-                                                    return task.isRejected();
-                                                });
+        {
+            return task.isRejected();
+        });
 
         ASSERT_TRUE(allAreRejected);
         ASSERT_TRUE(mustNeverBeCalled);
@@ -284,29 +286,29 @@ namespace nau::test
         CancellationSource cancellationSource;
         broadcaster().setCancellation(cancellationSource.getCancellation());
 
-        eastl::vector<Task<>> subscriptionTasks;
+        std::vector<Task<>> subscriptionTasks;
         subscriptionTasks.reserve(Count);
 
         std::atomic_size_t counter = 0;
         std::atomic_bool mustNeverBeCalled = true;
 
-        for(size_t i = 0; i < Count; ++i)
+        for (size_t i = 0; i < Count; ++i)
         {
             subscriptionTasks.emplace_back([](AsyncMessageSource& broadcaster, std::atomic_size_t& c, std::atomic_bool& neverCalled) -> Task<>
-                                           {
-                                               auto stream = broadcaster.getStream(TestStream1Name);
-                                               ++c;
-                                               [[maybe_unused]]
-                                               auto message = co_await stream.getNextMessage();
+            {
+                auto stream = broadcaster.getStream(TestStream1Name);
+                ++c;
+                [[maybe_unused]]
+                auto message = co_await stream.getNextMessage();
 
-                                               neverCalled = false;
-                                           }(broadcaster(), counter, mustNeverBeCalled));
+                neverCalled = false;
+            }(broadcaster(), counter, mustNeverBeCalled));
         }
 
         auto sender = [](CancellationSource cancellationSource, std::atomic_size_t& c, size_t count) mutable -> Task<>
         {
             co_await Executor::getDefault();
-            while(c < count / 2)
+            while (c < count / 2)
             {
                 co_await 1ms;
             }
@@ -318,9 +320,9 @@ namespace nau::test
         async::waitResult(async::whenAll(subscriptionTasks)).ignore();
 
         const bool allAreRejected = std::all_of(subscriptionTasks.begin(), subscriptionTasks.end(), [](const auto& task)
-                                                {
-                                                    return task.isRejected();
-                                                });
+        {
+            return task.isRejected();
+        });
 
         ASSERT_TRUE(allAreRejected);
         ASSERT_TRUE(mustNeverBeCalled);
@@ -369,19 +371,19 @@ namespace nau::test
         constexpr size_t SubscribersCount = 100;
         constexpr size_t SendCount = 200;
 
-        const eastl::vector<eastl::string> StreamNames = {
+        const std::vector<std::string> StreamNames = {
             "stream_1",
             "stream_2"};
 
-        eastl::vector<std::atomic_size_t> receiveCounters(StreamNames.size());
-        for(size_t i = 0; i < receiveCounters.size(); ++i)
+        std::vector<std::atomic_size_t> receiveCounters(StreamNames.size());
+        for (size_t i = 0; i < receiveCounters.size(); ++i)
         {
             receiveCounters[i] = 0;
         }
 
         std::atomic_size_t subscriberCounter = 0;
 
-        const auto subscriberFactory = [&](eastl::string streamName) -> Task<>
+        const auto subscriberFactory = [&](std::string streamName) -> Task<>
         {
             co_await Executor::getDefault();
 
@@ -389,7 +391,7 @@ namespace nau::test
             auto stream = broadcaster().getStream(streamName);
             ++subscriberCounter;
 
-            for(size_t i = 0; i < SendCount * SendersCount; ++i)
+            for (size_t i = 0; i < SendCount * SendersCount; ++i)
             {
                 RuntimeValue::Ptr indexVal = co_await stream.getNextMessage();
                 const size_t index = *runtimeValueCast<size_t>(indexVal);
@@ -398,13 +400,13 @@ namespace nau::test
             }
         };
 
-        const auto senderFactory = [&](eastl::string streamName, size_t streamIndex) -> Task<>
+        const auto senderFactory = [&](std::string streamName, size_t streamIndex) -> Task<>
         {
             size_t x = 0;
-            for(size_t counter = 0; counter < SendCount; ++counter, ++x)
+            for (size_t counter = 0; counter < SendCount; ++counter, ++x)
             {
                 broadcaster().post(streamName, makeValueCopy(streamIndex));
-                if(x == 50)
+                if (x == 50)
                 {
                     co_await 1ms;
                 }
@@ -413,30 +415,30 @@ namespace nau::test
             // std::cout << "Complete sender:" << streamName << std::endl;
         };
 
-        eastl::vector<Task<>> senders;
-        eastl::vector<Task<>> subscribers;
+        std::vector<Task<>> senders;
+        std::vector<Task<>> subscribers;
 
         senders.reserve(SendersCount);
         subscribers.reserve(SubscribersCount);
 
-        for(size_t i = 0; i < SubscribersCount; ++i)
+        for (size_t i = 0; i < SubscribersCount; ++i)
         {
-            for(const auto& streamName : StreamNames)
+            for (const auto& streamName : StreamNames)
             {
                 subscribers.emplace_back(subscriberFactory(streamName));
             }
         }
 
         const size_t ExpectedSubscribersCount = SubscribersCount * StreamNames.size();
-        while(subscriberCounter < ExpectedSubscribersCount)
+        while (subscriberCounter < ExpectedSubscribersCount)
         {
             std::this_thread::sleep_for(1ms);
         }
 
-        for(size_t i = 0; i < SendersCount; ++i)
+        for (size_t i = 0; i < SendersCount; ++i)
         {
             size_t streamIndex = 0;
-            for(const auto& stream : StreamNames)
+            for (const auto& stream : StreamNames)
             {
                 senders.emplace_back(senderFactory(stream, streamIndex++));
             }
@@ -446,7 +448,7 @@ namespace nau::test
         async::waitResult(async::whenAll(subscribers)).ignore();
 
         const size_t ExpectedReceiveCount = SendersCount * SubscribersCount * SendCount;
-        for(const auto& counter : receiveCounters)
+        for (const auto& counter : receiveCounters)
         {
             ASSERT_EQ(counter, ExpectedReceiveCount);
         }

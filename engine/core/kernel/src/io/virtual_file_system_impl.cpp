@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./virtual_file_system_impl.h"
+
+#include <vector>
 
 #include "nau/threading/lock_guard.h"
 
@@ -41,7 +42,7 @@ namespace nau::io
 
             bool increment() override
             {
-                if(m_current)
+                if (m_current)
                 {
                     m_current = m_dir.getNextChild(m_current);
                 }
@@ -51,7 +52,7 @@ namespace nau::io
 
             FsEntry getCurrent() override
             {
-                if(!m_current)
+                if (!m_current)
                 {
                     return {};
                 }
@@ -85,7 +86,7 @@ namespace nau::io
             ~MultiFsDirIteratorImpl()
             {
                 auto& [fs, fsIter, fsEntry] = m_iter;
-                if(fs && fsIter)
+                if (fs && fsIter)
                 {
                     fs->closeDirIterator(fsIter);
                 }
@@ -101,14 +102,14 @@ namespace nau::io
                 auto fs = std::get<0>(m_iter);
                 auto fsIter = std::get<1>(m_iter);
 
-                if(!(fs && fsIter))
+                if (!(fs && fsIter))
                 {
                     return false;
                 }
 
                 FsEntry& fsEntry = std::get<2>(m_iter);
 
-                if(fsEntry = fs->incrementDirIterator(fsIter); fsEntry)
+                if (fsEntry = fs->incrementDirIterator(fsIter); fsEntry)
                 {
                     fsEntry.path = m_basePath / fsEntry.path;
                     return true;
@@ -136,7 +137,7 @@ namespace nau::io
                 do
                 {
                     fileSystem = m_dir.getNextMountedFs(fileSystem.get());
-                } while(fileSystem && !fileSystem->exists(m_relativePath, FsEntryKind::Directory));
+                } while (fileSystem && !fileSystem->exists(m_relativePath, FsEntryKind::Directory));
 
                 return fileSystem;
             }
@@ -144,13 +145,13 @@ namespace nau::io
             Iterator getNextFsIterator() const
             {
                 auto fs = getNextFsContainingPath();
-                if(!fs)
+                if (!fs)
                 {
                     return {};
                 }
 
                 auto [fsIter, fsEntry] = *fs->openDirIterator(m_relativePath);
-                if(!fsIter || !fsEntry)
+                if (!fsIter || !fsEntry)
                 {
                     return Iterator{nullptr, nullptr, FsEntry{}};
                 }
@@ -179,13 +180,13 @@ namespace nau::io
         lock_(m_mutex);
 
         auto iter = findChildIter(name);
-        if(iter != m_children.end())
+        if (iter != m_children.end())
         {
             return &(*iter);
         }
 
         NAU_ASSERT(m_mountedFs.empty());
-        if(!m_mountedFs.empty())
+        if (!m_mountedFs.empty())
         {
             return NauMakeError("Already has mounted fs");
         }
@@ -207,16 +208,16 @@ namespace nau::io
     VirtualFileSystemImpl::FsNode* VirtualFileSystemImpl::FsNode::getNextChild(const FsNode* current)
     {
         lock_(m_mutex);
-        if(current == nullptr)
+        if (current == nullptr)
         {
             return !m_children.empty() ? &m_children.front() : nullptr;
         }
 
         auto nextChild = m_children.end();
 
-        for(auto iter = m_children.begin(); iter != m_children.end(); ++iter)
+        for (auto iter = m_children.begin(); iter != m_children.end(); ++iter)
         {
-            if(&(*iter) == current)
+            if (&(*iter) == current)
             {
                 nextChild = ++iter;
                 break;
@@ -230,15 +231,15 @@ namespace nau::io
     {
         lock_(m_mutex);
 
-        if(current == nullptr)
+        if (current == nullptr)
         {
             return !m_mountedFs.empty() ? m_mountedFs.front().fs : nullptr;
         }
 
         auto nextFs = m_mountedFs.end();
-        for(auto iter = m_mountedFs.begin(); iter != m_mountedFs.end(); ++iter)
+        for (auto iter = m_mountedFs.begin(); iter != m_mountedFs.end(); ++iter)
         {
-            if(iter->fs.get() == current)
+            if (iter->fs.get() == current)
             {
                 nextFs = ++iter;
                 break;
@@ -252,12 +253,12 @@ namespace nau::io
     {
         lock_(m_mutex);
         NAU_ASSERT(m_children.empty());
-        if(!m_children.empty())
+        if (!m_children.empty())
         {
             return NauMakeError("Already child directories");
         }
 
-        if(!fileSystem->isReadOnly())
+        if (!fileSystem->isReadOnly())
         {
             const bool hasMutableFs = std::any_of(m_mountedFs.begin(), m_mountedFs.end(), [](const FileSystemEntry& entry)
             {
@@ -265,7 +266,7 @@ namespace nau::io
             });
             NAU_ASSERT(!hasMutableFs, "Can not use multiple mutable file system at single mount point");
 
-            if(hasMutableFs)
+            if (hasMutableFs)
             {
                 return NauMakeError("Can not use multiple mutable file system at single mount point");
             }
@@ -278,7 +279,7 @@ namespace nau::io
     {
     }
 
-    eastl::vector<VirtualFileSystemImpl::FileSystemEntry> VirtualFileSystemImpl::FsNode::getMountedFs()
+    std::vector<VirtualFileSystemImpl::FileSystemEntry> VirtualFileSystemImpl::FsNode::getMountedFs()
     {
         lock_(m_mutex);
         return m_mountedFs;
@@ -305,12 +306,12 @@ namespace nau::io
         auto [basePath, fsNode] = findFsNodeForPath(path);
 
         // first check only vurtual path (can be only directory)
-        if(basePath == path)
+        if (basePath == path)
         {
             return !kind || (*kind == FsEntryKind::Directory);
         }
 
-        if(!fsNode || !fsNode->hasMounts())
+        if (!fsNode || !fsNode->hasMounts())
         {
             return false;
         }
@@ -334,7 +335,7 @@ namespace nau::io
 
         auto [basePath, fsNode] = findFsNodeForPath(path);
 
-        if(!fsNode)
+        if (!fsNode)
         {
             return nullptr;
         }
@@ -345,18 +346,18 @@ namespace nau::io
             accessMode && AccessMode::Write ||
             openMode != OpenFileMode::OpenExisting;
 
-        for(const auto& mountedFs : fsNode->getMountedFs())
+        for (const auto& mountedFs : fsNode->getMountedFs())
         {
-            if(requireMutableAccess && mountedFs.fs->isReadOnly())
+            if (requireMutableAccess && mountedFs.fs->isReadOnly())
             {
                 continue;
             }
 
-            if(auto file = mountedFs.fs->openFile(relativePath, accessMode, openMode))
+            if (auto file = mountedFs.fs->openFile(relativePath, accessMode, openMode))
             {
                 auto* const fileInternal = file->as<io_detail::IFileInternal*>();
                 NAU_ASSERT(fileInternal, "io_detail::IFileInternal must be implemented");
-                if(fileInternal)
+                if (fileInternal)
                 {
                     fileInternal->setVfsPath(path);
                 }
@@ -371,14 +372,14 @@ namespace nau::io
     IFileSystem::OpenDirResult VirtualFileSystemImpl::openDirIterator(const FsPath& path)
     {
         auto [basePath, fsNode] = findFsNodeForPath(path);
-        if(!fsNode)
+        if (!fsNode)
         {
             return NauMakeError("Directory does not exists");
         }
 
         DirIteratorImplBase* dirIteratorImpl = nullptr;
 
-        if(!fsNode->hasMounts())
+        if (!fsNode->hasMounts())
         {
             NAU_ASSERT(basePath == path);
             dirIteratorImpl = new InnerDirIteratorImpl(std::move(basePath), *fsNode);
@@ -389,7 +390,7 @@ namespace nau::io
             dirIteratorImpl = new MultiFsDirIteratorImpl(std::move(basePath), std::move(relativePath), *fsNode);
         }
 
-        if(dirIteratorImpl->isEnd())
+        if (dirIteratorImpl->isEnd())
         {
             delete dirIteratorImpl;
             return {};
@@ -404,7 +405,7 @@ namespace nau::io
 
     void VirtualFileSystemImpl::closeDirIterator(void* ptr)
     {
-        if(!ptr)
+        if (!ptr)
         {
             return;
         }
@@ -416,13 +417,13 @@ namespace nau::io
     FsEntry VirtualFileSystemImpl::incrementDirIterator(void* state)
     {
         NAU_ASSERT(state);
-        if(!state)
+        if (!state)
         {
             return {};
         }
 
         auto* const iterImpl = reinterpret_cast<DirIteratorImplBase*>(state);
-        if(iterImpl->increment())
+        if (iterImpl->increment())
         {
             return iterImpl->getCurrent();
         }
@@ -444,7 +445,7 @@ namespace nau::io
     {
         FsNode* fsNode = &m_root;
 
-        for(auto name : path.splitElements())
+        for (auto name : path.splitElements())
         {
             auto res = fsNode->getChild(name);
             NauCheckResult(res);
@@ -462,13 +463,13 @@ namespace nau::io
     std::wstring VirtualFileSystemImpl::resolveToNativePath(const FsPath& path)
     {
         auto [basePath, fsNode] = findFsNodeForPath(path);
-        if(!fsNode || !fsNode->hasMounts())
+        if (!fsNode || !fsNode->hasMounts())
         {
             return {};
         }
 
         auto fs = fsNode->getNextMountedFs();
-        if(INativeFileSystem* const nativeFs = (fs ? fs->as<INativeFileSystem*>() : nullptr); nativeFs)
+        if (INativeFileSystem* const nativeFs = (fs ? fs->as<INativeFileSystem*>() : nullptr); nativeFs)
         {
             return nativeFs->resolveToNativePath(path.getRelativePath(basePath));
         }
@@ -481,10 +482,10 @@ namespace nau::io
         FsNode* fsNode = &m_root;
         FsPath basePath{"/"};
 
-        for(auto name : path.splitElements())
+        for (auto name : path.splitElements())
         {
             auto* const next = fsNode->findChild(name);
-            if(!next)
+            if (!next)
             {
                 break;
             }
@@ -493,12 +494,12 @@ namespace nau::io
             basePath /= name;
         }
 
-        if(!fsNode)
+        if (!fsNode)
         {
             return {};
         }
 
-        if(basePath != path && !fsNode->hasMounts())
+        if (basePath != path && !fsNode->hasMounts())
         {
             return {};
         }

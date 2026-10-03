@@ -1,26 +1,33 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/network.h>
 #include <daECS/core/entityManager.h>
 #include <daECS/core/template.h>
 #include <daECS/net/connection.h>
 #include <daECS/net/message.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/tuple.h>
-#include <math/dag_bits.h>
-#include <startup/dag_globalSettings.h>
-#include <ioSys/dag_dataBlock.h>
-#include <daNet/bitStream.h>
-#include <daNet/messageIdentifiers.h>
-#include <debug/dag_assert.h>
-#include <perfMon/dag_cpuFreq.h>
-#include <daNet/daNetPeerInterface.h>
-#include <memory/dag_framemem.h>
-#include "utils.h"
 #include <daECS/net/netEvent.h>
 #include <daECS/net/netEvents.h>
+#include <daECS/net/network.h>
+#include <daNet/bitStream.h>
+#include <daNet/daNetPeerInterface.h>
+#include <daNet/messageIdentifiers.h>
+#include <debug/dag_assert.h>
+#include <ioSys/dag_dataBlock.h>
+#include <math/dag_bits.h>
+#include <memory/dag_framemem.h>
+#include <perfMon/dag_cpuFreq.h>
+#include <startup/dag_globalSettings.h>
+#include <stdlib.h>  // alloca
+
+#include <algorithm>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <utility>
+
 #include "compression.h"
 #include "encryption.h"
-#include <stdlib.h> // alloca
+#include "nau/utils/sorted_vector.h"
+#include "utils.h"
 
 namespace net
 {
@@ -40,18 +47,18 @@ extern void clear_cached_replicated_components();
 #define DEFAULT_COMPRESSION_THRESHOLD 256
 
 static int cachedCreationBandwith = -1, cachedCreationMaxDeltaTime = -1;
-static inline eastl::pair<int, int> get_creation_bw_limits() // returns (bandwidth, maxDeltaTime)
+static inline std::pair<int, int> get_creation_bw_limits()  // returns (bandwidth, maxDeltaTime)
 {
-  if (EASTL_UNLIKELY(cachedCreationBandwith < 0))
-  {
-    const DataBlock *blk = dgs_get_settings();
-    blk = blk->getBlockByNameEx("net");
-    blk = blk->getBlockByNameEx("bwlimit");
-    blk = blk->getBlockByNameEx("creation");
-    cachedCreationBandwith = blk->getInt("rate", 0); // Bytes per second. 0 - unlimited.
-    cachedCreationMaxDeltaTime = blk->getInt("maxDeltaTime", 0);
-  }
-  return eastl::make_pair(cachedCreationBandwith, cachedCreationMaxDeltaTime);
+    if (NAU_UNLIKELY(cachedCreationBandwith < 0))
+    {
+        const DataBlock* blk = dgs_get_settings();
+        blk = blk->getBlockByNameEx("net");
+        blk = blk->getBlockByNameEx("bwlimit");
+        blk = blk->getBlockByNameEx("creation");
+        cachedCreationBandwith = blk->getInt("rate", 0);  // Bytes per second. 0 - unlimited.
+        cachedCreationMaxDeltaTime = blk->getInt("maxDeltaTime", 0);
+    }
+    return std::make_pair(cachedCreationBandwith, cachedCreationMaxDeltaTime);
 }
 
 #define ID_MSG_BASE ID_FILE_LIST_TRANSFER_HEADER // To consider: make this random in runtime (to increase reverse-engineering efforts)
@@ -82,7 +89,7 @@ struct NetStatRecord
   bool operator<(const NetStatRecord &rhs) const { return strType < rhs.strType; }
 };
 static int performNetStat = 20;
-static void trace_net_stat(eastl::vector_set<NetStatRecord> &netstat, const char *strt, uint32_t bytes, uint32_t cbytes)
+static void trace_net_stat(nau::SortedVectorSet<NetStatRecord>& netstat, const char* strt, uint32_t bytes, uint32_t cbytes)
 {
   const char *strType = (bytes == cbytes) ? strt : strt + 1;
   auto it = netstat.find(NetStatRecord{strType});
@@ -90,14 +97,14 @@ static void trace_net_stat(eastl::vector_set<NetStatRecord> &netstat, const char
   {
     it->bytes += bytes;
     it->cbytes += cbytes;
-    it->maxMsgSize = eastl::max_alt(cbytes, it->maxMsgSize);
-    it->minMsgSize = eastl::min_alt(cbytes, it->minMsgSize);
+    it->maxMsgSize = std::max(cbytes, it->maxMsgSize);
+    it->minMsgSize = std::min(cbytes, it->minMsgSize);
     it->packets++;
   }
   else
     netstat.emplace(NetStatRecord{strType, bytes, cbytes, 1, cbytes, cbytes});
 }
-static void dump_net_stat(eastl::vector_set<NetStatRecord> &netstat, const char *trans_type)
+static void dump_net_stat(nau::SortedVectorSet<NetStatRecord>& netstat, const char* trans_type)
 {
   if (netstat.empty())
     return;
@@ -107,10 +114,13 @@ static void dump_net_stat(eastl::vector_set<NetStatRecord> &netstat, const char 
   {
     totalBytes += rec.effectiveBytes();
     totalPackets += rec.packets;
-    maxNameLen = eastl::max_alt(strlen(rec.name()), maxNameLen);
+    maxNameLen = std::max(strlen(rec.name()), maxNameLen);
   }
-  eastl::sort(netstat.begin(), netstat.end(),
-    [](const NetStatRecord &a, const NetStatRecord &b) { return a.effectiveBytes() > b.effectiveBytes(); });
+  std::sort(netstat.begin(), netstat.end(),
+            [](const NetStatRecord& a, const NetStatRecord& b)
+  {
+      return a.effectiveBytes() > b.effectiveBytes();
+  });
   NAU_CORE_DEBUG_LF("Dumping %s %d netstat records (message types) of total %d records, %d KBytes, %d packets:", trans_type, performNetStat,
     netstat.size(), totalBytes >> 10, totalPackets);
   NAU_CORE_DEBUG_LF("  #N compressed_flag name msg_size_bytes(avg/min/max) kilobytes(%%) packets(%%) compression_ratio"); // legend
@@ -167,9 +177,9 @@ void CNetwork::ObjMsg::apply(const net::Object &robj, net::Connection &from, CNe
   NAU_ASSERT(!mgr.isLoadingEntity(toEid));
   alignas(16) char tmpBuf[256];
   void *dataPtr = tmpBuf;
-  if (EASTL_UNLIKELY(msgCls->memSize > sizeof(tmpBuf)))
-    dataPtr = framemem_ptr()->alloc(msgCls->memSize);
-  eastl::unique_ptr<IMessage, MessageDeleter> msg(&msgCls->create(dataPtr), MessageDeleter(/*heap*/ false));
+  if (NAU_UNLIKELY(msgCls->memSize > sizeof(tmpBuf)))
+      dataPtr = framemem_ptr()->alloc(msgCls->memSize);
+  std::unique_ptr<IMessage, MessageDeleter> msg(&msgCls->create(dataPtr), MessageDeleter(/*heap*/ false));
   if (check_routing(*msg, cnet, toEid, &robj, from.getId(), /*send*/ false))
   {
     if (msg->unpack(data, from))
@@ -182,7 +192,7 @@ void CNetwork::ObjMsg::apply(const net::Object &robj, net::Connection &from, CNe
       else
       {
         // Send event immediately because we need this message to be processed before futher state syncs messages
-        mgr.sendEventImmediate(toEid, ecs::EventNetMessage(eastl::move(msg)));
+        mgr.sendEventImmediate(toEid, ecs::EventNetMessage(std::move(msg)));
       }
     }
     else
@@ -217,10 +227,11 @@ struct RTTStat
   void clear() { memset(this, 0, sizeof(*this)); }
 };
 
-
-CNetwork::CNetwork(INetDriver *drv_, INetworkObserver *obsrv, uint16_t protov, uint64_t session_rand,
-  scope_query_cb_t &&scope_query_) :
-  drv(drv_), observer(obsrv), scope_query(eastl::move(scope_query_)), protocolVersion(protov)
+CNetwork::CNetwork(INetDriver* drv_, INetworkObserver* obsrv, uint16_t protov, uint64_t session_rand, scope_query_cb_t&& scope_query_) :
+    drv(drv_),
+    observer(obsrv),
+    scope_query(std::move(scope_query_)),
+    protocolVersion(protov)
 {
   NAU_ASSERT(observer);
   NAU_ASSERT(drv_);
@@ -274,8 +285,8 @@ void CNetwork::receivePackets(int cur_time_ms, uint8_t replication_channel)
     drv->free(pkt);
   }
 
-  while (eastl::optional<danet::EchoResponse> echo = drv->receiveEchoResponse())
-    g_entity_mgr->broadcastEvent(NetEchoReponse{echo->routeId, static_cast<int>(echo->result), echo->rttOrTimeout});
+  while (std::optional<danet::EchoResponse> echo = drv->receiveEchoResponse())
+      g_entity_mgr->broadcastEvent(NetEchoReponse{echo->routeId, static_cast<int>(echo->result), echo->rttOrTimeout});
 }
 
 void CNetwork::updateConnections(int cur_time)
@@ -355,7 +366,7 @@ void CNetwork::syncStateUpdates(int cur_time, uint8_t replication_channel)
         return (int)bsToSend.GetNumberOfBytesUsed();
       };
       int creationBwLimit, creationBwMaxDeltaTime;
-      eastl::tie(creationBwLimit, creationBwMaxDeltaTime) = get_creation_bw_limits();
+      std::tie(creationBwLimit, creationBwMaxDeltaTime) = get_creation_bw_limits();
       if (creationBwLimit)
       {
         int creationDeltaTime = cur_time - conn->creationLastSentTime;
@@ -381,29 +392,29 @@ void CNetwork::syncStateUpdates(int cur_time, uint8_t replication_channel)
 
     if (pwrRes & Connection::PWR_REPLICATION)
     {
-      const auto &rtt = rttstat[eastl::distance(clientConnections.begin(), &conn)];
-      // Note: what is better: this formula (used in QUIC for ack timeouts) or smoothed + 4*variance (enet/QUIC PTO)?
-      int connTimeout = rtt.latest ? (eastl::max_alt(rtt.smoothed, rtt.latest) * 9u / 8u) : INITIAL_REPLICATION_PACKET_TIMEOUT_MS;
-      connTimeout = eastl::min(connTimeout, MAX_REPLICATION_PACKET_TIMEOUT_MS);
-      constexpr int headerSize = sizeof(char) + sizeof(cur_time);
-      const uint32_t limitReplBytes = realMTU - headerSize;
-      bs.ResetWritePointer();
-      bs.Write((char)ID_ENTITY_REPLICATION);
-      bs.Write(cur_time); // for RTT calculations, TODO: 16 bit
-      int iterGuard = 0;
-      do
-      {
-        NAU_ASSERT(iterGuard++ < (16 << 10));
-        NAU_UNUSED(iterGuard);
-        bs.SetWriteOffset(BYTES_TO_BITS(headerSize));
-        if (!conn->writeReplicationPacket(bs, tmpBs, limitReplBytes)) // limit replication packet size to MTU
-          break;
-        const uint32_t threshold = DEFAULT_COMPRESSION_THRESHOLD;
-        const uint8_t ptype = ID_ENTITY_REPLICATION_COMPRESSED;
-        const danet::BitStream &bsToSend = bitstream_compress(bs, headerSize, ptype, bsCompressed, threshold);
-        TRACE_NET_STAT(tx, str_msg_ids[ID_ENTITY_REPLICATION - ID_MSG_BASE], bs, bsToSend, conn);
-        conn->sendAckedPacket(bsToSend, cur_time, connTimeout, replication_channel);
-      } while (1);
+        const auto& rtt = rttstat[std::distance(clientConnections.begin(), &conn)];
+        // Note: what is better: this formula (used in QUIC for ack timeouts) or smoothed + 4*variance (enet/QUIC PTO)?
+        int connTimeout = rtt.latest ? (std::max(rtt.smoothed, rtt.latest) * 9u / 8u) : INITIAL_REPLICATION_PACKET_TIMEOUT_MS;
+        connTimeout = std::min(connTimeout, MAX_REPLICATION_PACKET_TIMEOUT_MS);
+        constexpr int headerSize = sizeof(char) + sizeof(cur_time);
+        const uint32_t limitReplBytes = realMTU - headerSize;
+        bs.ResetWritePointer();
+        bs.Write((char)ID_ENTITY_REPLICATION);
+        bs.Write(cur_time);  // for RTT calculations, TODO: 16 bit
+        int iterGuard = 0;
+        do
+        {
+            NAU_ASSERT(iterGuard++ < (16 << 10));
+            NAU_UNUSED(iterGuard);
+            bs.SetWriteOffset(BYTES_TO_BITS(headerSize));
+            if (!conn->writeReplicationPacket(bs, tmpBs, limitReplBytes))  // limit replication packet size to MTU
+                break;
+            const uint32_t threshold = DEFAULT_COMPRESSION_THRESHOLD;
+            const uint8_t ptype = ID_ENTITY_REPLICATION_COMPRESSED;
+            const danet::BitStream& bsToSend = bitstream_compress(bs, headerSize, ptype, bsCompressed, threshold);
+            TRACE_NET_STAT(tx, str_msg_ids[ID_ENTITY_REPLICATION - ID_MSG_BASE], bs, bsToSend, conn);
+            conn->sendAckedPacket(bsToSend, cur_time, connTimeout, replication_channel);
+        } while (1);
     }
   }
 }
@@ -569,7 +580,7 @@ void CNetwork::onPacket(const Packet *pkt, int cur_time_ms, uint8_t replication_
         else
         {
           auto it = clientWaitMsgs.insert(ClientWaitMsg{serverEid}).first;
-          it->msgs.push_back(eastl::move(omsg));
+          it->msgs.push_back(std::move(omsg));
           it->msgs.back().bs = *bsToRead; // copy
         }
       }
@@ -598,7 +609,7 @@ void CNetwork::onPacket(const Packet *pkt, int cur_time_ms, uint8_t replication_
         TRACE_NET_STAT(rx, ID_ENTITY_REPLICATION_ACKS_STR, bs, bs, conn);
         int rtt = cur_time_ms - sentTime;
         if (rtt > 0)
-          rttstat[conn->getId()].update(baseseq, eastl::min(rtt, USHRT_MAX));
+            rttstat[conn->getId()].update(baseseq, std::min(rtt, USHRT_MAX));
         else
           logwarn("Ignore bad rtt value %d (packet from future?)", rtt);
       }
@@ -638,7 +649,7 @@ void CNetwork::onPacket(const Packet *pkt, int cur_time_ms, uint8_t replication_
         if (!bsToRead)
           break;
         // Make sure that entities actually destroyed before creating new ones (in order to free potentially colliding eid slots)
-        if (EASTL_UNLIKELY(numEntitiesDestroyed != 0))
+        if (NAU_UNLIKELY(numEntitiesDestroyed != 0))
         {
           g_entity_mgr->performDelayedCreation(/*flush_all*/ false);
           numEntitiesDestroyed = 0;

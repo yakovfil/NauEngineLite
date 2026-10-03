@@ -14,7 +14,7 @@ ECS_DECLARE_RELOCATABLE_TYPE(DebugRectangleComponent);
 
 struct DebugRectangleComponentConstruct final : public DebugRectangleComponent
 {
-    EA_NON_COPYABLE(DebugRectangleComponentConstruct);
+    DebugRectangleComponentConstruct(const DebugRectangleComponentConstruct&) = delete; DebugRectangleComponentConstruct& operator=(const DebugRectangleComponentConstruct&) = delete;;
     DebugRectangleComponentConstruct() = default;
 
     static void requestResources(const char *, const ecs::resource_request_cb_t &) {}

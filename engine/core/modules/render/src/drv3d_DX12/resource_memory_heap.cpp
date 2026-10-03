@@ -2,6 +2,16 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <iterator>
+#include <numeric>
+#include <span>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
 #include "device.h"
 
 //#include <supp/dag_cpuControl.h>
@@ -70,8 +80,8 @@ ImageCreateResult TextureImageFactory::createTexture(DXGIAdapter *adapter, ID3D1
                                                      ? allocateGlobalResourceIdRange(ii.getSubResourceCount())
                                                      : ImageGlobalSubresouceId::make_invalid();
 
-      result.image = newImageObject(ResourceMemory{}, eastl::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips,
-        ii.arrays, subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
+      result.image = newImageObject(ResourceMemory{}, std::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips,
+                                    ii.arrays, subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
 
       recordTextureAllocated(result.image->getMipLevelRange(), result.image->getArrayLayers(), result.image->getBaseExtent(),
         result.image->getMemory().size(), result.image->getFormat(), name);
@@ -126,8 +136,8 @@ ImageCreateResult TextureImageFactory::createTexture(DXGIAdapter *adapter, ID3D1
                                                      ? allocateGlobalResourceIdRange(ii.getSubResourceCount())
                                                      : ImageGlobalSubresouceId::make_invalid();
 
-      result.image = newImageObject(memory, eastl::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips, ii.arrays,
-        subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
+      result.image = newImageObject(memory, std::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips, ii.arrays,
+                                    subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
 
       updateMemoryRangeUse(memory, result.image);
       recordTextureAllocated(result.image->getMipLevelRange(), result.image->getArrayLayers(), result.image->getBaseExtent(),
@@ -147,8 +157,8 @@ ImageCreateResult TextureImageFactory::createTexture(DXGIAdapter *adapter, ID3D1
     const ImageGlobalSubresouceId subResIdBase =
       (ii.allocateSubresourceIDs) ? allocateGlobalResourceIdRange(ii.getSubResourceCount()) : ImageGlobalSubresouceId::make_invalid();
 
-    result.image = newImageObject(ResourceMemory{}, eastl::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips,
-      ii.arrays, subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
+    result.image = newImageObject(ResourceMemory{}, std::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips,
+                                  ii.arrays, subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
   }
 
   result.image->setGPUChangeable(
@@ -171,9 +181,9 @@ Image *TextureImageFactory::adoptTexture(ID3D12Resource *texture, const char8_t 
   const auto idCount = ArrayLayerCount::make(desc.DepthOrArraySize) * MipMapCount::make(desc.MipLevels) * dagorFormat.getPlanes();
 
   auto subResIdBase = allocateGlobalResourceIdRange(idCount);
-  auto result = newImageObject(ResourceMemory{}, eastl::move(texture_ref), D3D12_RESOURCE_DIMENSION_TEXTURE2D, desc.Layout,
-    dagorFormat, Extent3D{uint32_t(desc.Width), uint32_t(desc.Height), 1}, MipMapCount::make(desc.MipLevels),
-    ArrayLayerCount::make(desc.DepthOrArraySize), subResIdBase, 0);
+  auto result = newImageObject(ResourceMemory{}, std::move(texture_ref), D3D12_RESOURCE_DIMENSION_TEXTURE2D, desc.Layout,
+                               dagorFormat, Extent3D{uint32_t(desc.Width), uint32_t(desc.Height), 1}, MipMapCount::make(desc.MipLevels),
+                               ArrayLayerCount::make(desc.DepthOrArraySize), subResIdBase, 0);
 
   recordTextureAdopted(result->getMipLevelRange(), result->getArrayLayers(), result->getBaseExtent(), result->getFormat(), name);
 
@@ -197,7 +207,7 @@ void TextureImageFactory::freeView(const ImageViewInfo &view)
   }
 }
 
-void TextureImageFactory::destroyTextures(eastl::span<Image *> textures)
+void TextureImageFactory::destroyTextures(std::span<Image*> textures)
 {
   for (auto texture : textures)
   {
@@ -379,7 +389,7 @@ uint32_t AliasHeapProvider::adoptMemoryAsAliasHeap(ResourceMemory memory)
       {
         continue;
       }
-      (*aliasHeapsAccess)[index] = eastl::move(newAliasHeap);
+      (*aliasHeapsAccess)[index] = std::move(newAliasHeap);
       updateMemoryRangeUse(memory, AliasHeapReference{index});
       return index;
     }
@@ -429,12 +439,12 @@ uint32_t AliasHeapProvider::adoptMemoryAsAliasHeap(ResourceMemory memory)
         continue;
       }
       updateMemoryRangeUse(newPHeap.memory, AliasHeapReference{uint32_t(index)});
-      (*aliasHeapsAccess)[index] = eastl::move(newPHeap);
+      (*aliasHeapsAccess)[index] = std::move(newPHeap);
       // have to start with 1 as null -> nullptr which is invalid
       return reinterpret_cast<UserResourceHeapType *>(index + 1);
     }
 
-    aliasHeapsAccess->push_back(eastl::move(newPHeap));
+    aliasHeapsAccess->push_back(std::move(newPHeap));
   }
 
   updateMemoryRangeUse(newPHeap.memory, AliasHeapReference{uint32_t(index)});
@@ -607,8 +617,8 @@ ImageCreateResult AliasHeapProvider::placeTextureInHeap(ID3D12Device *device, ::
   auto subResCount = mipMapCount * arrayLayerCount * fmt.getPlanes();
 
   auto subResIdBase = allocateGlobalResourceIdRange(subResCount);
-  result.image = newImageObject(memory, eastl::move(texture), dxDesc.Dimension, dxDesc.Layout, fmt, ext, mipMapCount, arrayLayerCount,
-    subResIdBase, nau::math::get_log2i_of_pow2(dxDesc.SampleDesc.Count));
+  result.image = newImageObject(memory, std::move(texture), dxDesc.Dimension, dxDesc.Layout, fmt, ext, mipMapCount, arrayLayerCount,
+                                subResIdBase, nau::math::get_log2i_of_pow2(dxDesc.SampleDesc.Count));
 
   recordTexturePlacedInUserResourceHeap(result.image->getMipLevelRange(), result.image->getArrayLayers(),
     result.image->getBaseExtent(), result.image->getMemory().size(), result.image->getFormat(), name);
@@ -713,7 +723,7 @@ ResourceMemory AliasHeapProvider::getUserHeapMemory(::ResourceHeap *heap)
   return result;
 }
 
-bool AliasHeapProvider::detachTextures(eastl::span<Image *> textures)
+bool AliasHeapProvider::detachTextures(std::span<Image*> textures)
 {
   bool needsAutoFreeHandling = false;
   auto aliasHeapsAccess = aliasHeaps.access();
@@ -726,7 +736,7 @@ bool AliasHeapProvider::detachTextures(eastl::span<Image *> textures)
       if (heapId.index < aliasHeapsAccess->size())
       {
         auto &heap = (*aliasHeapsAccess)[heapId.index];
-        auto ref = eastl::find(begin(heap.images), end(heap.images), texture);
+        auto ref = std::find(begin(heap.images), end(heap.images), texture);
         NAU_ASSERT(ref != end(heap.images));
         if (ref != end(heap.images))
         {
@@ -800,7 +810,7 @@ BufferState AliasHeapProvider::placeBufferInHeap(ID3D12Device *device, ::Resourc
   BufferGlobalId resultID;
   {
     auto bufferHeapStateAccess = bufferHeapState.access();
-    resultID = bufferHeapStateAccess->adoptBufferHeap(eastl::move(newHeap));
+    resultID = bufferHeapStateAccess->adoptBufferHeap(std::move(newHeap));
     heapRef.buffers.push_back(resultID);
 
     auto &selectedHeap = bufferHeapStateAccess->bufferHeaps[resultID.index()];
@@ -839,7 +849,7 @@ bool AliasHeapProvider::detachBuffer(const BufferState &buf)
     if (heapID.index < aliasHeapsAccess->size())
     {
       auto &heap = (*aliasHeapsAccess)[heapID.index];
-      auto ref = eastl::find(begin(heap.buffers), end(heap.buffers), buf.resourceId);
+      auto ref = std::find(begin(heap.buffers), end(heap.buffers), buf.resourceId);
       NAU_ASSERT(ref != end(heap.buffers));
       if (ref != end(heap.buffers))
       {
@@ -951,8 +961,8 @@ ImageCreateResult AliasHeapProvider::aliasTexture(ID3D12Device *device, const Im
     }
 
     auto subResIdBase = allocateGlobalResourceIdRange(ii.getSubResourceCount());
-    result.image = newImageObject(memory, eastl::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips, ii.arrays,
-      subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
+    result.image = newImageObject(memory, std::move(texture), ii.type, ii.memoryLayout, ii.format, ii.size, ii.mips, ii.arrays,
+                                  subResIdBase, nau::math::get_log2i_of_pow2(ii.sampleDesc.Count));
 
     heap.images.push_back(result.image);
   }
@@ -1073,7 +1083,7 @@ struct ScopedStyleColor
   template <typename T>
   ScopedStyleColor(ImGuiCol idx, T &&col)
   {
-    ImGui::PushStyleColor(idx, eastl::forward<T>(col));
+      ImGui::PushStyleColor(idx, std::forward<T>(col));
   }
   ~ScopedStyleColor() { ImGui::PopStyleColor(); }
 };
@@ -1088,7 +1098,7 @@ struct ScopedPlotStyleVar
   template <typename T>
   ScopedPlotStyleVar(ImGuiStyleVar var, T &&value)
   {
-    ImPlot::PushStyleVar(var, eastl::forward<T>(value));
+      ImPlot::PushStyleVar(var, std::forward<T>(value));
   }
   ~ScopedPlotStyleVar() { ImPlot::PopStyleVar(); }
 };
@@ -1345,7 +1355,7 @@ void draw_ring_buffer_plot(const char *plot_segment_id, const char *plot_segment
   end_sub_section();
 }
 
-bool filter_object_name(const eastl::string &object_name, const char *object_filter)
+bool filter_object_name(const std::string& object_name, const char* object_filter)
 {
   if (object_filter[0] == '\0')
   {
@@ -1362,8 +1372,11 @@ template <typename T>
 void draw_persisten_buffer_table_rows(const T &buffer)
 {
   auto sizeUnits = size_to_unit_table(buffer.bufferMemory.size());
-  size_t freeMem = eastl::accumulate(begin(buffer.freeRanges), end(buffer.freeRanges), size_t(0),
-    [](auto first, auto range) { return first + range.size(); });
+  size_t freeMem = std::accumulate(begin(buffer.freeRanges), end(buffer.freeRanges), size_t(0),
+                                   [](auto first, auto range)
+  {
+      return first + range.size();
+  });
   size_t usage = buffer.bufferMemory.size() - freeMem;
   auto usageUnits = size_to_unit_table(usage);
   char strBuf[32];
@@ -1412,15 +1425,15 @@ void draw_persisten_buffer_table_rows(const T &buffer)
 
 void DebugViewBase::storeViewSettings()
 {
-  using eastl::begin;
-  using eastl::end;
+    using std::begin;
+    using std::end;
 
-  auto blk = imgui_get_blk();
-  if (!blk)
-  {
-    NAU_LOG_DEBUG("DX12: ResourceMemoryHeap::storeViewSettings 'imgui_get_blk' returned null");
-    return;
-  }
+    auto blk = imgui_get_blk();
+    if (!blk)
+    {
+        NAU_LOG_DEBUG("DX12: ResourceMemoryHeap::storeViewSettings 'imgui_get_blk' returned null");
+        return;
+    }
 
   auto dx12Block = blk->addBlock("dx12");
   if (!dx12Block)
@@ -1467,15 +1480,15 @@ void DebugViewBase::storeViewSettings()
 
 void DebugViewBase::restoreViewSettings()
 {
-  using eastl::begin;
-  using eastl::end;
+    using std::begin;
+    using std::end;
 
-  auto blk = imgui_get_blk();
-  if (!blk)
-  {
-    NAU_LOG_DEBUG("DX12: ResourceMemoryHeap::restoreViewSettings 'imgui_get_blk' returned null");
-    return;
-  }
+    auto blk = imgui_get_blk();
+    if (!blk)
+    {
+        NAU_LOG_DEBUG("DX12: ResourceMemoryHeap::restoreViewSettings 'imgui_get_blk' returned null");
+        return;
+    }
 
   auto dx12Block = blk->getBlockByNameEx("dx12");
   if (!dx12Block)
@@ -4276,27 +4289,33 @@ void DebugView::drawBuffersTable()
 
         if (heap)
         {
-          ByteUnits freeSize = eastl::accumulate(begin(heap.freeRanges), end(heap.freeRanges), 0ull,
-            [](uint64_t size, ValueRange<uint64_t> range) { return size + range.size(); });
-          ByteUnits readySize = eastl::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-            end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
-            [id = heap.resId.index()](size_t size, auto &info) { return size + ((info.index == id) ? info.range.size() : 0); });
-          ByteUnits totalSize = heap.bufferMemory.size();
-          ByteUnits allocatedSize = totalSize - freeSize - readySize;
+            ByteUnits freeSize = std::accumulate(begin(heap.freeRanges), end(heap.freeRanges), 0ull,
+                                                 [](uint64_t size, ValueRange<uint64_t> range)
+            {
+                return size + range.size();
+            });
+            ByteUnits readySize = std::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                                                  end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
+                                                  [id = heap.resId.index()](size_t size, auto& info)
+            {
+                return size + ((info.index == id) ? info.range.size() : 0);
+            });
+            ByteUnits totalSize = heap.bufferMemory.size();
+            ByteUnits allocatedSize = totalSize - freeSize - readySize;
 
-          begin_selectable_row(strBuf);
+            begin_selectable_row(strBuf);
 
-          ImGui::TableNextColumn();
-          ImGui::Text("%p", heap.buffer.Get());
-
-          ImGui::TableNextColumn();
-          ImGui::Text("%016I64X", heap.getGPUPointer());
-
-          if (heap.getCPUPointer())
-          {
             ImGui::TableNextColumn();
-            ImGui::Text("%p", heap.getCPUPointer());
-          }
+            ImGui::Text("%p", heap.buffer.Get());
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%016I64X", heap.getGPUPointer());
+
+            if (heap.getCPUPointer())
+            {
+                ImGui::TableNextColumn();
+                ImGui::Text("%p", heap.getCPUPointer());
+            }
           else
           {
             ImGui::TableNextColumn();
@@ -4347,32 +4366,37 @@ void DebugView::drawBuffersTable()
 
     {
       auto bufferHeapStateAccess = bufferHeapState.access();
-      gpuStandbyAllocateSize = eastl::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-        end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
-        [&bufferHeapStateAccess](size_t size, auto &info) //
-        { return size + ((nullptr == bufferHeapStateAccess->bufferHeaps[info.index].getCPUPointer()) ? info.range.size() : 0); });
-      systemStandbyAllocateSize = eastl::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-        end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
-        [&bufferHeapStateAccess](size_t size, auto &info) //
-        { return size + ((nullptr != bufferHeapStateAccess->bufferHeaps[info.index].getCPUPointer()) ? info.range.size() : 0); });
+      gpuStandbyAllocateSize = std::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                                               end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
+                                               [&bufferHeapStateAccess](size_t size, auto& info)  //
+      { return size + ((nullptr == bufferHeapStateAccess->bufferHeaps[info.index].getCPUPointer()) ? info.range.size() : 0);
+      });
+      systemStandbyAllocateSize = std::accumulate(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                                                  end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), 0ull,
+                                                  [&bufferHeapStateAccess](size_t size, auto& info)  //
+      { return size + ((nullptr != bufferHeapStateAccess->bufferHeaps[info.index].getCPUPointer()) ? info.range.size() : 0);
+      });
 
       for (const auto &heap : bufferHeapStateAccess->bufferHeaps)
       {
         if (heap)
         {
-          auto freeMem = eastl::accumulate(begin(heap.freeRanges), end(heap.freeRanges), 0ull,
-            [](size_t size, auto range) { return size + range.size(); });
-          if (heap.getCPUPointer())
-          {
-            systemSize += heap.bufferMemory.size();
-            if (heap.canSubAllocateFrom())
+            auto freeMem = std::accumulate(begin(heap.freeRanges), end(heap.freeRanges), 0ull,
+                                           [](size_t size, auto range)
             {
-              systemFreeSize += freeMem;
-            }
-            else
+                return size + range.size();
+            });
+            if (heap.getCPUPointer())
             {
-              systemUnuseableSize += freeMem;
-            }
+                systemSize += heap.bufferMemory.size();
+                if (heap.canSubAllocateFrom())
+                {
+                    systemFreeSize += freeMem;
+                }
+                else
+                {
+                    systemUnuseableSize += freeMem;
+                }
           }
           else
           {
@@ -4606,7 +4630,10 @@ void DebugView::drawHeapsTable()
           }
           totalSize += heap.totalSize;
           totalFree +=
-            eastl::accumulate(begin(heap.freeRanges), end(heap.freeRanges), size_t(0), [](auto a, auto b) { return a + b.size(); });
+              std::accumulate(begin(heap.freeRanges), end(heap.freeRanges), size_t(0), [](auto a, auto b)
+          {
+              return a + b.size();
+          });
           children += heap.usedRanges.size();
           overalFragmentation.fragments(heap.freeRanges);
           ++activHeapCount;
@@ -4657,8 +4684,11 @@ void DebugView::drawHeapsTable()
               continue;
             }
             ByteUnits sizeUnit = heap->totalSize;
-            ByteUnits totalFree = eastl::accumulate(begin(heap->freeRanges), end(heap->freeRanges), size_t(0),
-              [](auto a, auto b) { return a + b.size(); });
+            ByteUnits totalFree = std::accumulate(begin(heap->freeRanges), end(heap->freeRanges), size_t(0),
+                                                  [](auto a, auto b)
+            {
+                return a + b.size();
+            });
             ByteUnits totalAllocated = heap->totalSize - totalFree;
             auto fragmentation = free_list_calculate_fragmentation_precise(heap->freeRanges);
 
@@ -4690,82 +4720,88 @@ void DebugView::drawHeapsTable()
                 else
                 {
                   auto &res = segment.getUsedResource();
-                  if (eastl::holds_alternative<Image *>(res))
+                  if (std::holds_alternative<Image*>(res))
                   {
-                    eastl::get<Image *>(res)->getDebugName(
-                      [heap, &segment](auto &res_name) { draw_segment(heap->heapPointer(), *segment, heap->totalSize, res_name); });
+                      std::get<Image*>(res)->getDebugName(
+                          [heap, &segment](auto& res_name)
+                      {
+                          draw_segment(heap->heapPointer(), *segment, heap->totalSize, res_name);
+                      });
                   }
-                  else if (eastl::holds_alternative<BufferGlobalId>(res))
+                  else if (std::holds_alternative<BufferGlobalId>(res))
                   {
-                    auto id = eastl::get<BufferGlobalId>(res);
-                    auto &buffer = bufferHeapStateAccess->bufferHeaps[id.index()];
-                    auto standbyRef = eastl::find_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-                      end(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-                      [idx = id.index()](auto info) { return idx == info.index; });
-                    if (standbyRef == end(bufferHeapStateAccess->bufferHeapDiscardStandbyList))
-                    {
-                      char resnameBuffer[MAX_OBJECT_NAME_LENGTH];
-                      draw_segment(heap->heapPointer(), *segment, heap->totalSize,
-                        get_resource_name(buffer.buffer.Get(), resnameBuffer));
-                    }
+                      auto id = std::get<BufferGlobalId>(res);
+                      auto& buffer = bufferHeapStateAccess->bufferHeaps[id.index()];
+                      auto standbyRef = std::find_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                                                     end(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                                                     [idx = id.index()](auto info)
+                      {
+                          return idx == info.index;
+                      });
+                      if (standbyRef == end(bufferHeapStateAccess->bufferHeapDiscardStandbyList))
+                      {
+                          char resnameBuffer[MAX_OBJECT_NAME_LENGTH];
+                          draw_segment(heap->heapPointer(), *segment, heap->totalSize,
+                                       get_resource_name(buffer.buffer.Get(), resnameBuffer));
+                      }
                     else
                     {
                       draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Standby for discard");
                     }
                   }
-                  else if (eastl::holds_alternative<AliasHeapReference>(res))
+                  else if (std::holds_alternative<AliasHeapReference>(res))
                   {
-                    // auto aliasHeapRef = eastl::get<AliasHeapReference>(res);
-                    // auto &heap = aliasHeaps[aliasHeapRef.index];
-                    draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Aliasing Heap");
-                    // TODO list current resources
+                      // auto aliasHeapRef = std::get<AliasHeapReference>(res);
+                      // auto &heap = aliasHeaps[aliasHeapRef.index];
+                      draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Aliasing Heap");
+                      // TODO list current resources
                   }
-                  else if (eastl::holds_alternative<ScratchBufferReference>(res))
+                  else if (std::holds_alternative<ScratchBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Scratch buffer");
                   }
-                  else if (eastl::holds_alternative<PushRingBufferReference>(res))
+                  else if (std::holds_alternative<PushRingBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Push ring buffer");
                   }
-                  else if (eastl::holds_alternative<UploadRingBufferReference>(res))
+                  else if (std::holds_alternative<UploadRingBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Upload ring buffer");
                   }
-                  else if (eastl::holds_alternative<TempUploadBufferReference>(res))
+                  else if (std::holds_alternative<TempUploadBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Temp upload buffer");
                   }
-                  else if (eastl::holds_alternative<PersistentUploadBufferReference>(res))
+                  else if (std::holds_alternative<PersistentUploadBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Persistent upload buffer");
                   }
-                  else if (eastl::holds_alternative<PersistentReadBackBufferReference>(res))
+                  else if (std::holds_alternative<PersistentReadBackBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Persistent read back buffer");
                   }
-                  else if (eastl::holds_alternative<PersistentBidirectionalBufferReference>(res))
+                  else if (std::holds_alternative<PersistentBidirectionalBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Persistent bidirectional buffer");
                   }
-                  else if (eastl::holds_alternative<RaytraceScratchBufferReference>(res))
+                  else if (std::holds_alternative<RaytraceScratchBufferReference>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Raytracing scratch buffer");
                   }
-                  else if (eastl::holds_alternative<RaytraceBottomLevelAccelerationStructureRefnerence>(res))
+                  else if (std::holds_alternative<RaytraceBottomLevelAccelerationStructureRefnerence>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Raytracing bottom level acceleration structure");
                   }
-                  else if (eastl::holds_alternative<RaytraceTopLevelAccelerationStructureRefnerence>(res))
+                  else if (std::holds_alternative<RaytraceTopLevelAccelerationStructureRefnerence>(res))
                   {
                     draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Raytracing top level acceleration structure");
                   }
                   else
                   {
-                    if (eastl::holds_alternative<eastl::monostate>(res))
-                    {
-                      draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Allocated (missing resource info)");
-                    }
+                      if (std::holds_alternative<std::monostate>(res))
+                      {
+                          draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Allocated (missing resource info)");
+                      }
                     else
                     {
                       draw_segment(heap->heapPointer(), *segment, heap->totalSize, "Allocated (missing display handling!)");
@@ -5038,16 +5074,16 @@ void DebugView::drawSamplerTable()
 
 void DebugView::debugOverlay()
 {
-  using eastl::begin;
-  using eastl::end;
+    using std::begin;
+    using std::end;
 
-#if _TARGET_PC_WIN
-  if (!get_device().isInitialized())
-  {
-    show_wrong_driver_info();
-    return;
-  }
-#endif
+    #if _TARGET_PC_WIN
+    if (!get_device().isInitialized())
+    {
+        show_wrong_driver_info();
+        return;
+    }
+    #endif
   // ImPlot is a mess, division by 0, multiply by inf and other exceptions left and right...
   FloatingPointExceptionsKeeper disableFE;
 
@@ -5496,7 +5532,7 @@ void OutOfMemoryRepoter::reportOOMInformation()
     didReportOOM = true;
     nau::string texStat;
     // cast assumes that OutOfMemoryRepoter is a base of ResourceMemoryHeap
-    static_assert((eastl::is_base_of<OutOfMemoryRepoter, ResourceMemoryHeap>::value));
+    static_assert((std::is_base_of<OutOfMemoryRepoter, ResourceMemoryHeap>::value));
     // can't use static cast as it respects visibility rules
     ((ResourceMemoryHeap *)this)->generateResourceAndMemoryReport(nullptr, nullptr, &texStat);
     NAU_LOG_DEBUG("GPU MEMORY STATISTICS:\n======================");

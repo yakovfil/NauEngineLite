@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_renderStates.h"
 #include "nau/3d/dag_texMgr.h"
@@ -18,9 +21,10 @@
 //#include <math/dag_Tnau::math::Matrix4.h>
 //#include <dag/dag_vector.h>
 //#include <memory/dag_framemem.h>
+#include <span>
+
 #include "nau/threading/spin_lock.h"
-#include <EASTL/span.h>
-#include <EASTL/bonus/lru_cache.h>
+#include "nau/utils/lru_cache.h"
 
 struct Color4;
 struct ShaderChannelId;
@@ -54,7 +58,7 @@ enum class ShaderCodeType
   COMPUTE = PIXEL,
 };
 
-using ShaderBytecode = eastl::vector<uint32_t>;
+using ShaderBytecode = std::vector<uint32_t>;
 
 struct ScriptedShadersBinDumpOwner
 {
@@ -67,43 +71,43 @@ struct ScriptedShadersBinDumpOwner
 
   size_t getDumpSize() const { return mSelfData.size(); }
 
-  eastl::span<const uint32_t> getCode(uint32_t id, ShaderCodeType type, ShaderBytecode &tmpbuf);
+  std::span<const uint32_t> getCode(uint32_t id, ShaderCodeType type, ShaderBytecode& tmpbuf);
 
   ScriptedShadersBinDump *operator->() { return mShaderDump; }
   ScriptedShadersBinDump *getDump() { return mShaderDump; }
   ScriptedShadersBinDumpV2 *getDumpV2() { return mShaderDumpV2; }
   ScriptedShadersBinDumpV3 *getDumpV3() { return mShaderDumpV3; }
 
-  eastl::vector<int16_t> globVarIntervalIdx;
-  eastl::vector<uint8_t> globIntervalNormValues;
+  std::vector<int16_t> globVarIntervalIdx;
+  std::vector<uint8_t> globIntervalNormValues;
 
   //auto getDecompressionDict() { return mDictionary.get(); }
 
 private:
   struct DecompressedGroup
   {
-    eastl::vector<uint8_t> decompressed_data;
-    bindump::Mapper<shader_layout::ShGroup> *sh_group = nullptr;
+      std::vector<uint8_t> decompressed_data;
+      bindump::Mapper<shader_layout::ShGroup>* sh_group = nullptr;
   };
-  using decompressed_groups_cache_t = eastl::lru_cache<uint16_t, DecompressedGroup>;
+  using decompressed_groups_cache_t = nau::LruCache<uint16_t, DecompressedGroup>;
 
   ScriptedShadersBinDump *mShaderDump = nullptr;
   ScriptedShadersBinDumpV2 *mShaderDumpV2 = nullptr;
   ScriptedShadersBinDumpV3 *mShaderDumpV3 = nullptr;
-  eastl::vector<uint8_t> mSelfData;
+  std::vector<uint8_t> mSelfData;
 
-  eastl::unique_ptr<decompressed_groups_cache_t> mDecompressedGropusLru;
+  std::unique_ptr<decompressed_groups_cache_t> mDecompressedGropusLru;
   nau::threading::SpinLock mDecompressedGroupsLruMutex;
 
   void copyDecompressedShader(const DecompressedGroup &decompressed_group, uint16_t index_in_group, ShaderBytecode &tmpbuf);
   void loadDecompressedShader(uint16_t group_id, uint16_t index_in_group, ShaderBytecode &tmpbuf);
   void storeDecompressedGroup(uint16_t group_id, DecompressedGroup &&decompressed_group);
 
-  //struct ZstdDictionaryDeleter
+  // struct ZstdDictionaryDeleter
   //{
-  //  void operator()(struct ZSTD_DDict_s *dict) const { zstd_destroy_ddict(dict); }
-  //};
-  //eastl::unique_ptr<struct ZSTD_DDict_s, ZstdDictionaryDeleter> mDictionary;
+  //   void operator()(struct ZSTD_DDict_s *dict) const { zstd_destroy_ddict(dict); }
+  // };
+  // std::unique_ptr<struct ZSTD_DDict_s, ZstdDictionaryDeleter> mDictionary;
 };
 
 namespace shaderbindump
@@ -162,8 +166,8 @@ struct ShaderStatistics
 };
 
 uint32_t get_dynvariant_collection_id(const shaderbindump::ShaderCode &code);
-void build_dynvariant_collection_cache(eastl::vector<int> &cache);
-void build_dynvariant_collection_cache(eastl::vector<int> &cache);
+void build_dynvariant_collection_cache(std::vector<int>& cache);
+void build_dynvariant_collection_cache(std::vector<int>& cache);
 } // namespace shaderbindump
 
 ScriptedShadersBinDump &shBinDumpRW(bool main = true);

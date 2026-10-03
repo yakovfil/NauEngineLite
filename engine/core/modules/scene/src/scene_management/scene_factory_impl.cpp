@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./scene_factory_impl.h"
+
+#include <algorithm>
+#include <span>
+#include <vector>
 
 #include "nau/diag/logging.h"
 #include "nau/scene/components/internal/missing_component.h"
@@ -49,7 +52,7 @@ namespace nau::scene
         return sceneVisitor.getPrefabInstance();
     }
 
-    ObjectUniquePtr<SceneObject> SceneFactoryImpl::createSceneObject(const rtti::TypeInfo* rootComponentType, const eastl::span<const rtti::TypeInfo*>)
+    ObjectUniquePtr<SceneObject> SceneFactoryImpl::createSceneObject(const rtti::TypeInfo* rootComponentType, const std::span<const rtti::TypeInfo*>)
     {
         ObjectUniquePtr<SceneComponent> rootComponent;
         if (rootComponentType)
@@ -96,7 +99,7 @@ namespace nau::scene
         return ObjectUniquePtr{component->as<Component*>()};
     }
 
-    const eastl::vector<IClassDescriptor::Ptr>& SceneFactoryImpl::getComponentTypes()
+    const std::vector<IClassDescriptor::Ptr>& SceneFactoryImpl::getComponentTypes()
     {
         if (!m_objectComponentTypes)
         {  // does not needed any thread sync. logic because scene system is single threaded.
@@ -113,7 +116,7 @@ namespace nau::scene
     const IClassDescriptor::Ptr& SceneFactoryImpl::findComponentClass(const rtti::TypeInfo& type)
     {
         const auto& componentTypes = getComponentTypes();
-        auto iter = eastl::find_if(componentTypes.begin(), componentTypes.end(), [&type](const IClassDescriptor::Ptr& classDesc)
+        auto iter = std::find_if(componentTypes.begin(), componentTypes.end(), [&type](const IClassDescriptor::Ptr& classDesc)
         {
             return classDesc->getClassTypeInfo() == type;
         });

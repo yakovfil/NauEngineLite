@@ -3,6 +3,9 @@
 
 #include "scene_container_builder.h"
 
+#include <optional>
+#include <unordered_map>
+
 #include "nau/app/global_properties.h"
 #include "nau/assets/scene_asset.h"
 #include "nau/io/memory_stream.h"
@@ -19,12 +22,12 @@ namespace nau
         public:
             SceneBuilderState() = default;
 
-            const eastl::unordered_map<Uid, SerializedSceneObject>& getAllObjects() const
+            const std::unordered_map<Uid, SerializedSceneObject>& getAllObjects() const
             {
                 return m_allObjects;
             }
 
-            const eastl::optional<SerializedSceneObject>& getRootObject() const
+            const std::optional<SerializedSceneObject>& getRootObject() const
             {
                 return m_rootObject;
             }
@@ -70,8 +73,8 @@ namespace nau
                 return true;
             }
 
-            eastl::optional<SerializedSceneObject> m_rootObject;
-            eastl::unordered_map<Uid, SerializedSceneObject> m_allObjects;
+            std::optional<SerializedSceneObject> m_rootObject;
+            std::unordered_map<Uid, SerializedSceneObject> m_allObjects;
             [[maybe_unused]] unsigned m_rootObjectId = 0;
         };
     }  // namespace

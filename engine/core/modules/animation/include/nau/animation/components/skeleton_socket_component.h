@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/assets/asset_ref.h"
 #include "nau/scene/components/component_attributes.h"
 #include "nau/scene/components/component_life_cycle.h"
@@ -35,14 +37,14 @@ namespace nau
          *
          * @param [in] boneName Name of the bone to attach the socket to.
          */
-        void setBoneName(const eastl::string& boneName);
+        void setBoneName(const std::string& boneName);
 
         /**
          * @brief Retrieves the name of the bone the socket is attached to.
          *
          * @return Name of the bone the socket is attached to.
          */
-        const eastl::string& getBoneName() const;
+        const std::string& getBoneName() const;
 
         /**
          * @brief Applies the socket transform relative to the bone it is attached to.
@@ -59,7 +61,7 @@ namespace nau
         const math::Transform& getRelativeToBoneOffset() const;
 
     private:
-        eastl::string m_boneName;
+        std::string m_boneName;
         math::Transform m_relativeToBoneOffset;
     };
 }  // namespace nau

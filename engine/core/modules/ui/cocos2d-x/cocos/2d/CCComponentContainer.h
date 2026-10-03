@@ -29,8 +29,8 @@ THE SOFTWARE.
 /// @cond DO_NOT_SHOW
 
 #include "base/CCMap.h"
-#include <EASTL/string.h>
-#include <EASTL/unordered_map.h>
+#include <string>
+#include <unordered_map>
 
 NS_CC_BEGIN
 
@@ -55,10 +55,10 @@ public:
 	/**
      * @js getComponent
      */
-	Component* get(const eastl::string& name) const;
+	Component* get(const std::string& name) const;
 
     bool add(Component *com);
-    bool remove(const eastl::string& name);
+    bool remove(const std::string& name);
     bool remove(Component *com);
     void removeAll();
     void visit(float delta);
@@ -68,7 +68,7 @@ public:
     
     bool isEmpty() const { return _componentMap.empty(); } 
 private:
-    eastl::unordered_map<eastl::string, Component*> _componentMap;
+    std::unordered_map<std::string, Component*> _componentMap;
     Node *_owner;
     
     friend class Node;

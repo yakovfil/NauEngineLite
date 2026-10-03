@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <utility>
+
 #include "dag_resMgr.h"
 #include "dag_texMgr.h"
 //#include "dag_drv3d_multi.h"
@@ -10,11 +13,11 @@
 //#include "nau/shaders/dag_shaders.h"
 //#include <gameRes/dag_gameResources.h>
 //#include <debug/daNAU_ASSERT.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/type_traits.h>
+#include <algorithm>
+#include <type_traits>
 
 #if DAGOR_DBGLEVEL > 1
-#include <EASTL/unordered_set.h>
+    #include <unordered_set>
 #endif
 //#include "nau/shaders/dag_shaderVar.h"
 
@@ -65,7 +68,7 @@
 
   SharedTex res = dag::get_tex_gameres("res_name");
   SharedTexHolder res_holder = dag::get_tex_gameres("res_name", "var_name");
-  SharedTexHolder other_res_holder(eastl::move(res), "var_name");
+  SharedTexHolder other_res_holder(std::move(res), "var_name");
 */
 
 namespace resptr_detail
@@ -202,7 +205,7 @@ public:
 };
 
 template <typename Type, typename ResType>
-using ResourceGetter = eastl::conditional_t<eastl::is_same_v<ResType, Sbuffer>, BufferGetter<Type>, TextureGetter<Type>>;
+using ResourceGetter = std::conditional_t<std::is_same_v<ResType, Sbuffer>, BufferGetter<Type>, TextureGetter<Type>>;
 
 class MoveAssignable
 {
@@ -224,29 +227,29 @@ protected:
   }
 };
 
-#define ENABLE_MOVING_BEHAVIOR(Class)                                                                                  \
-  Class() = default;                                                                                                   \
-  Class(Class &&other) noexcept                                                                                        \
-  {                                                                                                                    \
-    this->swap(other);                                                                                                 \
-  }                                                                                                                    \
-  Class &operator=(Class &&other)                                                                                      \
-  {                                                                                                                    \
-    NAU_ASSERT(Class::isValidForMoveAssignment(*this, other), "Invalid for move assignment. Call close() before this"); \
-    Class(eastl::move(other)).swap(*this);                                                                             \
-    return *this;                                                                                                      \
-  }                                                                                                                    \
-  void close()                                                                                                         \
-  {                                                                                                                    \
-    *this = Class();                                                                                                   \
-  }
+#define ENABLE_MOVING_BEHAVIOR(Class)                                                                                       \
+    Class() = default;                                                                                                      \
+    Class(Class&& other) noexcept                                                                                           \
+    {                                                                                                                       \
+        this->swap(other);                                                                                                  \
+    }                                                                                                                       \
+    Class& operator=(Class&& other)                                                                                         \
+    {                                                                                                                       \
+        NAU_ASSERT(Class::isValidForMoveAssignment(*this, other), "Invalid for move assignment. Call close() before this"); \
+        Class(std::move(other)).swap(*this);                                                                                \
+        return *this;                                                                                                       \
+    }                                                                                                                       \
+    void close()                                                                                                            \
+    {                                                                                                                       \
+        *this = Class();                                                                                                    \
+    }
 
-#define ASSIGNMENT_FROM_RESPTR(Class)       \
-  Class &operator=(ResPtr<ResType> &&res)   \
-  {                                         \
-    close();                                \
-    return *this = Class(eastl::move(res)); \
-  }
+#define ASSIGNMENT_FROM_RESPTR(Class)         \
+    Class& operator=(ResPtr<ResType>&& res)   \
+    {                                         \
+        close();                              \
+        return *this = Class(std::move(res)); \
+    }
 
 template <typename ResType>
 class ResPtr : public MoveAssignable
@@ -261,7 +264,10 @@ class ResPtr : public MoveAssignable
 public:
   ENABLE_MOVING_BEHAVIOR(ResPtr);
 
-  void swap(ResPtr &other) { eastl::swap(mResource, other.mResource); }
+  void swap(ResPtr& other)
+  {
+      std::swap(mResource, other.mResource);
+  }
 
   ~ResPtr()
   {
@@ -302,8 +308,8 @@ protected:
 
   void swap(ManagedRes &other)
   {
-    eastl::swap(mResId, other.mResId);
-    eastl::swap(mResource, other.mResource);
+      std::swap(mResId, other.mResId);
+      std::swap(mResource, other.mResource);
   }
 
   ManagedRes() = default;
@@ -331,7 +337,7 @@ public:
       managed_name = Helper<ResType>::getName(res.get());
 
     this->mResId = Helper<ResType>::registerRes(managed_name, res.get());
-    this->mResource = eastl::move(res).release();
+    this->mResource = std::move(res).release();
   }
 
   ~UniqueRes() { release(this->mResId, this->mResource); }
@@ -364,8 +370,8 @@ public:
 
   explicit SharedRes(ResPtr<ResType> &&res)
   {
-    this->mResource = eastl::move(res).release();
-    this->mResId = Helper<ResType>::registerRes(Helper<ResType>::getName(this->mResource), this->mResource);
+      this->mResource = std::move(res).release();
+      this->mResId = Helper<ResType>::registerRes(Helper<ResType>::getName(this->mResource), this->mResource);
   }
 
   SharedRes(const SharedRes &other) : SharedRes(other.mResId) {}
@@ -407,7 +413,7 @@ public:
 // Despite the fact that this header will be included to different cpp,
 // the linker will leave only one copy of this variable
 template <typename T = void>
-eastl::unordered_set<int> gUsedShaderVarIds;
+std::unordered_set<int> gUsedShaderVarIds;
 
 static void acquireShaderVarId(int new_id)
 {
@@ -441,7 +447,7 @@ protected:
   void swap(ManagedResHolder &other)
   {
     ManagedResType::swap(other);
-    eastl::swap(mShaderVarId, other.mShaderVarId);
+    std::swap(mShaderVarId, other.mShaderVarId);
   }
 
   ManagedResHolder() = default;
@@ -494,8 +500,8 @@ public:
       this->setVar();
   }
 
-  ConcreteResHolder(ResPtr<ResType> &&res, const char *shader_var_name = nullptr) :
-    ConcreteResHolder(ManagedResType(eastl::move(res)), shader_var_name)
+  ConcreteResHolder(ResPtr<ResType>&& res, const char* shader_var_name = nullptr) :
+      ConcreteResHolder(ManagedResType(std::move(res)), shader_var_name)
   {}
 
   ~ConcreteResHolder()
@@ -714,12 +720,11 @@ inline ResPtr<Sbuffer> create_one_frame_sr_structured(uint32_t structure_size, u
 //{
 //  return SharedTexHolder(dag::get_tex_gameres(resname), varname);
 //}
-static inline SharedTex add_managed_array_texture(const char *name, eastl::span<const char *> tex_slice_nm)
+static inline SharedTex add_managed_array_texture(const char* name, std::span<const char*> tex_slice_nm)
 {
   return SharedTex(::add_managed_array_texture(name, tex_slice_nm));
 }
-static inline SharedTexHolder add_managed_array_texture(const char *name, eastl::span<const char *> tex_slice_nm,
-  const char *varname)
+static inline SharedTexHolder add_managed_array_texture(const char* name, std::span<const char*> tex_slice_nm, const char* varname)
 {
   return SharedTexHolder(dag::add_managed_array_texture(name, tex_slice_nm), varname);
 }
@@ -745,9 +750,15 @@ static inline TexPtr make_texture_raw(Drv3dMakeTextureParams &makeParams)
   return resptr_detail::ResPtrFactory(wrappedTexture);
 }
 
-static inline SharedTexHolder set_texture(int var_id, SharedTex tex) { return SharedTexHolder(eastl::move(tex), var_id); }
+static inline SharedTexHolder set_texture(int var_id, SharedTex tex)
+{
+    return SharedTexHolder(std::move(tex), var_id);
+}
 
-static inline SharedBufHolder set_buffer(int var_id, SharedBuf buf) { return SharedBufHolder(eastl::move(buf), var_id); }
+static inline SharedBufHolder set_buffer(int var_id, SharedBuf buf)
+{
+    return SharedBufHolder(std::move(buf), var_id);
+}
 
 static inline SharedTexHolder set_texture(int var_id, const SharedTexHolder &tex)
 {

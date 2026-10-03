@@ -27,7 +27,7 @@
 #define __CCEVENTLISTENER_H__
 
 #include <functional>
-#include <EASTL/string.h>
+#include <string>
 #include <memory>
 
 #include "platform/CCPlatformMacros.h"
@@ -65,7 +65,7 @@ public:
         CUSTOM
     };
 
-    typedef eastl::string ListenerID;
+    typedef std::string ListenerID;
 
 CC_CONSTRUCTOR_ACCESS:
     /**

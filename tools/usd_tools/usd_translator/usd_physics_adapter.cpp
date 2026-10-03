@@ -1,10 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "usd_physics_adapter.h"
 
-#include <EASTL/string.h>
 #include <nau/math/math.h>
 #include <nau/scene/scene_factory.h>
 #include <nau/service/service_provider.h>
@@ -12,18 +10,19 @@
 #include <pxr/usd/usdGeom/xformCache.h>
 
 #include <filesystem>
+#include <string>
 
 #include "nau/NauPhysicsSchema/physicsMaterial.h"
 #include "nau/NauPhysicsSchema/rigidBody.h"
-#include "nau/service/service_provider.h"
-#include "nau/diag/logging.h"
 #include "nau/assets/asset_db.h"
+#include "nau/diag/logging.h"
 #include "nau/physics/components/rigid_body_component.h"
 #include "nau/physics/physics_body.h"
 #include "nau/physics/physics_collision_shapes_factory.h"
 #include "nau/physics/physics_contact_listener.h"
 #include "nau/physics/physics_material.h"
 #include "nau/physics/physics_world.h"
+#include "nau/service/service_provider.h"
 #include "usd_proxy/usd_proxy_decorators_regestry.h"
 
 using namespace nau;

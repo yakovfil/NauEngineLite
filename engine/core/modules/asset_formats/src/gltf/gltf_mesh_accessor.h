@@ -3,7 +3,8 @@
 
 
 #pragma once
-#include <EASTL/vector.h>
+#include <span>
+#include <vector>
 
 #include "gltf/gltf_file.h"
 #include "nau/assets/mesh_asset_accessor.h"
@@ -16,15 +17,15 @@ namespace nau
     {
         NAU_CLASS_(nau::GltfMeshAssetAccessor, IMeshAssetAccessor)
     public:
-        GltfMeshAssetAccessor(const GltfFile& file, size_t meshIndex, const eastl::vector<io::IFile::Ptr>& buffers);
+        GltfMeshAssetAccessor(const GltfFile& file, size_t meshIndex, const std::vector<io::IFile::Ptr>& buffers);
 
         ElementFormatFlag getSupportedIndexTypes() const override;
 
         MeshDescription getDescription() const override;
 
-        eastl::vector<VertAttribDescription> getVertAttribDescriptions() const override;
+        std::vector<VertAttribDescription> getVertAttribDescriptions() const override;
 
-        Result<> copyVertAttribs(eastl::span<OutputVertAttribDescription>) const override;
+        Result<> copyVertAttribs(std::span<OutputVertAttribDescription>) const override;
 
         Result<> copyIndices(void* outputBuffer, size_t outputBufferSize, ElementFormat outputIndexFormat) const override;
 
@@ -40,8 +41,8 @@ namespace nau
         };
 
         MeshDescription m_meshDescription;
-        eastl::vector<VertAttribDescription> m_vertAttributes;
-        eastl::vector<BinaryAccessor> m_binaryAccessors;
+        std::vector<VertAttribDescription> m_vertAttributes;
+        std::vector<BinaryAccessor> m_binaryAccessors;
     };
 
 }  // namespace nau

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/audio/audio_common.hpp"
 #include "nau/audio/audio_component_emitter.hpp"
 #include "nau/scene/components/component_attributes.h"
@@ -25,7 +27,7 @@ struct NAU_AUDIO_EXPORT AudioComponentListener : public scene::SceneComponent
         CLASS_FIELD(emitters))
 
     // Properties
-    eastl::vector<AudioComponentEmitter> emitters;
+    std::vector<AudioComponentEmitter> emitters;
 };
 
 NAU_AUDIO_END

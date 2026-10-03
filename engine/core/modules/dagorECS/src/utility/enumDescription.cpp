@@ -4,40 +4,43 @@
 #include <daECS/core/component.h>
 #include <daECS/core/entityComponent.h>
 #include <daECS/utility/ecs_asserts.h>
-#include <nau/utils/span.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/string.h>
-#include <daECS/utility/enum_registration.h>
 #include <daECS/utility/enum_description.h>
+#include <daECS/utility/enum_registration.h>
+#include <nau/utils/span.h>
+
+#include <string>
+#include <string_view>
+
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
 
-using DesriptionMap = eastl::vector_map<eastl::string, EnumLoaderDesc>;
-using string_c_str_comparator = eastl::less_2<eastl::string, const char *>;
+    using DesriptionMap = nau::SortedVectorMap<std::string, EnumLoaderDesc>;
+    using string_c_str_comparator = std::less<>;
 
-static DesriptionMap &get_descriptions()
-{
-  static DesriptionMap descriptionMap;
-  return descriptionMap;
-}
+    static DesriptionMap& get_descriptions()
+    {
+        static DesriptionMap descriptionMap;
+        return descriptionMap;
+    }
 
 void ecs_enum_registration(const char *enum_name, enum_parse_t parse, enum_names_t get_names, update_enum_t update_value,
   find_enum_idx_t find_enum, component_type_t component)
 {
-  auto it = get_descriptions().find_as(enum_name, string_c_str_comparator());
-  if (it != get_descriptions().end())
-  {
-    logerr("you try to register more than one enum type {}", enum_name);
-    return;
-  }
+    auto it = get_descriptions().find(enum_name);
+    if (it != get_descriptions().end())
+    {
+        logerr("you try to register more than one enum type {}", enum_name);
+        return;
+    }
   get_descriptions().emplace(enum_name, EnumLoaderDesc{parse, get_names, update_value, find_enum, component});
 }
 
-const EnumLoaderDesc *find_enum_description(eastl::string_view tp_name)
+const EnumLoaderDesc* find_enum_description(std::string_view tp_name)
 {
-  auto it = get_descriptions().find_as(tp_name.data(), string_c_str_comparator());
-  return it == get_descriptions().end() ? nullptr : &it->second;
+    auto it = get_descriptions().find(tp_name);
+    return it == get_descriptions().end() ? nullptr : &it->second;
 }
 
 bool is_type_ecs_enum(const char *type_name) { return find_enum_description(type_name) != nullptr; }

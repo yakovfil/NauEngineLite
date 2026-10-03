@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/rtti/type_info.h"
 #include "nau/utils/uid.h"
 
@@ -12,11 +14,11 @@ namespace nau
     struct AssetMetaInfoBase
     {
         Uid uid;
-        eastl::string dbPath;
-        eastl::string kind;
-        eastl::string sourceType;
-        eastl::string sourcePath;
-        eastl::string nausdPath;
+        std::string dbPath;
+        std::string kind;
+        std::string sourceType;
+        std::string sourcePath;
+        std::string nausdPath;
 
 #pragma region Class Info
         NAU_CLASS_FIELDS(

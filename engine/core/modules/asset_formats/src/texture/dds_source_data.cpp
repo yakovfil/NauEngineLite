@@ -3,6 +3,8 @@
 
 #include "./dds_source_data.h"
 
+#include <span>
+
 #include "./texture_utils.h"
 #include "nau/diag/logging.h"
 #include "nau/service/service_provider.h"
@@ -177,7 +179,7 @@ namespace nau
         return TinyImageFormat_FromTinyDDSFormat(TinyDDS_GetFormat(m_reader->m_data));
     }
 
-    void DDSSourceData::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination)
+    void DDSSourceData::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination)
     {
         NAU_FATAL(m_reader);
         NAU_ASSERT(mipLevelStart < getNumMipmaps());

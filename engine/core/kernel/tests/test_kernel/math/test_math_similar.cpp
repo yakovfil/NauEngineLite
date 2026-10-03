@@ -3,6 +3,8 @@
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
 
+#include <vector>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/math.h"
 #include "nau/math/transform.h"
@@ -11,16 +13,17 @@ using namespace Vectormath;
 
 #define EPS 0.000001f
 
-
 namespace nau::math
 {
-    void PrintTo(const Transform& transform, std::ostream* os) {
-        *os << std::endl << "t: (" << transform.getTranslation().getX() << ", " << transform.getTranslation().getY() << ", " << transform.getTranslation().getZ() << ")" << std::endl;
+    void PrintTo(const Transform& transform, std::ostream* os)
+    {
+        *os << std::endl
+            << "t: (" << transform.getTranslation().getX() << ", " << transform.getTranslation().getY() << ", " << transform.getTranslation().getZ() << ")" << std::endl;
         *os << "s: (" << transform.getScale().getX() << ", " << transform.getScale().getY() << ", " << transform.getScale().getZ() << ")" << std::endl;
         auto rotation = transform.getRotation().toEuler();
-        *os << "r: (" << rotation.getX() << ", " << rotation.getY() << ", " << rotation.getZ() << ")"<< std::endl;
+        *os << "r: (" << rotation.getX() << ", " << rotation.getY() << ", " << rotation.getZ() << ")" << std::endl;
     }
-}
+}  // namespace nau::math
 
 namespace nau::test
 {
@@ -139,7 +142,7 @@ namespace nau::test
 
         Vector3 vector = {};
 
-        const eastl::vector<float> multipliersList = {
+        const std::vector<float> multipliersList = {
             0.000001,
             0.00001,
             0.0001,
@@ -152,7 +155,7 @@ namespace nau::test
 
         auto testVector3Loop = [&](float x, float y, float z)
         {
-            for(auto scale : multipliersList)
+            for (auto scale : multipliersList)
             {
                 vector = Vector3{x, y, z} * scale;
                 testVector3(vector.getX(), vector.getY(), vector.getZ());
@@ -237,7 +240,7 @@ namespace nau::test
 
         Point3 point = {};
 
-        const eastl::vector<float> multipliersList = {
+        const std::vector<float> multipliersList = {
             0.000001,
             0.00001,
             0.0001,
@@ -250,7 +253,7 @@ namespace nau::test
 
         auto testPoint3Loop = [&](float x, float y, float z)
         {
-            for(auto scale : multipliersList)
+            for (auto scale : multipliersList)
             {
                 point = Point3{float(x * scale), float(y * scale), float(z * scale)};
                 testPoint3(point.getX(), point.getY(), point.getZ());
@@ -342,7 +345,7 @@ namespace nau::test
 
         Vector4 vector = {};
 
-        const eastl::vector<float> multipliersList = {
+        const std::vector<float> multipliersList = {
             0.000001,
             0.00001,
             0.0001,
@@ -355,7 +358,7 @@ namespace nau::test
 
         auto testVector4Loop = [&](float x, float y, float z, float w)
         {
-            for(auto scale : multipliersList)
+            for (auto scale : multipliersList)
             {
                 vector = Vector4{x, y, z, w} * scale;
                 testVector4(vector.getX(), vector.getY(), vector.getZ(), vector.getW());
@@ -563,9 +566,8 @@ namespace nau::test
             EXPECT_FALSE(Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz + 5}).similar(Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz}), 3));
             EXPECT_FALSE(Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx + 5, sy + 5, sz + 5}).similar(Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz}), 3));
 
-
             EXPECT_TRUE(Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz}) == (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));
-            EXPECT_NE(Transform({roll, pitch, yaw}, {tx + 1, ty, tz}, {sx, sy, sz}) , (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));
+            EXPECT_NE(Transform({roll, pitch, yaw}, {tx + 1, ty, tz}, {sx, sy, sz}), (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));
             EXPECT_FALSE(Transform({roll, pitch, yaw}, {tx, ty + 1, tz}, {sx, sy, sz}) == (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));
             EXPECT_FALSE(Transform({roll, pitch, yaw}, {tx, ty, tz + 1}, {sx, sy, sz}) == (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));
             EXPECT_FALSE(Transform({roll, pitch, yaw}, {tx + 1, ty + 1, tz + 1}, {sx, sy, sz}) == (Transform({roll, pitch, yaw}, {tx, ty, tz}, {sx, sy, sz})));

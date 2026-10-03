@@ -83,7 +83,9 @@ namespace nau::test
     static nau::math::vec3 GetBoneModelPosition(SkeletonComponent& skeletonComponent, unsigned boneIndex)
     {
         const ozz::math::Float4x4& boneModelMatrix = skeletonComponent.getModelSpaceJointMatrices()[boneIndex];
-        const math::vec3 bonePosition = math::vec3(boneModelMatrix.cols[3].m128_f32[0], boneModelMatrix.cols[3].m128_f32[1], boneModelMatrix.cols[3].m128_f32[2]);
+        alignas(16) float translation[4]{};
+        ozz::math::Store3Ptr(boneModelMatrix.cols[3], translation);
+        const math::vec3 bonePosition = math::vec3(translation[0], translation[1], translation[2]);
 
         return bonePosition;
     }
@@ -92,7 +94,7 @@ namespace nau::test
     {
         const ozz::math::Float4x4& boneModelMatrix = skeletonComponent.getModelSpaceJointMatrices()[boneIndex];
         math::Matrix4 modelM;
-        std::memcpy(&modelM, &boneModelMatrix, 64);
+        std::memcpy(static_cast<void*>(&modelM), &boneModelMatrix, sizeof(modelM));
         const math::Matrix4& modelTr = skeletonComponent.getWorldTransform().getMatrix();
 
         return (modelTr*modelM).getTranslation();

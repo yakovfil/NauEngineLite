@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <list>
 #include <type_traits>
 
 #include "nau/rtti/rtti_impl.h"
@@ -74,7 +75,7 @@ namespace nau::ser_detail
 
         void clear() override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 NAU_FATAL(!this->hasChildren(), "Attempt to modify Runtime Collection while there is still referenced children");
 
@@ -89,7 +90,7 @@ namespace nau::ser_detail
 
         void reserve(size_t capacity) override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 NAU_FATAL(!this->hasChildren(), "Attempt to modify Runtime Collection while there is still referenced children");
                 m_collection.reserve(capacity);
@@ -102,7 +103,7 @@ namespace nau::ser_detail
 
         Result<> append(const RuntimeValue::Ptr& value) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 NAU_FAILURE("Attempt to modify non mutable array");
                 return NauMakeError("Attempt to modify non mutable value");
@@ -192,7 +193,7 @@ namespace nau::ser_detail
 
         void clear() override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 NAU_FATAL(!this->hasChildren(), "Attempt to modify Runtime Collection while there is still referenced children");
 
@@ -207,7 +208,7 @@ namespace nau::ser_detail
 
         void reserve([[maybe_unused]] size_t) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 NAU_FAILURE("Can not reserve for non mutable array");
             }
@@ -215,7 +216,7 @@ namespace nau::ser_detail
 
         Result<> append(const RuntimeValue::Ptr& value) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 NAU_FAILURE("Attempt to modify non mutable value");
                 return NauMakeError("Attempt to modify non mutable value");
@@ -224,7 +225,6 @@ namespace nau::ser_detail
             {
                 value_changes_scope;
 
-                // eastl::list<T>::emplace_back() returns nothing.
                 m_collection.emplace_back();
                 decltype(auto) newElement = m_collection.back();
                 return RuntimeValue::assign(makeValueRef(newElement), value);
@@ -232,10 +232,8 @@ namespace nau::ser_detail
         }
 
     private:
-
         T m_collection;
     };
-
 
     template <typename T>
     class SetLikeNativeCollection final : public ser_detail::NativeRuntimeValueBase<RuntimeCollection>
@@ -304,7 +302,7 @@ namespace nau::ser_detail
 
         void clear() override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 NAU_FATAL(!this->hasChildren(), "Attempt to modify Runtime Collection while there is still referenced children");
 
@@ -319,7 +317,7 @@ namespace nau::ser_detail
 
         void reserve([[maybe_unused]] size_t) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 NAU_FAILURE("Can not reserve for non mutable array");
             }
@@ -327,7 +325,7 @@ namespace nau::ser_detail
 
         Result<> append(const RuntimeValue::Ptr& value) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 NAU_FAILURE("Attempt to modify non mutable value");
                 return NauMakeError("Attempt to modify non mutable value");
@@ -340,13 +338,12 @@ namespace nau::ser_detail
                 NauCheckResult(RuntimeValue::assign(makeValueRef(newElement), value))
                 [[maybe_unused]] auto [iter, emplaceOk] = m_collection.emplace(std::move(newElement));
                 NAU_ASSERT(emplaceOk, "Fail to emplace element (expects that collection holds only unique values)");
-                
+
                 return emplaceOk ? ResultSuccess : NauMakeError("Fail to append (unique) value");
             }
         }
 
     private:
-
         T m_collection;
     };
 }  // namespace nau::ser_detail
@@ -448,5 +445,5 @@ namespace nau
         using Collection = ser_detail::SetLikeNativeCollection<T>;
 
         return rtti::createInstanceWithAllocator<Collection>(std::move(allocator), std::move(collection));
-    }    
+    }
 }  // namespace nau

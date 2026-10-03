@@ -28,6 +28,7 @@
  * THE SOFTWARE.
  *
  */
+#include <string>
 #include "2d/CCParticleBatchNode.h"
 #include <stddef.h> // offsetof
 #include "base/ccTypes.h"
@@ -183,7 +184,7 @@ void ParticleBatchNode::addChild(Node * aChild, int zOrder, int tag)
     addChildByTagOrName(child, zOrder, tag, "", true);
 }
 
-void ParticleBatchNode::addChild(Node * aChild, int zOrder, const eastl::string &name)
+void ParticleBatchNode::addChild(Node * aChild, int zOrder, const std::string &name)
 {
     CCASSERT( aChild != nullptr, "Argument must be non-nullptr");
     CCASSERT( dynamic_cast<ParticleSystem*>(aChild) != nullptr, "CCParticleBatchNode only supports QuadParticleSystems as children");
@@ -193,7 +194,7 @@ void ParticleBatchNode::addChild(Node * aChild, int zOrder, const eastl::string 
     addChildByTagOrName(child, zOrder, 0, name, false);
 }
 
-void ParticleBatchNode::addChildByTagOrName(ParticleSystem* child, int zOrder, int tag, const eastl::string &name, bool setTag)
+void ParticleBatchNode::addChildByTagOrName(ParticleSystem* child, int zOrder, int tag, const std::string &name, bool setTag)
 {
     // If this is the 1st children, then copy blending function
     if (_children.empty())
@@ -233,7 +234,7 @@ void ParticleBatchNode::addChildByTagOrName(ParticleSystem* child, int zOrder, i
 // FIXME: research whether lazy sorting + freeing current quads and calloc a new block with size of capacity would be faster
 // FIXME: or possibly using vertexZ for reordering, that would be fastest
 // this helper is almost equivalent to Node's addChild, but doesn't make use of the lazy sorting
-int ParticleBatchNode::addChildHelper(ParticleSystem* child, int z, int aTag, const eastl::string &name, bool setTag)
+int ParticleBatchNode::addChildHelper(ParticleSystem* child, int z, int aTag, const std::string &name, bool setTag)
 {
     CCASSERT( child != nullptr, "Argument must be non-nil");
     CCASSERT( child->_getParent() == nullptr, "child already added. It can't be added again");

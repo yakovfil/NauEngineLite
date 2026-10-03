@@ -90,7 +90,7 @@ namespace utils
      * @return Array of Nodes that matches the name
      * @since v3.2
      */
-    CC_DLL std::vector<Node*>  findChildren(const Node &node, const eastl::string &name);
+    CC_DLL std::vector<Node*>  findChildren(const Node &node, const std::string &name);
     
     /** Same to ::atof, but strip the string, remain 7 numbers after '.' before call atof.
      * Why we need this? Because in android c++_static, atof ( and std::atof ) is unsupported for numbers have long decimal part and contain
@@ -138,7 +138,7 @@ namespace utils
 
      * @return  Returns found node or nullptr
      */
-    CC_DLL Node*  findChild(Node* levelRoot, const eastl::string& name);
+    CC_DLL Node*  findChild(Node* levelRoot, const std::string& name);
 
     /**
      * Find a child by tag recursively
@@ -153,7 +153,7 @@ namespace utils
      * @return  Returns found node or nullptr with specified type 'T'
      */
     template<typename T> inline
-    T findChild(Node* levelRoot, const eastl::string& name)
+    T findChild(Node* levelRoot, const std::string& name)
     {
         return dynamic_cast<T>(findChild(levelRoot, name));
     }

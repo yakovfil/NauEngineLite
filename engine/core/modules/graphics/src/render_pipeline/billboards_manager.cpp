@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_pipeline/billboards_manager.h"
+
+#include <functional>
+#include <memory>
+
 #include "graphics_impl.h"
 
 namespace nau
@@ -30,17 +33,16 @@ namespace nau
         }
     }
 
-
-    nau::async::Task<eastl::shared_ptr<nau::BillboardHandle>> BillboardsManager::addBillboard(
+    nau::async::Task<std::shared_ptr<nau::BillboardHandle>> BillboardsManager::addBillboard(
         ReloadableAssetView::Ptr texture,
-        nau::math::Vector3 position, 
+        nau::math::Vector3 position,
         nau::Uid uid,
         float screenPercentageSize)
     {
         auto& graphics = getServiceProvider().get<GraphicsImpl>();
         ASYNC_SWITCH_EXECUTOR(graphics.getPreRenderExecutor());
 
-        eastl::shared_ptr<nau::BillboardHandle> billboard = eastl::make_shared<nau::BillboardHandle>();
+        std::shared_ptr<nau::BillboardHandle> billboard = std::make_shared<nau::BillboardHandle>();
         billboard->setWorldPos(position);
         billboard->setTexture(texture);
         billboard->setScreenPercentageSize(screenPercentageSize);
@@ -111,8 +113,8 @@ namespace nau
     }
 
     RenderList::Ptr BillboardsManager::getRenderList(const nau::math::Vector3& viewerPosition,
-        eastl::function<bool(const InstanceInfo&)>& filterFunc,
-        eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
+                                                     std::function<bool(const InstanceInfo&)>& filterFunc,
+                                                     std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
     {
         NAU_FAILURE("Not implemented yet!");
         return RenderList::Ptr();
@@ -122,7 +124,8 @@ namespace nau
     {
         if (m_isBillboardsDirty)
         {
-            eastl::erase_if(m_billboards, [](auto& ptr) {
+            std::erase_if(m_billboards, [](auto& ptr)
+            {
                 return ptr.expired();
             });
 
@@ -132,7 +135,7 @@ namespace nau
 
     BillboardHandle::BillboardHandle()
     {
-        m_billboard = eastl::make_shared<BillboardsManager::BillboardInfo>();
+        m_billboard = std::make_shared<BillboardsManager::BillboardInfo>();
     }
 
     bool BillboardHandle::isValid() const

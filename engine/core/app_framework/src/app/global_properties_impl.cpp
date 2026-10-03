@@ -1,8 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "global_properties_impl.h"
+
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
 
 #include "nau/io/file_system.h"
 #include "nau/io/stream_utils.h"
@@ -15,17 +20,17 @@ namespace nau
     namespace
     {
         // splitting the path by {parent_path, property_name}
-        eastl::tuple<eastl::string_view, eastl::string_view> splitPropertyPath(eastl::string_view propertyPath)
+        std::tuple<std::string_view, std::string_view> splitPropertyPath(std::string_view propertyPath)
         {
             const auto pos = propertyPath.rfind('/');
-            if (pos == eastl::string_view::npos)
+            if (pos == std::string_view::npos)
             {
                 // root path
                 return {"/", propertyPath};
             }
 
-            const eastl::string_view parentPath{propertyPath.data(), pos};
-            const eastl::string_view propName{propertyPath.data() + pos + 1, propertyPath.size() - pos - 1};
+            const std::string_view parentPath{propertyPath.data(), pos};
+            const std::string_view propName{propertyPath.data() + pos + 1, propertyPath.size() - pos - 1};
 
             return {parentPath, propName};
         }
@@ -33,21 +38,21 @@ namespace nau
 
     // this function is used to access to the GlobalProperties instance from test projects only
     // without the need to create application.
-    eastl::unique_ptr<GlobalProperties> createGlobalProperties()
+    std::unique_ptr<GlobalProperties> createGlobalProperties()
     {
-        return eastl::make_unique<GlobalPropertiesImpl>();
+        return std::make_unique<GlobalPropertiesImpl>();
     }
 
     GlobalPropertiesImpl::GlobalPropertiesImpl() :
         m_propsRoot(serialization::jsonCreateDictionary())
     {
-        m_propsRoot->as<serialization::JsonValueHolder&>().setGetStringCallback([this](eastl::string_view str)
+        m_propsRoot->as<serialization::JsonValueHolder&>().setGetStringCallback([this](std::string_view str)
         {
             return expandConfigString(str);
         });
     }
 
-    RuntimeValue::Ptr GlobalPropertiesImpl::findValueAtPath(eastl::string_view valuePath) const
+    RuntimeValue::Ptr GlobalPropertiesImpl::findValueAtPath(std::string_view valuePath) const
     {  // BE AWARE: findValueAtPath requires m_mutex lock !
         if (!m_propsRoot)
         {
@@ -56,7 +61,7 @@ namespace nau
 
         RuntimeValue::Ptr current = m_propsRoot;
 
-        for (eastl::string_view propName : strings::split(valuePath, eastl::string_view{"/"}))
+        for (std::string_view propName : strings::split(valuePath, std::string_view{"/"}))
         {
             auto* const currentDict = current->as<RuntimeReadonlyDictionary*>();
             if (!currentDict)
@@ -78,14 +83,14 @@ namespace nau
         return current;
     }
 
-    Result<RuntimeDictionary::Ptr> GlobalPropertiesImpl::getDictionaryAtPath(eastl::string_view valuePath, bool createPath)
+    Result<RuntimeDictionary::Ptr> GlobalPropertiesImpl::getDictionaryAtPath(std::string_view valuePath, bool createPath)
     {
         // BE AWARE: getDictionaryAtPath requires m_mutex lock !
         NAU_FATAL(m_propsRoot);
 
         RuntimeValue::Ptr current = m_propsRoot;
 
-        for (eastl::string_view propName : strings::split(valuePath, eastl::string_view{"/"}))
+        for (std::string_view propName : strings::split(valuePath, std::string_view{"/"}))
         {
             auto* const currentDict = current->as<RuntimeDictionary*>();
             if (!currentDict)
@@ -116,24 +121,24 @@ namespace nau
         return NauMakeError("The enclosing object is not a dictionary ({})", valuePath);
     }
 
-    eastl::optional<eastl::string> GlobalPropertiesImpl::expandConfigString(eastl::string_view str) const
+    std::optional<std::string> GlobalPropertiesImpl::expandConfigString(std::string_view str) const
     {
         //  \$([a-zA-Z_0-9\-]*)\{([a-zA-Z_0-9/\-/]*)\}
         //  will parse strings like $[VAR_NAME]{[VAR_VALUE]}
         std::regex re(R"-(\$([a-zA-Z_0-9\-/]*)\{([a-zA-Z_0-9\-/]*)\})-", std::regex_constants::ECMAScript | std::regex_constants::icase);
         std::cmatch match;
 
-        eastl::string_view currentStr = str;
-        eastl::string result;
+        std::string_view currentStr = str;
+        std::string result;
 
         while (std::regex_search(currentStr.data(), currentStr.data() + currentStr.size(), match, re))
         {
             NAU_FATAL(match.size() >= 3);
 
-            eastl::string_view varKind{match[1].first, static_cast<size_t>(match[1].length())};
-            eastl::string_view varValue{match[2].first, static_cast<size_t>(match[2].length())};
+            std::string_view varKind{match[1].first, static_cast<size_t>(match[1].length())};
+            std::string_view varValue{match[2].first, static_cast<size_t>(match[2].length())};
 
-            eastl::string replacementStr;
+            std::string replacementStr;
 
             if (varKind.empty())
             {
@@ -146,7 +151,7 @@ namespace nau
             }
             else if (auto resolver = m_variableResolvers.find(varKind); resolver != m_variableResolvers.end())
             {
-                eastl::optional<eastl::string> resolvedStr = resolver->second(varValue);
+                std::optional<std::string> resolvedStr = resolver->second(varValue);
                 if (resolvedStr)
                 {
                     replacementStr = *std::move(resolvedStr);
@@ -169,12 +174,12 @@ namespace nau
             result.append(replacementStr.data(), replacementStr.size());
 
             const auto& suffix = match.suffix();
-            currentStr = eastl::string_view{suffix.first, static_cast<size_t>(suffix.length())};
+            currentStr = std::string_view{suffix.first, static_cast<size_t>(suffix.length())};
         }
 
         if (result.empty())
         {
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         if (!currentStr.empty())
@@ -185,19 +190,19 @@ namespace nau
         return result;
     }
 
-    RuntimeValue::Ptr GlobalPropertiesImpl::getRead(eastl::string_view path, [[maybe_unused]] IMemAllocator::Ptr allocator) const
+    RuntimeValue::Ptr GlobalPropertiesImpl::getRead(std::string_view path, [[maybe_unused]] IMemAllocator::Ptr allocator) const
     {
         shared_lock_(m_mutex);
         return findValueAtPath(path);
     }
 
-    bool GlobalPropertiesImpl::contains(eastl::string_view path) const
+    bool GlobalPropertiesImpl::contains(std::string_view path) const
     {
         shared_lock_(m_mutex);
         return findValueAtPath(path) != nullptr;
     }
 
-    Result<> GlobalPropertiesImpl::set(eastl::string_view path, RuntimeValue::Ptr value)
+    Result<> GlobalPropertiesImpl::set(std::string_view path, RuntimeValue::Ptr value)
     {
         NAU_FATAL(m_propsRoot);
 
@@ -212,7 +217,7 @@ namespace nau
         return (*parentDict)->setValue(strings::toStringView(propName), value);
     }
 
-    Result<RuntimeValue::Ptr> GlobalPropertiesImpl::getModify(eastl::string_view path, ModificationLock& lock, [[maybe_unused]] IMemAllocator::Ptr allocator)
+    Result<RuntimeValue::Ptr> GlobalPropertiesImpl::getModify(std::string_view path, ModificationLock& lock, [[maybe_unused]] IMemAllocator::Ptr allocator)
     {
         NAU_FATAL(m_propsRoot);
 
@@ -261,7 +266,7 @@ namespace nau
         return RuntimeValue::assign(m_propsRoot, nau::Ptr{&const_cast<RuntimeValue&>(value)}, ValueAssignOption::MergeCollection);
     }
 
-    void GlobalPropertiesImpl::addVariableResolver(eastl::string_view kind, VariableResolverCallback resolver)
+    void GlobalPropertiesImpl::addVariableResolver(std::string_view kind, VariableResolverCallback resolver)
     {
         NAU_ASSERT(!kind.empty());
         NAU_ASSERT(resolver);
@@ -276,7 +281,7 @@ namespace nau
         NAU_ASSERT(emplaceOk, "Variable resolver ({}) already exists", kind);
     }
 
-    Result<> mergePropertiesFromStream(GlobalProperties& properties, io::IStreamReader& stream, eastl::string_view contentType)
+    Result<> mergePropertiesFromStream(GlobalProperties& properties, io::IStreamReader& stream, std::string_view contentType)
     {
         if (strings::icaseEqual(contentType, "application/json"))
         {
@@ -293,7 +298,7 @@ namespace nau
         return ResultSuccess;
     }
 
-    Result<> mergePropertiesFromFile(GlobalProperties& properties, const std::filesystem::path& filePath, eastl::string_view contentType)
+    Result<> mergePropertiesFromFile(GlobalProperties& properties, const std::filesystem::path& filePath, std::string_view contentType)
     {
         namespace fs = std::filesystem;
         using namespace nau::io;
@@ -315,11 +320,11 @@ namespace nau
             }
         }
 
-        eastl::u8string utf8Path;
+        std::u8string utf8Path;
 
         {
             const std::wstring wcsPath = filePath.wstring();
-            utf8Path = strings::wstringToUtf8(eastl::wstring_view{wcsPath.data(), wcsPath.size()});
+            utf8Path = strings::wstringToUtf8(std::wstring_view{wcsPath.data(), wcsPath.size()});
         }
 
         auto fileStream = createNativeFileStream(reinterpret_cast<const char*>(utf8Path.c_str()), AccessMode::Read, OpenFileMode::OpenExisting);
@@ -331,7 +336,7 @@ namespace nau
         return mergePropertiesFromStream(properties, fileStream->as<IStreamReader&>(), contentType);
     }
 
-    void dumpPropertiesToStream(GlobalProperties& properties, io::IStreamWriter& stream, eastl::string_view contentType)
+    void dumpPropertiesToStream(GlobalProperties& properties, io::IStreamWriter& stream, std::string_view contentType)
     {
         using namespace nau::serialization;
 
@@ -350,9 +355,9 @@ namespace nau
         }
     }
 
-    eastl::string dumpPropertiesToString(GlobalProperties& properties, eastl::string_view contentType)
+    std::string dumpPropertiesToString(GlobalProperties& properties, std::string_view contentType)
     {
-        eastl::string buffer;
+        std::string buffer;
         io::InplaceStringWriter<char> writer{buffer};
         dumpPropertiesToStream(properties, writer);
         return buffer;

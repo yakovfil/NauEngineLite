@@ -6,19 +6,22 @@
 #define __DAGOR_TEX_MGR_DATA_H
 #pragma once
 
+#include <array>
+#include <vector>
+
+#include "nau/3d/dag_drv3dCmd.h"
+#include "nau/3d/dag_tex3d.h"
+#include "nau/3d/dag_texIdSet.h"
 #include "nau/3d/dag_texMgr.h"
 #include "nau/3d/dag_texMgrTags.h"
-#include "nau/3d/dag_tex3d.h"
-#include "nau/3d/dag_drv3dCmd.h"
+#include "nau/3d/ddsxTex.h"
+#include "nau/3d/tql.h"
+#include "nau/diag/logging.h"
+#include "nau/startup/dag_globalSettings.h"
 #include "nau/threading/critical_section.h"
 #include "nau/threading/dag_atomic.h"
 #include "nau/util/dag_fastStrMap.h"
-#include "nau/3d/dag_texIdSet.h"
-#include "nau/3d/ddsxTex.h"
-#include "nau/3d/tql.h"
-#include <EASTL/vector.h>
-#include "nau/startup/dag_globalSettings.h"
-#include "nau/diag/logging.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace ddsx
 {
@@ -29,7 +32,7 @@ namespace texmgr_internal
 {
 struct D3dResMgrDataFinal;
 
-struct TexTagInfoArray : public eastl::array<TexTagInfo, TEXTAG__COUNT>
+struct TexTagInfoArray : public std::array<TexTagInfo, TEXTAG__COUNT>
 {
     TexTagInfoArray()
     {
@@ -45,7 +48,7 @@ struct MipBiasRule
 
 extern D3dResMgrDataFinal RMGR; //< main resource manager data
 
-extern eastl::vector<MipBiasRule> mip_bias_rules;
+extern std::vector<MipBiasRule> mip_bias_rules;
 extern float default_mip_bias;
 
 extern TextureIdSet anisotropy_exceptions;
@@ -67,7 +70,7 @@ extern int dbg_texq_load_sleep_ms;
 extern bool dbg_texq_only_stubs;
 extern volatile int drv_res_updates_flush_count;
 extern NauFastStrMapT<int, -1> managed_tex_map_by_name; // helper container for fast resolve by name
-extern eastl::vector<const char *> managed_tex_map_by_idx;     // helper container for fast resolve by index
+extern std::vector<const char*> managed_tex_map_by_idx;  // helper container for fast resolve by index
 extern bool enable_cur_ql_mismatch_assert;
 
 extern bool (*should_release_tex)(BaseTexture *b);
@@ -80,7 +83,7 @@ extern bool (*d3d_load_genmip_sysmemcopy)(TEXTUREID tid, TEXTUREID base_tid, con
 namespace tql
 {
 extern dag::CriticalSection reqLDCritSection;
-extern eastl::vector_set<TEXTUREID> reqLD;
+extern nau::SortedVectorSet<TEXTUREID> reqLD;
 
 extern int gpu_mem_reserve_kb;
 extern int mem_used_persistent_kb;

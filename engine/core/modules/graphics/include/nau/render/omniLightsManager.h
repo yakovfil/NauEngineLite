@@ -3,17 +3,20 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <array>
+
 #include "nau/math/dag_bounds3.h"
-#include "nau/render/omniLight.h"
 #include "nau/math/dag_frustum.h"
+#include "nau/render/omniLight.h"
 
 namespace nau::render
 {
 #include "nau/render/renderLights.hlsli"
 }
 
-#include <EASTL/bitset.h>
-#include <EASTL/vector.h>
+#include <bitset>
+#include <vector>
+
 #include "nau/utils/dag_relocatableFixedVector.h"
 
 /* TODO: Support photometry
@@ -44,9 +47,9 @@ namespace nau::render
         void close();
 
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_inside_plane,
-                     eastl::vector<uint16_t>& lights_outside_plane,
-                     eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                     std::vector<uint16_t>& lights_inside_plane,
+                     std::vector<uint16_t>& lights_outside_plane,
+                     std::bitset<MAX_LIGHTS>* visibleIdBitset,
                      Occlusion*,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -57,8 +60,8 @@ namespace nau::render
                      mask_type_t accept_mask = MASK_ALL) const;
 
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_inside_plane,
-                     eastl::vector<uint16_t>& lights_outside_plane,
+                     std::vector<uint16_t>& lights_inside_plane,
+                     std::vector<uint16_t>& lights_outside_plane,
                      Occlusion*,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -69,8 +72,8 @@ namespace nau::render
                      mask_type_t accept_mask = MASK_ALL) const;
 
         void prepare(const nau::math::NauFrustum& frustum,
-                     eastl::vector<uint16_t>& lights_with_camera_inside,
-                     eastl::vector<uint16_t>& lights_with_camera_outside,
+                     std::vector<uint16_t>& lights_with_camera_inside,
+                     std::vector<uint16_t>& lights_with_camera_outside,
                      Occlusion*,
                      nau::math::BBox3& inside_box,
                      nau::math::BBox3& outside_box,
@@ -215,11 +218,11 @@ namespace nau::render
         }
 
     private:
-        eastl::array<Light, MAX_LIGHTS> rawLights = {};
-        eastl::array<uint8_t, MAX_LIGHTS> lightPriority = {};
+        std::array<Light, MAX_LIGHTS> rawLights = {};
+        std::array<uint8_t, MAX_LIGHTS> lightPriority = {};
         // masks allows to ignore specific lights in specific cases
         // for example, we can ignore highly dynamic lights for GI
-        eastl::array<mask_type_t, MAX_LIGHTS> masks = {};  //-V730_NOINIT
+        std::array<mask_type_t, MAX_LIGHTS> masks = {};  //-V730_NOINIT
         dag::RelocatableFixedVector<uint16_t, MAX_LIGHTS> freeLightIds = {};
 
         /* TODO: Support photometry

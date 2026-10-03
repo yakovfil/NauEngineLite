@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./gltf_mesh_accessor.h"
+
+#include <algorithm>
+#include <span>
+#include <string_view>
+#include <vector>
 
 namespace nau
 {
@@ -38,7 +42,7 @@ namespace nau
             return ElementFormat::Float;
         }
 
-        inline nau::AttributeType gltf2AttributeType(eastl::string_view type)
+        inline nau::AttributeType gltf2AttributeType(std::string_view type)
         {
             if(strings::icaseEqual(type, "SCALAR"))
             {
@@ -100,7 +104,7 @@ namespace nau
 
     }  // namespace
 
-    GltfMeshAssetAccessor::GltfMeshAssetAccessor(const GltfFile& file, size_t meshIndex, const eastl::vector<io::IFile::Ptr>& bufferFiles)
+    GltfMeshAssetAccessor::GltfMeshAssetAccessor(const GltfFile& file, size_t meshIndex, const std::vector<io::IFile::Ptr>& bufferFiles)
     {
         NAU_ASSERT(meshIndex < file.meshes.size());
 
@@ -174,17 +178,17 @@ namespace nau
         return m_meshDescription;
     }
 
-    eastl::vector<VertAttribDescription> GltfMeshAssetAccessor::getVertAttribDescriptions() const
+    std::vector<VertAttribDescription> GltfMeshAssetAccessor::getVertAttribDescriptions() const
     {
         return m_vertAttributes;
     }
 
-    Result<> GltfMeshAssetAccessor::copyVertAttribs(eastl::span<OutputVertAttribDescription> outputLayout) const
+    Result<> GltfMeshAssetAccessor::copyVertAttribs(std::span<OutputVertAttribDescription> outputLayout) const
     {
         const auto findAccessor = [&](const VertAttribDescription& desc) -> const BinaryAccessor*
         {
             // + 1 - skip indices
-            auto iter = eastl::find_if(m_binaryAccessors.begin() + 1, m_binaryAccessors.end(), [&desc](const BinaryAccessor& ba)
+            auto iter = std::find_if(m_binaryAccessors.begin() + 1, m_binaryAccessors.end(), [&desc](const BinaryAccessor& ba)
             {
                 return ba.attrib && (ba.attrib->semantic == desc.semantic && ba.attrib->semanticIndex == desc.semanticIndex);
             });

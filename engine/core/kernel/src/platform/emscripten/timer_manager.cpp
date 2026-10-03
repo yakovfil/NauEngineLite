@@ -1,10 +1,11 @@
 // Copyright 2026 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#include <EASTL/vector.h>
-
+#include <algorithm>
 #include <condition_variable>
+#include <memory>
 #include <thread>
+#include <vector>
 
 #include "nau/async/async_timer.h"
 #include "nau/async/task.h"
@@ -77,7 +78,7 @@ namespace nau::async
             if (!id)
                 return;
             std::lock_guard lock(m_mutex);
-            const auto it = eastl::find_if(m_entries.begin(), m_entries.end(), [id](const Entry& entry)
+            const auto it = std::find_if(m_entries.begin(), m_entries.end(), [id](const Entry& entry)
             {
                 return entry.id == id;
             });
@@ -151,7 +152,7 @@ namespace nau::async
                     m_changed.wait(lock);
                     continue;
                 }
-                auto it = eastl::min_element(m_entries.begin(), m_entries.end(), [](const Entry& a, const Entry& b)
+                auto it = std::min_element(m_entries.begin(), m_entries.end(), [](const Entry& a, const Entry& b)
                 {
                     return a.deadline < b.deadline;
                 });
@@ -173,7 +174,7 @@ namespace nau::async
 
         std::mutex m_mutex;
         std::condition_variable m_changed;
-        eastl::vector<Entry> m_entries;
+        std::vector<Entry> m_entries;
         InvokeAfterHandle m_nextId = 1;
         size_t m_pending = 0;
         bool m_disposed = false;
@@ -184,6 +185,6 @@ namespace nau::async
 
     ITimerManager::Ptr ITimerManager::createDefault()
     {
-        return eastl::make_unique<PortableTimerManager>();
+        return std::make_unique<PortableTimerManager>();
     }
 }  // namespace nau::async

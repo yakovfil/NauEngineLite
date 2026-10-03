@@ -8,15 +8,15 @@
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/xformCache.h>
 
-#include "nau/assets/asset_descriptor_factory.h"
-#include "usd_proxy/usd_proxy_decorators_regestry.h"
+#include <filesystem>
+#include <string>
 
 #include "../src/components/vfx_component.h"
-
-#include "nau/asset_tools/db_manager.h"
-#include "nau/io/virtual_file_system.h"
-#include <filesystem>
 #include "nau/asset_tools/asset_info.h"
+#include "nau/asset_tools/db_manager.h"
+#include "nau/assets/asset_descriptor_factory.h"
+#include "nau/io/virtual_file_system.h"
+#include "usd_proxy/usd_proxy_decorators_regestry.h"
 
 using namespace nau;
 using namespace nau::scene;
@@ -136,7 +136,7 @@ namespace UsdTranslator
         auto component = sceneFactory.createSceneObject<nau::vfx::VFXComponent>();
         component->setName(prim.GetName().GetText());
         auto& vfxComponent = component->getRootComponent<nau::vfx::VFXComponent>();
-        m_path = eastl::string((dbPath().string() + "\\").c_str() + metaInfo->dbPath);
+        m_path = std::string((dbPath().string() + "\\").c_str() + metaInfo->dbPath);
 
         vfxComponent.setAssetPath(metaInfo->dbPath);
 

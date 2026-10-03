@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include <map>
+#include <span>
+#include <string_view>
+#include <vector>
+
 #include "nau/animation/data/frame.h"
 #include "nau/animation/data/keyframe.h"
-
 #include "nau/dataBlock/dag_dataBlock.h"
-
-#include <EASTL/map.h>
-#include <EASTL/span.h>
-#include <EASTL/vector.h>
 
 namespace nau::animation
 {
@@ -138,8 +138,7 @@ namespace nau::animation
          * @param [in] index    Index of the event in the event collection associated with the frame.
          * @return              Event string identifier.
          */
-        virtual eastl::string_view getEventId(int frame, int index) const = 0;
-
+        virtual std::string_view getEventId(int frame, int index) const = 0;
 
         /**
          * @brief Deliver changes to the managed animation.
@@ -388,7 +387,7 @@ namespace nau::animation
             }
             else
             {
-                auto& newFrameIt = m_frameData.insert(frame).first->second;
+                auto& newFrameIt = m_frameData.try_emplace(frame).first->second;
                 newFrameIt.frame = frame;
                 newFrameIt.events.push_back(value);
             }
@@ -450,7 +449,7 @@ namespace nau::animation
          * @param [in] index    Index of the event in the event collection associated with the frame.
          * @return              Event string identifier.
          */
-        virtual eastl::string_view getEventId(int frame, int index) const override
+        virtual std::string_view getEventId(int frame, int index) const override
         {
             if (m_isFrameDataDirty)
             {
@@ -463,7 +462,7 @@ namespace nau::animation
             {
                 return m_editor->getEventId(frame, index);
             }
-            return eastl::string_view();
+            return std::string_view();
         }
         
         /**
@@ -530,8 +529,8 @@ namespace nau::animation
 
         IAnimationEditor<TKeyFrameValueType>* m_editor; ///< A pointer to the IAnimationEditor object that actually manages the animation. It receives all accumulated changes when @ref commit is called.
 
-        eastl::map<int, TKeyFrameValueType> m_keyFrames;///< A collection of keyframes.
-        eastl::map<int, Frame> m_frameData;             ///< A collection of frame data entries.
+        std::map<int, TKeyFrameValueType> m_keyFrames;  ///< A collection of keyframes.
+        std::map<int, Frame> m_frameData;               ///< A collection of frame data entries.
         bool m_isKeyFramesDirty = false;                ///< Indicates whether the keyframes collection contains uncommitted changes.
         bool m_isFrameDataDirty = false;                ///< Indicates whether the frame data entries collection contains uncommitted changes.
     };

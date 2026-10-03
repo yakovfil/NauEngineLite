@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "nau/scene/components/component_attributes.h"
 #include "nau/scene/components/internal/component_internal_attributes.h"
 #include "nau/serialization/json_utils.h"
 #include "net_sync_base_component.h"
-
 
 namespace nau
 {
@@ -36,7 +37,7 @@ namespace nau
             size_t length = str.length();
             buffer.resize(length);
             std::byte* data = buffer.data();
-            std::memcpy(data, str.begin(), length);
+            std::memcpy(data, str.data(), length);
         }
 
         /**
@@ -46,7 +47,7 @@ namespace nau
          */
         void netRead(const BytesBuffer& buffer) override
         {
-            eastl::u8string str((char8_t*)buffer.data(), (char8_t*)(buffer.data() + buffer.size()));
+            std::u8string str((char8_t*)buffer.data(), (char8_t*)(buffer.data() + buffer.size()));
             auto res = serialization::JsonUtils::parse(*this, str);
         }
     };

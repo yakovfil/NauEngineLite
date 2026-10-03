@@ -1,10 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./asset_db_impl.h"
 
+#include <algorithm>
 #include <format>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <vector>
 
 #include "nau/diag/logging.h"
 #include "nau/io/file_system.h"
@@ -42,16 +46,16 @@ namespace nau
         auto it = m_allAssets.find(uid);
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second;
+            return it->second;
         }
 
         NAU_LOG_WARNING("Can't find nausdPath by asset uid({})", toString(uid));
         return {};
     }
 
-    eastl::vector<AssetMetaInfoBase> AssetDBImpl::findAssetMetaInfoByKind(const eastl::string& kind) const
+    std::vector<AssetMetaInfoBase> AssetDBImpl::findAssetMetaInfoByKind(const std::string& kind) const
     {
-        eastl::vector<AssetMetaInfoBase> result;
+        std::vector<AssetMetaInfoBase> result;
         for (const auto& it : m_allAssets)
         {
             if (it.second.kind == kind)
@@ -62,94 +66,94 @@ namespace nau
         return result;
     }
 
-    eastl::string AssetDBImpl::getNausdPathFromUid(const Uid& uid) const
+    std::string AssetDBImpl::getNausdPathFromUid(const Uid& uid) const
     {
         auto it = m_allAssets.find(uid);
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.nausdPath;
+            return it->second.nausdPath;
         }
 
         NAU_LOG_WARNING("Can't find nausdPath by asset uid({})", toString(uid));
         return {};
     }
 
-    Uid AssetDBImpl::getUidFromNausdPath(const eastl::string& nausdPath) const
+    Uid AssetDBImpl::getUidFromNausdPath(const std::string& nausdPath) const
     {
-        auto it = eastl::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [nausdPath](const auto& assetInfo)
+        auto it = std::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [nausdPath](const auto& assetInfo)
         {
             return nausdPath == assetInfo.second.nausdPath;
         });
 
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.uid;
+            return it->second.uid;
         }
 
         NAU_LOG_WARNING("Can't find asset uid by nausdPath({})", nausdPath);
         return NullUid;
     }
 
-    eastl::string AssetDBImpl::getSourcePathFromUid(const Uid& uid) const
+    std::string AssetDBImpl::getSourcePathFromUid(const Uid& uid) const
     {
         auto it = m_allAssets.find(uid);
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.sourcePath;
+            return it->second.sourcePath;
         }
         NAU_LOG_WARNING("Can't find source path by asset uid({})", toString(uid));
         return {};
     }
 
-    Uid AssetDBImpl::getUidFromSourcePath(const eastl::string& sourcePath) const
+    Uid AssetDBImpl::getUidFromSourcePath(const std::string& sourcePath) const
     {
-        auto it = eastl::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [sourcePath](const auto& assetInfo)
+        auto it = std::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [sourcePath](const auto& assetInfo)
         {
             return sourcePath == assetInfo.second.sourcePath;
         });
 
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.uid;
+            return it->second.uid;
         }
 
         NAU_LOG_WARNING("Can't find asset uid by sourcePath({})", sourcePath);
         return NullUid;
     }
 
-    eastl::string AssetDBImpl::getSourcePathFromNausdPath(const eastl::string& nausdPath) const
+    std::string AssetDBImpl::getSourcePathFromNausdPath(const std::string& nausdPath) const
     {
-        auto it = eastl::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [nausdPath](const auto& assetInfo)
+        auto it = std::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [nausdPath](const auto& assetInfo)
         {
             return nausdPath == assetInfo.second.nausdPath;
         });
 
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.sourcePath;
+            return it->second.sourcePath;
         }
 
         NAU_LOG_WARNING("Can't find sourcePath by nausdPath({})", nausdPath);
         return {};
     }
 
-    eastl::string AssetDBImpl::getNausdPathFromSourcePath(const eastl::string& sourcePath) const
+    std::string AssetDBImpl::getNausdPathFromSourcePath(const std::string& sourcePath) const
     {
-        auto it = eastl::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [sourcePath](const auto& assetInfo)
+        auto it = std::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [sourcePath](const auto& assetInfo)
         {
             return sourcePath == assetInfo.second.sourcePath;
         });
 
         if (it != m_allAssets.end())
         {
-            return it.mpNode->mValue.second.nausdPath;
+            return it->second.nausdPath;
         }
 
         NAU_LOG_WARNING("Can't find nausdPath by sourcePath({})", sourcePath);
         return {};
     }
 
-    eastl::tuple<AssetPath, AssetContentInfo> AssetDBImpl::resolvePath(const AssetPath& assetPath)
+    std::tuple<AssetPath, AssetContentInfo> AssetDBImpl::resolvePath(const AssetPath& assetPath)
     {
         using namespace nau::strings;
 
@@ -164,7 +168,7 @@ namespace nau
             {
                 const nau::io::FsPath relativePath = stripRootPath(assetPath);
 
-                assetInfoIter = eastl::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [relativePath](const auto& assetInfo)
+                assetInfoIter = std::find_if(m_allAssets.cbegin(), m_allAssets.cend(), [relativePath](const auto& assetInfo)
                 {
                     const std::string fullName = std::format("{}.{}", assetInfo.second.sourcePath.c_str(), assetInfo.second.sourceType.c_str());
                     return fullName == relativePath;
@@ -218,14 +222,14 @@ namespace nau
         };
     }
 
-    eastl::vector<eastl::string_view> AssetDBImpl::getSupportedSchemes() const
+    std::vector<std::string_view> AssetDBImpl::getSupportedSchemes() const
     {
         return {"asset", "uid"};
     }
 
     void AssetDBImpl::addAssetDBInternal(io::FsPath dbPath)
     {
-        auto it = eastl::find_if(m_allDbs.cbegin(), m_allDbs.cend(), [dbPath](const auto& assetDb)
+        auto it = std::find_if(m_allDbs.cbegin(), m_allDbs.cend(), [dbPath](const auto& assetDb)
         {
             return assetDb.rootPath == dbPath.getParentPath();
         });
@@ -269,7 +273,7 @@ namespace nau
 
     void AssetDBImpl::reloadAssetDBInternal(io::FsPath dbPath)
     {
-        auto it = eastl::find_if(m_allDbs.cbegin(), m_allDbs.cend(), [dbPath](const auto& assetDb)
+        auto it = std::find_if(m_allDbs.cbegin(), m_allDbs.cend(), [dbPath](const auto& assetDb)
         {
             return assetDb.rootPath == dbPath.getParentPath();
         });
@@ -280,7 +284,7 @@ namespace nau
             return;
         }
 
-        [[maybe_unused]] size_t count = eastl::erase_if(m_allAssets, [it](const auto& assetInfo)
+        [[maybe_unused]] size_t count = std::erase_if(m_allAssets, [it](const auto& assetInfo)
         {
             return assetInfo.second.assetDbUid == (*it).uid;
         });

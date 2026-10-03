@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "2d/CCFontAtlas.h"
 #if CC_TARGET_PLATFORM != CC_PLATFORM_WIN32 && CC_TARGET_PLATFORM != CC_PLATFORM_ANDROID
 #include <iconv.h>
@@ -228,7 +229,7 @@ bool FontAtlas::getLetterDefinitionForChar(char32_t utf32Char, FontLetterDefinit
     }
 }
 
-void FontAtlas::conversionU32TOGB2312(const eastl::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap)
+void FontAtlas::conversionU32TOGB2312(const std::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap)
 {
     size_t strLen = u32Text.length();
     auto gb2312StrSize = strLen * 2;
@@ -240,7 +241,7 @@ void FontAtlas::conversionU32TOGB2312(const eastl::u32string& u32Text, std::unor
     case FT_ENCODING_GB2312:
     {
 #if CC_TARGET_PLATFORM == CC_PLATFORM_WIN32
-        eastl::u16string u16Text = nau::string(u32Text).tou16string();
+        std::u16string u16Text = nau::string(u32Text).tou16string();
         WideCharToMultiByte(936, NULL, (LPCWCH)u16Text.c_str(), strLen, (LPSTR)gb2312Text, gb2312StrSize, NULL, NULL);
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
         conversionEncodingJNI((char*)u32Text.c_str(), gb2312StrSize, "UTF-32LE", gb2312Text, "GB2312");
@@ -295,9 +296,9 @@ void FontAtlas::conversionU32TOGB2312(const eastl::u32string& u32Text, std::unor
     delete[] gb2312Text;
 }
 
-void FontAtlas::findNewCharacters(const eastl::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap)
+void FontAtlas::findNewCharacters(const std::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap)
 {
-    eastl::u32string newChars;
+    std::u32string newChars;
     FT_Encoding charEncoding = _fontFreeType->getEncoding();
 
     //find new characters
@@ -356,7 +357,7 @@ void FontAtlas::findNewCharacters(const eastl::u32string& u32Text, std::unordere
     }
 }
 
-bool FontAtlas::prepareLetterDefinitions(const eastl::u32string& utf32Text)
+bool FontAtlas::prepareLetterDefinitions(const std::u32string& utf32Text)
 {
     if (_fontFreeType == nullptr)
     {
@@ -516,9 +517,9 @@ std::string FontAtlas::getFontName() const
     std::string fontName = _fontFreeType ? _fontFreeType->getFontName() : "";
     if(fontName.empty()) return fontName;
     auto idx = fontName.rfind('/');
-    if (idx != eastl::string::npos) { return fontName.substr(idx + 1); }
+    if (idx != std::string::npos) { return fontName.substr(idx + 1); }
     idx = fontName.rfind('\\');
-    if (idx != eastl::string::npos) { return fontName.substr(idx + 1); }
+    if (idx != std::string::npos) { return fontName.substr(idx + 1); }
     return fontName;
 }
 

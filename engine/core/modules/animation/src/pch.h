@@ -10,10 +10,9 @@
 
 // clang-format off
 
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
-
+#include <string>
+#include <memory>
+#include <vector>
 
 // clang-format on
 

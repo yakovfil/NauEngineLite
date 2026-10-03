@@ -28,6 +28,7 @@ THE SOFTWARE.
 ****************************************************************************/
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "2d/CCNode.h"
@@ -193,7 +194,7 @@ public:
     
     using Node::addChild;
     virtual void addChild(Node * child, int zOrder, int tag) override;
-    virtual void addChild(Node * child, int zOrder, const eastl::string &name) override;
+    virtual void addChild(Node * child, int zOrder, const std::string &name) override;
     virtual void reorderChild(Node *child, int zOrder) override;
         
 	virtual void removeChild(Node *child, bool cleanup) override;
@@ -209,7 +210,7 @@ public:
 	/**
 	* @js NA
 	*/
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
     
     /**
     * Set ProgramState

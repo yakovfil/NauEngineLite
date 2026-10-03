@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
+#include <optional>
 
 #include "nau/math/transform.h"
 #include "nau/meta/class_info.h"
@@ -12,12 +12,13 @@
 #include "nau/scene/components/component_attributes.h"
 #include "nau/scene/components/internal/component_internal_attributes.h"
 #include "nau/scene/transform_control.h"
+#include "nau/utils/intrusive_list.h"
 
 namespace nau::scene_internal
 {
     /**
      */
-    struct TransformListNode : eastl::intrusive_list_node
+    struct TransformListNode : nau::IntrusiveListNode
     {
     };
 }  // namespace nau::scene_internal
@@ -44,6 +45,8 @@ namespace nau::scene
 
     public:
         SceneComponent() = default;
+        ~SceneComponent() override;
+
         SceneComponent(const SceneComponent&) = delete;
         SceneComponent& operator=(const SceneComponent&) = delete;
 
@@ -82,11 +85,11 @@ namespace nau::scene
 
     protected:
         math::Transform m_transform;
-        mutable eastl::optional<math::Transform> m_worldTransformCache;
+        mutable std::optional<math::Transform> m_worldTransformCache;
 
     private:
         SceneComponent* m_transformParent = nullptr;
-        eastl::intrusive_list<scene_internal::TransformListNode> m_transformChildren;
+        nau::IntrusiveList<scene_internal::TransformListNode> m_transformChildren;
 
         friend class SceneObject;
     };

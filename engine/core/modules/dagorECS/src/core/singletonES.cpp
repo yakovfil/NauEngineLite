@@ -1,9 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
+#include <daECS/core/coreEvents.h>
 #include <daECS/core/entityManager.h>
 #include <daECS/core/entitySystem.h>
-#include <daECS/core/coreEvents.h>
+
+#include <span>
+
 #include "ecsQueryInternal.h"
 #include "entityManagerEvent.h"
 #include "singletonName.h"
@@ -66,14 +69,17 @@ inline void singleton_creation_event(const Event &evt, const QueryView &componen
 }
 
 static EntitySystemDesc singleton_creation_events_es_desc("singleton_creation_events_es",
-    EntitySystemOps(nullptr, singleton_creation_event),
-    nau::ConstSpan<ComponentDesc>(), eastl::span(singleton_creation_comps + 0, 1),                                                 
-    eastl::span(singleton_creation_comps + 1, 1),
-    nau::ConstSpan<ComponentDesc>(),
-  EventSetBuilder<EventEntityCreated, EventComponentsAppear, EventEntityDestroyed,
-    EventComponentsDisappear>::build(), //
-  0, nullptr, nullptr, "__first_sync_point");
-
+                                                          EntitySystemOps(nullptr, singleton_creation_event),
+                                                          nau::ConstSpan<ComponentDesc>(),
+                                                          std::span(singleton_creation_comps + 0, 1),
+                                                          std::span(singleton_creation_comps + 1, 1),
+                                                          nau::ConstSpan<ComponentDesc>(),
+                                                          EventSetBuilder<EventEntityCreated, EventComponentsAppear, EventEntityDestroyed,
+                                                                          EventComponentsDisappear>::build(),  //
+                                                          0,
+                                                          nullptr,
+                                                          nullptr,
+                                                          "__first_sync_point");
 
 EntityId EntityManager::getSingletonEntity(const HashedConstString name)
 {

@@ -1,10 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "debug_renderer_sys_impl.h"
 
+#include <memory>
 #include <numbers>
+#include <vector>
 
 #include "graphics_assets/shader_asset.h"
 #include "nau/assets/asset_manager.h"
@@ -31,7 +32,7 @@ namespace nau
 
     DebugRenderSystem::Ptr createDebugRenderer()
     {
-        return eastl::make_unique<DebugRenderSysImpl>();
+        return std::make_unique<DebugRenderSysImpl>();
     };
 
     async::Task<> DebugRenderSysImpl::preInitService()
@@ -67,7 +68,7 @@ namespace nau
         return async::Task<>::makeResolved();
     }
 
-    eastl::vector<const rtti::TypeInfo*> DebugRenderSysImpl::getServiceDependencies() const
+    std::vector<const rtti::TypeInfo*> DebugRenderSysImpl::getServiceDependencies() const
     {
         return {&rtti::getTypeInfo<ICoreGraphics>()};
     }

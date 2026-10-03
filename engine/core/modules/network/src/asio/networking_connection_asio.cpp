@@ -6,6 +6,9 @@
 #include <uriparser/Uri.h>
 
 #include <asio.hpp>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include "nau/network/asio/networking_transport_asio.h"
 #include "networking_asio_wrapper.h"
@@ -18,16 +21,16 @@ namespace nau
     namespace NetworkingASIO
     {
         // TODO - move to common Networking sources
-        static bool ParseURI(const eastl::string& uriStr, eastl::string& scheme, eastl::string& host, eastl::string& port)
+        static bool ParseURI(const std::string& uriStr, std::string& scheme, std::string& host, std::string& port)
         {
             UriUriA uri;
             const char* errorPos;
             // No need to call uriFreeUriMembersA if Failure
             if (uriParseSingleUriA(&uri, uriStr.c_str(), &errorPos) == URI_SUCCESS)
             {
-                scheme = eastl::string(uri.scheme.first, uri.scheme.afterLast);
-                host = eastl::string(uri.hostText.first, uri.hostText.afterLast);
-                port = eastl::string(uri.portText.first, uri.portText.afterLast);
+                scheme = std::string(uri.scheme.first, uri.scheme.afterLast);
+                host = std::string(uri.hostText.first, uri.hostText.afterLast);
+                port = std::string(uri.portText.first, uri.portText.afterLast);
                 uriFreeUriMembersA(&uri);
                 return true;
             }
@@ -42,24 +45,24 @@ namespace nau
 
     NetworkingListenerASIO::~NetworkingListenerASIO() = default;
 
-    bool NetworkingListenerASIO::listen(const eastl::string& uriStr, nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback)
+    bool NetworkingListenerASIO::listen(const std::string& uriStr, nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback)
     {
         bool result = false;
-        eastl::string scheme;
-        eastl::string host;
-        eastl::string port;
+        std::string scheme;
+        std::string host;
+        std::string port;
         if (NetworkingASIO::ParseURI(uriStr, scheme, host, port))
         {
             if (scheme == "tcp")
             {
-                m_context.m_successCallback = eastl::move(successCallback);
-                m_context.m_failCallback = eastl::move(failCallback);
+                m_context.m_successCallback = std::move(successCallback);
+                m_context.m_failCallback = std::move(failCallback);
                 if (!m_acceptor)
                 {
-                    m_acceptor = eastl::make_shared<ASIO_Acceptor>(m_context.m_io_context, std::stoi(port.c_str()), [this](tcp::socket socket) -> void
+                    m_acceptor = std::make_shared<ASIO_Acceptor>(m_context.m_io_context, std::stoi(port.c_str()), [this](tcp::socket socket) -> void
                     {
-                        auto connection = eastl::make_shared<ASIO_Connection>(eastl::move(socket));
-                        auto transport = eastl::make_shared<NetworkingTransportASIO>(connection.get());
+                        auto connection = std::make_shared<ASIO_Connection>(std::move(socket));
+                        auto transport = std::make_shared<NetworkingTransportASIO>(connection.get());
                         m_incomingConnections.push_back(connection);
                         m_context.m_successCallback(transport);
                     });
@@ -97,27 +100,27 @@ namespace nau
         // TODO
     }
 
-    bool NetworkingConnectorASIO::connect(const eastl::string& uriStr,
-                                          nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+    bool NetworkingConnectorASIO::connect(const std::string& uriStr,
+                                          nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                                           nau::Functor<void(void)> failCallback)
     {
         bool result = false;
-        eastl::string scheme;
-        eastl::string host;
-        eastl::string port;
+        std::string scheme;
+        std::string host;
+        std::string port;
         if (NetworkingASIO::ParseURI(uriStr, scheme, host, port))
         {
             if (scheme == "tcp")
             {
-                m_context.m_successCallback = eastl::move(successCallback);
-                m_context.m_failCallback = eastl::move(failCallback);
-                m_connection = eastl::make_shared<ASIO_Connection>(m_context.m_io_context);
+                m_context.m_successCallback = std::move(successCallback);
+                m_context.m_failCallback = std::move(failCallback);
+                m_connection = std::make_shared<ASIO_Connection>(m_context.m_io_context);
                 auto endpoint = tcp::endpoint(ip::address::from_string(host.c_str()), std::stoi(port.c_str()));
                 m_connection->connect(endpoint, [this](std::error_code ec) -> void
                 {
                     if (!ec)
                     {
-                        auto transport = eastl::make_shared<NetworkingTransportASIO>(m_connection.get());
+                        auto transport = std::make_shared<NetworkingTransportASIO>(m_connection.get());
                         m_context.m_successCallback(transport);
                     }
                     else
@@ -135,10 +138,10 @@ namespace nau
         return result;
     }
 
-    bool NetworkingConnectorASIO::connect(const eastl::string& uri,
-                                          nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+    bool NetworkingConnectorASIO::connect(const std::string& uri,
+                                          nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                                           nau::Functor<void(void)> failCallback,
-                                          nau::Functor<void(eastl::shared_ptr<INetworkingSignaling>)> signalingCallback)
+                                          nau::Functor<void(std::shared_ptr<INetworkingSignaling>)> signalingCallback)
     {
         // No P2P in ASIO
         if (failCallback)

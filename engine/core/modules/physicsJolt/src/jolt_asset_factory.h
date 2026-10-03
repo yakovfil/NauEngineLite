@@ -3,16 +3,17 @@
 
 #pragma once
 
-#include "nau/assets/asset_view_factory.h"
+#include <vector>
 
+#include "nau/assets/asset_view_factory.h"
 
 namespace nau::physics::jolt
 {
     class JoltAssetFactory final : public IAssetViewFactory
     {
         NAU_RTTI_CLASS(nau::physics::jolt::JoltAssetFactory, IAssetViewFactory)
-        
-        eastl::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
+
+        std::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
         async::Task<IAssetView::Ptr> createAssetView(nau::Ptr<> accessor, const rtti::TypeInfo& viewType) override;
     };
 }

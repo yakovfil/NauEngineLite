@@ -4,6 +4,9 @@
 
 #pragma once
 #include <asio.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/network/napi/networking_connection.h"
 
@@ -15,7 +18,7 @@ namespace nau
     struct NetworkingConectionASIOContext
     {
         asio::io_context& m_io_context;
-        nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> m_successCallback;
+        nau::Functor<void(std::shared_ptr<INetworkingTransport>)> m_successCallback;
         nau::Functor<void(void)> m_failCallback;
         NetworkingConectionASIOContext(asio::io_context& context) :
             m_io_context(context)
@@ -49,7 +52,7 @@ namespace nau
         @param [in] failCallback Callback, if connection failed
         @return True, if listening begin, false otherwise
         */
-        bool listen(const eastl::string& uri, nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback) override;
+        bool listen(const std::string& uri, nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback) override;
 
         /**
         @brief Stop listen
@@ -59,8 +62,8 @@ namespace nau
 
     private:
         NetworkingConectionASIOContext m_context;
-        eastl::shared_ptr<ASIO_Acceptor> m_acceptor;
-        eastl::vector<eastl::shared_ptr<ASIO_Connection>> m_incomingConnections;
+        std::shared_ptr<ASIO_Acceptor> m_acceptor;
+        std::vector<std::shared_ptr<ASIO_Connection>> m_incomingConnections;
     };
 
     /**
@@ -89,8 +92,8 @@ namespace nau
          * @param [in] failCallback     Callback that is dispatched, if the connection has failed.
          * @return                      `true`, if connection attempt has started, `false` otherwise.
          */
-        bool connect(const eastl::string& uri,
-                     nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+        bool connect(const std::string& uri,
+                     nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                      nau::Functor<void(void)> failCallback) override;
         /**
          * @brief Connects using URI with callbacks.
@@ -101,10 +104,10 @@ namespace nau
          * @param [in] signalingCallback    Callback to signaling service.
          * @return                          `true`, if connection attempt has started, `false` otherwise.
          */
-        bool connect(const eastl::string& uri,
-                     nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+        bool connect(const std::string& uri,
+                     nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                      nau::Functor<void(void)> failCallback,
-                     nau::Functor<void(eastl::shared_ptr<INetworkingSignaling>)> signalingCallback) override;
+                     nau::Functor<void(std::shared_ptr<INetworkingSignaling>)> signalingCallback) override;
 
         /**
          * @brief Stops connection attempts.
@@ -115,7 +118,7 @@ namespace nau
 
     private:
         NetworkingConectionASIOContext m_context;
-        eastl::shared_ptr<ASIO_Connection> m_connection;
+        std::shared_ptr<ASIO_Connection> m_connection;
     };
 
 }  // namespace nau

@@ -3,18 +3,22 @@
 
 #include "camera/readonly_camera.h"
 
+#include <tuple>
+#include <utility>
+#include <variant>
+
 namespace nau::scene
 {
     // do not replace camera parameter with rvalue reference (or value):
     // must guarantee that first syncCameraProperties (in constructor) call always success.
     ReadonlyCamera::ReadonlyCamera(const nau::Ptr<DetachedCamera>& camera) :
-        m_cameraReference(eastl::in_place<DetachedCameraWeakRef>, camera)
+        m_cameraReference(std::in_place_type<DetachedCameraWeakRef>, camera)
     {
         NAU_VERIFY(syncCameraProperties());
     }
 
     ReadonlyCamera::ReadonlyCamera(ObjectWeakRef<ICameraControl> camera) :
-        m_cameraReference(eastl::in_place<SceneCameraWeakRef>, camera)
+        m_cameraReference(std::in_place_type<SceneCameraWeakRef>, camera)
     {
         NAU_VERIFY(syncCameraProperties());
     }
@@ -31,7 +35,7 @@ namespace nau::scene
 
         if (m_cameraReference.index() == 0)
         {
-            SceneCameraWeakRef& cameraRef = eastl::get<SceneCameraWeakRef>(m_cameraReference);
+            SceneCameraWeakRef& cameraRef = std::get<SceneCameraWeakRef>(m_cameraReference);
             if (!cameraRef)
             {
                 return false;
@@ -43,7 +47,7 @@ namespace nau::scene
         else
         {
             NAU_FATAL(m_cameraReference.index() == 1, "Invalid camera reference state");
-            nau::Ptr<DetachedCamera> camera = eastl::get<DetachedCameraWeakRef>(m_cameraReference).lock();
+            nau::Ptr<DetachedCamera> camera = std::get<DetachedCameraWeakRef>(m_cameraReference).lock();
             if (!camera)
             {
                 return false;

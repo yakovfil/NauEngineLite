@@ -1,10 +1,11 @@
 //
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
-#include "nau/threading/thread_local_value.h"
-#include <unordered_set>
 #include <chrono>
 #include <mutex>
+#include <unordered_set>
+
+#include "nau/threading/thread_local_value.h"
 
 namespace nau::test
 {
@@ -47,18 +48,25 @@ namespace nau::test
 
     TEST(TestThreadLocalValue, MultipleThreads)
     {
+        std::mutex mutex;
         std::unordered_set<void*> ptrs;
         ThreadLocalValue<int> value;
-        std::thread thread1([&]() 
-            { 
-                ptrs.emplace( &value.value()); 
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            });
-        std::thread thread2([&]() 
-            { 
-                ptrs.emplace( &value.value()); 
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            });
+        std::thread thread1([&]()
+        {
+            {
+                std::lock_guard lock(mutex);
+                ptrs.emplace(&value.value());
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        });
+        std::thread thread2([&]()
+        {
+            {
+                std::lock_guard lock(mutex);
+                ptrs.emplace(&value.value());
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        });
         thread1.join();
         thread2.join();
         ASSERT_EQ(ptrs.size(), 2);
@@ -69,15 +77,15 @@ namespace nau::test
         TestValue::count = 0;
         ThreadLocalValue<TestValue> value;
         std::thread thread1([&value]
-        { 
+        {
             auto& unused = value.value();
             value.destroy();
         });
-        
+
         std::thread thread2([&value]
-        { 
+        {
             auto& unused = value.value();
-            value.destroy(); 
+            value.destroy();
         });
 
         thread1.join();
@@ -90,12 +98,12 @@ namespace nau::test
         TestValue::count = 0;
         ThreadLocalValue<TestValue> value;
         std::thread thread1([&value]
-        { 
+        {
             auto& unused = value.value();
         });
-        
+
         std::thread thread2([&value]
-        { 
+        {
             auto& unused = value.value();
         });
 
@@ -112,40 +120,38 @@ namespace nau::test
         std::unordered_set<void*> ptrs;
         std::vector<std::thread> threads;
         ThreadLocalValue<int> value;
-        for(int i = 0; i < std::thread::hardware_concurrency(); ++i)
+        for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             threads.push_back(
-                std::thread([&]() 
-                { 
-                    auto* ptr = &value.value();
-                    {
-                        std::lock_guard lock(mutex);
-                        ptrs.emplace(ptr);
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                })
-            );
+                std::thread([&]()
+            {
+                auto* ptr = &value.value();
+                {
+                    std::lock_guard lock(mutex);
+                    ptrs.emplace(ptr);
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }));
         }
-        for(auto &t : threads) 
-        { 
-            t.join(); 
+        for (auto& t : threads)
+        {
+            t.join();
         }
         threads.clear();
         auto curSize = ptrs.size();
 
-        for(int i = 0; i < std::thread::hardware_concurrency(); ++i)
+        for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             threads.push_back(
-                std::thread([&]() 
-                { 
-                    auto* ptr = &value.value();
-                    {
-                        std::lock_guard lock(mutex);
-                        ptrs.emplace(ptr);
-                    }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                })
-            );
+                std::thread([&]()
+            {
+                auto* ptr = &value.value();
+                {
+                    std::lock_guard lock(mutex);
+                    ptrs.emplace(ptr);
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }));
         }
         for (auto& t : threads)
         {
@@ -155,4 +161,4 @@ namespace nau::test
         ASSERT_EQ(ptrs.size(), curSize);
     }
 
-}
+}  // namespace nau::test

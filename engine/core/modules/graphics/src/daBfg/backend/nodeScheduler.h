@@ -4,13 +4,12 @@
 #pragma once
 
 #include <ska_hash_map/flat_hash_map2.hpp>
-#include <EASTL/span.h>
-#include "nau/memory/eastl_aliases.h"
+#include <span>
 
-#include "dabfg/common/graphDumper.h"
 #include "dabfg/backend/intermediateRepresentation.h"
+#include "dabfg/common/graphDumper.h"
 #include "dabfg/id/idIndexedFlags.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
 
 namespace dabfg
 {
@@ -21,7 +20,7 @@ public:
   NodeScheduler(IGraphDumper &dumper) : graphDumper{dumper} {}
 
   // old index -> new index mapping
-  using NodePermutation = IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::EastlFrameAllocator>;
+  using NodePermutation = IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>>;
   NodePermutation schedule(const intermediate::Graph &graph);
 
 private:

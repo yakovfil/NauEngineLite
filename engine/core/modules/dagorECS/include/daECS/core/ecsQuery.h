@@ -4,11 +4,12 @@
 #pragma once
 
 #include <daECS/utility/dag_generationRefId.h>
-#include <EASTL/vector.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/fixed_function.h>
-#include "entityId.h"
+
+#include <vector>
+
 #include "dataComponent.h"
+#include "entityId.h"
+#include "nau/utils/fixed_function.h"
 #include "nau/utils/for_each.h"
 
 namespace ecs
@@ -30,8 +31,8 @@ enum class QueryCbResult
 };
 
 // Queries are considered perfomance critical therefore it should not allocate memory on execution (hence fixed_function)
-typedef eastl::fixed_function<sizeof(void *) * 2, void(const QueryView &)> query_cb_t;
-typedef eastl::fixed_function<sizeof(void *) * 2, QueryCbResult(const QueryView &)> stoppable_query_cb_t;
+typedef nau::FixedFunction<sizeof(void*) * 2, void(const QueryView&)> query_cb_t;
+typedef nau::FixedFunction<sizeof(void*) * 2, QueryCbResult(const QueryView&)> stoppable_query_cb_t;
 #if DAGOR_DBGLEVEL > 1
 #define QUERY_FAST_ASSERT \
   NAU_FAST_ASSERT // there is no reason to check type correctness, as we generate our queries using codegen. do that only in

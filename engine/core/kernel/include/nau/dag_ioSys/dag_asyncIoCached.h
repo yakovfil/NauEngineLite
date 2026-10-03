@@ -4,7 +4,8 @@
 
 #include <nau/dag_ioSys/dag_baseIo.h>
 
-#include "EASTL/string.h"
+#include <string>
+
 #include "nau/kernel/kernel_config.h"
 namespace nau::iosys
 {
@@ -34,7 +35,7 @@ namespace nau::iosys
             int pos;
             char* data;
         } buf;
-        eastl::string targetFilename;
+        std::string targetFilename;
 
     public:
         AsyncLoadCachedCB(const char* fpath);

@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include <EASTL/vector.h>
+#include <vector>
 
 #include "gltf/gltf_file.h"
 #include "nau/animation/data/frame.h"
@@ -32,7 +32,7 @@ namespace nau
         };
 
     public:
-        GltfAnimationAssetAccessor(const GltfFile& file, size_t animationIndex, size_t channelIndex, const eastl::vector<io::IFile::Ptr>& bufferFiles);
+        GltfAnimationAssetAccessor(const GltfFile& file, size_t animationIndex, size_t channelIndex, const std::vector<io::IFile::Ptr>& bufferFiles);
 
         virtual AnimationDataDescriptor getDataDescriptor() const override;
         virtual async::Task<> copyVectors(const AnimationDataDescriptor& desc, TTimesContainer& times, TDataContainer<math::vec3>& data) const override;
@@ -44,7 +44,7 @@ namespace nau
         GltfAnimDataDescriptor m_descriptor;
 
         template <typename TData>
-        friend void readBinaryData(const BinaryAccessor&, eastl::vector<TData>&);
+        friend void readBinaryData(const BinaryAccessor&, std::vector<TData>&);
 
         template <typename TData>
         void copyTrackData(const AnimationDataDescriptor& desc, TTimesContainer&, TDataContainer<TData>&) const;

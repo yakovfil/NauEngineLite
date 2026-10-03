@@ -2,21 +2,23 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "backendDebug.h"
-
-#include "dabfg/frontend/internalRegistry.h"
-
-#include <EASTL/array.h>
-#include <EASTL/string.h>
-#include <EASTL/queue.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/fixed_vector.h>
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include "nau/gui/dag_imgui.h"
 #include <imgui.h>
 
+#include <algorithm>
+#include <array>
+#include <limits>
+#include <queue>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <span>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "backendDebug.h"
+#include "dabfg/frontend/internalRegistry.h"
+#include "nau/gui/dag_imgui.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 static inline ImVec2 operator+(const ImVec2 &lhs, const ImVec2 &rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2 operator-(const ImVec2 &lhs, const ImVec2 &rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
@@ -25,46 +27,45 @@ static inline ImVec2 operator/(const ImVec2 &lhs, float rhs) { return ImVec2(lhs
 constexpr auto IMGUI_WINDOW_GROUP = "FRAMEGRAPH";
 constexpr auto IMGUI_VISUALIZE_LIFETIMES_WINDOW = "Resource Lifetimes##FRAMEGRAPH-lifetimes";
 
-
-constexpr eastl::pair<ResourceBarrier, const char *> BARRIER_NAMES[]{
-  {RB_RW_RENDER_TARGET, "RB_RW_RENDER_TARGET"},
-  {RB_RW_UAV, "RB_RW_UAV"},
-  {RB_RW_COPY_DEST, "RB_RW_COPY_DEST"},
-  {RB_RW_BLIT_DEST, "RB_RW_BLIT_DEST"},
-  {RB_RO_SRV, "RB_RO_SRV"},
-  {RB_RO_CONSTANT_BUFFER, "RB_RO_CONSTANT_BUFFER"},
-  {RB_RO_VERTEX_BUFFER, "RB_RO_VERTEX_BUFFER"},
-  {RB_RO_INDEX_BUFFER, "RB_RO_INDEX_BUFFER"},
-  {RB_RO_INDIRECT_BUFFER, "RB_RO_INDIRECT_BUFFER"},
-  {RB_RO_VARIABLE_RATE_SHADING_TEXTURE, "RB_RO_VARIABLE_RATE_SHADING_TEXTURE"},
-  {RB_RO_COPY_SOURCE, "RB_RO_COPY_SOURCE"},
-  {RB_RO_BLIT_SOURCE, "RB_RO_BLIT_SOURCE"},
-  {RB_RO_RAYTRACE_ACCELERATION_BUILD_SOURCE, "RB_RO_RAYTRACE_ACCELERATION_BUILD_SOURCE"},
-  {RB_FLAG_RELEASE_PIPELINE_OWNERSHIP, "RB_FLAG_RELEASE_PIPELINE_OWNERSHIP"},
-  {RB_FLAG_ACQUIRE_PIPELINE_OWNERSHIP, "RB_FLAG_ACQUIRE_PIPELINE_OWNERSHIP"},
-  {RB_FLAG_SPLIT_BARRIER_BEGIN, "RB_FLAG_SPLIT_BARRIER_BEGIN"},
-  {RB_FLAG_SPLIT_BARRIER_END, "RB_FLAG_SPLIT_BARRIER_END"},
-  {RB_STAGE_VERTEX, "RB_STAGE_VERTEX"},
-  {RB_STAGE_PIXEL, "RB_STAGE_PIXEL"},
-  {RB_STAGE_COMPUTE, "RB_STAGE_COMPUTE"},
-  {RB_STAGE_RAYTRACE, "RB_STAGE_RAYTRACE"},
-  {RB_FLUSH_UAV, "RB_FLUSH_UAV"},
-  {RB_FLAG_DONT_PRESERVE_CONTENT, "RB_FLAG_DONT_PRESERVE_CONTENT"},
-  {RB_SOURCE_STAGE_VERTEX, "RB_SOURCE_STAGE_VERTEX"},
-  {RB_SOURCE_STAGE_PIXEL, "RB_SOURCE_STAGE_PIXEL"},
-  {RB_SOURCE_STAGE_COMPUTE, "RB_SOURCE_STAGE_COMPUTE"},
-  {RB_SOURCE_STAGE_RAYTRACE, "RB_SOURCE_STAGE_RAYTRACE"},
+constexpr std::pair<ResourceBarrier, const char*> BARRIER_NAMES[]{
+    {                     RB_RW_RENDER_TARGET,                      "RB_RW_RENDER_TARGET"},
+    {                               RB_RW_UAV,                                "RB_RW_UAV"},
+    {                         RB_RW_COPY_DEST,                          "RB_RW_COPY_DEST"},
+    {                         RB_RW_BLIT_DEST,                          "RB_RW_BLIT_DEST"},
+    {                               RB_RO_SRV,                                "RB_RO_SRV"},
+    {                   RB_RO_CONSTANT_BUFFER,                    "RB_RO_CONSTANT_BUFFER"},
+    {                     RB_RO_VERTEX_BUFFER,                      "RB_RO_VERTEX_BUFFER"},
+    {                      RB_RO_INDEX_BUFFER,                       "RB_RO_INDEX_BUFFER"},
+    {                   RB_RO_INDIRECT_BUFFER,                    "RB_RO_INDIRECT_BUFFER"},
+    {     RB_RO_VARIABLE_RATE_SHADING_TEXTURE,      "RB_RO_VARIABLE_RATE_SHADING_TEXTURE"},
+    {                       RB_RO_COPY_SOURCE,                        "RB_RO_COPY_SOURCE"},
+    {                       RB_RO_BLIT_SOURCE,                        "RB_RO_BLIT_SOURCE"},
+    {RB_RO_RAYTRACE_ACCELERATION_BUILD_SOURCE, "RB_RO_RAYTRACE_ACCELERATION_BUILD_SOURCE"},
+    {      RB_FLAG_RELEASE_PIPELINE_OWNERSHIP,       "RB_FLAG_RELEASE_PIPELINE_OWNERSHIP"},
+    {      RB_FLAG_ACQUIRE_PIPELINE_OWNERSHIP,       "RB_FLAG_ACQUIRE_PIPELINE_OWNERSHIP"},
+    {             RB_FLAG_SPLIT_BARRIER_BEGIN,              "RB_FLAG_SPLIT_BARRIER_BEGIN"},
+    {               RB_FLAG_SPLIT_BARRIER_END,                "RB_FLAG_SPLIT_BARRIER_END"},
+    {                         RB_STAGE_VERTEX,                          "RB_STAGE_VERTEX"},
+    {                          RB_STAGE_PIXEL,                           "RB_STAGE_PIXEL"},
+    {                        RB_STAGE_COMPUTE,                         "RB_STAGE_COMPUTE"},
+    {                       RB_STAGE_RAYTRACE,                        "RB_STAGE_RAYTRACE"},
+    {                            RB_FLUSH_UAV,                             "RB_FLUSH_UAV"},
+    {           RB_FLAG_DONT_PRESERVE_CONTENT,            "RB_FLAG_DONT_PRESERVE_CONTENT"},
+    {                  RB_SOURCE_STAGE_VERTEX,                   "RB_SOURCE_STAGE_VERTEX"},
+    {                   RB_SOURCE_STAGE_PIXEL,                    "RB_SOURCE_STAGE_PIXEL"},
+    {                 RB_SOURCE_STAGE_COMPUTE,                  "RB_SOURCE_STAGE_COMPUTE"},
+    {                RB_SOURCE_STAGE_RAYTRACE,                 "RB_SOURCE_STAGE_RAYTRACE"},
 };
-static eastl::string nameForBarrier(ResourceBarrier barrier)
+static std::string nameForBarrier(ResourceBarrier barrier)
 {
-  eastl::string result;
-  for (auto [flag, name] : BARRIER_NAMES)
-  {
-    if (flag == (barrier & flag))
+    std::string result;
+    for (auto [flag, name] : BARRIER_NAMES)
     {
-      result += name;
-      result += " | ";
-    }
+        if (flag == (barrier & flag))
+        {
+            result += name;
+            result += " | ";
+        }
   }
 
   if (!result.empty())
@@ -73,44 +74,44 @@ static eastl::string nameForBarrier(ResourceBarrier barrier)
   return result;
 }
 
-static const eastl::vector_map<dabfg::Access, const char *> RES_USAGE_ACCESS_NAMES{
-  {dabfg::Access::UNKNOWN, "UNKNOWN"},       //
-  {dabfg::Access::READ_ONLY, "READ_ONLY"},   //
-  {dabfg::Access::READ_WRITE, "READ_WRITE"}, //
+static const nau::SortedVectorMap<dabfg::Access, const char*> RES_USAGE_ACCESS_NAMES{
+    {   dabfg::Access::UNKNOWN,    "UNKNOWN"}, //
+    { dabfg::Access::READ_ONLY,  "READ_ONLY"}, //
+    {dabfg::Access::READ_WRITE, "READ_WRITE"}, //
 };
-static const eastl::vector_map<dabfg::Usage, const char *> RES_USAGE_TYPE_NAMES{
-  {dabfg::Usage::UNKNOWN, "UNKNOWN"},
-  {dabfg::Usage::COLOR_ATTACHMENT, "COLOR_ATTACHMENT"},
-  {dabfg::Usage::INPUT_ATTACHMENT, "INPUT_ATTACHMENT"},
-  {dabfg::Usage::DEPTH_ATTACHMENT, "DEPTH_ATTACHMENT"},
-  {dabfg::Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE, "DEPTH_ATTACHMENT_AND_SHADER_RESOURCE"},
-  {dabfg::Usage::RESOLVE_ATTACHMENT, "RESOLVE_ATTACHMENT"},
-  {dabfg::Usage::SHADER_RESOURCE, "SHADER_RESOURCE"},
-  {dabfg::Usage::CONSTANT_BUFFER, "CONSTANT_BUFFER"},
-  {dabfg::Usage::INDEX_BUFFER, "INDEX_BUFFER"},
-  {dabfg::Usage::VERTEX_BUFFER, "VERTEX_BUFFER"},
-  {dabfg::Usage::COPY, "COPY"},
-  {dabfg::Usage::BLIT, "BLIT"},
-  {dabfg::Usage::INDIRECTION_BUFFER, "INDIRECTION_BUFFER"},
-  {dabfg::Usage::VRS_RATE_TEXTURE, "VRS_RATE_TEXTURE"},
+static const nau::SortedVectorMap<dabfg::Usage, const char*> RES_USAGE_TYPE_NAMES{
+    {                             dabfg::Usage::UNKNOWN,                              "UNKNOWN"},
+    {                    dabfg::Usage::COLOR_ATTACHMENT,                     "COLOR_ATTACHMENT"},
+    {                    dabfg::Usage::INPUT_ATTACHMENT,                     "INPUT_ATTACHMENT"},
+    {                    dabfg::Usage::DEPTH_ATTACHMENT,                     "DEPTH_ATTACHMENT"},
+    {dabfg::Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE, "DEPTH_ATTACHMENT_AND_SHADER_RESOURCE"},
+    {                  dabfg::Usage::RESOLVE_ATTACHMENT,                   "RESOLVE_ATTACHMENT"},
+    {                     dabfg::Usage::SHADER_RESOURCE,                      "SHADER_RESOURCE"},
+    {                     dabfg::Usage::CONSTANT_BUFFER,                      "CONSTANT_BUFFER"},
+    {                        dabfg::Usage::INDEX_BUFFER,                         "INDEX_BUFFER"},
+    {                       dabfg::Usage::VERTEX_BUFFER,                        "VERTEX_BUFFER"},
+    {                                dabfg::Usage::COPY,                                 "COPY"},
+    {                                dabfg::Usage::BLIT,                                 "BLIT"},
+    {                  dabfg::Usage::INDIRECTION_BUFFER,                   "INDIRECTION_BUFFER"},
+    {                    dabfg::Usage::VRS_RATE_TEXTURE,                     "VRS_RATE_TEXTURE"},
 };
-constexpr eastl::pair<dabfg::Stage, const char *> RES_USAGE_STAGE_NAMES[]{
-  {dabfg::Stage::PRE_RASTER, "PRE_RASTER"},   //
-  {dabfg::Stage::POST_RASTER, "POST_RASTER"}, //
-  {dabfg::Stage::COMPUTE, "COMPUTE"},         //
-  {dabfg::Stage::TRANSFER, "TRANSFER"},       //
-  {dabfg::Stage::RAYTRACE, "RAYTRACE"},       //
+constexpr std::pair<dabfg::Stage, const char*> RES_USAGE_STAGE_NAMES[]{
+    { dabfg::Stage::PRE_RASTER,  "PRE_RASTER"}, //
+    {dabfg::Stage::POST_RASTER, "POST_RASTER"}, //
+    {    dabfg::Stage::COMPUTE,     "COMPUTE"}, //
+    {   dabfg::Stage::TRANSFER,    "TRANSFER"}, //
+    {   dabfg::Stage::RAYTRACE,    "RAYTRACE"}, //
 };
-static eastl::string name_for_usage_stage(dabfg::Stage stage)
+static std::string name_for_usage_stage(dabfg::Stage stage)
 {
-  eastl::string result;
-  for (auto [flag, name] : RES_USAGE_STAGE_NAMES)
-  {
-    if (flag == (stage & flag))
+    std::string result;
+    for (auto [flag, name] : RES_USAGE_STAGE_NAMES)
     {
-      result += name;
-      result += " | ";
-    }
+        if (flag == (stage & flag))
+        {
+            result += name;
+            result += " | ";
+        }
   }
 
   if (!result.empty())
@@ -125,31 +126,31 @@ static constexpr int RES_RECORD_WINDOW = 2; // must be in sync with scheduler, b
 
 struct ResourceInfo
 {
-  eastl::string name;
+    std::string name;
 
-  int firstUsageNodeIdx = eastl::numeric_limits<int>::max();
-  int lastUsageNodeIdx = eastl::numeric_limits<int>::min();
+    int firstUsageNodeIdx = std::numeric_limits<int>::max();
+    int lastUsageNodeIdx = std::numeric_limits<int>::min();
 
-  int heapIndex = -1;
-  int offset = 0;
-  int size = 0;
+    int heapIndex = -1;
+    int offset = 0;
+    int size = 0;
 
-  bool createdByRename = false;
-  bool consumedByRename = false;
+    bool createdByRename = false;
+    bool consumedByRename = false;
 
-  // Node execution index -> usage
-  eastl::vector_map<int, ResourceUsage> usageTimeline;
+    // Node execution index -> usage
+    nau::SortedVectorMap<int, ResourceUsage> usageTimeline;
 
-  eastl::fixed_vector<eastl::pair<int, ResourceBarrier>, 32> barrierEvents;
+    nau::InlineVector<std::pair<int, ResourceBarrier>, 32> barrierEvents;
 };
 
-static eastl::array<ska::flat_hash_map<ResNameId, ResourceInfo>, RES_RECORD_WINDOW> per_resource_infos;
+static std::array<ska::flat_hash_map<ResNameId, ResourceInfo>, RES_RECORD_WINDOW> per_resource_infos;
 
-static eastl::vector<int> resource_heap_sizes;
+static std::vector<int> resource_heap_sizes;
 
-static eastl::vector<eastl::string> node_names;
+static std::vector<std::string> node_names;
 
-void update_resource_visualization(const InternalRegistry &registry, eastl::span<const NodeNameId> node_execution_order)
+void update_resource_visualization(const InternalRegistry& registry, std::span<const NodeNameId> node_execution_order)
 {
   for (auto &v : per_resource_infos)
     v.clear();
@@ -169,7 +170,7 @@ void update_resource_visualization(const InternalRegistry &registry, eastl::span
       const auto recordUsage = //
         [frame, nodeExecIdx](ResNameId res) {
           auto &lifetime = per_resource_infos[frame][res];
-          lifetime.lastUsageNodeIdx = eastl::max(lifetime.lastUsageNodeIdx, nodeExecIdx);
+          lifetime.lastUsageNodeIdx = std::max(lifetime.lastUsageNodeIdx, nodeExecIdx);
         };
 
       for (auto resId : node.createdResources)
@@ -199,7 +200,7 @@ void update_resource_visualization(const InternalRegistry &registry, eastl::span
         // This is a hack: next frame reads are represented as node ids bigger
         // than the total amount of executed nodes
         const int fakeExecId = nodeExecIdx + node_execution_order.size();
-        lifetime.lastUsageNodeIdx = eastl::max(lifetime.lastUsageNodeIdx, fakeExecId);
+        lifetime.lastUsageNodeIdx = std::max(lifetime.lastUsageNodeIdx, fakeExecId);
       }
     }
   }
@@ -243,7 +244,7 @@ void debug_rec_resource_placement(ResNameId id, int frame, int heap, int offset,
 
   if (resource_heap_sizes.size() <= heap)
     resource_heap_sizes.resize(heap + 1, 0);
-  resource_heap_sizes[heap] = eastl::max(resource_heap_sizes[heap], offset + size);
+  resource_heap_sizes[heap] = std::max(resource_heap_sizes[heap], offset + size);
 }
 
 void debug_rec_resource_barrier(ResNameId res_id, int res_frame, int exec_time, int exec_frame, ResourceBarrier barrier)
@@ -309,7 +310,7 @@ static void visualize_resource_lifetimes()
   const float viewWidth =
     dabfg::RES_RECORD_WINDOW * (NODE_HORIZONTAL_SIZE * nodeCount + GAP_BETWEEN_FRAMES_SIZE) - GAP_BETWEEN_FRAMES_SIZE;
 
-  eastl::vector<float> heapSizeScaling(dabfg::resource_heap_sizes.size());
+  std::vector<float> heapSizeScaling(dabfg::resource_heap_sizes.size());
   for (size_t i = 0; i < heapSizeScaling.size(); ++i)
     heapSizeScaling[i] = verticalScaling / float(dabfg::resource_heap_sizes[i]);
 
@@ -338,7 +339,7 @@ static void visualize_resource_lifetimes()
 
       {
         ImVec2 textSize = ImGui::CalcTextSize(nodeName.c_str());
-        textSize.x = eastl::min(textSize.x, NODE_HORIZONTAL_SIZE * viewScaling);
+        textSize.x = std::min(textSize.x, NODE_HORIZONTAL_SIZE * viewScaling);
 
         const ImVec2 nodeRectMin = nodeRectCenter - ImVec2(0.5f * textSize.x, 0);
         const ImVec2 nodeRectMax = nodeRectMin + textSize;
@@ -355,9 +356,9 @@ static void visualize_resource_lifetimes()
       {
         const auto numberRectCenter = ImVec2(nodeRectCenter.x, initialPos.y + 2.0f * NODE_WINDOW_PADDING);
 
-        eastl::string num = eastl::to_string(i);
+        std::string num = std::to_string(i);
         ImVec2 textSize = ImGui::CalcTextSize(num.c_str());
-        textSize.x = eastl::min(textSize.x, NODE_HORIZONTAL_SIZE * viewScaling);
+        textSize.x = std::min(textSize.x, NODE_HORIZONTAL_SIZE * viewScaling);
 
         ImGui::SetCursorScreenPos(numberRectCenter - textSize / 2);
         ImGui::TextUnformatted(num.c_str());
@@ -471,7 +472,7 @@ static void visualize_resource_lifetimes()
             (frame + 1 < dabfg::RES_RECORD_WINDOW || time < nodeCount) ? frameOffsetX + gapSkips : -NODE_HORIZONTAL_SIZE * nodeCount;
 
           const float rectMiddle = viewOffset.x + (frameOffsetXWithHistory + NODE_HORIZONTAL_SIZE * (time - .5f)) * viewScaling;
-          const float rectBottom = resOffsetY + eastl::max(4, info.size * heapSizeScaling[info.heapIndex]);
+          const float rectBottom = resOffsetY + std::max(4.0f, info.size * heapSizeScaling[info.heapIndex]);
 
           const auto min = ImVec2(rectMiddle - 3.f, resOffsetY);
           const auto max = ImVec2(rectMiddle + 3.f, rectBottom);
@@ -542,24 +543,24 @@ static void visualize_resource_lifetimes()
 
     if (ImGui::GetIO().MouseWheel != 0)
     {
-      //if (ImGui::IsKeyDown(HumanInput::DKEY_LSHIFT))
-      //{
-      //  const float prevVertScaling = verticalScaling;
-      //  verticalScaling = eastl::clamp(verticalScaling + 20.f * ImGui::GetIO().MouseWheel, 100.f, 2000.f);
-      //
-      //  const float prevAnchor = (ImGui::GetMousePos().y - viewOffset.y) / prevVertScaling;
-      //  const float nextAnchor = (ImGui::GetMousePos().y - viewOffset.y) / verticalScaling;
-      //  viewScrolling.y = viewScrolling.y + verticalScaling * (nextAnchor - prevAnchor);
-      //}
-      //else
-      //{
-      //  const float prevScaling = viewScaling;
-      //  viewScaling = eastl::clamp(viewScaling + 0.05f * ImGui::GetIO().MouseWheel, 0.25f, 2.0f);
-      //
-      //  const float prevAnchor = (ImGui::GetMousePos().x - viewOffset.x) / prevScaling;
-      //  const float nextAnchor = (ImGui::GetMousePos().x - viewOffset.x) / viewScaling;
-      //  viewScrolling.x = viewScrolling.x + viewScaling * (nextAnchor - prevAnchor);
-      //}
+        // if (ImGui::IsKeyDown(HumanInput::DKEY_LSHIFT))
+        //{
+        //   const float prevVertScaling = verticalScaling;
+        //   verticalScaling = std::clamp(verticalScaling + 20.f * ImGui::GetIO().MouseWheel, 100.f, 2000.f);
+        //
+        //   const float prevAnchor = (ImGui::GetMousePos().y - viewOffset.y) / prevVertScaling;
+        //   const float nextAnchor = (ImGui::GetMousePos().y - viewOffset.y) / verticalScaling;
+        //   viewScrolling.y = viewScrolling.y + verticalScaling * (nextAnchor - prevAnchor);
+        // }
+        // else
+        //{
+        //   const float prevScaling = viewScaling;
+        //   viewScaling = std::clamp(viewScaling + 0.05f * ImGui::GetIO().MouseWheel, 0.25f, 2.0f);
+        //
+        //   const float prevAnchor = (ImGui::GetMousePos().x - viewOffset.x) / prevScaling;
+        //   const float nextAnchor = (ImGui::GetMousePos().x - viewOffset.x) / viewScaling;
+        //   viewScrolling.x = viewScrolling.x + viewScaling * (nextAnchor - prevAnchor);
+        // }
     }
   }
 

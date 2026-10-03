@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "static_mesh_instance_group.h"
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "graphics_assets/static_mesh_asset.h"
 #include "nau/string/hash.h"
@@ -55,18 +59,17 @@ namespace nau
         return RenderEntity();
     }
 
-
     RenderList::Ptr nau::StaticMeshInstanceGroup::createRenderList(const nau::math::Vector3& viewerPosition,
-        eastl::function<bool(const InstanceInfo&)>& filterFunc,
-        eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
+                                                                   std::function<bool(const InstanceInfo&)>& filterFunc,
+                                                                   std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
     {
         NAU_FATAL(m_staticMesh);
 
-        RenderList::Ptr ret = eastl::make_shared<RenderList>();
+        RenderList::Ptr ret = std::make_shared<RenderList>();
 
         Ptr<StaticMeshAssetView> meshView;
         m_staticMesh->getTyped<StaticMeshAssetView>(meshView);
-        eastl::vector<eastl::vector<eastl::map<size_t /*material name*/, uint32_t /*entityIndex*/>>> lodSlotMats(meshView->getMesh()->getLodsCount());
+        std::vector<std::vector<std::map<size_t /*material name*/, uint32_t /*entityIndex*/>>> lodSlotMats(meshView->getMesh()->getLodsCount());
 
         for (const auto& [id, info] : m_instances)
         {
@@ -156,7 +159,7 @@ namespace nau
 
     void StaticMeshInstanceGroup::clearPendingInstances()
     {
-        eastl::erase_if(m_instances, [](const auto& pair)
+        std::erase_if(m_instances, [](const auto& pair)
         {
             return pair.second.toDelete;
         });

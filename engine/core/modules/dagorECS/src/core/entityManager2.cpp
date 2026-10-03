@@ -1,19 +1,26 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/core/entityManager.h>
-#include <EASTL/fixed_set.h>
-#include <EASTL/chrono.h>
-#include <EASTL/vector_set.h>
-#include <daECS/core/coreEvents.h>
 #include <daECS/core/baseIo.h>
+#include <daECS/core/coreEvents.h>
+#include <daECS/core/entityManager.h>
+
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
+
+#include "daECS/core/componentTypes.h"  // TMatrix
+#include "ecsInternal.h"
 #include "ecsQueryInternal.h"
 #include "ecsQueryManager.h"
-#include "entityManagerEvent.h"
-#include "daECS/core/componentTypes.h" // TMatrix
 #include "entityCreationProfiler.h"
-#include "ecsInternal.h"
-
+#include "entityManagerEvent.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 #define ASYNC_RESOURCES                         "render"
 #define REQUEST_RESOURCES_CAN_RECREATE_ENTITIES 1
@@ -45,7 +52,7 @@ InitOnDemand<ecs::EntityManager, false> g_entity_mgr;
 namespace ecs
 {
 
-EntityManager &get_entity_mgr() { return *g_entity_mgr; }
+NAU_DAGORECS_EXPORT EntityManager &get_entity_mgr() { return *g_entity_mgr; }
 
 bool EntityComponentRef::operator==(const EntityComponentRef &a) const
 {
@@ -158,10 +165,10 @@ void EntityManager::createEntityInternal(EntityId eid, template_t templId, Compo
   const uint32_t oldIdInChunk = entDescs[idx].idInChunk;
   const bool isRecreating = oldArchetype != INVALID_ARCHETYPE;
 
-  if (EASTL_UNLIKELY(oldArchetype == newArchetype)) // effectively doing nothing, all data is already created
+  if (NAU_UNLIKELY(oldArchetype == newArchetype))  // effectively doing nothing, all data is already created
   {
-    recreateOnSameArchetype(eid, templId, eastl::move(initializer), eastl::move(creation_cb));
-    return;
+      recreateOnSameArchetype(eid, templId, std::move(initializer), std::move(creation_cb));
+      return;
   }
 
   if (oldArchetype != INVALID_ARCHETYPE)
@@ -191,7 +198,7 @@ void EntityManager::createEntityInternal(EntityId eid, template_t templId, Compo
   if (isRecreating)
   {
     nArch->manager.allocateEmpty(chunkId, idInChunk, nArch->entitySize);
-    if (EASTL_UNLIKELY(nArch->manager.lock() == 0))
+    if (NAU_UNLIKELY(nArch->manager.lock() == 0))
     {
       logerr("Attempt to recreate Entity on same archetype too often <{}>", getTemplateName(templId));
       nArch->manager.unlock();
@@ -518,7 +525,7 @@ void EntityManager::createEntityInternal(EntityId eid, template_t templId, Compo
             archetypes.getComponentDataUnsafeOfsNoCheck(newArchetype, component.trackedFromOfs, component.size, chunkId, idInChunk);
           entCreatProf.start(component.originalCidx);
           ComponentTypeManager *typeManager = componentTypes.getTypeManager(component.typeIndex);
-          if (EASTL_UNLIKELY(!typeManager->copy(copyData, fromData, component.originalCidx, eid))) // trying to create copy constructor
+          if (NAU_UNLIKELY(!typeManager->copy(copyData, fromData, component.originalCidx, eid)))  // trying to create copy constructor
           {
             typeManager->create(copyData, *this, eid, map, component.originalCidx);
             if (!typeManager->assign(copyData, fromData))
@@ -566,11 +573,11 @@ void EntityManager::createEntityInternal(EntityId eid, template_t templId, Compo
   }
 
   auto it = findLoadingEntityEvents(eid);
-  if (EASTL_UNLIKELY(it != eventsForLoadingEntities.end()))
+  if (NAU_UNLIKELY(it != eventsForLoadingEntities.end()))
   {
     PROFILE_CREATE(loading_events);
     DAECS_EXT_ASSERT(it->eid == eid);
-    decltype(LoadingEntityEvents::events) loadingEvents(eastl::move(it->events));
+    decltype(LoadingEntityEvents::events) loadingEvents(std::move(it->events));
     eventsForLoadingEntities.erase(it);
     processEventsAnyway(~0u, loadingEvents);
   }
@@ -588,19 +595,20 @@ inline bool EntityManager::validateInitializer(template_t templId, ComponentsIni
   NAU_UNUSED(archetype);
 #endif
   // validateInitializer can not be completely omitted
-  for (auto initIt = comp_init.end() - 1, initEnd = comp_init.begin() - 1; initIt != initEnd; --initIt)
+  for (size_t index = comp_init.size(); index != 0;)
   {
-    if (initIt->cIndex == INVALID_COMPONENT_INDEX)
-    {
-      component_index_t initializerIndex = dataComponents.findComponentId(initIt->name);
-      if (EASTL_UNLIKELY(initializerIndex == INVALID_COMPONENT_INDEX))
+      auto initIt = comp_init.begin() + --index;
+      if (initIt->cIndex == INVALID_COMPONENT_INDEX)
       {
+          component_index_t initializerIndex = dataComponents.findComponentId(initIt->name);
+          if (NAU_UNLIKELY(initializerIndex == INVALID_COMPONENT_INDEX))
+          {
 #if NAU_DEBUG
-        static eastl::vector_set<template_t> warnedTemplates;
-        if (warnedTemplates.insert(templId).second)
-        {
-            logwarn("<0x{}> component is not known in template <{}>", initIt->name, getTemplateName(templId));
-        }
+              static nau::SortedVectorSet<template_t> warnedTemplates;
+              if (warnedTemplates.insert(templId).second)
+              {
+                  logwarn("<0x{}> component is not known in template <{}>", initIt->name, getTemplateName(templId));
+              }
 #endif
         continue;
       }
@@ -608,8 +616,8 @@ inline bool EntityManager::validateInitializer(template_t templId, ComponentsIni
       DataComponent destComponent;
       // verify type and 'not a copy' (should never happen in production)!
       destComponent = dataComponents.getComponentById(initIt->cIndex);
-      if (EASTL_UNLIKELY(
-            initIt->second.getUserType() != destComponent.componentTypeName || (destComponent.flags & DataComponent::IS_COPY)))
+      if (NAU_UNLIKELY(
+              initIt->second.getUserType() != destComponent.componentTypeName || (destComponent.flags & DataComponent::IS_COPY)))
       {
         logerr("initializer <{}|0x{}> type mismatch {} initializer, <{}> in template <{}>",
           dataComponents.getComponentNameById(initIt->cIndex), initIt->name, componentTypes.findTypeName(initIt->second.getUserType()),
@@ -627,7 +635,7 @@ inline bool EntityManager::validateInitializer(template_t templId, ComponentsIni
     }
 #if NAU_DEBUG
     // todo: store initializerIndex in ComponentsInitializer parallel array.
-    if (EASTL_UNLIKELY(archetypes.getArchetypeComponentIdUnsafe(archetype, initIt->cIndex) == INVALID_ARCHETYPE_COMPONENT_ID))
+    if (NAU_UNLIKELY(archetypes.getArchetypeComponentIdUnsafe(archetype, initIt->cIndex) == INVALID_ARCHETYPE_COMPONENT_ID))
     {
       component_t name = dataComponents.getComponentTpById(initIt->cIndex);
       auto flagsIt = getTemplateDB().info().componentFlags.find(name);
@@ -685,11 +693,11 @@ RequestResources EntityManager::requestResources(EntityId eid, archetype_t oldAr
             if(!requestedResources.empty())
             {
                 for(auto&& name : rcb.requestedResources)
-                    requestedResources.emplace(eastl::move(name));  // todo: this is actually allocation for each string
+                    requestedResources.emplace(std::move(name));  // todo: this is actually allocation for each string
             }
             else
             {
-                eastl::swap(requestedResources, rcb.requestedResources);
+                std::swap(requestedResources, rcb.requestedResources);
             }
             resourceEntities.push_back(eid);
             loadingEntities[eid]++;
@@ -697,7 +705,7 @@ RequestResources EntityManager::requestResources(EntityId eid, archetype_t oldAr
         }
         else  // sync
         {
-            return getECSResourceManager()->load_gameres_list(eastl::move(rcb.requestedResources)) ? RequestResources::Loaded : RequestResources::Error;
+            return getECSResourceManager()->load_gameres_list(std::move(rcb.requestedResources)) ? RequestResources::Loaded : RequestResources::Error;
         }
     }
 }
@@ -708,7 +716,7 @@ EntityId EntityManager::createEntitySync(template_t templId, ComponentsInitializ
     return INVALID_ENTITY_ID;
   EntityId eid = allocateOneEid();
   const RequestResources result = requestResources(eid, INVALID_ARCHETYPE, templId, initializer, RequestResourcesType::SYNC);
-  if (EASTL_UNLIKELY(result != RequestResources::Loaded))
+  if (NAU_UNLIKELY(result != RequestResources::Loaded))
   {
 #if NAU_DEBUG
     if (result == RequestResources::Loaded)
@@ -726,7 +734,7 @@ EntityId EntityManager::createEntitySync(template_t templId, ComponentsInitializ
       return INVALID_ENTITY_ID;
     }
   }
-  createEntityInternal(eid, templId, eastl::move(initializer), eastl::move(map), create_entity_async_cb_t());
+  createEntityInternal(eid, templId, std::move(initializer), std::move(map), create_entity_async_cb_t());
   return eid;
 }
 
@@ -756,13 +764,13 @@ template_t EntityManager::instantiateTemplate(int id)
   }
   DA_PROFILE_TAG(template, templ.getName());
   FRAMEMEM_REGION;
-  eastl::vector_set<component_index_t, eastl::less<component_index_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templComponentsIndices;  // we better sort
-                                                                                                                   // after that, but
-                                                                                                                   // in pairs
-  eastl::vector_set<component_index_t, eastl::less<component_index_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templReplicatedIndices;  // we better sort
-                                                                                                                   // after that, but
-                                                                                                                   // in pairs
-  eastl::vector<const ChildComponent*, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templComponentsData;
+  nau::SortedVectorSet<component_index_t, std::less<component_index_t>, std::allocator<component_index_t>> templComponentsIndices;  // we better sort
+                                                                                                                                    // after that, but
+                                                                                                                                    // in pairs
+  nau::SortedVectorSet<component_index_t, std::less<component_index_t>, std::allocator<component_index_t>> templReplicatedIndices;  // we better sort
+                                                                                                                                    // after that, but
+                                                                                                                                    // in pairs
+  std::vector<const ChildComponent*, std::allocator<const ChildComponent*>> templComponentsData;
   templComponentsIndices.reserve(templ.components.size()); // todo: we can precalc that to exact!//fixme:
   templComponentsData.reserve(templ.components.size());
   templComponentsIndices.insert(0);
@@ -778,7 +786,7 @@ template_t EntityManager::instantiateTemplate(int id)
         component_index_t comp = dataComponents.findComponentId(compHash);
         type_index_t typeIdx;
         component_flags_t flag = 0;
-        if (EASTL_LIKELY(comp != INVALID_COMPONENT_INDEX))
+        if (NAU_LIKELY(comp != INVALID_COMPONENT_INDEX))
         {
           auto compInfo = dataComponents.getComponentById(comp);
           typeIdx = compInfo.componentType;
@@ -806,8 +814,8 @@ template_t EntityManager::instantiateTemplate(int id)
         }
         if (templComponentsIndices.find(comp) != templComponentsIndices.end()) // already added
           continue;
-        const component_index_t *ciAt = templComponentsIndices.emplace(comp).first;
-        const size_t at = eastl::distance(templComponentsIndices.cbegin(), ciAt);
+        auto ciAt = templComponentsIndices.emplace(comp).first;
+        const size_t at = std::distance(templComponentsIndices.begin(), ciAt);
         templComponentsData.insert(templComponentsData.begin() + at, &templateIt->second);
 
         if (componentTypes.getTypeInfo(typeIdx).size != 0) // do not process tags
@@ -821,9 +829,9 @@ template_t EntityManager::instantiateTemplate(int id)
               templReplicatedIndices.insert(comp);
             component_index_t compCopy = createComponent(HashedConstString{nullptr, compHash}, typeIdx, nau::Span<component_t>(), nullptr,
               flag | DataComponent::IS_COPY);
-            const component_index_t *copyCidx =
-              templComponentsIndices.emplace_hint(templComponentsIndices.cbegin() + at + 1, compCopy);
-            const uint32_t copyAt = eastl::distance(templComponentsIndices.cbegin(), copyCidx);
+            auto copyCidx =
+                templComponentsIndices.emplace_hint(templComponentsIndices.cbegin() + at + 1, compCopy);
+            const uint32_t copyAt = std::distance(templComponentsIndices.begin(), copyCidx);
             templComponentsData.insert(templComponentsData.cbegin() + copyAt, nullptr);
           }
         }
@@ -832,8 +840,8 @@ template_t EntityManager::instantiateTemplate(int id)
   }
   const uint32_t oldArchetypesCount = archetypes.size(), oldArchetypesCapacity = archetypes.capacity();
   NAU_UNUSED(oldArchetypesCapacity); // only used in dev mode
-  const template_t ret = templates.createTemplate(archetypes, id, templComponentsIndices.cbegin(), templComponentsIndices.size(),
-    templReplicatedIndices.cbegin(), templReplicatedIndices.size(), templComponentsData.cbegin(), dataComponents, componentTypes);
+  const template_t ret = templates.createTemplate(archetypes, id, templComponentsIndices.data(), templComponentsIndices.size(),
+                                                  templReplicatedIndices.data(), templReplicatedIndices.size(), templComponentsData.data(), dataComponents, componentTypes);
 
 #if NAU_DEBUG
   logwarn("template {} <{}> has archetype {}", ret, templ.getName(), templates.getTemplate(ret).archetype);
@@ -860,13 +868,13 @@ template_t EntityManager::instantiateTemplate(int id)
 template_t EntityManager::templateByName(const char *templ_name, EntityId eid)
 {
   int id = getMutableTemplateDB().buildTemplateIdByName(templ_name);
-  if (EASTL_UNLIKELY(id == -1))
+  if (NAU_UNLIKELY(id == -1))
   {
     logerr("template <{}> is not in database", templ_name);
     return INVALID_TEMPLATE_INDEX;
   }
   auto templId = getTemplateDB().instantiatedTemplates[id];
-  if (EASTL_UNLIKELY(templId.singleton))
+  if (NAU_UNLIKELY(templId.singleton))
   {
     const EntityId singletonEid = hasSingletoneEntity(templ_name);
     if (singletonEid != eid && singletonEid != INVALID_ENTITY_ID)
@@ -875,8 +883,8 @@ template_t EntityManager::templateByName(const char *templ_name, EntityId eid)
       return INVALID_TEMPLATE_INDEX;
     }
   }
-  if (EASTL_LIKELY(templId.t != INVALID_TEMPLATE_INDEX))
-    return templId.t;
+  if (NAU_LIKELY(templId.t != INVALID_TEMPLATE_INDEX))
+      return templId.t;
   return instantiateTemplate(id);
 }
 
@@ -894,7 +902,7 @@ EntityId EntityManager::createEntitySync(const char *templ_name, ComponentsIniti
           logerr("Race in sync creation. We have to invalidate queries array, due to sync creation");
       }
   }
-  return createEntitySync(tId, eastl::move(initializer), eastl::move(map));
+  return createEntitySync(tId, std::move(initializer), std::move(map));
 }
 
 EntityId EntityManager::createEntityAsync(const char *templ_name, ComponentsInitializer &&initializer, ComponentsMap &&map,
@@ -902,9 +910,9 @@ EntityId EntityManager::createEntityAsync(const char *templ_name, ComponentsInit
 {
   ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
   EntityId eid = allocateOneEidDelayed(isConstrainedMTMode());
-  emplaceCreate(eid, DelayedEntityCreation::Op::Create, templ_name, eastl::move(initializer), eastl::move(map), eastl::move(cb));
+  emplaceCreate(eid, DelayedEntityCreation::Op::Create, templ_name, std::move(initializer), std::move(map), std::move(cb));
   return eid;
-  // return createEntityAsync(templateByName(templ_name, EntityId()), eastl::move(initializer), eastl::move(map), eastl::move(cb));
+  // return createEntityAsync(templateByName(templ_name, EntityId()), std::move(initializer), std::move(map), std::move(cb));
 }
 
 EntityId EntityManager::createEntityAsync(template_t templ_id, ComponentsInitializer &&initializer, ComponentsMap &&map,
@@ -912,16 +920,16 @@ EntityId EntityManager::createEntityAsync(template_t templ_id, ComponentsInitial
 {
   ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
   EntityId eid = allocateOneEidDelayed(isConstrainedMTMode());
-  emplaceCreate(eid, DelayedEntityCreation::Op::Create, templ_id, eastl::move(initializer), eastl::move(map), eastl::move(cb));
+  emplaceCreate(eid, DelayedEntityCreation::Op::Create, templ_id, std::move(initializer), std::move(map), std::move(cb));
   return eid;
-  // return createEntityAsync(templateByName(templ_name, EntityId()), eastl::move(initializer), eastl::move(map), eastl::move(cb));
+  // return createEntityAsync(templateByName(templ_name, EntityId()), std::move(initializer), std::move(map), std::move(cb));
 }
 
 void EntityManager::forceServerEidGeneration(EntityId from_eid)
 {
   ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
   unsigned ei = from_eid.index();
-  if (EASTL_UNLIKELY(entDescs[ei].archetype != INVALID_ARCHETYPE)) // already allocated (this is considered erroneous code path)
+  if (NAU_UNLIKELY(entDescs[ei].archetype != INVALID_ARCHETYPE))  // already allocated (this is considered erroneous code path)
   {
     EntityId peid(make_eid(ei, entDescs[ei].generation));
     logerr("{} attempt to allocate eid {} while slot already occupied with {}<{}>. Did client created replicating entity?",
@@ -934,34 +942,35 @@ void EntityManager::forceServerEidGeneration(EntityId from_eid)
 bool EntityManager::collapseRecreate(EntityId eid, const char *template_name, ComponentsInitializer &cinit, ComponentsMap &cmap,
   create_entity_async_cb_t &&creation_cb)
 {
-  for (auto ci = delayedCreationQueue.end() - 1, ce = delayedCreationQueue.begin() - 1; ci != ce; --ci)
-    for (auto cr = ci->end() - 1, cre = ci->begin() - 1; cr != cre; --cr)
-      if (EASTL_UNLIKELY(cr->eid == eid))
-      {
-        if (cr->currentlyCreating)
-          return true; // don't try to optimize currently creating entity (e.g. if we get here from disappear events)
-        else if (!cr->isToDestroy())
-        {
+    for (auto ci = delayedCreationQueue.rbegin(), ce = delayedCreationQueue.rend(); ci != ce; ++ci)
+        for (auto cr = std::make_reverse_iterator(ci->end()), cre = std::make_reverse_iterator(ci->begin()); cr != cre; ++cr)
+            if (NAU_UNLIKELY(cr->eid == eid))
+            {
+                if (cr->currentlyCreating)
+                    return true;  // don't try to optimize currently creating entity (e.g. if we get here from disappear events)
+                else if (!cr->isToDestroy())
+                {
 #if NAU_DEBUG
           // template names in re-creates might be too long (hence use id)
             ECS_LOG("{} {} templ {} -> {}", __FUNCTION__, eid, cr->templateName.c_str(), template_name);
 #endif
-          eastl::move(cinit.begin(), cinit.end(), eastl::back_inserter(static_cast<BaseComponentsInitializer &>(cr->compInit)));
-          for (auto &ckv : static_cast<BaseComponentsMap &>(cmap))
-            static_cast<BaseComponentsMap &>(cr->compMap).emplace(eastl::move(ckv.first), eastl::move(ckv.second));
-          cr->templateName = template_name;
-          cr->templ = INVALID_TEMPLATE_INDEX;
-          if (!cr->cb)
-            cr->cb = eastl::move(creation_cb);
-          else if (creation_cb)
-          {
-            DAECS_EXT_FAST_ASSERT(cr->cb && creation_cb);
-            auto cb2 = [cbA = eastl::move(cr->cb), cbB = eastl::move(creation_cb)](EntityId eid) {
-              cbA(eid);
-              cbB(eid);
-            };
-            cr->cb = eastl::move(cb2);
-          }
+            std::move(cinit.begin(), cinit.end(), std::back_inserter(static_cast<BaseComponentsInitializer&>(cr->compInit)));
+            for (auto& ckv : static_cast<BaseComponentsMap&>(cmap))
+                static_cast<BaseComponentsMap&>(cr->compMap).emplace(std::move(ckv.first), std::move(ckv.second));
+            cr->templateName = template_name;
+            cr->templ = INVALID_TEMPLATE_INDEX;
+            if (!cr->cb)
+                cr->cb = std::move(creation_cb);
+            else if (creation_cb)
+            {
+                DAECS_EXT_FAST_ASSERT(cr->cb && creation_cb);
+                auto cb2 = [cbA = std::move(cr->cb), cbB = std::move(creation_cb)](EntityId eid)
+                {
+                    cbA(eid);
+                    cbB(eid);
+                };
+                cr->cb = std::move(cb2);
+            }
         }
         else
           ; // ignore this re-create if entity is already scheduled to be destroyed
@@ -977,9 +986,9 @@ EntityId EntityManager::reCreateEntityFromAsync(EntityId from_eid, const char *t
     return INVALID_ENTITY_ID;
   ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
   const uint32_t idx = from_eid.index();
-  if (entDescs.isCurrentlyCreating(idx) && !collapseRecreate(from_eid, templ_name, initializer, map, eastl::move(cb)))
-    return from_eid;
-  emplaceCreate(from_eid, DelayedEntityCreation::Op::Create, templ_name, eastl::move(initializer), eastl::move(map), eastl::move(cb));
+  if (entDescs.isCurrentlyCreating(idx) && !collapseRecreate(from_eid, templ_name, initializer, map, std::move(cb)))
+      return from_eid;
+  emplaceCreate(from_eid, DelayedEntityCreation::Op::Create, templ_name, std::move(initializer), std::move(map), std::move(cb));
   return from_eid;
 }
 
@@ -995,8 +1004,8 @@ EntityId EntityManager::allocateOneEid()
     alloc_non_reserved:
       idx = entDescs.push_back();
     }
-    else if (EASTL_LIKELY(nextResevedEidIndex <= MAX_RESERVED_EID_IDX_CONST))
-      idx = nextResevedEidIndex++;
+    else if (NAU_LIKELY(nextResevedEidIndex <= MAX_RESERVED_EID_IDX_CONST))
+        idx = nextResevedEidIndex++;
     else if (!freeIndicesReserved.empty())
       goto alloc_free_indices;
     else
@@ -1034,8 +1043,8 @@ EntityId EntityManager::allocateOneEidDelayed(bool delayed)
     alloc_non_reserved:
       idx = delayed ? entDescs.push_back_delayed() : entDescs.push_back();
     }
-    else if (EASTL_LIKELY(nextResevedEidIndex <= MAX_RESERVED_EID_IDX_CONST))
-      idx = nextResevedEidIndex++;
+    else if (NAU_LIKELY(nextResevedEidIndex <= MAX_RESERVED_EID_IDX_CONST))
+        idx = nextResevedEidIndex++;
     else if (!freeIndicesReserved.empty())
       goto alloc_free_indices;
     else
@@ -1069,7 +1078,7 @@ void EntityManager::allocateInvalid()
   eidsReservationMode = oldMode;
   DAECS_EXT_ASSERT(invalidEid.index() == INVALID_ENTITY_ID.index());
   NAU_UNUSED(invalidEid);
-  entDescs[0].generation = eastl::numeric_limits<decltype(entDescs[0].generation)>::max();
+  entDescs[0].generation = std::numeric_limits<decltype(entDescs[0].generation)>::max();
   DAECS_EXT_ASSERT(!doesEntityExist(INVALID_ENTITY_ID));
 }
 
@@ -1137,12 +1146,11 @@ EntityManager::EntityManager(const EntityManager &from)
   ECS_LOG("biggest type size is {}, zeroMem %p", biggestType, (void*)zeroMem.get());
   copyFrom(from);
   dataComponents.componentToLT = from.dataComponents.componentToLT;
-  eastl::for_each(dataComponents.componentToLT.begin(), dataComponents.componentToLT.end(),
-                  [](auto& component)
-                  {
-                      component.second->info.cidx = INVALID_COMPONENT_INDEX;
-                  });
- 
+  std::for_each(dataComponents.componentToLT.begin(), dataComponents.componentToLT.end(),
+                [](auto& component)
+  {
+      component.second->info.cidx = INVALID_COMPONENT_INDEX;
+  });
 }
 
 void EntityManager::clear()
@@ -1153,7 +1161,7 @@ void EntityManager::clear()
   // sendEvent.
   static const int max_destroy_attempts = 1024;
   int clearAttempts = max_destroy_attempts;
-  decltype(EntityDesc::generation) minGen = eastl::numeric_limits<decltype(EntityDesc::generation)>::max(), maxGen = 0;
+  decltype(EntityDesc::generation) minGen = std::numeric_limits<decltype(EntityDesc::generation)>::max(), maxGen = 0;
   bool destroyed = false;
   do
   {
@@ -1171,8 +1179,8 @@ void EntityManager::clear()
         destroyed = true;
         destroyEntityImmediate(EntityId(make_eid(lasti, entDesc.generation)));
       }
-      minGen = eastl::min(minGen, entDesc.generation);
-      maxGen = eastl::max(maxGen, entDesc.generation);
+      minGen = std::min(minGen, entDesc.generation);
+      maxGen = std::max(maxGen, entDesc.generation);
     }
   } while (destroyed && deferredEventsCount && --clearAttempts);
 
@@ -1323,10 +1331,10 @@ void EntityManager::flushGameResRequests()
 {
   if (resourceEntities.empty())
     return;
-  auto tmpResEntities = eastl::move(resourceEntities);
-  auto tmpReqRes = eastl::move(requestedResources);
+  auto tmpResEntities = std::move(resourceEntities);
+  auto tmpReqRes = std::move(requestedResources);
 
-  getECSResourceManager()->async_load_gameres_list(eastl::move(tmpResEntities), eastl::move(tmpReqRes));
+  getECSResourceManager()->async_load_gameres_list(std::move(tmpResEntities), std::move(tmpReqRes));
 }
 
 void EntityManager::onEntitiesLoaded(nau::ConstSpan<EntityId> ents, bool all_ok)
@@ -1336,22 +1344,20 @@ void EntityManager::onEntitiesLoaded(nau::ConstSpan<EntityId> ents, bool all_ok)
   if (!all_ok)
     someLoadedEntitiesHasErrors = true;                     // will cause slow path off error reporting
   lastUpdatedCreationQueueGen = INITIAL_CREATION_QUEUE_GEN; // some entities were loaded
-  for (const EntityId *__restrict eit = ents.end() - 1, *__restrict end = ents.begin() - 1; eit != end; --eit) // we iterate in reverse
-                                                                                                               // order to decrease
-                                                                                                               // cost of erase in
-                                                                                                               // loadingEntities
+  // Reverse order decreases the cost of erasing loadingEntities entries.
+  for (auto eit = ents.end(); eit != ents.begin();)
   {
-    EntityId eid = *eit;
-    if (!doesEntityExist(eid))
-      continue;
-    auto it = find_loading_entity(eid);
-    if (it == loadingEntities.end())
-    {
-      // Could be if resource loading jobs cross ::clear call.
-      // To consider: mark such jobs as invalid to avoid calling this?
-      logwarn("{} eid <{}> not exist in loadingEntities", __FUNCTION__, (ecs::entity_id_t)eid);
-      continue;
-    }
+      EntityId eid = *--eit;
+      if (!doesEntityExist(eid))
+          continue;
+      auto it = find_loading_entity(eid);
+      if (it == loadingEntities.end())
+      {
+          // Could be if resource loading jobs cross ::clear call.
+          // To consider: mark such jobs as invalid to avoid calling this?
+          logwarn("{} eid <{}> not exist in loadingEntities", __FUNCTION__, (ecs::entity_id_t)eid);
+          continue;
+      }
     if (--it->second == 0)
       loadingEntities.erase(it);
   }
@@ -1367,7 +1373,7 @@ void EntityManager::performDeferredEvents(bool flush_all)
   average_tick_events = 0.8f * float(average_tick_events) + 0.2f * float(current_tick_events + deferredEventsCount);
   average_tick_events_uint = uint32_t(average_tick_events * minAverageAllowance) + minEventsPerTick;
   unsigned minimum_to_perform = std::max((int)average_tick_events_uint, (int)minEventsPerTick);
-  minimum_to_perform = flush_all ? eastl::numeric_limits<decltype(minimum_to_perform)>::max() : minimum_to_perform;
+  minimum_to_perform = flush_all ? std::numeric_limits<decltype(minimum_to_perform)>::max() : minimum_to_perform;
   sendQueuedEvents(minimum_to_perform);
   current_tick_events = 0;
 }
@@ -1401,11 +1407,14 @@ bool EntityManager::createQueuedEntitiesOOL()
     EntityId eid;
     uint32_t sortBy;
   };
-  eastl::fixed_vector<Destroy, 32, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> destroyNow;  // use sorting queue, so we reduce amount of memory movements
+  nau::InlineVector<Destroy, 32, true> destroyNow;  // use sorting queue, so we reduce amount of memory movements
   auto destroyQueued = [&destroyNow, this]() {
     if (destroyNow.empty())
       return;
-    eastl::sort(destroyNow.begin(), destroyNow.end(), [](auto &a, auto &b) { return a.sortBy > b.sortBy; });
+    std::sort(destroyNow.begin(), destroyNow.end(), [](auto& a, auto& b)
+    {
+        return a.sortBy > b.sortBy;
+    });
     for (auto &i : destroyNow)
       destroyEntityImmediate(i.eid);
     destroyNow.clear();
@@ -1502,7 +1511,7 @@ bool EntityManager::createQueuedEntitiesOOL()
             }
 #endif
             ce.currentlyCreating = true;
-            createEntityInternal(eid, ce.templ, eastl::move(ce.compInit), eastl::move(ce.compMap), eastl::move(ce.cb));
+            createEntityInternal(eid, ce.templ, std::move(ce.compInit), std::move(ce.compMap), std::move(ce.cb));
             if (firstLoading) // Otherwise it won't be destroyed until end of loading preceding entities
               ce.clear();
           }
@@ -1526,13 +1535,16 @@ bool EntityManager::createQueuedEntitiesOOL()
   destroyQueued();
   const bool wereAdded = currentTop != createOrDestroyGen;
 
-  if (EASTL_UNLIKELY(delayedCreationQueue.size() > 1))
+  if (NAU_UNLIKELY(delayedCreationQueue.size() > 1))
   {
-    delayedCreationQueue.erase(
-      eastl::remove_if(delayedCreationQueue.begin() + 1, delayedCreationQueue.end(), [](auto &a) { return a.empty(); }),
-      delayedCreationQueue.end());
-    if (delayedCreationQueue.back().full())
-      delayedCreationQueue.emplace_back(delayedCreationQueue.back().next_capacity());
+      delayedCreationQueue.erase(
+          std::remove_if(delayedCreationQueue.begin() + 1, delayedCreationQueue.end(), [](auto& a)
+      {
+          return a.empty();
+      }),
+          delayedCreationQueue.end());
+      if (delayedCreationQueue.back().full())
+          delayedCreationQueue.emplace_back(delayedCreationQueue.back().next_capacity());
   }
 
   someLoadedEntitiesHasErrors = false; // all errors were already checked
@@ -1549,7 +1561,7 @@ bool EntityManager::createQueuedEntitiesOOL()
 
 inline double profile_usec(auto& start)
 {
-    return (eastl::chrono::duration_cast<eastl::chrono::duration<double>>(eastl::chrono::system_clock::now() - start)).count();
+    return (std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now() - start)).count();
 }
 inline bool profile_usec_passed(auto& start, double t)
 {
@@ -1563,7 +1575,7 @@ void EntityManager::defragmentArchetypes()
   if (!archetypesCount)
     return;
   TIME_PROFILE(ecs_gc);
-  auto reft = eastl::chrono::system_clock::now();
+  auto reft = std::chrono::system_clock::now();
   chunk_type_t movedFrom, movedTo;
   uint32_t movedAt, movedCount;
 #if NAU_DEBUG
@@ -1574,7 +1586,7 @@ void EntityManager::defragmentArchetypes()
   DataComponentManager::DefragResult defrag = DataComponentManager::NO_ACTION;
   // we still defragment only one chunk in only one archetype each frame
   // but now we try to find it faster (skipping up to 16 defragmented archetypes each tick)
-  int attempts_to_find_defrag_archetype = eastl::min((uint32_t)64, archetypesCount); // while we check
+  int attempts_to_find_defrag_archetype = std::min((uint32_t)64, archetypesCount);  // while we check
   do
   {
     defragmentArchetypeId = (defragmentArchetypeId + 1) % archetypesCount;
@@ -1702,12 +1714,12 @@ const char *EntityManager::getEntityFutureTemplateName(EntityId eid) const
   if (!entDescs.doesEntityExist(idx, eid.generation()))
     return nullptr;
   for (auto ci = delayedCreationQueue.rbegin(), ce = delayedCreationQueue.rend(); ci != ce; ++ci)
-    for (auto i = ci->end() - 1, e = ci->begin() - 1; i != e; --i)
-      if (i->eid == eid)
-      {
-        DAECS_EXT_ASSERT(i->op <= DelayedEntityCreation::Op::Create); // currently add is not supported
-        return i->isToDestroy() ? nullptr : i->templateName.c_str();
-      }
+      for (auto i = std::make_reverse_iterator(ci->end()), e = std::make_reverse_iterator(ci->begin()); i != e; ++i)
+          if (i->eid == eid)
+          {
+              DAECS_EXT_ASSERT(i->op <= DelayedEntityCreation::Op::Create);  // currently add is not supported
+              return i->isToDestroy() ? nullptr : i->templateName.c_str();
+          }
   return idx < entDescs.allocated_size() ? getTemplateName(entDescs[idx].template_id) : nullptr;
 }
 

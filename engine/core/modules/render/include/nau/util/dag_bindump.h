@@ -3,17 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <limits>
+#include <utility>
+
 #include "nau/utils/dag_hash.h"
 //#include <debug/daNAU_ASSERT.h>
 #include "nau/diag/logging.h"
 //#include <debug/dag_debug.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/vector.h>
-#include <EASTL/stack.h>
-#include <EASTL/map.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/shared_ptr.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <stack>
+#include <type_traits>
+#include <vector>
 
 // The `bindump` library is designed for easy serialization and deserialization of binary dumps
 // This library has the following features:
@@ -176,13 +178,13 @@ struct Context
   };
 
   using DeferredActionType =
-    eastl::conditional_t<eastl::is_const_v<eastl::remove_pointer_t<WrapperAddressType>>, const DeferredAction *, DeferredAction *>;
+      std::conditional_t<std::is_const_v<std::remove_pointer_t<WrapperAddressType>>, const DeferredAction*, DeferredAction*>;
 
   bool enabled = false;
   WorkerType *worker = nullptr;
   Props current_props;
-  eastl::stack<Props> props_stack;
-  eastl::vector<DeferredActionType> deferred_actions;
+  std::stack<Props> props_stack;
+  std::vector<DeferredActionType> deferred_actions;
 
   bool isEnabled() const { return enabled; }
   void enable()
@@ -218,13 +220,13 @@ struct Context
 
   void close()
   {
-    eastl::stack<Props>{}.swap(props_stack);
-    if (worker)
-      worker->end();
-    enabled = false;
-    worker = nullptr;
-    current_props = Props{};
-    deferred_actions.clear();
+      std::stack<Props>{}.swap(props_stack);
+      if (worker)
+          worker->end();
+      enabled = false;
+      worker = nullptr;
+      current_props = Props{};
+      deferred_actions.clear();
   }
 
   template <typename LayoutType>
@@ -314,11 +316,11 @@ inline HasherContext &context()
 template <typename LayoutType>
 static void hash()
 {
-  if (eastl::is_trivially_copy_assignable_v<LayoutType>)
-  {
-    context().worker->step(sizeof(LayoutType));
-    return;
-  }
+    if (std::is_trivially_copy_assignable_v<LayoutType>)
+    {
+        context().worker->step(sizeof(LayoutType));
+        return;
+    }
 
   LayoutType src{};
   LayoutType dest;
@@ -394,7 +396,7 @@ static void writeOffset(uint64_t offset)
   if (offset)
   {
     int64_t delta64 = offset - context().current_props.stream_offset;
-    NAU_ASSERT(delta64 >= eastl::numeric_limits<int32_t>::min() && delta64 <= eastl::numeric_limits<int32_t>::max());
+    NAU_ASSERT(delta64 >= std::numeric_limits<int32_t>::min() && delta64 <= std::numeric_limits<int32_t>::max());
     delta = (int32_t)delta64;
   }
   context().stream((const uint8_t *)&delta, sizeof(delta));
@@ -448,7 +450,7 @@ struct ReaderContext : Context<IReader, uint8_t *>
   void deferredAction(DeferredAction *action) override { action->deferredRead(); }
 
   // stream offset -> List content address
-  eastl::map<uint64_t, uint8_t *> offset_to_lists;
+  std::map<uint64_t, uint8_t*> offset_to_lists;
 };
 
 inline ReaderContext &context()
@@ -467,7 +469,7 @@ static uint64_t readOffset()
   return offset;
 }
 
-static eastl::pair<uint64_t, uint64_t> readList(bool should_read_count)
+static std::pair<uint64_t, uint64_t> readList(bool should_read_count)
 {
   uint64_t offset_to_list = readOffset();
   uint32_t count = offset_to_list ? 1 : 0;
@@ -527,7 +529,7 @@ struct ListElementAddress
 {
   ListWrapper<Type> *mList = nullptr;
   uint64_t mIndex = 0;
-  eastl::shared_ptr<uint64_t> mListOffset;
+  std::shared_ptr<uint64_t> mListOffset;
 
   ListElementAddress() = default;
   ListElementAddress(ListWrapper<Type> &list, uint64_t index) : mList(&list), mIndex(index), mListOffset(list.mListOffset) {}
@@ -564,22 +566,22 @@ class ListWrapper
 protected:
   using data_t = Type;
   friend ListElementAddress<data_t>;
-  eastl::vector<data_t> mData;
-  eastl::shared_ptr<uint64_t> mListOffset;
+  std::vector<data_t> mData;
+  std::shared_ptr<uint64_t> mListOffset;
 
   data_t *getDataPtr(uint64_t no = 0) { return mData.begin() + no; }
   const data_t *getDataPtr(uint64_t no = 0) const { return mData.begin() + no; }
   uint64_t getCount() const
   {
-    NAU_ASSERT(mData.size() <= eastl::numeric_limits<int32_t>::max());
-    return mData.size();
+      NAU_ASSERT(mData.size() <= std::numeric_limits<int32_t>::max());
+      return mData.size();
   }
 
 public:
   ListElementAddress<data_t> getElementAddress(uint64_t index)
   {
     if (!mListOffset)
-      mListOffset = eastl::make_shared<uint64_t>();
+        mListOffset = std::make_shared<uint64_t>();
     return {*this, index};
   }
   void resize(uint64_t count) { mData.resize(count); }
@@ -588,17 +590,17 @@ public:
 template <typename UserDataType, uint64_t alignment>
 class ListMaster : public ListWrapper<UserDataType>
 {
-  static_assert(eastl::is_trivially_destructible<UserDataType>::value,
-    "It looks like this type owns the resource, so we can't properly serialized it");
+    static_assert(std::is_trivially_destructible<UserDataType>::value,
+                  "It looks like this type owns the resource, so we can't properly serialized it");
 
-  void write() const
-  {
-    writer::context().preStreamData(*this);
-    uint64_t offset = writer::writeList<UserDataType, alignment>(this->getDataPtr(), this->getCount());
-    if (this->mListOffset)
-      *this->mListOffset = offset;
-    writer::context().postStreamData(*this);
-  }
+    void write() const
+    {
+        writer::context().preStreamData(*this);
+        uint64_t offset = writer::writeList<UserDataType, alignment>(this->getDataPtr(), this->getCount());
+        if (this->mListOffset)
+            *this->mListOffset = offset;
+        writer::context().postStreamData(*this);
+    }
 
   void read()
   {
@@ -799,17 +801,17 @@ namespace streamer
 template <typename StreamerType, typename WrapperAddressType>
 struct Context : master::Context<StreamerType, WrapperAddressType>
 {
-  eastl::map<const uint8_t *, uint64_t> address_to_offset;
-  eastl::map<uint64_t, uint8_t *> offset_to_address;
-  uint64_t mOffset = 0;
+    std::map<const uint8_t*, uint64_t> address_to_offset;
+    std::map<uint64_t, uint8_t*> offset_to_address;
+    uint64_t mOffset = 0;
 
-  template <typename LayoutType>
-  void endLayout()
-  {
-    uint64_t begin_layout_address = (uint64_t)this->props_stack.top().wrapper_address;
-    uint64_t end_layout_address = (uint64_t)this->current_props.wrapper_address;
-    this->template endLayoutImpl<LayoutType>(begin_layout_address, end_layout_address);
-  }
+    template <typename LayoutType>
+    void endLayout()
+    {
+        uint64_t begin_layout_address = (uint64_t)this->props_stack.top().wrapper_address;
+        uint64_t end_layout_address = (uint64_t)this->current_props.wrapper_address;
+        this->template endLayoutImpl<LayoutType>(begin_layout_address, end_layout_address);
+    }
 
   template <typename LayoutType>
   void begin(const LayoutType &layout, StreamerType &streamer)
@@ -836,7 +838,7 @@ struct Context : master::Context<StreamerType, WrapperAddressType>
   }
 
   template <typename Type, typename KeyType, typename ValueType>
-  ValueType remap(const eastl::map<KeyType, ValueType> &map, KeyType key)
+  ValueType remap(const std::map<KeyType, ValueType>& map, KeyType key)
   {
     auto found = map.upper_bound(key);
     --found;
@@ -944,13 +946,13 @@ struct EndNonSerializable
 template <typename Type>
 void write(const Type *data, uint32_t count, bool need_to_add_address)
 {
-  if (eastl::is_trivially_copy_assignable_v<Type>)
-  {
-    if (need_to_add_address)
-      writer::context().addAddressTo(data);
-    writer::context().stream((const uint8_t *)data, count * sizeof(Type));
-    return;
-  }
+    if (std::is_trivially_copy_assignable_v<Type>)
+    {
+        if (need_to_add_address)
+            writer::context().addAddressTo(data);
+        writer::context().stream((const uint8_t*)data, count * sizeof(Type));
+        return;
+    }
   Type layout;
   for (uint32_t i = 0; i < count; i++)
   {
@@ -964,13 +966,13 @@ void write(const Type *data, uint32_t count, bool need_to_add_address)
 template <typename Type>
 void read(Type *data, uint32_t count, bool need_to_add_offset)
 {
-  if (eastl::is_trivially_copy_assignable_v<Type>)
-  {
-    if (need_to_add_offset)
-      reader::context().addOffsetTo(data);
-    reader::context().stream((uint8_t *)data, count * sizeof(Type));
-    return;
-  }
+    if (std::is_trivially_copy_assignable_v<Type>)
+    {
+        if (need_to_add_offset)
+            reader::context().addOffsetTo(data);
+        reader::context().stream((uint8_t*)data, count * sizeof(Type));
+        return;
+    }
   for (uint32_t i = 0; i < count; i++)
   {
     reader::context().disable();
@@ -1078,7 +1080,7 @@ template <typename Type, enum detail::Target target>
 using Address = detail::Wrapper<typename WrapHolder<Type, target>::Address, Type, AddressType>;
 
 template <typename Type, uint64_t alignment, enum detail::Target target>
-using List = decltype(getList<Type, alignment, target>(eastl::declval<Type>()));
+using List = decltype(getList<Type, alignment, target>(std::declval<Type>()));
 
 template <typename Type, enum detail::Target target>
 using LayoutList = detail::List<typename WrapHolder<Type, target>::LayoutList, Type, LayoutType>;
@@ -1144,10 +1146,10 @@ private:
 template <typename LayoutType>
 const LayoutType *map_base(const uint8_t *dump)
 {
-  static_assert(eastl::is_trivially_destructible<LayoutType>::value,
-    "It looks like this type owns the resource, so we can't properly serialized it");
+    static_assert(std::is_trivially_destructible<LayoutType>::value,
+                  "It looks like this type owns the resource, so we can't properly serialized it");
 
-  return (const LayoutType *)dump;
+    return (const LayoutType*)dump;
 }
 
 template <typename LayoutType>
@@ -1400,23 +1402,27 @@ bool streamRead(Master<LayoutClass> &layout, IReader &reader)
   }
 
 #define BINDUMP_ENABLE_STREAMING(Class, BaseClass, BaseCtor) \
-  using BaseClass::BaseCtor;                                 \
-  Class() = default;                                         \
-  Class(const BaseClass &other) : BaseClass(other)           \
-  {}                                                         \
-  Class(BaseClass &&other) : BaseClass(eastl::move(other))   \
-  {}                                                         \
-  Class &operator=(const BaseClass &other)                   \
-  {                                                          \
-    BaseClass::operator=(other);                             \
-    return *this;                                            \
-  }                                                          \
-  Class &operator=(BaseClass &&other) noexcept               \
-  {                                                          \
-    BaseClass::operator=(eastl::move(other));                \
-    return *this;                                            \
-  }                                                          \
-  BINDUMP_DECLARE_ASSIGNMENT_OPERATOR(Class, BaseClass::operator=(other))
+    using BaseClass::BaseCtor;                               \
+    Class() = default;                                       \
+    Class(const BaseClass& other) :                          \
+        BaseClass(other)                                     \
+    {                                                        \
+    }                                                        \
+    Class(BaseClass&& other) :                               \
+        BaseClass(std::move(other))                          \
+    {                                                        \
+    }                                                        \
+    Class& operator=(const BaseClass& other)                 \
+    {                                                        \
+        BaseClass::operator=(other);                         \
+        return *this;                                        \
+    }                                                        \
+    Class& operator=(BaseClass&& other) noexcept             \
+    {                                                        \
+        BaseClass::operator=(std::move(other));              \
+        return *this;                                        \
+    }                                                        \
+    BINDUMP_DECLARE_ASSIGNMENT_OPERATOR(Class, BaseClass::operator=(other))
 
 #define BINDUMP_CONCAT_HELPER(x, y) x##y
 #define BINDUMP_CONCAT(x, y)        BINDUMP_CONCAT_HELPER(x, y)

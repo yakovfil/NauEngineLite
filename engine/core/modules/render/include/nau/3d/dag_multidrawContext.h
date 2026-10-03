@@ -3,14 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_function.h>
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/variant.h>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <variant>
 
-#include "nau/3d/dag_resPtr.h"
 #include "nau/3d/dag_lockSbuffer.h"
-
+#include "nau/3d/dag_resPtr.h"
+#include "nau/utils/fixed_function.h"
 
 /** Multidraw Context
  *
@@ -23,7 +23,7 @@ class MultidrawContext
   /**
    * @brief Name for context that is used as a buffer name and as a prefix for helper buffers.
    */
-  eastl::string name;
+  std::string name;
   /**
    * @brief Buffer for draw calls arguments.
    */
@@ -86,7 +86,10 @@ class MultidrawContext
   /**
    * @brief Returns name for per draw parameters buffer.
    */
-  eastl::string getPerDrawArgsBufferName() const { return name + "_perDrawArgsBuffer"; }
+  std::string getPerDrawArgsBufferName() const
+  {
+      return name + "_perDrawArgsBuffer";
+  }
 
   /**
    * @brief Checks if per draw parameter could be stored instead of draw id. In this case we don't need per draw parameters buffer.
@@ -165,9 +168,8 @@ public:
    * @brief Type for a callback that is called for each draw call to fill draw call parameters.
    * We don't allow to fill startInstanceLocation because it is used for draw call id on some platforms.
    */
-  using MultidrawParametersSetter = eastl::fixed_function<sizeof(void *),
-    void(uint32_t draw_index, uint32_t &index_count_per_instance, uint32_t &instance_count, uint32_t &start_index_location,
-      int32_t &base_vertex_location, PerDrawDataT &per_draw_data)>;
+  using MultidrawParametersSetter = nau::FixedFunction<sizeof(void*),
+                                                       void(uint32_t draw_index, uint32_t& index_count_per_instance, uint32_t& instance_count, uint32_t& start_index_location, int32_t& base_vertex_location, PerDrawDataT& per_draw_data)>;
 
   /**
    * @brief Fills multidraw buffers.
@@ -201,20 +203,20 @@ public:
       lockFlags = VBLOCK_DISCARD;
     }
 
-    eastl::variant<eastl::monostate, LockedBuffer<DrawIndexedIndirectArgs>, LockedBuffer<ExtendedDrawIndexedIndirectArgs>>
-      multidrawArgs;
+    std::variant<std::monostate, LockedBuffer<DrawIndexedIndirectArgs>, LockedBuffer<ExtendedDrawIndexedIndirectArgs>>
+        multidrawArgs;
     bool bufferLocked = true;
     if (usesExtendedMultiDrawStruct())
     {
       multidrawArgs = lock_sbuffer<ExtendedDrawIndexedIndirectArgs>(multidrawArguments.getBuf(),
         lastOffset * sizeof(ExtendedDrawIndexedIndirectArgs), drawcalls_count, lockFlags);
-      bufferLocked = (bool)eastl::get<2>(multidrawArgs);
+      bufferLocked = (bool)std::get<2>(multidrawArgs);
     }
     else
     {
       multidrawArgs = lock_sbuffer<DrawIndexedIndirectArgs>(multidrawArguments.getBuf(), lastOffset * sizeof(DrawIndexedIndirectArgs),
         drawcalls_count, lockFlags);
-      bufferLocked = (bool)eastl::get<1>(multidrawArgs);
+      bufferLocked = (bool)std::get<1>(multidrawArgs);
     }
     if (!bufferLocked)
     {
@@ -222,7 +224,7 @@ public:
       return MultidrawRenderExecutor(nullptr);
     }
 
-    eastl::optional<LockedBuffer<PerDrawDataT>> perDrawArgs;
+    std::optional<LockedBuffer<PerDrawDataT>> perDrawArgs;
     if (needPerDrawParamsBuffer())
     {
       perDrawArgs.emplace(lock_sbuffer<PerDrawDataT>(perDrawArgsBuffer.getBuf(), 0, drawcalls_count, VBLOCK_DISCARD));
@@ -234,14 +236,14 @@ public:
     }
     for (uint32_t i = 0; i < drawcalls_count; ++i)
     {
-      DrawIndexedIndirectArgs &drawCall =
-        multidrawArgs.index() == 1 ? eastl::get<1>(multidrawArgs)[i] : eastl::get<2>(multidrawArgs)[i].args;
-      uint32_t &drawcallId = multidrawArgs.index() == 1 ? drawCall.startInstanceLocation : eastl::get<2>(multidrawArgs)[i].drawcallId;
-      PerDrawDataT &perDrawData = perDrawArgs ? perDrawArgs.value()[i] : reinterpret_cast<PerDrawDataT &>(drawcallId);
-      params_setter(i, drawCall.indexCountPerInstance, drawCall.instanceCount, drawCall.startIndexLocation,
-        drawCall.baseVertexLocation, perDrawData);
-      if (perDrawArgs)
-        drawcallId = i;
+        DrawIndexedIndirectArgs& drawCall =
+            multidrawArgs.index() == 1 ? std::get<1>(multidrawArgs)[i] : std::get<2>(multidrawArgs)[i].args;
+        uint32_t& drawcallId = multidrawArgs.index() == 1 ? drawCall.startInstanceLocation : std::get<2>(multidrawArgs)[i].drawcallId;
+        PerDrawDataT& perDrawData = perDrawArgs ? perDrawArgs.value()[i] : reinterpret_cast<PerDrawDataT&>(drawcallId);
+        params_setter(i, drawCall.indexCountPerInstance, drawCall.instanceCount, drawCall.startIndexLocation,
+                      drawCall.baseVertexLocation, perDrawData);
+        if (perDrawArgs)
+            drawcallId = i;
     }
     actualStart = lastOffset;
     lastOffset += drawcalls_count;

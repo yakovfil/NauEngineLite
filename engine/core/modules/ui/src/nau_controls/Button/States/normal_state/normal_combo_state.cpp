@@ -1,18 +1,20 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "normal_combo_state.h"
+
+#include <memory>
+
+#include "../button_state_animation.h"
 #include "normal_state.h"
 #include "normal_state_color.h"
 #include "normal_state_size.h"
-#include "../button_state_animation.h"
 
 namespace nau::ui
 {
     bool NormalComboState::initialize(nau::ui::NauButton* button, nau::ui::NauButtonData& data)
     {
-        auto state = eastl::make_unique<NormalState>();
+        auto state = std::make_unique<NormalState>();
         if (state && state->initialize(button, data))
         {
             m_includedStates.push_back(std::move(state));
@@ -20,20 +22,20 @@ namespace nau::ui
 
         if (data.normalAnimation)
         {
-            auto stateAnimation = eastl::make_unique<ButtonStateNormalAnimation>();
+            auto stateAnimation = std::make_unique<ButtonStateNormalAnimation>();
             if (stateAnimation->initialize(button, data))
             {
                 m_includedStates.push_back(std::move(stateAnimation));
             }
         }
 
-        auto stateColor = eastl::make_unique<NormalStateColor>();
+        auto stateColor = std::make_unique<NormalStateColor>();
         if (stateColor && stateColor->initialize(button, data))
         {
             m_includedStates.push_back(std::move(stateColor));
         }
 
-        auto stateSize = eastl::make_unique<NormalStateSize>();
+        auto stateSize = std::make_unique<NormalStateSize>();
         if (stateSize && stateSize->initialize(button, data))
         {
             m_includedStates.push_back(std::move(stateSize));

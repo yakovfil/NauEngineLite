@@ -1,18 +1,27 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/serialize.h>
 #include <daECS/core/component.h>
 #include <daECS/core/componentTypes.h>
-#include <daECS/core/template.h>
 #include <daECS/core/entityManager.h>
-#include <daECS/net/object.h>
-#include <daECS/net/connection.h>
+#include <daECS/core/template.h>
 #include <daECS/net/compBlacklist.h>
-#include <EASTL/fixed_string.h>
+#include <daECS/net/connection.h>
+#include <daECS/net/object.h>
+#include <daECS/net/serialize.h>
 #include <daNet/bitStream.h>
-#include <util/dag_simpleString.h>
 #include <generic/dag_tab.h>
-#include <memory/dag_framemem.h>
 #include <limits.h>
+#include <memory/dag_framemem.h>
+#include <util/dag_simpleString.h>
+
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_string.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
@@ -23,28 +32,28 @@ extern const uint32_t MAX_RESERVED_EID_IDX;
 namespace net
 {
 
-static int read_string(const danet::BitStream &cb, eastl::string &to)
-{
-  char buf[1024];
-  buf[0] = 0;
-  for (char *str = buf;;)
-  {
-    if (!cb.Read(str, 1))
-      return -1;
-    if (!*str)
-      break;
-    if (str == buf + countof(buf) - 2)
+    static int read_string(const danet::BitStream& cb, std::string& to)
     {
-      str[1] = 0;
-      to += buf;
-      str = buf;
+        char buf[1024];
+        buf[0] = 0;
+        for (char* str = buf;;)
+        {
+            if (!cb.Read(str, 1))
+                return -1;
+            if (!*str)
+                break;
+            if (str == buf + countof(buf) - 2)
+            {
+                str[1] = 0;
+                to += buf;
+                str = buf;
+            }
+            else
+                str++;
+        };
+        to += buf;
+        return to.length();
     }
-    else
-      str++;
-  };
-  to += buf;
-  return to.length();
-}
 
 InternedStrings::InternedStrings()
 {
@@ -66,7 +75,7 @@ inline void write_string_no(danet::BitStream &cb, uint32_t str, const uint32_t s
   cb.WriteBits((const uint8_t *)&str, short_bits);
 }
 
-static eastl::string oneString;
+static std::string oneString;
 static const char *read_istring(const danet::BitStream &cb, InternedStrings *istrs, uint32_t short_bits)
 {
   bool rawString = false;
@@ -92,19 +101,19 @@ static const char *read_istring(const danet::BitStream &cb, InternedStrings *ist
   if (str >= all.strings.size())
     all.strings.resize(str + 1);
   NAU_ASSERT(all.strings.size() <= uint32_t(1 << short_bits));
-  eastl::string &it = all.strings[str];
+  std::string& it = all.strings[str];
   if (read_string(cb, it) < 0)
     return nullptr;
   return it.c_str();
 }
 
-static void write_raw_string(danet::BitStream &cb, const eastl::string &pStr)
+static void write_raw_string(danet::BitStream& cb, const std::string& pStr)
 {
   cb.Write(true);
   cb.Write(pStr.c_str(), pStr.length() + 1);
 }
 
-static void write_string(danet::BitStream &cb, const eastl::string &pStr, InternedStrings &all, uint32_t short_bits)
+static void write_string(danet::BitStream& cb, const std::string& pStr, InternedStrings& all, uint32_t short_bits)
 {
   auto it = all.index.find(pStr);
   if (it == all.index.end())
@@ -158,7 +167,7 @@ bool BitstreamDeserializer::read(void *to, size_t sz_in_bits, ecs::component_typ
         return false;
       auto &item = obj.insert(str); // insert before deserialization since 'str' might be reused in next calls
       if (ecs::MaybeChildComponent maybeComp = ecs::deserialize_child_component(*this))
-        item = eastl::move(*maybeComp);
+          item = std::move(*maybeComp);
       else
         return false;
     }
@@ -314,7 +323,7 @@ bool Connection::deserializeComponentReplication(ecs::EntityId eid, const danet:
   BitstreamDeserializer bsds(bs, &objectKeys);
   ecs::EntityComponentRef cref = g_entity_mgr->getComponentRefRW(eid, clientCidx);
   bool crefIsNull = cref.isNull();
-  if (EASTL_LIKELY(!crefIsNull && deserialize_component_typeless(cref, bsds)))
+  if (NAU_LIKELY(!crefIsNull && deserialize_component_typeless(cref, bsds)))
   {
     replicated_component_on_client_deserialize(eid, clientCidx);
     return true;
@@ -444,7 +453,7 @@ const char *Connection::deserializeTemplate(const danet::BitStream &bs, ecs::tem
 
 #define NET_STAT_PROFILE_INITIAL_SIZES (DAECS_EXTENSIVE_CHECKS)
 #if NET_STAT_PROFILE_INITIAL_SIZES
-static eastl::vector_map<ecs::template_t, uint32_t> templatesSize;
+static nau::SortedVectorMap<ecs::template_t, uint32_t> templatesSize;
 static ska::flat_hash_map<uint32_t, uint32_t> templatesComponentSize;
 void dump_initial_construction_stats()
 {
@@ -453,12 +462,15 @@ void dump_initial_construction_stats()
   static_assert(sizeof(ecs::template_t) + sizeof(ecs::component_index_t) == sizeof(uint32_t)); // if ever happen, can be replaced
                                                                                                  // with uint64_t
   NAU_CORE_DEBUG_LF("dumping_templates");
-  eastl::vector<eastl::pair<ecs::template_t, size_t>> templSizes;
-  eastl::vector<eastl::pair<ecs::component_index_t, size_t>> templCompSizes;
+  std::vector<std::pair<ecs::template_t, size_t>> templSizes;
+  std::vector<std::pair<ecs::component_index_t, size_t>> templCompSizes;
   templSizes.reserve(templatesSize.size());
   for (auto &t : templatesSize)
     templSizes.push_back(t);
-  eastl::sort(templSizes.begin(), templSizes.end(), [](auto a, auto b) { return a.second > b.second; });
+  std::sort(templSizes.begin(), templSizes.end(), [](auto a, auto b)
+  {
+      return a.second > b.second;
+  });
   for (size_t i = 0; i < min(templSizes.size(), size_t(20)); ++i)
   {
     auto &t = templSizes[i];
@@ -469,11 +481,14 @@ void dump_initial_construction_stats()
     {
       if ((c.first & 0xFFFF) == t.first)
       {
-        templCompSizes.emplace_back(eastl::move(c.first >> 16), c.second);
-        totalCompSizes += c.second;
+          templCompSizes.emplace_back(std::move(c.first >> 16), c.second);
+          totalCompSizes += c.second;
       }
     }
-    eastl::sort(templCompSizes.begin(), templCompSizes.end(), [](auto a, auto b) { return a.second > b.second; });
+    std::sort(templCompSizes.begin(), templCompSizes.end(), [](auto a, auto b)
+    {
+        return a.second > b.second;
+    });
 
     NAU_CORE_DEBUG_LF("  template components total kb =%.2f, count = %d", totalCompSizes / (8. * 1024), templCompSizes.size());
     for (size_t j = 0; j < min(templCompSizes.size(), size_t(20)); ++j)
@@ -497,8 +512,8 @@ static const char *replace_local_to_remote(const char *templ_name, S &tmps)
   static const char LOCAL[] = "_local";
   static const char REMOTE[] = "_remote";
   const char *lpos = strstr(templ_name, LOCAL);
-  if (EASTL_LIKELY(!lpos))
-    return templ_name;
+  if (NAU_LIKELY(!lpos))
+      return templ_name;
   tmps = templ_name;
   lpos = tmps.c_str() + (lpos - templ_name);
   do
@@ -511,7 +526,7 @@ static const char *replace_local_to_remote(const char *templ_name, S &tmps)
   return tmps.c_str();
 }
 
-void Connection::serializeTemplate(danet::BitStream &bs, ecs::template_t templateIdx, eastl::bitvector<> &componentsSyncedTmp) const
+void Connection::serializeTemplate(danet::BitStream& bs, ecs::template_t templateIdx, nau::DynamicBitVector<>& componentsSyncedTmp) const
 {
   ecs::template_t templateId = serverIdxToTemplates[templateIdx];
   uint32_t archetype = g_entity_mgr->getArchetypeByTemplateId(templateId);
@@ -528,8 +543,8 @@ void Connection::serializeTemplate(danet::BitStream &bs, ecs::template_t templat
 
   bs.WriteCompressed(templateIdx); // ref to template
   {
-    eastl::fixed_string<char, 128, true, framemem_allocator> tmps;
-    bs.Write(replace_local_to_remote(g_entity_mgr->getTemplateName(templateId), tmps)); // _local -> _remote
+      nau::InlineString<char, 128, true, nau::FrameStdAllocator<char>> tmps;
+      bs.Write(replace_local_to_remote(g_entity_mgr->getTemplateName(templateId), tmps));  // _local -> _remote
   }
 
   const BitSize_t blockSizePos = bs.GetWriteOffset();
@@ -585,8 +600,8 @@ void Connection::serializeConstruction(ecs::EntityId eid, danet::BitStream &bs, 
     serverIdxToTemplates[serverWrittenIdx] = templateId;
     bs.WriteCompressed(serverWrittenIdx); // ref to template
     {
-      eastl::fixed_string<char, 128, true, framemem_allocator> tmps;
-      bs.Write(replace_local_to_remote(g_entity_mgr->getTemplateName(templateId), tmps)); // _local -> _remote
+        nau::InlineString<char, 128, true, nau::FrameStdAllocator<char>> tmps;
+        bs.Write(replace_local_to_remote(g_entity_mgr->getTemplateName(templateId), tmps));  // _local -> _remote
     }
     // todo: actually, we'd better serialize template, if it is different on server and client. Would require some state to check.
     const BitSize_t blockSizePos = bs.GetWriteOffset();
@@ -629,7 +644,7 @@ void Connection::serializeConstruction(ecs::EntityId eid, danet::BitStream &bs, 
 #if NET_STAT_PROFILE_INITIAL_SIZES
     auto beginWrComp = serializer.bs.GetWriteOffset();
 #endif
-    if ((ignoredComponents != nullptr && eastl::binary_search(ignoredComponents, ignoredComponentsE, comp.getComponentId())) ||
+    if ((ignoredComponents != nullptr && std::binary_search(ignoredComponents, ignoredComponentsE, comp.getComponentId())) ||
         g_entity_mgr->isEntityComponentSameAsTemplate(eid, comp, cid) ||
         (canSkipInitial == CanSkipInitial::Yes && object->skipInitialReplication(comp.getComponentId(), this, replica)))
     {
@@ -659,9 +674,9 @@ void Connection::serializeConstruction(ecs::EntityId eid, danet::BitStream &bs, 
   NAU_ASSERT(lessThan256 == (componentsInTemplate < 256));
 
   // Remove this check when we sure enough that it's not happens and use bitmap for storing info about count < 256 instead
-  if (EASTL_UNLIKELY(componentsInTemplate != serverTemplateComponentsCount[serverWrittenIdx]))
-    logerr("Inconsistent replication components count %d (cur) != %d (initial) in template %d<%s>", componentsInTemplate,
-      serverTemplateComponentsCount[serverWrittenIdx], templateId, g_entity_mgr->getEntityTemplateName(eid));
+  if (NAU_UNLIKELY(componentsInTemplate != serverTemplateComponentsCount[serverWrittenIdx]))
+      logerr("Inconsistent replication components count %d (cur) != %d (initial) in template %d<%s>", componentsInTemplate,
+             serverTemplateComponentsCount[serverWrittenIdx], templateId, g_entity_mgr->getEntityTemplateName(eid));
 
   if (lessThan256)
     bs.WriteAt(uint8_t(writtenComponents), countSizePos);
@@ -715,7 +730,7 @@ bool Connection::deserializeComponentConstruction(ecs::template_t server_templat
     if (ecs::MaybeChildComponent mbcomp = deserialize_init_component_typeless(componentTypeName, cidx, deserializer))
     {
       if (!mbcomp->isNull())
-        init[ecs::HashedConstString({"!net_replicated!", componentNameHash})] = eastl::move(*mbcomp);
+          init[ecs::HashedConstString({"!net_replicated!", componentNameHash})] = std::move(*mbcomp);
     }
     else
       return false;
@@ -771,7 +786,7 @@ ecs::EntityId Connection::deserializeConstruction(const danet::BitStream &bs, ec
       serverId, templDeserialized ? "initial " : "", templName, sz, ncomp, clientTemplatesComponents[serverTemplate].size(), cratio,
       constructionPacketSequence);
 #endif
-  G_VERIFY(srvEid == g_entity_mgr->reCreateEntityFromAsync(srvEid, templName, eastl::move(ainit), eastl::move(amap), eastl::move(cb)));
+  G_VERIFY(srvEid == g_entity_mgr->reCreateEntityFromAsync(srvEid, templName, std::move(ainit), std::move(amap), std::move(cb)));
   return srvEid;
 }
 

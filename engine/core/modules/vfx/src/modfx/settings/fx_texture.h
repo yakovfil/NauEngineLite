@@ -3,8 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/math/math.h"
+#include <string>
+
 #include "nau/dataBlock/dag_dataBlock.h"
+#include "nau/math/math.h"
 
 namespace nau::vfx::modfx::settings
 {
@@ -12,7 +14,7 @@ namespace nau::vfx::modfx::settings
     {
         FxTexture() :
             enabled(false),
-            tex_0_name(eastl::string()),
+            tex_0_name(std::string()),
             frames_x(1),
             frames_y(1),
             current_frame(0),
@@ -63,7 +65,7 @@ namespace nau::vfx::modfx::settings
 
         bool enabled;
 
-        eastl::string tex_0_name;
+        std::string tex_0_name;
 
         int frames_x;
         int frames_y;

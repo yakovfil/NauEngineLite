@@ -29,7 +29,7 @@
 #include "platform/CCPlatformConfig.h"
 #include "platform/CCCommon.h"
 #include <string>
-#include <EASTL/string.h>
+#include <string>
 
 NS_CC_BEGIN
 

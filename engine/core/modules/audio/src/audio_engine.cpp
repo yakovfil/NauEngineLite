@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/audio/audio_engine.hpp"
+
+#include <string>
+
 #include "audio_backend_miniaudio.hpp"
 
 NAU_AUDIO_BEGIN
@@ -32,7 +34,7 @@ AudioAssetList IAudioEngine::assets()
     return result;
 }
 
-AudioAssetContainerPtr IAudioEngine::createContainer(const eastl::string& name)
+AudioAssetContainerPtr IAudioEngine::createContainer(const std::string& name)
 {
     auto container = std::make_shared<AudioAssetContainer>(name);
     m_containers.emplace_back(container);

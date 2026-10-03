@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/assets/asset_container.h"
 #include "nau/assets/ui_asset_accessor.h"
 
@@ -19,7 +23,7 @@ namespace nau
         NanimAssetContainerLoader() = default;
 
     private:
-        virtual eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        virtual std::vector<std::string_view> getSupportedAssetKind() const override;
 
         virtual async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr file, AssetContentInfo info) override;
 
@@ -36,8 +40,8 @@ namespace nau
         io::IStreamReader::Ptr getStream();
 
     private:
-        virtual nau::Ptr<> getAsset(eastl::string_view path) override;
-        virtual eastl::vector<eastl::string> getContent() const override;
+        virtual nau::Ptr<> getAsset(std::string_view path) override;
+        virtual std::vector<std::string> getContent() const override;
 
     private:
         io::IStreamReader::Ptr m_stream;

@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <span>
+#include <utility>
+
 #include "device.h"
 
 //#include <util/dag_watchdog.h>
@@ -32,24 +35,24 @@ void TileMapperAccel::beginTileMapping(ID3D12Resource *tex_in, ID3D12Heap *heap_
 
 void TileMapperAccel::addTileMappings(const TileMapping *mapping, size_t mapping_count)
 {
-  for (auto &map : eastl::span{mapping, mapping_count})
-  {
-    D3D12_TILED_RESOURCE_COORDINATE &trc = trcs.emplace_back();
-    trc.X = map.texX;
-    trc.Y = map.texY;
-    trc.Z = map.texZ;
-    trc.Subresource = map.texSubresource;
+    for (auto& map : std::span{mapping, mapping_count})
+    {
+        D3D12_TILED_RESOURCE_COORDINATE& trc = trcs.emplace_back();
+        trc.X = map.texX;
+        trc.Y = map.texY;
+        trc.Z = map.texZ;
+        trc.Subresource = map.texSubresource;
 
-    D3D12_TILE_REGION_SIZE &trs = trss.emplace_back();
-    trs.UseBox = (map.heapTileSpan == 1) ? TRUE : FALSE;
-    trs.Width = map.heapTileSpan;
-    trs.Height = 1;
-    trs.Depth = 1;
-    trs.NumTiles = map.heapTileSpan;
+        D3D12_TILE_REGION_SIZE& trs = trss.emplace_back();
+        trs.UseBox = (map.heapTileSpan == 1) ? TRUE : FALSE;
+        trs.Width = map.heapTileSpan;
+        trs.Height = 1;
+        trs.Depth = 1;
+        trs.NumTiles = map.heapTileSpan;
 
-    offsets.emplace_back(map.heapTileIndex + heapBase);
-    counts.emplace_back(map.heapTileSpan);
-  }
+        offsets.emplace_back(map.heapTileIndex + heapBase);
+        counts.emplace_back(map.heapTileSpan);
+    }
 }
 
 void TileMapperAccel::endTileMapping(ID3D12CommandQueue *queue)
@@ -131,10 +134,10 @@ bool DeviceQueueGroup::init(ID3D12Device *device, bool give_names)
     DX12_SET_DEBUG_OBJ_NAME(graphicsQueue, L"GraphicsQueue");
   }
 
-  group[static_cast<uint32_t>(DeviceQueueType::GRAPHICS)] = DeviceQueue(eastl::move(graphicsQueue));
-  group[static_cast<uint32_t>(DeviceQueueType::COMPUTE)] = DeviceQueue(eastl::move(computeQueue));
-  group[static_cast<uint32_t>(DeviceQueueType::UPLOAD)] = DeviceQueue(eastl::move(uploadQueue));
-  group[static_cast<uint32_t>(DeviceQueueType::READ_BACK)] = DeviceQueue(eastl::move(readBackQueue));
+  group[static_cast<uint32_t>(DeviceQueueType::GRAPHICS)] = DeviceQueue(std::move(graphicsQueue));
+  group[static_cast<uint32_t>(DeviceQueueType::COMPUTE)] = DeviceQueue(std::move(computeQueue));
+  group[static_cast<uint32_t>(DeviceQueueType::UPLOAD)] = DeviceQueue(std::move(uploadQueue));
+  group[static_cast<uint32_t>(DeviceQueueType::READ_BACK)] = DeviceQueue(std::move(readBackQueue));
 
   return true;
 }

@@ -1,24 +1,21 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "usd_audio_adapter.h"
-#include "usd_prim_translator.h"
-#include "usd_stage_translator.h"
-
-#include "nau/NauAudioSchema/audioEmitter.h"
-
-#include "nau/service/service_provider.h"
-#include "nau/assets/asset_db.h"
-#include "nau/shared/file_system.h"
-#include "nau/scene/scene_factory.h"
-
-#include "nau/audio/audio_service.hpp"
-#include "nau/audio/audio_component_emitter.hpp"
-#include "nau/audio/audio_engine.hpp"
 
 #include <filesystem>
+#include <string>
 
+#include "nau/NauAudioSchema/audioEmitter.h"
+#include "nau/assets/asset_db.h"
+#include "nau/audio/audio_component_emitter.hpp"
+#include "nau/audio/audio_engine.hpp"
+#include "nau/audio/audio_service.hpp"
+#include "nau/scene/scene_factory.h"
+#include "nau/service/service_provider.h"
+#include "nau/shared/file_system.h"
+#include "usd_prim_translator.h"
+#include "usd_stage_translator.h"
 
 namespace UsdTranslator
 {
@@ -68,7 +65,7 @@ namespace UsdTranslator
         PXR_NS::SdfAssetPath sdfPathContainer;
         emitterData.GetAudioContainerContainerAttr().Get(&sdfPathContainer);
 
-        if (const eastl::string uidString = sdfPathContainer.GetAssetPath().c_str(); !uidString.empty())
+        if (const std::string uidString = sdfPathContainer.GetAssetPath().c_str(); !uidString.empty())
         {
             const auto uid = *nau::Uid::parseString(uidString.substr(4).c_str());
             component->containerAssetUid = uid;

@@ -2,6 +2,12 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <iterator>
+#include <span>
+#include <utility>
+#include <vector>
+
 #include "device.h"
 
 //#include <ioSys/dag_fileIo.h>
@@ -120,11 +126,11 @@ void PipelineCache::init(const SetupParameters &params)
 
 struct MemoryWriteBuffer
 {
-  eastl::vector<uint8_t> buf;
-  void append(const void *ptr, size_t sz)
-  {
-    buf.insert(buf.end(), reinterpret_cast<const uint8_t *>(ptr), reinterpret_cast<const uint8_t *>(ptr) + sz);
-  }
+    std::vector<uint8_t> buf;
+    void append(const void* ptr, size_t sz)
+    {
+        buf.insert(buf.end(), reinterpret_cast<const uint8_t*>(ptr), reinterpret_cast<const uint8_t*>(ptr) + sz);
+    }
 };
 
 void PipelineCache::shutdown(const ShutdownParameters &params)
@@ -332,14 +338,14 @@ void PipelineCache::shutdown(const ShutdownParameters &params)
 
   if (library)
   {
-    eastl::vector<uint8_t> blob;
-    blob.resize(library->GetSerializedSize());
-    library->Serialize(blob.data(), blob.size());
-    mem.append(blob.data(), blob.size());
+      std::vector<uint8_t> blob;
+      blob.resize(library->GetSerializedSize());
+      library->Serialize(blob.data(), blob.size());
+      mem.append(blob.data(), blob.size());
   }
 
-  eastl::vector<uint8_t> compressedMemory;
-#if DX12_ENABLE_CACHE_COMPRESSION
+  std::vector<uint8_t> compressedMemory;
+    #if DX12_ENABLE_CACHE_COMPRESSION
   compressedMemory.resize(mem.buf.size() * 2);
   auto compSize = 42; //zstd_compress(compressedMemory.data(), compressedMemory.size(), mem.buf.data(), mem.buf.size(), 20);
   // if we encountered an error or for some reason the data is not smaller,
@@ -367,24 +373,30 @@ void PipelineCache::shutdown(const ShutdownParameters &params)
 
 GraphicsPipelineBaseCacheId PipelineCache::getGraphicsPipeline(const BasePipelineIdentifier &ident)
 {
-  auto ref =
-    eastl::find_if(begin(graphicsCache), end(graphicsCache), [=](const GraphicsPipeline &pipe) { return pipe.ident == ident; });
+    auto ref =
+        std::find_if(begin(graphicsCache), end(graphicsCache), [=](const GraphicsPipeline& pipe)
+    {
+        return pipe.ident == ident;
+    });
 
-  if (ref == end(graphicsCache))
-  {
-    ref = graphicsCache.insert(ref, GraphicsPipeline{});
-    ref->ident = ident;
-  }
+    if (ref == end(graphicsCache))
+    {
+        ref = graphicsCache.insert(ref, GraphicsPipeline{});
+        ref->ident = ident;
+    }
 
-  return GraphicsPipelineBaseCacheId{ref - eastl::begin(graphicsCache)};
+    return GraphicsPipelineBaseCacheId{ref - std::begin(graphicsCache)};
 }
 
 bool PipelineCache::containsGraphicsPipeline(const BasePipelineIdentifier &ident)
 {
-  auto ref =
-    eastl::find_if(begin(graphicsCache), end(graphicsCache), [=](const GraphicsPipeline &pipe) { return pipe.ident == ident; });
+    auto ref =
+        std::find_if(begin(graphicsCache), end(graphicsCache), [=](const GraphicsPipeline& pipe)
+    {
+        return pipe.ident == ident;
+    });
 
-  return ref != end(graphicsCache);
+    return ref != end(graphicsCache);
 }
 
 size_t PipelineCache::getGraphicsPipelineVariantCount(GraphicsPipelineBaseCacheId base_id)
@@ -408,12 +420,12 @@ size_t PipelineCache::addGraphicsPipelineVariant(GraphicsPipelineBaseCacheId bas
   auto inputLayoutIndex = getInputLayoutIndex(input_layout);
   auto staticRenderStateIndex = getStaticRenderStateIndex(static_state);
   auto framebufferLayoutIndex = getFramebufferLayoutIndex(fb_layout);
-  auto ref = eastl::find_if(begin(base.variantCache), end(base.variantCache),
-    [=](const GraphicsPipeline::VariantCacheEntry &vce) //
-    {
+  auto ref = std::find_if(begin(base.variantCache), end(base.variantCache),
+                          [=](const GraphicsPipeline::VariantCacheEntry& vce)  //
+  {
       return vce.topology == topology && vce.inputLayoutIndex == inputLayoutIndex && (vce.isWireFrame != 0) == is_wire_frame &&
              vce.staticRenderStateIndex == staticRenderStateIndex && vce.framebufferLayoutIndex == framebufferLayoutIndex;
-    });
+  });
   if (ref == end(base.variantCache))
   {
     ref = base.variantCache.insert(ref, GraphicsPipeline::VariantCacheEntry{});
@@ -456,12 +468,12 @@ size_t PipelineCache::addGraphicsMeshPipelineVariant(GraphicsPipelineBaseCacheId
   auto &base = graphicsCache[base_id.get()];
   auto staticRenderStateIndex = getStaticRenderStateIndex(static_state);
   auto framebufferLayoutIndex = getFramebufferLayoutIndex(fb_layout);
-  auto ref = eastl::find_if(begin(base.variantCache), end(base.variantCache),
-    [=](const GraphicsPipeline::VariantCacheEntry &vce) //
-    {
+  auto ref = std::find_if(begin(base.variantCache), end(base.variantCache),
+                          [=](const GraphicsPipeline::VariantCacheEntry& vce)  //
+  {
       return (vce.isWireFrame != 0) == is_wire_frame && vce.staticRenderStateIndex == staticRenderStateIndex &&
              vce.framebufferLayoutIndex == framebufferLayoutIndex;
-    });
+  });
   if (ref == end(base.variantCache))
   {
     ref = base.variantCache.insert(ref, GraphicsPipeline::VariantCacheEntry{});
@@ -537,24 +549,24 @@ ComPtr<ID3D12PipelineState> PipelineCache::loadGraphicsPipelineVariant(GraphicsP
   auto framebufferLayoutIndex = getFramebufferLayoutIndex(fb_layout);
   if (usePSOBlobs())
   {
-    auto ref = eastl::find_if(begin(base.variantCache), end(base.variantCache),
-      [=](const GraphicsPipeline::VariantCacheEntry &vce) //
+      auto ref = std::find_if(begin(base.variantCache), end(base.variantCache),
+                              [=](const GraphicsPipeline::VariantCacheEntry& vce)  //
       {
-        return vce.topology == topology && vce.inputLayoutIndex == inputLayoutIndex && (vce.isWireFrame != 0) == is_wire_frame &&
-               vce.staticRenderStateIndex == staticRenderStateIndex && vce.framebufferLayoutIndex == framebufferLayoutIndex;
+          return vce.topology == topology && vce.inputLayoutIndex == inputLayoutIndex && (vce.isWireFrame != 0) == is_wire_frame &&
+                 vce.staticRenderStateIndex == staticRenderStateIndex && vce.framebufferLayoutIndex == framebufferLayoutIndex;
       });
-    if (ref != end(base.variantCache))
-    {
-      if (!ref->blob.empty())
+      if (ref != end(base.variantCache))
       {
-        blob_target.pCachedBlob = ref->blob.data();
-        blob_target.CachedBlobSizeInBytes = ref->blob.size();
-        CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache hit");
-      }
-      else
-      {
-        CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache miss (no blob)");
-      }
+          if (!ref->blob.empty())
+          {
+              blob_target.pCachedBlob = ref->blob.data();
+              blob_target.CachedBlobSizeInBytes = ref->blob.size();
+              CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache hit");
+          }
+          else
+          {
+              CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache miss (no blob)");
+          }
     }
     else
     {
@@ -591,24 +603,24 @@ ComPtr<ID3D12PipelineState> PipelineCache::loadGraphicsMeshPipelineVariant(Graph
   auto framebufferLayoutIndex = getFramebufferLayoutIndex(fb_layout);
   if (usePSOBlobs())
   {
-    auto ref = eastl::find_if(begin(base.variantCache), end(base.variantCache),
-      [=](const GraphicsPipeline::VariantCacheEntry &vce) //
+      auto ref = std::find_if(begin(base.variantCache), end(base.variantCache),
+                              [=](const GraphicsPipeline::VariantCacheEntry& vce)  //
       {
-        return (vce.isWireFrame != 0) == is_wire_frame && vce.staticRenderStateIndex == staticRenderStateIndex &&
-               vce.framebufferLayoutIndex == framebufferLayoutIndex;
+          return (vce.isWireFrame != 0) == is_wire_frame && vce.staticRenderStateIndex == staticRenderStateIndex &&
+                 vce.framebufferLayoutIndex == framebufferLayoutIndex;
       });
-    if (ref != end(base.variantCache))
-    {
-      if (!ref->blob.empty())
+      if (ref != end(base.variantCache))
       {
-        blob_target.pCachedBlob = ref->blob.data();
-        blob_target.CachedBlobSizeInBytes = ref->blob.size();
-        CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache hit");
-      }
-      else
-      {
-        CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache miss (no blob)");
-      }
+          if (!ref->blob.empty())
+          {
+              blob_target.pCachedBlob = ref->blob.data();
+              blob_target.CachedBlobSizeInBytes = ref->blob.size();
+              CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache hit");
+          }
+          else
+          {
+              CACHE_INFO_VERBOSE("DX12: Graphics pipeline cache miss (no blob)");
+          }
     }
     else
     {
@@ -711,22 +723,25 @@ void PipelineCache::addCompute(const dxil::HashValue &shader, ID3D12PipelineStat
     {
       if (blob->GetBufferSize() > 1)
       {
-        auto ref = eastl::find_if(begin(computeBlobs), end(computeBlobs),
-          [&](const ComputeBlob &blob_info) { return blob_info.hash == shader; });
-        auto from = reinterpret_cast<const uint8_t *>(blob->GetBufferPointer());
-        auto to = from + blob->GetBufferSize();
-        if (ref != end(computeBlobs))
-        {
-          CACHE_INFO_VERBOSE("DX12: Updating compute pipeline cache");
-          ref->blob.assign(from, to);
-        }
+          auto ref = std::find_if(begin(computeBlobs), end(computeBlobs),
+                                  [&](const ComputeBlob& blob_info)
+          {
+              return blob_info.hash == shader;
+          });
+          auto from = reinterpret_cast<const uint8_t*>(blob->GetBufferPointer());
+          auto to = from + blob->GetBufferSize();
+          if (ref != end(computeBlobs))
+          {
+              CACHE_INFO_VERBOSE("DX12: Updating compute pipeline cache");
+              ref->blob.assign(from, to);
+          }
         else
         {
           CACHE_INFO_VERBOSE("DX12: New compute pipeline cache entry");
           ComputeBlob newComputeBlob;
           newComputeBlob.hash = shader;
           newComputeBlob.blob.assign(from, to);
-          computeBlobs.push_back(eastl::move(newComputeBlob));
+          computeBlobs.push_back(std::move(newComputeBlob));
         }
       }
     }
@@ -750,14 +765,17 @@ ComPtr<ID3D12PipelineState> PipelineCache::loadCompute(const dxil::HashValue &sh
   ComPtr<ID3D12PipelineState> result;
   if (usePSOBlobs())
   {
-    auto ref =
-      eastl::find_if(begin(computeBlobs), end(computeBlobs), [&](const ComputeBlob &blob_info) { return blob_info.hash == shader; });
-    if (ref != end(computeBlobs))
-    {
-      blob_target.pCachedBlob = ref->blob.data();
-      blob_target.CachedBlobSizeInBytes = ref->blob.size();
-      CACHE_INFO_VERBOSE("DX12: Compute pipeline cache hit");
-    }
+      auto ref =
+          std::find_if(begin(computeBlobs), end(computeBlobs), [&](const ComputeBlob& blob_info)
+      {
+          return blob_info.hash == shader;
+      });
+      if (ref != end(computeBlobs))
+      {
+          blob_target.pCachedBlob = ref->blob.data();
+          blob_target.CachedBlobSizeInBytes = ref->blob.size();
+          CACHE_INFO_VERBOSE("DX12: Compute pipeline cache hit");
+      }
     else
     {
       CACHE_INFO_VERBOSE("DX12: Compute pipeline cache miss");
@@ -785,18 +803,18 @@ namespace
 {
 struct MemoryReadBuffer
 {
-  eastl::vector<uint8_t> buf;
-  size_t location = 0;
-  template <typename T>
-  const T *readRange(size_t cnt = 1)
-  {
-    auto left = buf.size() - location;
-    if (cnt * sizeof(T) > left)
-      return nullptr;
-    auto ptr = buf.data() + location;
-    location += sizeof(T) * cnt;
-    return reinterpret_cast<const T *>(ptr);
-  }
+    std::vector<uint8_t> buf;
+    size_t location = 0;
+    template <typename T>
+    const T* readRange(size_t cnt = 1)
+    {
+        auto left = buf.size() - location;
+        if (cnt * sizeof(T) > left)
+            return nullptr;
+        auto ptr = buf.data() + location;
+        location += sizeof(T) * cnt;
+        return reinterpret_cast<const T*>(ptr);
+    }
   template <typename T>
   bool read(T &target)
   {
@@ -816,7 +834,7 @@ void PipelineCache::preRecovery()
   if (library && hasChanged)
   {
     // try to recover pipeline library cache blob and reuse it later
-    eastl::vector<uint8_t> newBlob;
+    std::vector<uint8_t> newBlob;
     auto sz = library->GetSerializedSize();
     if (sz)
     {
@@ -824,7 +842,7 @@ void PipelineCache::preRecovery()
       library->Serialize(newBlob.data(), newBlob.size());
       // delete lib object and then swap memory blob to reuse later
       library.Reset();
-      initialPipelineBlob = eastl::move(newBlob);
+      initialPipelineBlob = std::move(newBlob);
     }
   }
   if (library)
@@ -866,7 +884,7 @@ void PipelineCache::recover(ID3D12Device1 *device, D3D12_SHADER_CACHE_SUPPORT_FL
 #endif
 }
 
-void PipelineCache::onBindumpLoad(ID3D12Device1 *device, eastl::span<const dxil::HashValue> all_shader_hashes)
+void PipelineCache::onBindumpLoad(ID3D12Device1* device, std::span<const dxil::HashValue> all_shader_hashes)
 {
   NAU_LOG_DEBUG("DX12: onBindumpLoad...");
   auto newHash = dxil::HashValue::calculate(all_shader_hashes.data(), all_shader_hashes.size());
@@ -956,14 +974,14 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
   data.buf.resize(fileHeader.uncompressedContentSize);
   if (fileHeader.compressedContentSize)
   {
-    eastl::vector<uint8_t> compressedData;
-    compressedData.resize(fileHeader.compressedContentSize);
-    ln = cacheFile.tryRead(compressedData.data(), compressedData.size());
-    if (ln != compressedData.size())
-    {
-      NAU_LOG_ERROR("DX12: Error while reading data");
-      return false;
-    }
+      std::vector<uint8_t> compressedData;
+      compressedData.resize(fileHeader.compressedContentSize);
+      ln = cacheFile.tryRead(compressedData.data(), compressedData.size());
+      if (ln != compressedData.size())
+      {
+          NAU_LOG_ERROR("DX12: Error while reading data");
+          return false;
+      }
     auto outSize = 42; //zstd_decompress(data.buf.data(), data.buf.size(), compressedData.data(), compressedData.size());
     if (outSize != data.buf.size())
     {
@@ -1035,7 +1053,7 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
     if (usePSOBlobs() && shouldLoadBlobsOrLibrary)
     {
       blob.blob.assign(pso, pso + sz);
-      computeBlobs.push_back(eastl::move(blob));
+      computeBlobs.push_back(std::move(blob));
       ++computeBlobsLoaded;
       computeBlobsSize += sz;
     }
@@ -1128,9 +1146,9 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
         graphicsVariantBlobsLoaded++;
         graphicsVariantBlobsSize += psoSz;
       }
-      blob.variantCache.push_back(eastl::move(vce));
+      blob.variantCache.push_back(std::move(vce));
     }
-    graphicsCache.push_back(eastl::move(blob));
+    graphicsCache.push_back(std::move(blob));
   }
 
   size_t computeSignatureBlobSize = 0;
@@ -1165,7 +1183,7 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
       return false;
     }
     csb.blob.assign(sig, sig + sigSz);
-    computeSignatures.push_back(eastl::move(csb));
+    computeSignatures.push_back(std::move(csb));
     computeSignatureBlobSize += sigSz;
   }
 
@@ -1204,7 +1222,7 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
       return false;
     }
     gsb.blob.assign(sig, sig + sigSz);
-    graphicsSignatures.push_back(eastl::move(gsb));
+    graphicsSignatures.push_back(std::move(gsb));
     graphicsSignatureBlobSize += sigSz;
   }
 
@@ -1246,7 +1264,7 @@ bool PipelineCache::loadFromFile(const SetupParameters &params)
       return false;
     }
     gsb.blob.assign(sig, sig + sigSz);
-    graphicsMeshSignatures.push_back(eastl::move(gsb));
+    graphicsMeshSignatures.push_back(std::move(gsb));
     graphicsMeshSignatureBlobSize += sigSz;
   }
 

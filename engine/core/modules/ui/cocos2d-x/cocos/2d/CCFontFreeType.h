@@ -57,7 +57,7 @@ public:
 
     FT_Encoding getEncoding() const { return _encoding; }
 
-    int* getHorizontalKerningForTextUTF32(const eastl::u32string& text, int &outNumLetters) const override;
+    int* getHorizontalKerningForTextUTF32(const std::u32string& text, int &outNumLetters) const override;
     
     unsigned char* getGlyphBitmap(uint64_t theChar, long &outWidth, long &outHeight, Rect &outRect,int &xAdvance);
     
@@ -101,7 +101,7 @@ private:
     FontAtlas* _fontAtlas;
 
     GlyphCollection _usedGlyphs;
-    eastl::string _customGlyphs;
+    std::string _customGlyphs;
 };
 
 /// @endcond

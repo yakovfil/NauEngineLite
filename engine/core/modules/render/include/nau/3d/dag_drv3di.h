@@ -10,11 +10,11 @@ namespace d3d
 typedef D3dEventQuery EventQuery;
 }
 
+#include <span>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/math/math.h"
-#include <eastl/vector.h>
-#include <eastl/span.h>
-
 
 // function-pointers table that mirrors d3d API
 struct D3dInterfaceTable
@@ -162,10 +162,10 @@ struct D3dInterfaceTable
   void (*setglobtm_vec)(const nau::math::Matrix4 &);
 
   bool (*setscissor)(int x, int y, int w, int h);
-  bool (*setscissors)(eastl::span<const ScissorRect> scissorRects);
+  bool (*setscissors)(std::span<const ScissorRect> scissorRects);
 
   bool (*setview)(int x, int y, int w, int h, float minz, float maxz);
-  bool (*setviews)(eastl::span<const Viewport> viewports);
+  bool (*setviews)(std::span<const Viewport> viewports);
   bool (*getview)(int &x, int &y, int &w, int &h, float &minz, float &maxz);
   bool (*clearview)(int what, nau::math::E3DCOLOR, float z, uint32_t stencil);
 
@@ -256,7 +256,7 @@ struct D3dInterfaceTable
   bool (*set_capture_full_frame_buffer)(bool ison);
   unsigned (*get_texture_format)(BaseTexture *tex);
   const char *(*get_texture_format_str)(BaseTexture *tex);
-  void (*get_video_modes_list)(eastl::vector<nau::string> &list);
+  void (*get_video_modes_list)(std::vector<nau::string>& list);
   PROGRAM (*get_debug_program)();
   void (*beginEvent)(const char *s);
   void (*endEvent)();

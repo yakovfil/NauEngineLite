@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
-#include <EASTL/unordered_map.h>
-#include <EASTL/vector.h>
+#include <optional>
+#include <span>
+#include <unordered_map>
+#include <vector>
 
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/rtti/ptr.h"
 #include "nau/scene/camera/camera.h"
 #include "nau/utils/functor.h"
@@ -26,20 +26,20 @@ namespace nau::scene
     {
         NAU_TYPEID(nau::scene::ICameraManager)
 
-        using CameraCollection = eastl::vector<Ptr<ICameraProperties>>;
+        using CameraCollection = std::vector<Ptr<ICameraProperties>>;
 
         class NAU_CORESCENE_EXPORT CamerasSnapshot
         {
         public:
             Ptr<ICameraProperties> getCameraByUid(Uid cameraUid);
-            eastl::span<Ptr<ICameraProperties>> getWorldAllCameras(Uid worldUid = NullUid);
+            std::span<Ptr<ICameraProperties>> getWorldAllCameras(Uid worldUid = NullUid);
             Ptr<ICameraProperties> getWorldMainCamera(Uid worldUid = NullUid);
             Ptr<ICameraProperties> getWorldExplicitMainCamera(Uid worldUid = NullUid);
             bool isEmpty() const;
 
         private:
-            eastl::unordered_map<Uid, CameraCollection> m_worldCameras;
-            eastl::unordered_map<Uid, Uid> m_worldMainCameras;
+            std::unordered_map<Uid, CameraCollection> m_worldCameras;
+            std::unordered_map<Uid, Uid> m_worldMainCameras;
 
             friend class CameraManagerImpl;
         };

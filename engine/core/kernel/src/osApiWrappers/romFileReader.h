@@ -9,6 +9,8 @@
 #include <nau/utils/dag_stdint.h>
 #include <stdio.h>
 
+#include <span>
+
 #include "nau/utils/span.h"
 #if NAU_PLATFORM_ANDROID
     #include <android/asset_manager.h>
@@ -29,31 +31,31 @@ namespace nau::hal
 
         int read(void* buf, int sz)
         {
-            if(sz <= 0 || pos >= size)
+            if (sz <= 0 || pos >= size)
                 return 0;
-            if(pos + sz > size)
+            if (pos + sz > size)
                 sz = size - pos;
 
-            if(fp)
+            if (fp)
             {
             retry:
                 int ret = (int)fread(buf, 1, sz, fp);
-                if(ret != sz)
+                if (ret != sz)
                 {
                     int ofs = ftell(fp) - (ret > 0 ? ret : 0);
                     bool doRetry = false;
-                    if(feof(fp))
+                    if (feof(fp))
                     {
-                        if(dag_on_read_beyond_eof_cb)
+                        if (dag_on_read_beyond_eof_cb)
                             doRetry = dag_on_read_beyond_eof_cb(fp, ofs, sz, ret);
                     }
                     else
                     {
-                        if(dag_on_read_error_cb)
+                        if (dag_on_read_error_cb)
                             doRetry = dag_on_read_error_cb(fp, ofs, sz);
                     }
 
-                    if(doRetry)
+                    if (doRetry)
                     {
                         fseek(fp, ofs, SEEK_SET);
                         goto retry;
@@ -69,15 +71,15 @@ namespace nau::hal
         }
         char* gets(char* buf, int max_sz)
         {
-            if(fp)
+            if (fp)
             {
-                if(pos >= size)
+                if (pos >= size)
                     return NULL;
                 buf = fgets(buf, max_sz, fp);
                 int rd = ftell(fp) - fpOfs - pos;
-                if(pos + rd > size)
+                if (pos + rd > size)
                 {
-                    if(buf)
+                    if (buf)
                         buf[size - pos] = 0;
                     fseek(fp, (pos = size) + fpOfs, SEEK_SET);
                 }
@@ -86,13 +88,13 @@ namespace nau::hal
                 return buf;
             }
 
-            if(pos + max_sz > size)
+            if (pos + max_sz > size)
                 max_sz = size - pos;
-            if(max_sz < 1)
+            if (max_sz < 1)
                 return NULL;
 
             char* p = (char*)memchr(data + pos, '\n', max_sz - 1);
-            if(p)
+            if (p)
                 max_sz = p - (data + pos);
 
             memcpy(buf, data + pos, max_sz);
@@ -103,10 +105,10 @@ namespace nau::hal
 
         int seekTo(int ofs_abs)
         {
-            if(ofs_abs < 0 || ofs_abs > size)
+            if (ofs_abs < 0 || ofs_abs > size)
                 return -1;
             pos = ofs_abs;
-            if(fp)
+            if (fp)
                 return fseek(fp, pos + fpOfs, SEEK_SET);
             return 0;
         }
@@ -131,7 +133,7 @@ namespace nau::hal
         void* mmap(int* base, int offset, int* out_file_len, FILE** out_fp)
         {
             *out_file_len = size;
-            if(fp)
+            if (fp)
             {
                 *out_fp = fp;
                 *base = fpOfs;
@@ -146,13 +148,13 @@ namespace nau::hal
         static RomFileReader rdPool[MAX_FILE_RD];
         static dag::CriticalSection critSec;
 
-        static int getBaseOfs(eastl::span<const char> p)
+        static int getBaseOfs(std::span<const char> p)
         {
             int ofs = ptrdiff_t(p.data());
             return ofs > 0 ? ofs : 0;
         }
         /* TODO: VROM integration
-        static RomFileReader *open(eastl::span<const char> p, VirtualRomFsPack *pack, VirtualRomFsData *vrom_src)
+        static RomFileReader *open(std::span<const char> p, VirtualRomFsPack *pack, VirtualRomFsData *vrom_src)
         {
           int i;
           {
@@ -203,19 +205,19 @@ namespace nau::hal
             RomFileReader* h = nullptr;
             {
                 dag::CSAutoLock lock(critSec);
-                for(RomFileReader& rfr : rdPool)
-                    if(rfr.size < 0)
+                for (RomFileReader& rfr : rdPool)
+                    if (rfr.size < 0)
                     {
                         h = &rfr;
                         rfr.size = 0;
                         break;
                     }
-                if(!h)
+                if (!h)
                     return h;
             }
 
             const char* data_b64_end = strchr(data_b64, '.');
-            if(!data_b64_end)
+            if (!data_b64_end)
                 data_b64_end = data_b64 + strlen(data_b64);
 
             h->data = decodeB64(data_b64, data_b64_end, &h->size);
@@ -229,23 +231,23 @@ namespace nau::hal
         static RomFileReader* openAsset(const char* fpath)
         {
             android_app* state = (android_app*)win32_get_instance();
-            if(!state)
+            if (!state)
                 return nullptr;
             AAsset* a = AAssetManager_open(state->activity->assetManager, fpath, AASSET_MODE_BUFFER);
-            if(!a)
+            if (!a)
                 return nullptr;
 
             RomFileReader* h = nullptr;
             {
                 dag::CSAutoLock lock(critSec);
-                for(RomFileReader& rfr : rdPool)
-                    if(rfr.size < 0)
+                for (RomFileReader& rfr : rdPool)
+                    if (rfr.size < 0)
                     {
                         h = &rfr;
                         rfr.size = 0;
                         break;
                     }
-                if(!h)
+                if (!h)
                     return h;
             }
 
@@ -260,8 +262,8 @@ namespace nau::hal
         }
         static int getAssetSize(const char* fpath)
         {
-            if(android_app* state = (android_app*)win32_get_instance())
-                if(AAsset* a = AAssetManager_open(state->activity->assetManager, fpath, AASSET_MODE_UNKNOWN))
+            if (android_app* state = (android_app*)win32_get_instance())
+                if (AAsset* a = AAssetManager_open(state->activity->assetManager, fpath, AASSET_MODE_UNKNOWN))
                 {
                     int sz = AAsset_getLength(a);
                     AAsset_close(a);
@@ -282,26 +284,26 @@ namespace nau::hal
         static bool close(RomFileReader* rd)
         {
             dag::CSAutoLock lock(critSec);
-            if(rd < &rdPool[0] || rd >= &rdPool[MAX_FILE_RD])
+            if (rd < &rdPool[0] || rd >= &rdPool[MAX_FILE_RD])
                 return false;
 
             int i = rd - &rdPool[0];
-            if(rdPool[i].size < 0)
+            if (rdPool[i].size < 0)
                 return false;
 
-            if(!rdPool[i].fp && rdPool[i].fpOfs == 0xAAAA5555)
+            if (!rdPool[i].fp && rdPool[i].fpOfs == 0xAAAA5555)
                 free((void*)rdPool[i].data);
             rdPool[i].data = NULL;
             rdPool[i].size = -1;
             rdPool[i].pos = 0;
             rdPool[i].srcVrom = nullptr;
-            if(rdPool[i].fp)
+            if (rdPool[i].fp)
             {
                 df_close(rdPool[i].fp);
                 rdPool[i].fp = NULL;
             }
 #if _TARGET_ANDROID
-            if(rdPool[i].asset)
+            if (rdPool[i].asset)
             {
                 AAsset_close(rdPool[i].asset);
                 rdPool[i].asset = nullptr;
@@ -313,8 +315,8 @@ namespace nau::hal
         static bool munmap(const void* start)
         {
             dag::CSAutoLock lock(critSec);
-            for(int i = 0; i < MAX_FILE_RD; ++i)
-                if(rdPool[i].data && (const char*)start >= rdPool[i].data && start < (rdPool[i].data + rdPool[i].size))
+            for (int i = 0; i < MAX_FILE_RD; ++i)
+                if (rdPool[i].data && (const char*)start >= rdPool[i].data && start < (rdPool[i].data + rdPool[i].size))
                     return true;
             return false;
         }
@@ -323,34 +325,34 @@ namespace nau::hal
         {
             int sz = (data_end - data) / 4 * 3;
             char* buf = (char*)malloc(sz);
-            if(!buf)
+            if (!buf)
             {
                 *out_sz = 0;
                 return nullptr;
             }
 
-            if(data_end - 1 > data && *(data_end - 1) == '=')
+            if (data_end - 1 > data && *(data_end - 1) == '=')
             {
                 sz--;
-                if(data_end - 2 > data && *(data_end - 2) == '=')
+                if (data_end - 2 > data && *(data_end - 2) == '=')
                     sz--;
             }
             *out_sz = sz;
 
-            for(uint8_t* p = (uint8_t*)buf; data < data_end; p += 3, data += 4)
+            for (uint8_t* p = (uint8_t*)buf; data < data_end; p += 3, data += 4)
             {
                 uint8_t b6[4];
-                for(int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     uint8_t C = data[i];
-                    if(C >= 'A' && C < 'A' + 26)
+                    if (C >= 'A' && C < 'A' + 26)
                         b6[i] = C - 'A';
-                    else if(C >= 'a' && C < 'a' + 26)
+                    else if (C >= 'a' && C < 'a' + 26)
                         b6[i] = C - 'a' + 26;
-                    else if(C >= '0' && C < '0' + 10)
+                    else if (C >= '0' && C < '0' + 10)
                         b6[i] = C - '0' + 52;
                     else
-                        switch(C)
+                        switch (C)
                         {
                             case '+':
                                 b6[i] = 62;

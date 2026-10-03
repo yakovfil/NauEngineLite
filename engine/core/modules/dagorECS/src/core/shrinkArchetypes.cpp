@@ -1,8 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-// #include <perfMon/dag_perfTimer.h>
 #include <daECS/core/entityManager.h>
+
+#include <limits>
+#include <utility>
+#include <vector>
+
+#include "nau/utils/dynamic_bit_vector.h"
 
 namespace ecs
 {
@@ -11,7 +16,7 @@ uint32_t EntityManager::defragTemplates()
 {
   NAU_ASSERT_RETURN(!isConstrainedMTMode(), 0);
   NAU_ASSERT_RETURN(nestedQuery == 0, 0);
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templUsed(templates.size(), false);
+  nau::DynamicBitVector<> templUsed(templates.size(), false);
   for (const auto &ei : entDescs.entDescs)
   {
     if (ei.archetype == INVALID_ARCHETYPE)
@@ -24,7 +29,7 @@ uint32_t EntityManager::defragTemplates()
       if (!cr.isToDestroy())
         templUsed.set(cr.templ, true);
   NAU_ASSERT(templUsed.size() == templates.size());
-  eastl::vector<template_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> remapTemplates(templates.size());
+  std::vector<template_t, std::allocator<template_t>> remapTemplates(templates.size());
   uint32_t used = 0;
   for (uint32_t i = 0, e = templates.size(); i != e; ++i)
   {
@@ -38,7 +43,7 @@ uint32_t EntityManager::defragTemplates()
     return 0;
   // defrag templates
   // remove unused templates
-  templates.remap(remapTemplates.begin(), used, true, archetypes, dataComponents, componentTypes);
+  templates.remap(remapTemplates.data(), used, true, archetypes, dataComponents, componentTypes);
 
   // remap all old templates
   for (auto &t : templateDB.instantiatedTemplates)
@@ -61,9 +66,9 @@ uint32_t EntityManager::defragTemplates()
     if (ei.archetype == INVALID_ARCHETYPE)
       continue;
     NAU_ASSERT(ei.template_id < remapTemplates.size() && remapTemplates[ei.template_id] != INVALID_TEMPLATE_INDEX &&
-                remapTemplates[ei.template_id] < templates.size(),
-      "eid={} template was {} -> {}, total new {}", make_eid(&ei - entDescs.entDescs.begin(), ei.generation), ei.template_id,
-      remapTemplates[ei.template_id], templates.size());
+                   remapTemplates[ei.template_id] < templates.size(),
+               "eid={} template was {} -> {}, total new {}", make_eid(&ei - entDescs.entDescs.data(), ei.generation), ei.template_id,
+               remapTemplates[ei.template_id], templates.size());
     ei.template_id = remapTemplates[ei.template_id];
   }
   // todo: send to net broadcast event with changes
@@ -78,13 +83,13 @@ uint32_t EntityManager::defragArchetypes()
     return 0;
   performTrackChanges(true); // try to track changes first. only needed for scheduled archetype changes. We remap scheduled anyway, but
                              // this could create more archetypes, so just do it
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> archUsed(archetypes.size(), false);
+  nau::DynamicBitVector<> archUsed(archetypes.size(), false);
 
   for (uint32_t i = 0, e = templates.size(); i != e; ++i)
     archUsed.set(templates.getTemplate(i).archetype, true);
 
   uint32_t used = 0;
-  eastl::vector<archetype_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> remapArchetypes(archetypes.size());
+  std::vector<archetype_t, std::allocator<archetype_t>> remapArchetypes(archetypes.size());
   for (uint32_t i = 0, e = remapArchetypes.size(); i != e; ++i)
   {
     if (archUsed.test(i, false))
@@ -99,7 +104,7 @@ uint32_t EntityManager::defragArchetypes()
   if (!unused)
     return 0;
   // remove unused archetypes
-  archetypes.remap(remapArchetypes.begin(), used);
+  archetypes.remap(remapArchetypes.data(), used);
   convertArchetypeScheduledChanges();
   if (!archetypeTrackingQueue.empty())
   {
@@ -107,12 +112,12 @@ uint32_t EntityManager::defragArchetypes()
     for (auto scheduled : archetypeTrackingQueue)
     {
       static_assert(sizeof(archetype_t) + sizeof(component_index_t) <= sizeof(scheduled));
-      const archetype_t archetype = (scheduled & eastl::numeric_limits<archetype_t>::max());
+      const archetype_t archetype = (scheduled & std::numeric_limits<archetype_t>::max());
       const component_index_t cidx = (scheduled >> (8 * sizeof(archetype_t)));
       if (remapArchetypes[archetype] != INVALID_ARCHETYPE)
         archetypeTrackingQueue2.insert(remapArchetypes[archetype] | (cidx << (8 * sizeof(archetype_t))));
     }
-    eastl::swap(archetypeTrackingQueue, archetypeTrackingQueue2);
+    std::swap(archetypeTrackingQueue, archetypeTrackingQueue2);
   }
 
   // remap archetypes

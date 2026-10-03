@@ -2,8 +2,12 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include "nau/3d/tql.h"
 
-#include <EASTL/unique_ptr.h>
+
+#include <memory>
+#include <utility>
+
 #include "nau/3d/dag_drv3d.h"
 //#include "nau/perfMon/dag_graphStat.h"
 //#include <debug/dag_log.h>
@@ -170,8 +174,8 @@ public:
 template <typename T, bool /*IS_UMA*/ = false>
 class GenericBufferMemoryArchitecture
 {
-  eastl::unique_ptr<uint8_t[]> localBuffer;
-  typename T::StagingMemoryType stagingMemory = T::getNullStagingMemory();
+    std::unique_ptr<uint8_t[]> localBuffer;
+    typename T::StagingMemoryType stagingMemory = T::getNullStagingMemory();
 
 protected:
   bool allocateHostCopyMemory(uint32_t buf_flags, uint32_t size)
@@ -179,8 +183,8 @@ protected:
     if (!(buf_flags & SBCF_DYNAMIC) &&
         ((buf_flags & SBCF_BIND_MASK) == SBCF_BIND_VERTEX || (buf_flags & SBCF_BIND_MASK) == SBCF_BIND_INDEX))
     {
-      localBuffer = eastl::make_unique<uint8_t[]>(size);
-      return true;
+        localBuffer = std::make_unique<uint8_t[]>(size);
+        return true;
     }
     return false;
   }
@@ -329,7 +333,7 @@ class GenericBufferReloadImplementation
     }
   };
 
-  typedef eastl::unique_ptr<Sbuffer::IReloadData, ReloadDataHandler> ReloadDataPointer;
+  typedef std::unique_ptr<Sbuffer::IReloadData, ReloadDataHandler> ReloadDataPointer;
 
   ReloadDataPointer reloadInfo;
 
@@ -424,7 +428,7 @@ class GenericSbufferImplementation final : public GenericBufferMemoryArchitectur
       return;
     }
 
-    adopt(eastl::move(buf), buf_name);
+    adopt(std::move(buf), buf_name);
 
     if (T::REPORT_MEMORY_SIZE_TO_MANAGER)
     {
@@ -436,12 +440,12 @@ class GenericSbufferImplementation final : public GenericBufferMemoryArchitectur
 
   void adopt(typename T::BufferType &&buf, const char8_t *buf_name)
   {
-    buffer = eastl::move(buf);
+      buffer = std::move(buf);
 
-    if (!T::isMapable(buffer))
-    {
-      BufferMemoryArchitecture::allocateStagingMemory(bufFlags, bufSize, buf_name, *this);
-    }
+      if (!T::isMapable(buffer))
+      {
+          BufferMemoryArchitecture::allocateStagingMemory(bufFlags, bufSize, buf_name, *this);
+      }
 
     T::addGenericView(buffer, structSize, viewFormat);
 
@@ -663,7 +667,7 @@ public:
       viewFormat = T::getRawViewFormat();
     }
 
-    adopt(eastl::move(buf), stat_name);
+    adopt(std::move(buf), stat_name);
   }
   ~GenericSbufferImplementation()
   {

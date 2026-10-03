@@ -4,11 +4,15 @@
 
 #pragma once
 
-#include "render_pipeline/render_scene.h"
-#include "render_pipeline/render_manager.h"
+#include <functional>
+#include <memory>
+#include <vector>
+
 #include "graphics_assets/skinned_mesh_asset.h"
 #include "nau/assets/asset_ref.h"
 #include "nau/shaders/shader_defines.h"
+#include "render_pipeline/render_manager.h"
+#include "render_pipeline/render_scene.h"
 
 namespace nau
 {
@@ -48,12 +52,12 @@ namespace nau
     public:
         using Ptr = nau::Ptr<SkinnedMeshManager>;
 
-        eastl::shared_ptr<nau::SkinnedMeshInstance> addSkinnedMesh(SkinnedMeshAssetRef ref);
+        std::shared_ptr<nau::SkinnedMeshInstance> addSkinnedMesh(SkinnedMeshAssetRef ref);
 
         // IRenderManager
         RenderList::Ptr getRenderList(const nau::math::Vector3& viewerPosition,
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
+                                      std::function<bool(const InstanceInfo&)>& filterFunc,
+                                      std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
 
         void update() override;
 
@@ -61,9 +65,9 @@ namespace nau
 
         RenderScene::Ptr m_sceneOwner;
 
-        eastl::vector<ReloadableAssetView::Ptr> m_skinnedMeshes;
+        std::vector<ReloadableAssetView::Ptr> m_skinnedMeshes;
 
-        eastl::vector<eastl::weak_ptr<nau::SkinnedMeshInstance>> m_skinnedMeshInstances;
+        std::vector<std::weak_ptr<nau::SkinnedMeshInstance>> m_skinnedMeshInstances;
     };
 } // namespace nau
 

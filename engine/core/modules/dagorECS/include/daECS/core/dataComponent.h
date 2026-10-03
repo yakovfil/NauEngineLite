@@ -3,14 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <nau/utils/span.h>
-#include <daECS/utility/ecs_asserts.h>
-#include <EASTL/unordered_map.h>
 #include <daECS/core/componentType.h>
-#include "internal/ltComponentList.h"
+#include <daECS/utility/ecs_asserts.h>
 #include <nau/utils/dag_stringTableAllocator.h>
-#include <ska_hash_map/flat_hash_map2.hpp>
+#include <nau/utils/span.h>
 
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <span>
+#include <unordered_map>
+#include <vector>
+
+#include "internal/ltComponentList.h"
+#include "nau/utils/tuple_vector.h"
 
 #if defined(__cplusplus) && !defined(__GNUC__)
 template <typename T, size_t N>
@@ -25,11 +29,11 @@ char (&_countof__helper_(T (&array)[N]))[N];
     ecs::ComponentTypeInfo<type_name_>::type, {}, serializer, flags);                                                                 \
 static ecs::LTComponentList MAKE_UNIQUE(ltc_rec_, __LINE__)(ECS_HASH(name), ecs::ComponentTypeInfo<type_name_>::type);
 
-#define ECS_AUTO_REGISTER_COMPONENT_DEPS_BASE(type_name_, name, serializer, flags, ...)                                               \
-  static const char *MAKE_UNIQUE(ccm_deps_, __LINE__)[] = {__VA_ARGS__};                                                              \
-  static ecs::CompileComponentRegister MAKE_UNIQUE(ccm_rec_, __LINE__)(ECS_HASH(name), ecs::ComponentTypeInfo<type_name_>::type_name, \
-    ecs::ComponentTypeInfo<type_name_>::type, eastl::span(MAKE_UNIQUE(ccm_deps_, __LINE__), countof(MAKE_UNIQUE(ccm_deps_, __LINE__))), \
-    serializer, flags);\
+#define ECS_AUTO_REGISTER_COMPONENT_DEPS_BASE(type_name_, name, serializer, flags, ...)                                                                                                                    \
+    static const char* MAKE_UNIQUE(ccm_deps_, __LINE__)[] = {__VA_ARGS__};                                                                                                                                 \
+    static ecs::CompileComponentRegister MAKE_UNIQUE(ccm_rec_, __LINE__)(ECS_HASH(name), ecs::ComponentTypeInfo<type_name_>::type_name,                                                                    \
+                                                                         ecs::ComponentTypeInfo<type_name_>::type, std::span(MAKE_UNIQUE(ccm_deps_, __LINE__), countof(MAKE_UNIQUE(ccm_deps_, __LINE__))), \
+                                                                         serializer, flags);                                                                                                               \
     static ecs::LTComponentList MAKE_UNIQUE(ltc_rec_, __LINE__)(ECS_HASH(name), ecs::ComponentTypeInfo<type_name_>::type);
 
 #define ECS_AUTO_REGISTER_COMPONENT(type_name, name, serializer, flags) \
@@ -117,7 +121,7 @@ protected:
   void initialize(const ComponentTypes &);
   void clear();
   friend class EntityManager;
-  // eastl::hash_map<component_t, component_index_t> componentIndex;
+  // std::unordered_map<component_t, component_index_t> componentIndex;
   ska::flat_hash_map<component_t, component_index_t, ska::power_of_two_std_hash<component_t>> componentIndex; //
   struct DependencyRange
   {
@@ -132,16 +136,17 @@ protected:
     DEPRANGE,
     NAME
   };
-  eastl::tuple_vector<DataComponent, ComponentSerializer *,
-    component_t,       // hash
-    component_index_t, // trackedPair
-    DependencyRange, uint32_t>
-    components;
-  eastl::vector<component_t> dependencies;
+  nau::TupleVector<DataComponent, ComponentSerializer*,
+                   component_t,        // hash
+                   component_index_t,  // trackedPair
+                   DependencyRange,
+                   uint32_t>
+      components;
+  std::vector<component_t> dependencies;
   dag::StringTableAllocator names = {13, 13};
   static_assert(sizeof(DataComponent) == 8);
   ska::flat_hash_set<component_t, ska::power_of_two_std_hash<component_t>> filterTags;
-  eastl::unordered_map<component_t, LTComponentList *> componentToLT;
+  std::unordered_map<component_t, LTComponentList*> componentToLT;
   LTComponentList *lastSeenComponentLT = nullptr;
   void updateComponentToLT();
 };
@@ -186,12 +191,12 @@ inline DataComponent DataComponents::findComponent(component_t name) const { ret
 
 inline const char *DataComponents::getComponentNameById(component_index_t id) const
 {
-  if (EASTL_UNLIKELY(id >= components.size()))
-    return nullptr;
-  uint32_t addr = components.get<NAME>()[id];
-  if (EASTL_LIKELY(addr))
-    return names.getDataRawUnsafe(addr);
-  return getHashName(id);
+    if (NAU_UNLIKELY(id >= components.size()))
+        return nullptr;
+    uint32_t addr = components.get<NAME>()[id];
+    if (NAU_LIKELY(addr))
+        return names.getDataRawUnsafe(addr);
+    return getHashName(id);
 }
 
 inline const char *DataComponents::findComponentName(component_t name) const { return getComponentNameById(findComponentId(name)); }

@@ -1,18 +1,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <util/dag_stdint.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/numeric_limits.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/functional.h>
-#include <EASTL/memory.h>
-#include <daNet/packetPriority.h>
-#include <daNet/daNetTypes.h> // DaNetTime
-#include <debug/dag_assert.h>
 #include <daECS/core/event.h>
+#include <daNet/daNetTypes.h>  // DaNetTime
+#include <daNet/packetPriority.h>
+#include <debug/dag_assert.h>
 #include <generic/dag_tab.h>
 #include <util/dag_hash.h>
+#include <util/dag_stdint.h>
+
+#include <functional>
+#include <limits>
+#include <memory>
+#include <type_traits>
 
 namespace danet
 {
@@ -89,7 +89,7 @@ public:
     if (heapAllocated)
       delete ptr;
     else
-      eastl::destroy_at(ptr);
+        std::destroy_at(ptr);
   }
 };
 
@@ -116,7 +116,7 @@ struct MessageNetDesc
   MessageRouting routing;
   PacketReliability reliability;
   uint8_t channel;
-  eastl::underlying_type_t<MessageFlags> flags;
+  std::underlying_type_t<MessageFlags> flags;
   uint16_t dupDelay; // If not 0 - message will be duplicated (resent) after this number of milliseconds
   recipient_filter_t rcptFilter;
 };
@@ -149,10 +149,13 @@ template <typename T>
 class MessageClassInst final : public MessageClass
 {
 public:
-  static_assert(sizeof(T) <= eastl::numeric_limits<decltype(MessageClass::memSize)>::max());
-  using MessageClass::MessageClass;
-  MessageClassInst() = delete;
-  IMessage &create(void *mem) const override { return *new (mem/*, _NEW_INPLACE*/) T{}; }
+    static_assert(sizeof(T) <= std::numeric_limits<decltype(MessageClass::memSize)>::max());
+    using MessageClass::MessageClass;
+    MessageClassInst() = delete;
+    IMessage& create(void* mem) const override
+    {
+        return *new(mem /*, _NEW_INPLACE*/) T{};
+    }
 };
 
 
@@ -162,7 +165,7 @@ public:
 #define ECS_NET_MSG_CLASS_NAME(x) \
   nullptr // No message names in release to complicate reverse-engineering (and reduce size of final executable)
 #endif
-#define ECS_NET_MSG_CLASS_HASH(a) eastl::integral_constant<uint32_t, str_hash_fnv1(#a)>::value
+#define ECS_NET_MSG_CLASS_HASH(a) std::integral_constant<uint32_t, str_hash_fnv1(#a)>::value
 
 #define ECS_NET_DECL_MSG_CLASS_BASE(class_name, base_class)           \
   static net::MessageClassInst<class_name> messageClass;              \
@@ -175,12 +178,12 @@ public:
 
 #define ECS_NET_DECL_MSG_CLASS(class_name) ECS_NET_DECL_MSG_CLASS_BASE(class_name, net::IMessage)
 
-#define ECS_NET_IMPL_MSG(class_name, rout, ...)                                                                                      \
-  net::MessageClassInst<class_name> class_name::messageClass(ECS_NET_MSG_CLASS_NAME(class_name), ECS_NET_MSG_CLASS_HASH(class_name), \
-    sizeof(class_name), rout, (eastl::is_base_of<net::IMessageTimed, class_name>::value), ##__VA_ARGS__)
+#define ECS_NET_IMPL_MSG(class_name, rout, ...)                                                                                        \
+    net::MessageClassInst<class_name> class_name::messageClass(ECS_NET_MSG_CLASS_NAME(class_name), ECS_NET_MSG_CLASS_HASH(class_name), \
+                                                               sizeof(class_name), rout, (std::is_base_of<net::IMessageTimed, class_name>::value), ##__VA_ARGS__)
 }; // namespace net
 
 namespace ecs
 {
-ECS_UNICAST_EVENT_TYPE(EventNetMessage, eastl::unique_ptr<net::IMessage, net::MessageDeleter>);
+    ECS_UNICAST_EVENT_TYPE(EventNetMessage, std::unique_ptr<net::IMessage, net::MessageDeleter>);
 }

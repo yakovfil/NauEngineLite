@@ -1,6 +1,6 @@
+#include <utility>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
-
 
 #include "windows_window_impl.h"
 
@@ -46,7 +46,7 @@ namespace nau
             {
                 // Currently wil crash application on shutdown
                 // NAU-2108
-                //NAU_LOG_DEBUG("DestroyWindow returns not OK");
+                // NAU_LOG_DEBUG("DestroyWindow returns not OK");
             }
         }
     }
@@ -69,7 +69,7 @@ namespace nau
         return false;
     }
 
-    eastl::pair<unsigned, unsigned> WindowsWindow::getSize() const
+    std::pair<unsigned, unsigned> WindowsWindow::getSize() const
     {
         NAU_ASSERT(m_hWnd);
 
@@ -84,7 +84,7 @@ namespace nau
         return {rect.right - rect.left, rect.bottom - rect.top};
     }
 
-    eastl::pair<unsigned, unsigned> WindowsWindow::getClientSize() const
+    std::pair<unsigned, unsigned> WindowsWindow::getClientSize() const
     {
         NAU_ASSERT(m_hWnd);
 
@@ -111,7 +111,7 @@ namespace nau
         ::SetWindowPos(m_hWnd, 0, positionX, positionY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
     }
 
-    eastl::pair<unsigned, unsigned> WindowsWindow::getPosition() const
+    std::pair<unsigned, unsigned> WindowsWindow::getPosition() const
     {
         NAU_ASSERT(m_hWnd);
 

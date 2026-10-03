@@ -3,10 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_map.h>
+#include <span>
+
 #include "dabfg/frontend/internalRegistry.h"
 #include "dabfg/id/idNameResolver.h"
-
+#include "nau/utils/fixed_map.h"
 
 namespace dabfg
 {
@@ -26,7 +27,7 @@ public:
   // Returns the list of unresolved resource ids that were requested by node node_id
   // but resulted in a single resolved res_id request. Note that this does not
   // account for history requests.
-  eastl::span<ResNameId const> unresolve(NodeNameId node_id, ResNameId res_id) const;
+  std::span<ResNameId const> unresolve(NodeNameId node_id, ResNameId res_id) const;
 
   // Iterate over all resolved ids and unresolved res id lists corresponding to
   // them that were requested by the node node_id. This iterates both history
@@ -47,8 +48,7 @@ private:
   const InternalRegistry &registry;
   IdNameResolver<NameSpaceNameId, ResNameId, NodeNameId, AutoResTypeNameId> resolver;
 
-
-  using ResolvedToUnresolved = eastl::fixed_map<ResNameId, dag::RelocatableFixedVector<ResNameId, 4>, 16>;
+  using ResolvedToUnresolved = nau::FixedMap<ResNameId, dag::RelocatableFixedVector<ResNameId, 4>, 16>;
   // Mapping (node, resolved res id) -> unresolved res Ids
   IdIndexedMapping<NodeNameId, ResolvedToUnresolved> inverseMapping;
   IdIndexedMapping<NodeNameId, ResolvedToUnresolved> inverseHistoryMapping;

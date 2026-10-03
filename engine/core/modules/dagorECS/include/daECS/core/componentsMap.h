@@ -3,25 +3,29 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/vector_map.h>
-#include "internal/archetypes.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "component.h"
+#include "internal/archetypes.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
 class ComponentsInitializer;
 class ComponentsMap;
 
-// typedef eastl::hash_map<eastl::string, ChildComponent, EcsHasher,
-//                         eastl::equal_to<eastl::string>, EASTLAllocatorType, /*bCacheHashCode*/true> BaseComponentsMap;
-// typedef eastl::vector_map<ecs::component_t, ChildComponent> BaseComponentsMap;
-typedef eastl::vector_map<component_t, ChildComponent, eastl::less<component_t>, EASTLAllocatorType,
-  eastl::vector<eastl::pair<component_t, ChildComponent>, EASTLAllocatorType>>
-  BaseComponentsMap;
+// typedef std::unordered_map<std::string, ChildComponent, EcsHasher,
+//                         std::equal_to<std::string>,std::allocator<std::pair<const std::string, ChildComponent>>, /*bCacheHashCode*/true> BaseComponentsMap;
+// typedef nau::SortedVectorMap<ecs::component_t, ChildComponent> BaseComponentsMap;
+typedef nau::SortedVectorMap<component_t, ChildComponent, std::less<component_t>, std::allocator<std::pair<component_t, ChildComponent>>, std::vector<std::pair<component_t, ChildComponent>, std::allocator<std::pair<component_t, ChildComponent>>>>
+    BaseComponentsMap;
 
 // it is still extremely slow on (de)allocation. We'd better try some other container (Object from ecs20, for example)
 class ComponentsMap : protected BaseComponentsMap
@@ -78,7 +82,7 @@ struct InitializerNode
   component_index_t cIndex; // initialized once during validation
 };
 
-typedef eastl::fixed_vector<InitializerNode, 8, true> BaseComponentsInitializer;
+typedef nau::InlineVector<InitializerNode, 8, true> BaseComponentsInitializer;
 
 class ComponentsInitializer : public BaseComponentsInitializer //TODO NEVER INHERIT FROM CLASSES FROM STD OR EASTL!!!!!!!!!!!!! 
 {
@@ -143,11 +147,11 @@ template <class ComponentType>
 __forceinline bool ComponentsInitializer::insert(const component_t name, const FastGetInfo &lt, ComponentType &&val,
   const char *nameStr)
 {
-  if (EASTL_UNLIKELY(!lt.isValid()))
-    return false;
-  NAU_UNUSED(nameStr);
-  base_type::emplace_back(InitializerNode{ChildComponent(eastl::forward<ComponentType>(val)), name, lt.getCidx()});
-  return true;
+    if (NAU_UNLIKELY(!lt.isValid()))
+        return false;
+    NAU_UNUSED(nameStr);
+    base_type::emplace_back(InitializerNode{ChildComponent(std::forward<ComponentType>(val)), name, lt.getCidx()});
+    return true;
 }
 
 __forceinline ChildComponent &ComponentsInitializer::operator[](const HashedConstString name)
@@ -162,7 +166,7 @@ __forceinline ComponentsInitializer::ComponentsInitializer(ComponentsMap &&map)
   for (auto it = map.begin(); it != map.end(); ++it)
   {
     auto val = it->first;
-    base_type::emplace_back(InitializerNode{eastl::move(it->second), val, INVALID_COMPONENT_INDEX});
+    base_type::emplace_back(InitializerNode{std::move(it->second), val, INVALID_COMPONENT_INDEX});
   }
 };
 }; // namespace ecs

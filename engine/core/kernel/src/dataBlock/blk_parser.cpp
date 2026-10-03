@@ -12,12 +12,15 @@
 #include <nau/osApiWrappers/dag_files.h>
 #include <nau/utils/le2be.h>
 
+#include <array>
 #include <cstddef>
 #include <cstring>
+#include <limits>
+#include <span>
+#include <string>
 #include <type_traits>
+#include <vector>
 
-#include "EASTL/internal/char_traits.h"
-#include "EASTL/string.h"
 #include "blk_shared.h"
 #include "nau/debug/dag_except.h"
 #include "nau/diag/logging.h"
@@ -56,12 +59,12 @@ namespace nau
     public:
         virtual bool resolveIncludeFile(nau::string& inout_fname) override
         {
-            if(!inout_fname.empty() && inout_fname[0] == '#')
+            if (!inout_fname.empty() && inout_fname[0] == '#')
             {
                 inout_fname.format("{}/{}", root, inout_fname.c_str()[1]);
                 return true;
             }
-            if(!inout_fname.empty() && inout_fname[0] == '%')
+            if (!inout_fname.empty() && inout_fname[0] == '%')
                 return true;
             return false;
         }
@@ -82,12 +85,12 @@ namespace nau
     class DataBlockParser
     {
     public:
-        eastl::vector<char>& buffer;
+        std::vector<char>& buffer;
         const char *text, *curp, *textend;
         const char* fileName;
         int curLine;
         const char* curLineP;
-        eastl::vector<nau::string> includeStack;
+        std::vector<nau::string> includeStack;
         DataBlock* blkRef = nullptr;
         bool robustParsing;
         bool wasNewlineAfterStatement = false;
@@ -97,10 +100,10 @@ namespace nau
             const char *ss, *se;
             bool cpp;
         };
-        eastl::vector<PendingComment> pendCmnt;
+        std::vector<PendingComment> pendCmnt;
         DataBlock::IFileNotify* fnotify;
 
-        DataBlockParser(eastl::vector<char>& buf, const char* fn, bool robust_parsing, DataBlock::IFileNotify* fnot) :
+        DataBlockParser(std::vector<char>& buf, const char* fn, bool robust_parsing, DataBlock::IFileNotify* fnot) :
             buffer(buf),
             text(&buf[0]),
             curp(&buf[0]),
@@ -112,10 +115,10 @@ namespace nau
             robustParsing(robust_parsing),
             fnotify(fnot)
         {
-            for(char* c = buf.data(); c < textend; ++c)
-                if(*c == EOF_CHAR)
+            for (char* c = buf.data(); c < textend; ++c)
+                if (*c == EOF_CHAR)
                     *c = ' ';
-            includeStack.push_back() = fileName;
+            includeStack.push_back(fileName);
             fileName = reinterpret_cast<const char*>(includeStack.back().c_str());
         }
 
@@ -130,12 +133,12 @@ namespace nau
 
         void syntaxError(const char* msg)
         {
-            if(!(curLineP >= buffer.data() && curLineP < (buffer.data() + buffer.size())))
+            if (!(curLineP >= buffer.data() && curLineP < (buffer.data() + buffer.size())))
             {
                 curLineP = buffer.data();
                 curLine = 1;
             }
-            for(char* p = (char*)curLineP; *p; ++p)
+            for (char* p = (char*)curLineP; *p; ++p)
                 if (*p == '\n' || *p == '\r')
                 {
                     *p = 0;
@@ -149,7 +152,7 @@ namespace nau
     {                   \
         syntaxError(x); \
         return false;   \
-    } while(0)
+    } while (0)
 
         __forceinline bool endOfText()
         {
@@ -165,11 +168,11 @@ namespace nau
         DataBlockParser& operator=(const DataBlockParser&) = delete;
         void flushPendingComments(DataBlock& blk, bool to_params)
         {
-            for(auto& c : pendCmnt)
+            for (auto& c : pendCmnt)
             {
                 const char* nm = c.cpp ? reinterpret_cast<const char*>(COMMENT_PRE_CPP) : reinterpret_cast<const char*>(COMMENT_PRE_C);
                 auto str = make_substring(c.ss, c.se);
-                if(to_params)
+                if (to_params)
                     blk.addStr(nm, reinterpret_cast<const char*>(str.c_str()));
                 else
                     blkRef->addNewBlock(nm)->addStr(nm, reinterpret_cast<const char*>(str.c_str()));
@@ -180,18 +183,18 @@ namespace nau
 
     bool DataBlockParser::skipWhite(bool allow_crlf, bool track_newline_after_param)
     {
-        for(;;)
+        for (;;)
         {
-            if(endOfText())
+            if (endOfText())
                 break;
 
             char c = *curp++;
-            if(c == ' ' || c == '\t' || c == '\x1A')
+            if (c == ' ' || c == '\t' || c == '\x1A')
                 continue;
 
-            if(c == EOF_CHAR)
+            if (c == EOF_CHAR)
             {
-                if(includeStack.size() > 1)
+                if (includeStack.size() > 1)
                 {
                     includeStack.pop_back();
                     fileName = reinterpret_cast<const char*>(includeStack.back().c_str());
@@ -199,85 +202,85 @@ namespace nau
                 continue;
             }
 
-            if(!allow_crlf)
+            if (!allow_crlf)
             {
                 //== stop on \r \n
             }
-            else if(c == '\r')
+            else if (c == '\r')
             {
-                if(!endOfText() && *curp == '\n')
+                if (!endOfText() && *curp == '\n')
                 {
                     ++curp;
                     INC_CURLINE;
-                    if(track_newline_after_param)
+                    if (track_newline_after_param)
                         wasNewlineAfterStatement = true;
                 }
                 continue;
             }
-            else if(c == '\n')
+            else if (c == '\n')
             {
                 INC_CURLINE;
-                if(track_newline_after_param)
+                if (track_newline_after_param)
                     wasNewlineAfterStatement = true;
                 continue;
             }
 
-            if(c == '/')
+            if (c == '/')
             {
-                if(!endOfText())
+                if (!endOfText())
                 {
                     char nc = *curp++;
-                    if(nc == '/')
+                    if (nc == '/')
                     {
                         const char* cpp_comment_start = curp;
-                        while(!endOfText())
+                        while (!endOfText())
                         {
                             char cc = *curp++;
-                            if(cc == '\r' || cc == '\n')
+                            if (cc == '\r' || cc == '\n')
                                 break;
                         }
-                        if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                        if (DataBlock::parseCommentsAsParams) [[unlikely]]
                         {
                             auto str = make_substring(cpp_comment_start, curp - 1);
-                            if(wasNewlineAfterStatement || lastStatement == -1)
+                            if (wasNewlineAfterStatement || lastStatement == -1)
                                 pendCmnt.push_back(PendingComment{cpp_comment_start, curp - 1, true});
-                            else if(lastStatement == 0)
+                            else if (lastStatement == 0)
                                 blkRef->addStr(reinterpret_cast<const char*>(COMMENT_POST_CPP), reinterpret_cast<const char*>(str.c_str()));
                             else
                                 blkRef->addNewBlock(reinterpret_cast<const char*>(COMMENT_POST_CPP))->addStr(reinterpret_cast<const char*>(COMMENT_POST_CPP), reinterpret_cast<const char*>(str.c_str()));
                         }
                         continue;
                     }
-                    else if(nc == '*')
+                    else if (nc == '*')
                     {
                         const char* c_comment_start = curp;
                         int cnt = 1;
-                        while(curp + 2 <= textend)
+                        while (curp + 2 <= textend)
                         {
-                            if(curp[0] == '/' && curp[1] == '*')
+                            if (curp[0] == '/' && curp[1] == '*')
                             {
                                 curp += 2;
                                 ++cnt;
                             }
-                            else if(curp[0] == '*' && curp[1] == '/')
+                            else if (curp[0] == '*' && curp[1] == '/')
                             {
                                 curp += 2;
-                                if(--cnt <= 0)
+                                if (--cnt <= 0)
                                     break;
                             }
                             else
                                 ++curp;
                         }
 
-                        if(cnt > 0 && curp + 2 > textend)
+                        if (cnt > 0 && curp + 2 > textend)
                             SYNTAX_ERROR("unexpected EOF inside comment");
 
-                        if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                        if (DataBlock::parseCommentsAsParams) [[unlikely]]
                         {
                             auto str = make_substring(c_comment_start, curp - 2);
-                            if(wasNewlineAfterStatement || lastStatement == -1)
+                            if (wasNewlineAfterStatement || lastStatement == -1)
                                 pendCmnt.push_back(PendingComment{c_comment_start, curp - 2, false});
-                            else if(lastStatement == 0)
+                            else if (lastStatement == 0)
                                 blkRef->addStr(reinterpret_cast<const char*>(COMMENT_POST_C), reinterpret_cast<const char*>(str.c_str()));
                             else
                                 blkRef->addNewBlock(reinterpret_cast<const char*>(COMMENT_POST_C))->addStr(reinterpret_cast<const char*>(COMMENT_POST_C), reinterpret_cast<const char*>(str.c_str()));
@@ -307,7 +310,7 @@ namespace nau
         bool SSOflag = true;
         char buf[SSO_SIZE];
         uint16_t len = 0;
-        eastl::string str;  // can be unioned with buf
+        std::string str;  // can be unioned with buf
 
         TempString()
         {
@@ -335,9 +338,9 @@ namespace nau
         }
         int append(int cnt, const char* v)
         {
-            if(isSSO())
+            if (isSSO())
             {
-                if(len + cnt <= SSO_SIZE)
+                if (len + cnt <= SSO_SIZE)
                 {
                     memcpy(buf + len, v, cnt);
                     int at = len;
@@ -353,9 +356,9 @@ namespace nau
         }
         void erase(int at, int n)
         {
-            if(isSSO())
+            if (isSSO())
             {
-                if(len - at - n > 0)
+                if (len - at - n > 0)
                     memmove(data() + at, data() + at + n, len - at - n);
             }
             else
@@ -377,9 +380,9 @@ namespace nau
         }
         void resize(uint32_t sz)
         {
-            if(isSSO())
+            if (isSSO())
             {
-                if(sz <= SSO_SIZE)
+                if (sz <= SSO_SIZE)
                 {
                     len = sz;
                     return;
@@ -423,20 +426,20 @@ namespace nau
 
     bool DataBlockParser::getIdent(TempString& name)
     {
-        for(;;)
+        for (;;)
         {
-            if(!skipWhite())
+            if (!skipWhite())
                 return false;
 
-            if(endOfText())
+            if (endOfText())
                 break;
 
             char c = *curp;
-            if(is_ident_char(c))
+            if (is_ident_char(c))
             {
                 const char* ident = curp;
-                for(++curp; !endOfText(); ++curp)
-                    if(!is_ident_char(*curp))
+                for (++curp; !endOfText(); ++curp)
+                    if (!is_ident_char(*curp))
                         break;
 
                 int len = curp - ident;
@@ -447,7 +450,7 @@ namespace nau
 
                 return true;
             }
-            else if(c == '"' || c == '\'')
+            else if (c == '"' || c == '\'')
                 return getValue(name);
             else
                 break;
@@ -461,40 +464,40 @@ namespace nau
 
         char qc = 0;
         bool multi_line_str = false;
-        if(*curp == '"' || *curp == '\'')
+        if (*curp == '"' || *curp == '\'')
         {
             qc = *curp;
             ++curp;
-            if(curp[0] == qc && curp[1] == qc)
+            if (curp[0] == qc && curp[1] == qc)
             {
                 multi_line_str = true;
                 curp += 2;
                 // skip first \n (only when follows quotation with possible whitespace)
-                for(const char* p = curp; *p; p++)
-                    if(*p == '\n')
+                for (const char* p = curp; *p; p++)
+                    if (*p == '\n')
                     {
                         curp = p + 1;
                         break;
                     }
-                    else if(!strchr(" \r\t", *p))
+                    else if (!strchr(" \r\t", *p))
                         break;
             }
         }
 
         const char *multiComment = nullptr, *rewind_to_pos = nullptr;
 
-        for(;;)
+        for (;;)
         {
-            if(endOfText())
+            if (endOfText())
                 SYNTAX_ERROR("unexpected EOF");
 
             char c = *curp;
 
-            if(multiComment)
+            if (multiComment)
             {
-                if(c == '\r')
+                if (c == '\r')
                 {
-                    if(*(curp + 1) == '\n')
+                    if (*(curp + 1) == '\n')
                     {
                         curp += 2;
                         INC_CURLINE;
@@ -502,20 +505,20 @@ namespace nau
                     rewind_to_pos = multiComment;
                     break;
                 }
-                else if(c == '\n')
+                else if (c == '\n')
                 {
                     curp++;
                     INC_CURLINE;
                     rewind_to_pos = multiComment;
                     break;
                 }
-                else if(c == EOF_CHAR)
+                else if (c == EOF_CHAR)
                     SYNTAX_ERROR("unclosed string");
-                else if((c == '*') && (*(curp + 1) == '/'))
+                else if ((c == '*') && (*(curp + 1) == '/'))
                 {
                     curp += 2;
                     c = *curp;
-                    if(c == '\r' || c == '\n')
+                    if (c == '\r' || c == '\n')
                         rewind_to_pos = multiComment;
                     multiComment = nullptr;
                 }
@@ -526,47 +529,47 @@ namespace nau
                 }
             }
 
-            if(qc)
+            if (qc)
             {
-                if(c == qc && !multi_line_str)
+                if (c == qc && !multi_line_str)
                 {
                     ++curp;
-                    if(!skipWhite())
+                    if (!skipWhite())
                         return false;
-                    if(*curp == ';')
+                    if (*curp == ';')
                         ++curp;
                     break;
                 }
-                else if(c == qc && multi_line_str && curp[1] == qc && curp[2] == qc)
+                else if (c == qc && multi_line_str && curp[1] == qc && curp[2] == qc)
                 {
                     // skip last \n
-                    if(value.size() > 1 && value[value.size() - 1] == '\n')
+                    if (value.size() > 1 && value[value.size() - 1] == '\n')
                         value.erase(value.size() - 1, 1);
                     curp += 3;
-                    if(!skipWhite())
+                    if (!skipWhite())
                         return false;
-                    if(*curp == ';')
+                    if (*curp == ';')
                         ++curp;
                     break;
                 }
-                else if(((c == '\r' || c == '\n') && !multi_line_str) || c == EOF_CHAR)
+                else if (((c == '\r' || c == '\n') && !multi_line_str) || c == EOF_CHAR)
                     SYNTAX_ERROR("unclosed string");
-                else if(c == '~')
+                else if (c == '~')
                 {
                     ++curp;
 
-                    if(endOfText())
+                    if (endOfText())
                         SYNTAX_ERROR("unclosed string");
 
                     c = *curp;
-                    if(c == 'r')
+                    if (c == 'r')
                         c = '\r';
-                    else if(c == 'n')
+                    else if (c == 'n')
                         c = '\n';
-                    else if(c == 't')
+                    else if (c == 't')
                         c = '\t';
                 }
-                else if(c == '\r')
+                else if (c == '\r')
                 {
                     ++curp;
                     continue;
@@ -574,19 +577,19 @@ namespace nau
             }
             else
             {
-                if(c == ';' || c == '\r' || c == '\n' || c == EOF_CHAR || c == '}')
+                if (c == ';' || c == '\r' || c == '\n' || c == EOF_CHAR || c == '}')
                 {
-                    if(c == ';')
+                    if (c == ';')
                         ++curp;
                     break;
                 }
-                else if(c == '/')
+                else if (c == '/')
                 {
                     char nc = *(curp + 1);
 
-                    if(nc == '/')
+                    if (nc == '/')
                         break;
-                    else if(nc == '*')
+                    else if (nc == '*')
                     {
                         multiComment = curp - 1;
                         curp += 2;
@@ -600,20 +603,20 @@ namespace nau
             ++curp;
         }
 
-        if(multiComment)
-            for(;;)  // infinite cycle
+        if (multiComment)
+            for (;;)  // infinite cycle
             {
                 const char& c = *curp;
-                if(c == EOF_CHAR)
+                if (c == EOF_CHAR)
                     SYNTAX_ERROR("unclosed string");
-                else if((c == '\r') && (*(curp + 1) == '\n'))
+                else if ((c == '\r') && (*(curp + 1) == '\n'))
                 {
                     curp++;
                     INC_CURLINE;
                 }
-                else if(c == '\n')
+                else if (c == '\n')
                     INC_CURLINE
-                else if((c == '*') && (*(curp + 1) == '/'))
+                else if ((c == '*') && (*(curp + 1) == '/'))
                 {
                     curp += 2;
                     multiComment = nullptr;
@@ -623,20 +626,20 @@ namespace nau
                 curp++;
             }
 
-        if(!qc)
+        if (!qc)
         {
             int i;
-            for(i = value.size() - 1; i >= 0; --i)
-                if(value[i] != ' ' && value[i] != '\t')
+            for (i = value.size() - 1; i >= 0; --i)
+                if (value[i] != ' ' && value[i] != '\t')
                     break;
             ++i;
-            if(i < value.size())
+            if (i < value.size())
                 value.erase(i, value.size() - i);
         }
 
         value.push(0);
 
-        if(rewind_to_pos && DataBlock::parseCommentsAsParams)
+        if (rewind_to_pos && DataBlock::parseCommentsAsParams)
             curp = rewind_to_pos;
         return true;
     }
@@ -644,7 +647,7 @@ namespace nau
     static int get_array_idx(char* name)
     {
         char* p = strchr(reinterpret_cast<char*>(name), '[');
-        if(!p)
+        if (!p)
             return 0;
         *p = '\0';
         return atoi(p + 1) - 1;
@@ -652,33 +655,33 @@ namespace nau
 
     static void makeFullPathFromRelative(nau::string& path, const char* base_filename)
     {
-        if(!path.length() || !base_filename)
+        if (!path.length() || !base_filename)
             return;
 
-        if(path[0] == '/' || path[0] == '\\')
+        if (path[0] == '/' || path[0] == '\\')
             return;
 
-        if(path.length() > 2 && path[0] == ':' && path[1] == '/')
+        if (path.length() > 2 && path[0] == ':' && path[1] == '/')
         {
             erase_items(path, 0, 2);
             return;
         }
 
         int i;
-        for(i = static_cast<int>(eastl::CharStrlen(base_filename)) - 1; i >= 0; --i)
-            if(base_filename[i] == '/' || base_filename[i] == '\\' || base_filename[i] == ':')
+        for (i = static_cast<int>(std::char_traits<char>::length(base_filename)) - 1; i >= 0; --i)
+            if (base_filename[i] == '/' || base_filename[i] == '\\' || base_filename[i] == ':')
                 break;
 
         int baseLen = i + 1;
 
-        if(baseLen > 0)
+        if (baseLen > 0)
             path = nau::string(base_filename, baseLen) + path;
     }
 
 #define ADD_PARAM_CHECKED(NAME, TYPE, VALUE)                                                                                    \
-    if(blk.addParam((NAME), (TYPE), (VALUE).c_str(), (VALUE).end(), curLine, fileName) < 0)                                     \
+    if (blk.addParam((NAME), (TYPE), (VALUE).c_str(), (VALUE).end(), curLine, fileName) < 0)                                    \
     {                                                                                                                           \
-        if(blk.shared->blkRobustLoad())                                                                                         \
+        if (blk.shared->blkRobustLoad())                                                                                        \
         {                                                                                                                       \
             NAU_LOG_WARNING("DataBlockParser: invalid value '{}' at line {} of file '{}'", (VALUE).c_str(), curLine, fileName); \
         }                                                                                                                       \
@@ -698,28 +701,28 @@ namespace nau
     inline const char* parse_naive_int_templ(const char* __restrict value, const char* __restrict eof, IntType& v)
     {
         bool is_neg = false;
-        if(*value == '-')
+        if (*value == '-')
         {
             is_neg = true;
             value++;
         }
-        else if(*value == '+')
+        else if (*value == '+')
             value++;
 
-        if(value == eof)
+        if (value == eof)
             return nullptr;
-        typename eastl::make_unsigned<IntType>::type result = 0;
+        typename std::make_unsigned<IntType>::type result = 0;
 
-        if(!is_neg && value[0] == '0' && value[1] == 'x')  // hex!
+        if (!is_neg && value[0] == '0' && value[1] == 'x')  // hex!
         {
-            for(value += 2; value < eof; ++value)
+            for (value += 2; value < eof; ++value)
             {
                 char c = *value;
-                if(is_digit(c))
+                if (is_digit(c))
                     c = (c - '0');
-                else if(c >= 'a' && c <= 'f')
+                else if (c >= 'a' && c <= 'f')
                     c = (c - ('a' - 10));
-                else if(c >= 'A' && c <= 'F')
+                else if (c >= 'A' && c <= 'F')
                     c = (c - ('A' - 10));
                 else
                     break;
@@ -732,7 +735,7 @@ namespace nau
         {
             result *= 10;
             result += *value - '0';
-        } while(++value != eof && is_digit(*value));
+        } while (++value != eof && is_digit(*value));
         v = is_neg ? -IntType(result) : IntType(result);
         return value;
     }
@@ -741,15 +744,15 @@ namespace nau
     {
         const char* endPtr = parse_naive_int_templ(value, eof, v);
 #ifdef _DEBUG_TAB_
-        if(endPtr)
+        if (endPtr)
         {
             char* endPtr2 = NULL;
             int i2;
-            if(value[0] == '0')  // for hex
+            if (value[0] == '0')  // for hex
                 i2 = strtoul(value, &endPtr2, 0);
             else
                 i2 = strtol(value, &endPtr2, 0);
-            if(endPtr != endPtr2 || v != i2)
+            if (endPtr != endPtr2 || v != i2)
             {
                 logerr("Parsed incorrectly, %d != %d, <%s>", v, i2, value);
                 return nullptr;
@@ -773,11 +776,11 @@ namespace nau
     {
         const char* endPtr = parse_naive_int_templ(value, eof, v);
 #ifdef _DEBUG_TAB_
-        if(endPtr)
+        if (endPtr)
         {
             long long int i2 = 0;
             int res = sscanf(value, "%lld", &i2);
-            if(res != 1 || v != i2)
+            if (res != 1 || v != i2)
             {
                 logerr("Parsed incorrectly, %d != %d, <%s>", v, i2, value);
                 return nullptr;
@@ -807,23 +810,21 @@ namespace nau
     const char* parse_naive_number(const char* __restrict value, const char* __restrict eof, NumberType& v)
     {
         const char* endPtr = parse_naive(value, eof, v);
-        if(endPtr && endPtr < eof && *endPtr)
+        if (endPtr && endPtr < eof && *endPtr)
             endPtr = nullptr;
         return endPtr;
     }
 
     static const char* skip_comma(const char* __restrict value, const char* __restrict eof)
     {
-        for(; value != eof && *value == ' '; ++value)
+        for (; value != eof && *value == ' '; ++value)
             ;
-        if(value == eof || *value != ',')  // skip only one comma
+        if (value == eof || *value != ',')  // skip only one comma
             return nullptr;
-        for(++value; value != eof && *value == ' '; ++value)
+        for (++value; value != eof && *value == ' '; ++value)
             ;
         return value;
     }
-
-    
 
     template <class Point, class value_type>
     inline const char* parse_point_int(const char* __restrict value, const char* __restrict eof, Point& v)
@@ -842,9 +843,9 @@ namespace nau
         return parse_naive(value, eof, valIdx);
     }
 
-    template<class Point>
+    template <class Point>
     inline const char* parse_point_int(const char* __restrict value, const char* __restrict eof, Point& v)
-    {  
+    {
         using value_type = std::remove_reference_t<decltype(v[0])>;
 
         if constexpr (std::is_arithmetic<value_type>::value)
@@ -857,14 +858,14 @@ namespace nau
     inline const char* parse_point(const char* __restrict value, const char* __restrict eof, Point& v)
     {
         const char* r = parse_point_int(value, eof, v);
-        if(!r)
+        if (!r)
             memset(&v, 0, sizeof(v));
         return r;
     }
 
     inline const char* skip_white(const char* __restrict value, const char* __restrict eof)
     {
-        for(; value != eof && *value == ' '; ++value)
+        for (; value != eof && *value == ' '; ++value)
             ;
         return value == eof ? NULL : value;
     }
@@ -872,28 +873,28 @@ namespace nau
     inline const char* parse_matrix(const char* __restrict value, const char* __restrict eof, nau::math::mat4& tm)
     {
         // value = skip_white(value);/// first is already skipped
-        if(*(value++) != '[')
+        if (*(value++) != '[')
             return NULL;
         nau::math::mat4 ntm;
-        for(int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             value = skip_white(value, eof);
-            if(!value || *value != '[')
+            if (!value || *value != '[')
                 return NULL;
             const char* __restrict end = ++value;
-            for(; end != eof && *end != ']'; ++end)
+            for (; end != eof && *end != ']'; ++end)
                 ;
-            if(end == eof)
+            if (end == eof)
                 return NULL;
             nau::math::vec3 col;
             value = parse_point(value, end, col);
-            if(!value)
+            if (!value)
                 return NULL;
             value = end + 1;
             ntm.setCol(i, nau::math::vec4{col});
         }
         value = skip_white(value, eof);
-        if(!value || *value != ']')
+        if (!value || *value != ']')
             return NULL;
         tm = ntm;
         return value;
@@ -904,17 +905,17 @@ namespace nau
         nau::math::ivec3 v;
         int w = 255;
         value = parse_point(value, eof, v);
-        if(!value || (uint32_t(v.getX()) > 255 || uint32_t(v.getY()) > 255 || uint32_t(v.getZ()) > 255))
+        if (!value || (uint32_t(v.getX()) > 255 || uint32_t(v.getY()) > 255 || uint32_t(v.getZ()) > 255))
             return nullptr;
 
         const char* e4 = skip_comma(value, eof);
-        if(!e4)
+        if (!e4)
         {
             col = nau::math::E3DCOLOR(v.getX(), v.getY(), v.getZ(), w);
             return value;
         }
         const char* end = parse_naive(e4, eof, w);
-        if(!end)
+        if (!end)
             return NULL;
         col = nau::math::E3DCOLOR(v.getX(), v.getY(), v.getZ(), w);
         return end;
@@ -936,103 +937,103 @@ namespace nau
     int DataBlock::addParam(const char* name, int type, const char* value, const char* eof, int line, const char* filename, int at)
     {
         toOwned();
-        if(at < 0)
+        if (at < 0)
             at = paramsCount;
         G_UNUSED(eof);
         NAU_ASSERT(this != &emptyBlock);
         int paramNameId = addNameId(name);
         int itemId = findParam(paramNameId);
-        if((itemId >= 0) && (getParamType(itemId) != type))
+        if ((itemId >= 0) && (getParamType(itemId) != type))
         {
             issue_error_bad_type(name, type, getParamType(itemId), filename ? filename : resolveFilename());
             return -1;
         }
         int64_t buf[sizeof(nau::math::mat4)];  // enough to hold mat4
-        switch(type)
+        switch (type)
         {
             case TYPE_STRING:
-                if(eastl::CharStrlen(value) > 8191) [[unlikely]]
+                if (std::char_traits<char>::length(value) > 8191) [[unlikely]]
                     issue_warning_huge_string(name, value, filename ? filename : resolveFilename(), line);
                 break;
             case TYPE_INT:
-                if(!parse_naive_number(value, eof, *(int*)buf))
+                if (!parse_naive_number(value, eof, *(int*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_REAL:
-                if(!parse_naive_number(value, eof, *(float*)buf))
+                if (!parse_naive_number(value, eof, *(float*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_POINT2:
-                if(!parse_point(value, eof, *(nau::math::vec2*)buf))
+                if (!parse_point(value, eof, *(nau::math::vec2*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_POINT3:
-                if(!parse_point(value, eof, *(nau::math::vec3*)buf))
+                if (!parse_point(value, eof, *(nau::math::vec3*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_POINT4:
-                if(!parse_point(value, eof, *(nau::math::vec4*)buf))
+                if (!parse_point(value, eof, *(nau::math::vec4*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_IPOINT2:
-                if(!parse_point(value, eof, *(nau::math::ivec2*)buf))
+                if (!parse_point(value, eof, *(nau::math::ivec2*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_IPOINT3:
-                if(!parse_point(value, eof, *(nau::math::ivec3*)buf))
+                if (!parse_point(value, eof, *(nau::math::ivec3*)buf))
                     VALUE_SYNTAX_ERROR();
                 break;
             case TYPE_BOOL:
+            {
+                if (
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "yes") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "on") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "true") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "1") == 0)
+                    *(bool*)buf = true;
+                else if (
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "no") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "off") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "false") == 0 ||
+                    nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "0") == 0)
+                    *(bool*)buf = false;
+                else
                 {
-                    if(
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "yes") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "on") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "true") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "1") == 0)
-                        *(bool*)buf = true;
-                    else if(
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "no") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "off") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "false") == 0 ||
-                        nau::hal::dd_stricmp(reinterpret_cast<const char*>(value), "0") == 0)
-                        *(bool*)buf = false;
-                    else
-                    {
-                        *(bool*)buf = false;
-                        VALUE_SYNTAX_ERROR();
-                    }
+                    *(bool*)buf = false;
+                    VALUE_SYNTAX_ERROR();
                 }
-                break;
+            }
+            break;
             case TYPE_E3DCOLOR:
-                {
-                    nau::math::E3DCOLOR col(255, 255, 255, 255);
-                    if(!parse_e3dcolor(value, eof, col))
-                        VALUE_SYNTAX_ERROR();
-                    *(nau::math::E3DCOLOR*)buf = col;
-                }
-                break;
+            {
+                nau::math::E3DCOLOR col(255, 255, 255, 255);
+                if (!parse_e3dcolor(value, eof, col))
+                    VALUE_SYNTAX_ERROR();
+                *(nau::math::E3DCOLOR*)buf = col;
+            }
+            break;
             case TYPE_MATRIX:
-                {
-                    nau::math::mat4& tm = *(nau::math::mat4*)buf;
-                    tm.identity();
-                    if(!parse_matrix(value, eof, tm))
-                        VALUE_SYNTAX_ERROR();
-                }
-                break;
+            {
+                nau::math::mat4& tm = *(nau::math::mat4*)buf;
+                tm.identity();
+                if (!parse_matrix(value, eof, tm))
+                    VALUE_SYNTAX_ERROR();
+            }
+            break;
             case TYPE_INT64:
-                {
-                    if(!parse_naive_number(value, eof, *(int64_t*)buf))
-                        VALUE_SYNTAX_ERROR();
-                }
-                break;
+            {
+                if (!parse_naive_number(value, eof, *(int64_t*)buf))
+                    VALUE_SYNTAX_ERROR();
+            }
+            break;
             default:
                 NAU_ASSERT(0);
         }
-        if(paramCount() == eastl::numeric_limits<decltype(DataBlock::paramsCount)>::max()) [[unlikely]]
+        if (paramCount() == std::numeric_limits<decltype(DataBlock::paramsCount)>::max()) [[unlikely]]
         {
             PARSING_VALUE_SYNTAX_ERROR("parameters count exceeds maximum value");
         }
-        if(type == TYPE_STRING)
+        if (type == TYPE_STRING)
             insertParamAt(at, paramNameId, value);
         else
             insertNewParamRaw(at, paramNameId, type, dblk::get_type_size(type), reinterpret_cast<char*>(buf));
@@ -1047,77 +1048,77 @@ namespace nau
         TempString typeName;
         TempString value;
         nau::string valueStr;
-        for(;;)
+        for (;;)
         {
-            if(!skipWhite(true, DataBlock::parseCommentsAsParams))
+            if (!skipWhite(true, DataBlock::parseCommentsAsParams))
                 return false;
 
-            if(endOfText())
+            if (endOfText())
             {
-                if(!isTop)
+                if (!isTop)
                     SYNTAX_ERROR("unexpected EOF");
                 break;
             }
 
-            if(*curp == '}')
+            if (*curp == '}')
             {
-                if(isTop)
+                if (isTop)
                     SYNTAX_ERROR("unexpected '}' in top block");
                 ++curp;
-                if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                if (DataBlock::parseCommentsAsParams) [[unlikely]]
                     flushPendingComments(blk, false);
                 break;
             }
 
             const char* start = curp;
             name.clear();
-            if(!getIdent(name))
+            if (!getIdent(name))
                 SYNTAX_ERROR("expected identifier");
 
-            if(!skipWhite())
+            if (!skipWhite())
                 return false;
 
-            if(endOfText())
+            if (endOfText())
                 SYNTAX_ERROR("unexpected EOF");
 
-            if(*curp == '{')
+            if (*curp == '{')
             {
                 ++curp;
                 DataBlock* nb = NULL;
-                if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                if (DataBlock::parseCommentsAsParams) [[unlikely]]
                 {
                     wasNewlineAfterStatement = false;
                     lastStatement = -1;
                     flushPendingComments(blk, false);
                 }
 
-                if(name[0] != '@' || DataBlock::parseOverridesNotApply)
+                if (name[0] != '@' || DataBlock::parseOverridesNotApply)
                 {
-                    if(blk.blockCount() == eastl::numeric_limits<decltype(DataBlock::blocksCount)>::max()) [[unlikely]]
+                    if (blk.blockCount() == std::numeric_limits<decltype(DataBlock::blocksCount)>::max()) [[unlikely]]
                         SYNTAX_ERROR("blocks count exceeds maximum value");
                     nb = blk.addNewBlock(name);
                 }
-                else if(DataBlock::parseOverridesIgnored)
+                else if (DataBlock::parseOverridesIgnored)
                     ;  // do nothing
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@clone-last:", 12) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@clone-last:", 12) == 0)
                 {
                     nb = blk.addNewBlock(name + 12);
-                    if(blk.blockCount() > 1)
+                    if (blk.blockCount() > 1)
                         nb->setFrom(blk.getBlock(blk.blockCount() - 2));
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
                 {
                     char* blk_name = name.data() + 10;
                     int idx = get_array_idx(blk_name), ord = idx + 1;
                     int nid = blk.getNameId(blk_name);
-                    if(nid >= 0)
+                    if (nid >= 0)
                     {
-                        if(idx >= 0)
+                        if (idx >= 0)
                         {
-                            for(int i = 0, ie = blk.blockCount(); i < ie; i++)
-                                if(blk.getBlock(i)->getBlockNameId() == nid)
+                            for (int i = 0, ie = blk.blockCount(); i < ie; i++)
+                                if (blk.getBlock(i)->getBlockNameId() == nid)
                                 {
-                                    if(idx == 0)
+                                    if (idx == 0)
                                     {
                                         nb = blk.getBlock(i);
                                         break;
@@ -1126,12 +1127,12 @@ namespace nau
                                         idx--;
                                 }
                         }
-                        else if(idx < -1)
+                        else if (idx < -1)
                         {
-                            for(int i = blk.blockCount() - 1; i >= 0; i--)
-                                if(blk.getBlock(i)->getBlockNameId() == nid)
+                            for (int i = blk.blockCount() - 1; i >= 0; i--)
+                                if (blk.getBlock(i)->getBlockNameId() == nid)
                                 {
-                                    if(idx == -2)
+                                    if (idx == -2)
                                     {
                                         nb = blk.getBlock(i);
                                         break;
@@ -1141,22 +1142,22 @@ namespace nau
                                 }
                         }
                     }
-                    if(!nb)
+                    if (!nb)
                     {
                         NAU_LOG_ERROR("cannot find block <{}> (ordinal {}) for override in file {}", blk_name, ord, blk.resolveFilename(true));
                     }
                     (void)ord;
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
                 {
                     char* blk_name = name.data() + 8;
                     int idx = get_array_idx(blk_name), ord = idx + 1;
                     int nid = blk.getNameId(blk_name);
-                    if(nid >= 0)
-                        for(int i = 0, ie = blk.blockCount(); i < ie; i++)
-                            if(blk.getBlock(i)->getBlockNameId() == nid)
+                    if (nid >= 0)
+                        for (int i = 0, ie = blk.blockCount(); i < ie; i++)
+                            if (blk.getBlock(i)->getBlockNameId() == nid)
                             {
-                                if(idx == 0)
+                                if (idx == 0)
                                 {
                                     blk.removeBlock(i);
                                     nid = -2;
@@ -1165,93 +1166,93 @@ namespace nau
                                 else
                                     idx--;
                             }
-                    if(nid != -2)
+                    if (nid != -2)
                     {
                         NAU_LOG_ERROR("cannot find block {} (ordinal {}) for deletion in file {}", blk_name, ord, blk.resolveFilename(true));
                     }
                     (void)ord;
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete-all:", 12) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete-all:", 12) == 0)
                 {
                     const char* blk_name = name.data() + 12;
                     int nid = blk.getNameId(blk_name);
                     bool found = false;
-                    if(nid >= 0)
-                        for(int i = blk.blockCount() - 1; i >= 0; i--)
-                            if(blk.getBlock(i)->getBlockNameId() == nid)
+                    if (nid >= 0)
+                        for (int i = blk.blockCount() - 1; i >= 0; i--)
+                            if (blk.getBlock(i)->getBlockNameId() == nid)
                             {
                                 blk.removeBlock(i);
                                 found = true;
                             }
                 }
-                else if(strcmp(reinterpret_cast<const char*>(name.c_str()), "@override-last") == 0)
+                else if (strcmp(reinterpret_cast<const char*>(name.c_str()), "@override-last") == 0)
                 {
-                    if(blk.blockCount() > 0)
+                    if (blk.blockCount() > 0)
                         nb = blk.getBlock(blk.blockCount() - 1);
                     else
                         NAU_LOG_ERROR("cannot find block for {} in file {}", name.c_str(), blk.resolveFilename(true));
                 }
-                else if(strcmp(reinterpret_cast<const char*>(name.c_str()), "@delete-last") == 0)
+                else if (strcmp(reinterpret_cast<const char*>(name.c_str()), "@delete-last") == 0)
                 {
-                    if(blk.blockCount() > 0)
+                    if (blk.blockCount() > 0)
                         blk.removeBlock(blk.blockCount() - 1);
                     else
                         NAU_LOG_ERROR("cannot find block for {} in file {}", name.c_str(), blk.resolveFilename(true));
                 }
 
-                if(nb)
+                if (nb)
                 {
-                    if(!parse(*nb, false))
+                    if (!parse(*nb, false))
                         return false;
                 }
                 else
                 {
                     DataBlock b;
                     b.shared->setBlkRobustLoad(blk.shared->blkRobustLoad());
-                    if(const char* fn = reinterpret_cast<const char*>(blk.shared->getSrc()))
+                    if (const char* fn = reinterpret_cast<const char*>(blk.shared->getSrc()))
                         b.shared->setSrc(fn);
-                    if(!parse(b, false))
+                    if (!parse(b, false))
                         return false;
                 }
                 blkRef = &blk;
                 lastStatement = 1;
             }
-            else if(*curp == ':')
+            else if (*curp == ':')
             {
-                if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                if (DataBlock::parseCommentsAsParams) [[unlikely]]
                     flushPendingComments(blk, true);
                 ++curp;
                 typeName.clear();
-                if(!getIdent(typeName))
+                if (!getIdent(typeName))
                     SYNTAX_ERROR("expected type identifier");
 
                 int type = 0;
-                if(typeName.length() == 1)
+                if (typeName.length() == 1)
                 {
-                    if(typeName[0] == 't')
+                    if (typeName[0] == 't')
                         type = DataBlock::TYPE_STRING;
-                    else if(typeName[0] == 'i')
+                    else if (typeName[0] == 'i')
                         type = DataBlock::TYPE_INT;
-                    else if(typeName[0] == 'b')
+                    else if (typeName[0] == 'b')
                         type = DataBlock::TYPE_BOOL;
-                    else if(typeName[0] == 'c')
+                    else if (typeName[0] == 'c')
                         type = DataBlock::TYPE_E3DCOLOR;
-                    else if(typeName[0] == 'r')
+                    else if (typeName[0] == 'r')
                         type = DataBlock::TYPE_REAL;
-                    else if(typeName[0] == 'm')
+                    else if (typeName[0] == 'm')
                         type = DataBlock::TYPE_MATRIX;
                     else
                         SYNTAX_ERROR("unknown type");
                 }
-                else if(typeName.length() == 2)
+                else if (typeName.length() == 2)
                 {
-                    if(typeName[0] == 'p')
+                    if (typeName[0] == 'p')
                     {
-                        if(typeName[1] == '2')
+                        if (typeName[1] == '2')
                             type = DataBlock::TYPE_POINT2;
-                        else if(typeName[1] == '3')
+                        else if (typeName[1] == '3')
                             type = DataBlock::TYPE_POINT3;
-                        else if(typeName[1] == '4')
+                        else if (typeName[1] == '4')
                             type = DataBlock::TYPE_POINT4;
                         else
                             SYNTAX_ERROR("unknown type");
@@ -1259,20 +1260,20 @@ namespace nau
                     else
                         SYNTAX_ERROR("unknown type");
                 }
-                else if(typeName.length() == 3)
+                else if (typeName.length() == 3)
                 {
-                    if(typeName[0] == 'i')
+                    if (typeName[0] == 'i')
                     {
-                        if(typeName[1] == 'p')
+                        if (typeName[1] == 'p')
                         {
-                            if(typeName[2] == '2')
+                            if (typeName[2] == '2')
                                 type = DataBlock::TYPE_IPOINT2;
-                            else if(typeName[2] == '3')
+                            else if (typeName[2] == '3')
                                 type = DataBlock::TYPE_IPOINT3;
                             else
                                 SYNTAX_ERROR("unknown type");
                         }
-                        else if(typeName[1] == '6' && typeName[2] == '4')
+                        else if (typeName[1] == '6' && typeName[2] == '4')
                             type = DataBlock::TYPE_INT64;
                         else
                             SYNTAX_ERROR("unknown type");
@@ -1283,57 +1284,57 @@ namespace nau
                 else
                     SYNTAX_ERROR("unknown type");
 
-                if(!skipWhite())
+                if (!skipWhite())
                     return false;
 
-                if(endOfText())
+                if (endOfText())
                     SYNTAX_ERROR("unexpected EOF");
 
                 bool is_array = false;
-                if(curp[0] == '[' && curp[1] == ']')
+                if (curp[0] == '[' && curp[1] == ']')
                 {
                     curp += 2;
                     is_array = true;
 
-                    if(!skipWhite())
+                    if (!skipWhite())
                         return false;
                 }
 
-                if(*curp++ != '=')
+                if (*curp++ != '=')
                     SYNTAX_ERROR("expected '='");
 
-                if(!skipWhite(false))
+                if (!skipWhite(false))
                     return false;
-                if(strchr("\r\n", *curp))
+                if (strchr("\r\n", *curp))
                     SYNTAX_ERROR("unexpected CR/LF");
 
-                if(endOfText())
+                if (endOfText())
                     SYNTAX_ERROR("unexpected EOF");
 
-                if(is_array)
+                if (is_array)
                 {
-                    if(name[0] == '@' && !DataBlock::parseOverridesNotApply)
+                    if (name[0] == '@' && !DataBlock::parseOverridesNotApply)
                         SYNTAX_ERROR("wrong identifier");
 
-                    if(!skipWhite(false))
+                    if (!skipWhite(false))
                         return false;
 
-                    if(*curp++ != '[')
+                    if (*curp++ != '[')
                         SYNTAX_ERROR("expected '['");
 
-                    for(;;)
+                    for (;;)
                     {
-                        if(!skipWhite())
+                        if (!skipWhite())
                             return false;
 
-                        if(*curp == ']')
+                        if (*curp == ']')
                         {
                             curp++;
                             break;
                         }
 
                         value.clear();
-                        if(!getValue(value))
+                        if (!getValue(value))
                             return false;
 
                         ADD_PARAM_CHECKED(name.c_str(), type, value);
@@ -1344,79 +1345,79 @@ namespace nau
                 }
 
                 value.clear();
-                if(!getValue(value))
+                if (!getValue(value))
                     return false;
 
-                if(name[0] != '@' || DataBlock::parseOverridesNotApply)
+                if (name[0] != '@' || DataBlock::parseOverridesNotApply)
                 {
                     ADD_PARAM_CHECKED(name.c_str(), type, value);
                 }
-                else if(DataBlock::parseOverridesIgnored)
+                else if (DataBlock::parseOverridesIgnored)
                     ;  // do nothing
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
                 {
                     char* pname = name.data() + 10;
                     int idx = get_array_idx(pname), ord = idx + 1;
                     int nid = blk.getNameId(pname);
-                    if(nid >= 0)
+                    if (nid >= 0)
                     {
                         int i = -1;
-                        if(idx >= 0)
+                        if (idx >= 0)
                         {
-                            for(i = 0; i < blk.paramCount(); i++)
-                                if(blk.getParamNameId(i) == nid)
+                            for (i = 0; i < blk.paramCount(); i++)
+                                if (blk.getParamNameId(i) == nid)
                                 {
-                                    if(idx == 0)
+                                    if (idx == 0)
                                         break;
                                     else
                                         idx--;
                                 }
                         }
-                        else if(idx < -1)
+                        else if (idx < -1)
                         {
-                            for(i = blk.paramCount() - 1; i >= 0; i--)
-                                if(blk.getParamNameId(i) == nid)
+                            for (i = blk.paramCount() - 1; i >= 0; i--)
+                                if (blk.getParamNameId(i) == nid)
                                 {
-                                    if(idx == -2)
+                                    if (idx == -2)
                                         break;
                                     else
                                         idx++;
                                 }
                         }
-                        if(i >= 0 && i < blk.paramCount())
+                        if (i >= 0 && i < blk.paramCount())
                         {
-                            if(type != blk.getParamType(i) && !DataBlock::allowVarTypeChange)
+                            if (type != blk.getParamType(i) && !DataBlock::allowVarTypeChange)
                                 NAU_LOG_ERROR("different types ({} != {}) of param <{}> (ordinal {}) for override in file {}", type, blk.getParamType(i), pname,
                                               ord, blk.resolveFilename(true));
-                            else if(type != blk.getParamType(i))
+                            else if (type != blk.getParamType(i))
                             {
-                                for(int j = blk.paramCount() - 1; j >= i; j--)
-                                    if(blk.getParamNameId(j) == nid)
+                                for (int j = blk.paramCount() - 1; j >= i; j--)
+                                    if (blk.getParamNameId(j) == nid)
                                         blk.removeParam(j);
 
                                 ADD_PARAM_CHECKED(pname, type, value);
                             }
-                            else if(blk.addParam(pname, type, value.c_str(), value.end(), curLine, fileName, i) >= 0)
+                            else if (blk.addParam(pname, type, value.c_str(), value.end(), curLine, fileName, i) >= 0)
                                 blk.removeParam(i + 1);
                             nid = -2;
                         }
                     }
-                    if(nid != -2)
+                    if (nid != -2)
                     {
                         NAU_LOG_ERROR("cannot find param <{}> (ordinal {}) for override in file {}", pname, ord, blk.resolveFilename(true));
                     }
                     (void)ord;
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
                 {
                     char* pname = name.data() + 8;
                     int idx = get_array_idx(pname), ord = idx + 1;
                     int nid = blk.getNameId(pname);
-                    if(nid >= 0)
-                        for(int i = 0, ie = blk.paramCount(); i < ie; i++)
-                            if(blk.getParamNameId(i) == nid)
+                    if (nid >= 0)
+                        for (int i = 0, ie = blk.paramCount(); i < ie; i++)
+                            if (blk.getParamNameId(i) == nid)
                             {
-                                if(idx == 0)
+                                if (idx == 0)
                                 {
                                     blk.removeParam(i);
                                     nid = -2;
@@ -1425,74 +1426,74 @@ namespace nau
                                 else
                                     idx--;
                             }
-                    if(nid != -2)
+                    if (nid != -2)
                     {
                         NAU_LOG_ERROR("cannot find param {} (ordinal {}) for deletion in file {}", pname, ord, blk.resolveFilename(true));
                     }
                     (void)ord;
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete-all:", 12) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete-all:", 12) == 0)
                 {
                     const char* pname = name.data() + 12;
                     int nid = blk.getNameId(pname);
                     bool found = false;
-                    if(nid >= 0)
-                        for(int i = blk.paramCount() - 1; i >= 0; i--)
-                            if(blk.getParamNameId(i) == nid)
+                    if (nid >= 0)
+                        for (int i = blk.paramCount() - 1; i >= 0; i--)
+                            if (blk.getParamNameId(i) == nid)
                             {
                                 blk.removeParam(i);
                                 found = true;
                             }
                 }
-                else if(strcmp(reinterpret_cast<const char*>(name.c_str()), "@include") == 0 || CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(name.c_str())))
+                else if (strcmp(reinterpret_cast<const char*>(name.c_str()), "@include") == 0 || CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(name.c_str())))
                 {
                     ADD_PARAM_CHECKED(name.c_str(), type, value);
                 }
                 wasNewlineAfterStatement = false;
                 lastStatement = 0;
             }
-            else if(*curp == '=' && DataBlock::allowSimpleString)
+            else if (*curp == '=' && DataBlock::allowSimpleString)
             {
-                if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                if (DataBlock::parseCommentsAsParams) [[unlikely]]
                     flushPendingComments(blk, true);
-                if(!skipWhite(false))
+                if (!skipWhite(false))
                     return false;
-                if(strchr("\r\n", *curp))
+                if (strchr("\r\n", *curp))
                     SYNTAX_ERROR("unexpected CR/LF");
 
-                if(endOfText())
+                if (endOfText())
                     SYNTAX_ERROR("unexpected EOF");
 
                 curp++;
 
-                if(!skipWhite())
+                if (!skipWhite())
                     return false;
 
-                if(endOfText())
+                if (endOfText())
                     SYNTAX_ERROR("unexpected EOF");
 
                 value.clear();
-                if(!getValue(value))
+                if (!getValue(value))
                     return false;
 
-                if(name[0] != '@' || DataBlock::parseOverridesNotApply)
+                if (name[0] != '@' || DataBlock::parseOverridesNotApply)
                 {
                     ADD_PARAM_CHECKED(name.c_str(), DataBlock::TYPE_STRING, value);
                 }
-                else if(DataBlock::parseOverridesIgnored)
+                else if (DataBlock::parseOverridesIgnored)
                     ;  // do nothing
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@override:", 10) == 0)
                 {
                     char* pname = name.data() + 10;
                     int idx = get_array_idx(pname), ord = idx + 1;
                     int nid = blk.getNameId(pname);
-                    if(nid >= 0)
-                        for(int i = 0, ie = blk.paramCount(); i < ie; i++)
-                            if(blk.getParamNameId(i) == nid)
+                    if (nid >= 0)
+                        for (int i = 0, ie = blk.paramCount(); i < ie; i++)
+                            if (blk.getParamNameId(i) == nid)
                             {
-                                if(idx == 0)
+                                if (idx == 0)
                                 {
-                                    if(DataBlock::TYPE_STRING != blk.getParamType(i))
+                                    if (DataBlock::TYPE_STRING != blk.getParamType(i))
                                         NAU_LOG_ERROR("different types ({} != {}) of param <{}> (ordinal {}) for override in file {}", int(DataBlock::TYPE_STRING),
                                                       blk.getParamType(i), pname, ord, blk.resolveFilename(true));
                                     else
@@ -1503,20 +1504,20 @@ namespace nau
                                 else
                                     idx--;
                             }
-                    if(nid != -2)
+                    if (nid != -2)
                         NAU_LOG_ERROR("cannot find param <{}> (ordinal {}) for override in file {}", pname, ord, blk.resolveFilename(true));
                     (void)ord;
                 }
-                else if(strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
+                else if (strncmp(reinterpret_cast<const char*>(name.c_str()), "@delete:", 8) == 0)
                 {
                     char* pname = name.data() + 8;
                     int idx = get_array_idx(pname), ord = idx + 1;
                     int nid = blk.getNameId(pname);
-                    if(nid >= 0)
-                        for(int i = 0, ie = blk.paramCount(); i < ie; i++)
-                            if(blk.getParamNameId(i) == nid)
+                    if (nid >= 0)
+                        for (int i = 0, ie = blk.paramCount(); i < ie; i++)
+                            if (blk.getParamNameId(i) == nid)
                             {
-                                if(idx == 0)
+                                if (idx == 0)
                                 {
                                     blk.removeParam(i);
                                     nid = -2;
@@ -1525,36 +1526,36 @@ namespace nau
                                 else
                                     idx--;
                             }
-                    if(nid != -2)
+                    if (nid != -2)
                         NAU_LOG_ERROR("cannot find param {} (ordinal {}) for deletion in file {}", pname, ord, blk.resolveFilename(true));
                     (void)ord;
                 }
                 wasNewlineAfterStatement = false;
                 lastStatement = 0;
             }
-            else if(nau::hal::dd_stricmp(reinterpret_cast<const char*>(name.c_str()), "include") == 0)
+            else if (nau::hal::dd_stricmp(reinterpret_cast<const char*>(name.c_str()), "include") == 0)
             {
                 // We have to cache 'filename' here because 'getValue()' might incorrectly change it
                 // in case when this include is last one in file (which breaks relative pathes)
                 nau::string cachedFileName(fileName);
                 value.clear();
-                if(!getValue(value))
+                if (!getValue(value))
                     return false;
-                if(DataBlock::parseIncludesAsParams)
+                if (DataBlock::parseIncludesAsParams)
                 {
-                    if(DataBlock::parseCommentsAsParams) [[unlikely]]
+                    if (DataBlock::parseCommentsAsParams) [[unlikely]]
                         flushPendingComments(blk, true);
                     ADD_PARAM_CHECKED("@include", DataBlock::TYPE_STRING, value);
                     continue;
                 }
                 valueStr = value.data();
-                if(!fresolve || !fresolve->resolveIncludeFile(valueStr))
-                    if(*valueStr.c_str() != '%')
+                if (!fresolve || !fresolve->resolveIncludeFile(valueStr))
+                    if (*valueStr.c_str() != '%')
                         makeFullPathFromRelative(valueStr, reinterpret_cast<const char*>(cachedFileName.c_str()));
 
                 const char* baseFileName = reinterpret_cast<const char*>(cachedFileName.c_str());
 
-                if(fnotify)
+                if (fnotify)
                     fnotify->onFileLoaded(reinterpret_cast<const char*>(valueStr.c_str()));
 
                 includeStack.push_back(valueStr);
@@ -1562,7 +1563,7 @@ namespace nau
 
                 nau::hal::file_ptr_t h = nau::hal::df_open(reinterpret_cast<const char*>(valueStr.c_str()),
                                                            nau::hal::DF_READ | (robustParsing ? nau::hal::DF_IGNORE_MISSING : 0));
-                if(!h)
+                if (!h)
                 {
                     NAU_LOG_ERROR("can't open include file '{}' for '{}'", valueStr, baseFileName);
                     SYNTAX_ERROR("can't open include file");
@@ -1570,7 +1571,7 @@ namespace nau
                 (void)baseFileName;
 
                 int len = nau::hal::df_length(h);
-                if(len < 0)
+                if (len < 0)
                 {
                     nau::hal::df_close(h);
                     SYNTAX_ERROR("error loading include file");
@@ -1586,7 +1587,7 @@ namespace nau
 
                 buffer.insert(buffer.begin() + pos, len + 2, '\0');
 
-                if(nau::hal::df_read(h, &buffer[pos], len) != len)
+                if (nau::hal::df_read(h, &buffer[pos], len) != len)
                 {
                     nau::hal::df_close(h);
                     SYNTAX_ERROR("error loading include file");
@@ -1624,13 +1625,13 @@ namespace nau
                 buffer[pos + len + 0] = '\r';
                 buffer[pos + len + 1] = '\n';
 
-                for(int i = 0; i < len; ++i)
-                    if(buffer[pos + i] == EOF_CHAR)
+                for (int i = 0; i < len; ++i)
+                    if (buffer[pos + i] == EOF_CHAR)
                         buffer[pos + i] = ' ';
 
                 // skip UTF-8 BOM
-                if(len >= 3 && (unsigned char)buffer[pos] == 0xEF && (unsigned char)buffer[pos + 1] == 0xBB &&
-                   (unsigned char)buffer[pos + 2] == 0xBF)
+                if (len >= 3 && (unsigned char)buffer[pos] == 0xEF && (unsigned char)buffer[pos + 1] == 0xBB &&
+                    (unsigned char)buffer[pos + 2] == 0xBF)
                 {
                     buffer.erase(buffer.begin() + pos, buffer.begin() + pos + 3);
                     // erase_items(buffer, pos, 3);
@@ -1648,17 +1649,17 @@ namespace nau
         return true;
     }
 
-    static bool parse_from_text(DataBlock& blk, eastl::vector<char>& text, const char* filename, bool robust_load, DataBlock::IFileNotify* fnotify)
+    static bool parse_from_text(DataBlock& blk, std::vector<char>& text, const char* filename, bool robust_load, DataBlock::IFileNotify* fnotify)
     {
         char* end = text.size() ? (char*)memchr(text.data(), 0, text.size()) : nullptr;
 
         // erase_items(text, end - text.data(), text.data() + text.size() - end);
-        if(end)
+        if (end)
             text.erase(text.begin() + (end - text.data()), text.begin() + (text.data() + text.size() - end));
         text.push_back('\n');
         text.push_back('\0');
         text.push_back('\0');
-        if(text.size() >= 3 && memcmp(text.data(), "\xEF\xBB\xBF", 3) == 0)
+        if (text.size() >= 3 && memcmp(text.data(), "\xEF\xBB\xBF", 3) == 0)
             memcpy(text.data(), "   ", 3);
 
         DataBlockParser parser(text, filename, robust_load, fnotify);
@@ -1675,27 +1676,27 @@ namespace nau
 
     bool DataBlock::loadText(const char* text, int len, const char* filename, DataBlock::IFileNotify* fnotify)
     {
-        if(shared->blkBinOnlyLoad())
+        if (shared->blkBinOnlyLoad())
             return false;
 
-        if(len >= 3 && memcmp(text, "\xEF\xBB\xBF", 3) == 0)
+        if (len >= 3 && memcmp(text, "\xEF\xBB\xBF", 3) == 0)
             len -= 3, text += 3;
-        if(!len)
+        if (!len)
         {
             reset();
             shared->setBlkValid(true);
             return true;
         }
 
-        eastl::vector<char> buf;  //(tmpmem);
-        buf.reserve(len + 3);     // +3 because of append in loadText
-        buf.resize(len);          // don't use copyFrom because it does realloc despite of total (i.e. reserved) memory
+        std::vector<char> buf;  //(tmpmem);
+        buf.reserve(len + 3);   // +3 because of append in loadText
+        buf.resize(len);        // don't use copyFrom because it does realloc despite of total (i.e. reserved) memory
         memcpy(buf.data(), text, len);
 
-        if(!is_patch(filename))
+        if (!is_patch(filename))
         {
             reset();
-            if(filename)
+            if (filename)
                 shared->setSrc(filename);
 #if DAGOR_DBGLEVEL > 0
             else
@@ -1712,7 +1713,7 @@ namespace nau
     {
         reset();
 
-        if(!fname || !*fname)
+        if (!fname || !*fname)
         {
             shared->setBlkValid(false);
             issue_error_missing_file(fname, "invalid BLK filename");
@@ -1722,41 +1723,41 @@ namespace nau
         nau::iosys::FullFileLoadCB crd(reinterpret_cast<const char*>(fname), nau::hal::DF_READ | nau::hal::DF_IGNORE_MISSING);
         nau::string fileName_stor;
 
-        if(!crd.fileHandle && !nau::hal::dd_get_fname_ext(reinterpret_cast<const char*>(fname)))
+        if (!crd.fileHandle && !nau::hal::dd_get_fname_ext(reinterpret_cast<const char*>(fname)))
         {
             fileName_stor.format("{}{}", fname, ".blk");
-            if(crd.open(reinterpret_cast<const char*>(fileName_stor.c_str()), nau::hal::DF_READ | nau::hal::DF_IGNORE_MISSING))
+            if (crd.open(reinterpret_cast<const char*>(fileName_stor.c_str()), nau::hal::DF_READ | nau::hal::DF_IGNORE_MISSING))
                 fname = reinterpret_cast<const char*>(fileName_stor.c_str());
         }
-        if(!crd.fileHandle)
+        if (!crd.fileHandle)
         {
-            if(!shared->blkRobustLoad())
+            if (!shared->blkRobustLoad())
                 NAU_LOG_WARNING("BLK: failed to open file \"{}\" ({})", fname, fileName_stor);
 
             shared->setBlkValid(false);
 
-            if(!shared->blkRobustLoad() && fatalOnMissingFile && nau::hal::dag_on_file_not_found)
+            if (!shared->blkRobustLoad() && fatalOnMissingFile && nau::hal::dag_on_file_not_found)
                 nau::hal::dag_on_file_not_found(reinterpret_cast<const char*>(fname));
 
             issue_error_missing_file(fname, "BLK not found");
             return false;
         }
 
-        if(topMost())
+        if (topMost())
             shared->setSrc(fname);
 
         const int len = crd.getTargetDataSize() < 0 ? nau::hal::df_length(crd.fileHandle) : crd.getTargetDataSize();
-        if(len < 0)
+        if (len < 0)
         {
             shared->setBlkValid(false);
             issue_error_load_failed(fname, nullptr);
             return false;
         }
 
-        if(fnotify)
+        if (fnotify)
             fnotify->onFileLoaded(fname);
 
-        if(len == 0)  // Empty file in - empty blk out.
+        if (len == 0)  // Empty file in - empty blk out.
             return true;
 
         return loadFromStream(crd, fname, fnotify, len);
@@ -1766,7 +1767,7 @@ namespace nau
     {
         reset();
         unsigned blkFlags = shared->blkFlags;
-        if(fname)
+        if (fname)
             shared->setSrc(fname);
 
         DBNameMap* shared_nm = nullptr;
@@ -1775,7 +1776,7 @@ namespace nau
         NAU_TRY
         {
             unsigned label = 0;
-            if(crd.tryRead(&label, 1) != 1)
+            if (crd.tryRead(&label, 1) != 1)
                 return !shared->blkBinOnlyLoad();  // allow 0-length be read as valid empty BLK only as text format
 
             constexpr bool zstdtmp = true;  // Use framemem if possible
@@ -1792,7 +1793,7 @@ namespace nau
                 issue_error_load_failed(fname, reinterpret_cast<const char*>(err_desc));
                 return false;
               }
-              eastl::span<const char> rom_file_data = crd.getTargetRomData();
+              std::span<const char> rom_file_data = crd.getTargetRomData();
               if (!rom_file_data.data())
               {
                 shared->setBlkValid(true);
@@ -1828,9 +1829,9 @@ namespace nau
               shared_nm = nullptr; // release shared_nm refcount
             }
             else */
-            if(label == dblk::BBF_full_binary_in_stream)
+            if (label == dblk::BBF_full_binary_in_stream)
                 valid = loadFromBinDump(crd, nullptr);
-            else if(label == dblk::BBF_full_binary_in_stream_z)
+            else if (label == dblk::BBF_full_binary_in_stream_z)
             {
                 unsigned csz = 0;
                 crd.read(&csz, 3);
@@ -1844,29 +1845,29 @@ namespace nau
 
                 // try to get first 12 bytes of stream
                 int hdr_read = crd.tryRead(1 + (char*)hdr, 11) + 1;
-                if(hdr_read < 12)
+                if (hdr_read < 12)
                 {
-                    if(shared->blkBinOnlyLoad())
+                    if (shared->blkBinOnlyLoad())
                         return false;
                     return loadText(reinterpret_cast<char*>(hdr), hdr_read, fname, fnotify);
                 }
 
-                if(hdr[0] == _MAKE4C('blk ') && hdr[1] == _MAKE4C('1.1'))
+                if (hdr[0] == _MAKE4C('blk ') && hdr[1] == _MAKE4C('1.1'))
                 {
                     issue_error_load_failed(fname, "obsolete binary BLK: format 1.1");
                     return false;
                 }
-                else if(hdr[0] == _MAKE4C('SB') && hdr[2] == _MAKE4C('blk'))
+                else if (hdr[0] == _MAKE4C('SB') && hdr[2] == _MAKE4C('blk'))
                 {
                     issue_error_load_failed(fname, "obsolete text BLK in stream");
                     return false;
                 }
 
                 // if it is binary file
-                if(hdr[0] == _MAKE4C('BBF'))  // parse old BBF-3 format
+                if (hdr[0] == _MAKE4C('BBF'))  // parse old BBF-3 format
                 {
                     int end = crd.tell() + hdr[2];
-                    if((hdr[1] & 0xFFFF) != 0x0003)
+                    if ((hdr[1] & 0xFFFF) != 0x0003)
                     {
                         issue_error_load_failed_ver(fname, 3, hdr[1] & 0xFFFF);
                         return false;
@@ -1874,9 +1875,9 @@ namespace nau
 
                     valid = doLoadFromStreamBBF3(crd) && crd.tell() == end;
                 }
-                else if(hdr[0] == _MAKE4C('BBz'))  // load old compressed BBF-3 format
+                else if (hdr[0] == _MAKE4C('BBz'))  // load old compressed BBF-3 format
                 {
-                    eastl::vector<char> buf;  //(tmpmem);
+                    std::vector<char> buf;  //(tmpmem);
                     buf.resize(hdr[1]);
 
                     {
@@ -1887,36 +1888,36 @@ namespace nau
                     nau::iosys::InPlaceMemLoadCB mcrd(buf.data(), buf.size() * sizeof(decltype(buf)::value_type));
                     return loadFromStream(mcrd, fname, fnotify, buf.size() * sizeof(decltype(buf)::value_type));
                 }
-                else if(shared->blkBinOnlyLoad())
+                else if (shared->blkBinOnlyLoad())
                     return false;
                 else
                 {
                     // try to load stream as text file
                     static constexpr int BUF_SZ = 16 << 10;
-                    eastl::array<char, BUF_SZ> buf;
-                    eastl::vector<char> text;
+                    std::array<char, BUF_SZ> buf;
+                    std::vector<char> text;
                     text.reserve(sizeof(hdr) + hint_size);
 
                     text.resize(sizeof(hdr));
                     memcpy(text.data(), hdr, sizeof(hdr));
-                    if(void* pzero = memchr(text.data(), 0, text.size()))
+                    if (void* pzero = memchr(text.data(), 0, text.size()))
                         text.resize(intptr_t(pzero) - intptr_t(text.data()));
                     else
-                        for(;;)
+                        for (;;)
                         {
                             int read = crd.tryRead(buf.data(), buf.size());
-                            if(void* pzero = memchr(buf.data(), 0, read))
+                            if (void* pzero = memchr(buf.data(), 0, read))
                                 read = intptr_t(pzero) - intptr_t(buf.data());
 
-                            text.insert(text.end(), buf.begin(), buf.begin() + read);
-                            if(read < BUF_SZ)
+                            text.insert(text.end(), buf.data(), buf.data() + read);
+                            if (read < BUF_SZ)
                                 break;
                         }
 
-                    if(!is_patch(fname))
+                    if (!is_patch(fname))
                     {
                         reset();
-                        if(fname)
+                        if (fname)
                             shared->setSrc(fname);
 #if DAGOR_DBGLEVEL > 0
                         else
@@ -1930,9 +1931,9 @@ namespace nau
                 }
             }
 
-            if(fname && valid)
+            if (fname && valid)
                 shared->setSrc(fname);
-            if(valid)
+            if (valid)
             {
                 shared->setBlkValid(true);
                 compact();
@@ -1946,7 +1947,7 @@ namespace nau
 
         auto restoreShared = [this](unsigned f)
         {  // to cheat PVS since we don't need to check shared anywhere earlier
-            if(!this->shared)
+            if (!this->shared)
             {
                 this->shared = new DataBlockShared;
                 this->shared->blkFlags = f;

@@ -2,8 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include "nau/generic/dag_objectPool.h"
 
+
+#include <algorithm>
 #include <atomic>
+#include <iterator>
+#include <utility>
+#include <vector>
 //#include <generic/dag_objectPool.h>
 
 #include "driver.h"
@@ -79,10 +85,10 @@ private:
     ID3D12QueryHeap *heap = nullptr;
     uint32_t heapIndex = 0;
   };
-  eastl::vector<HeapTimeStampVisibility> timeStampHeaps;
-  eastl::vector<HeapTimeStampVisibility> visibilityHeaps;
-  eastl::vector<QueryFlushMapping> tsFlushes;
-  eastl::vector<VisibilityFlushMapping> visFlushes;
+  std::vector<HeapTimeStampVisibility> timeStampHeaps;
+  std::vector<HeapTimeStampVisibility> visibilityHeaps;
+  std::vector<QueryFlushMapping> tsFlushes;
+  std::vector<VisibilityFlushMapping> visFlushes;
 
   HeapTimeStampVisibility *newTimeStampVisibilityHeap(D3D12_QUERY_HEAP_TYPE type, ID3D12Device *device);
   void heapResolve(ID3D12GraphicsCommandList *target, D3D12_QUERY_TYPE type, HeapTimeStampVisibility &heap);
@@ -105,17 +111,23 @@ class FrontendQueryManager
     Query *qArr[heap_size]{};
     bool hasAnyFree() const
     {
-      return eastl::end(qArr) != eastl::find_if(eastl::begin(qArr), eastl::end(qArr), [](const auto p) { return nullptr == p; });
+        return std::end(qArr) != std::find_if(std::begin(qArr), std::end(qArr), [](const auto p)
+        {
+            return nullptr == p;
+        });
     }
     uint32_t addQuery(Query *qry)
     {
-      auto ref = eastl::find_if(eastl::begin(qArr), eastl::end(qArr), [](const auto p) { return nullptr == p; });
-      NAU_ASSERT(ref != eastl::end(qArr));
-      if (ref != eastl::end(qArr))
-      {
-        *ref = qry;
-        return eastl::distance(eastl::begin(qArr), ref);
-      }
+        auto ref = std::find_if(std::begin(qArr), std::end(qArr), [](const auto p)
+        {
+            return nullptr == p;
+        });
+        NAU_ASSERT(ref != std::end(qArr));
+        if (ref != std::end(qArr))
+        {
+            *ref = qry;
+            return std::distance(std::begin(qArr), ref);
+        }
       return ~uint32_t(0);
     }
     bool posFree(int pos) const { return pos < heap_size ? (qArr[pos] == nullptr) : false; }
@@ -125,19 +137,19 @@ class FrontendQueryManager
     dag::CriticalSection guard;
     ObjectPool<Query> objectPool;
   };
-  eastl::vector<HeapPredicate> predicateHeaps;
+  std::vector<HeapPredicate> predicateHeaps;
   dag::CriticalSection predicateGuard;
   QueriesData qd;
-  eastl::vector<HeapPredicate>::iterator newPredicateHeap(Device &device, ID3D12Device *dx_device);
+  HeapPredicate* newPredicateHeap(Device& device, ID3D12Device* dx_device);
 
-public:
+  public:
   uint64_t createPredicate(Device &device, ID3D12Device *dx_device);
   void deletePredicate(uint64_t id);
   void shutdownPredicate(DeviceContext &ctx);
   void preRecovery();
   bool postRecovery(Device &device, ID3D12Device *dx_device);
   void deleteQuery(Query *query_ptr);
-  void removeDeletedQueries(const eastl::vector<Query *> &deletedQueries);
+  void removeDeletedQueries(const std::vector<Query*>& deletedQueries);
   Query *newQuery();
   Query *getQueryPtrFromId(uint64_t id);
   PredicateInfo getPredicateInfo(Query *query);
@@ -187,11 +199,11 @@ inline BackendQueryManager::HeapTimeStampVisibility *BackendQueryManager::newTim
   }
   if (type == D3D12_QUERY_HEAP_TYPE_OCCLUSION)
   {
-    return &visibilityHeaps.emplace_back(eastl::move(newHeap));
+      return &visibilityHeaps.emplace_back(std::move(newHeap));
   }
   else
   {
-    return &timeStampHeaps.emplace_back(eastl::move(newHeap));
+      return &timeStampHeaps.emplace_back(std::move(newHeap));
   }
 }
 
@@ -199,8 +211,11 @@ inline void BackendQueryManager::makeVisibilityQuery(Query *query_ptr, ID3D12Dev
 {
   HeapTimeStampVisibility *ptr = nullptr;
   // find free position in heaps vector
-  auto ref = eastl::find_if(begin(visibilityHeaps), end(visibilityHeaps),
-    [](const HeapTimeStampVisibility &visibilityHeap) { return visibilityHeap.freeMask.any(); });
+  auto ref = std::find_if(begin(visibilityHeaps), end(visibilityHeaps),
+                          [](const HeapTimeStampVisibility& visibilityHeap)
+  {
+      return visibilityHeap.freeMask.any();
+  });
   if (ref == end(visibilityHeaps))
   {
     // need to create new heap
@@ -231,8 +246,11 @@ inline void BackendQueryManager::makeTimeStampQuery(Query *query_ptr, ID3D12Devi
 {
   HeapTimeStampVisibility *ptr = nullptr;
   // find free position in heaps vector
-  auto ref = eastl::find_if(begin(timeStampHeaps), end(timeStampHeaps),
-    [](const HeapTimeStampVisibility &timeStampHeap) { return timeStampHeap.freeMask.any(); });
+  auto ref = std::find_if(begin(timeStampHeaps), end(timeStampHeaps),
+                          [](const HeapTimeStampVisibility& timeStampHeap)
+  {
+      return timeStampHeap.freeMask.any();
+  });
   if (ref == end(timeStampHeaps))
   {
     // need to create new heap
@@ -352,7 +370,7 @@ inline Query *FrontendQueryManager::getQueryPtrFromId(uint64_t id)
   }
   return nullptr;
 }
-inline void FrontendQueryManager::removeDeletedQueries(const eastl::vector<Query *> &deletedQueries)
+inline void FrontendQueryManager::removeDeletedQueries(const std::vector<Query*>& deletedQueries)
 {
   dag::CSAutoLock l(qd.guard);
   for (auto &&ts : deletedQueries)

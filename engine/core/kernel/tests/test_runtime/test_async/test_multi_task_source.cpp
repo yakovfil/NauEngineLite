@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <vector>
 
 #include "helpers/runtime_guard.h"
 #include "nau/async/multi_task_source.h"
@@ -40,7 +41,6 @@ namespace nau::test
         ASSERT_TRUE(ts);
     }
 
-
     /**
         Test: multiple getTask() + resolve()
     */
@@ -53,16 +53,16 @@ namespace nau::test
 
         async::MultiTaskSource<unsigned> taskSource;
 
-        eastl::vector<Task<unsigned>> tasks;
+        std::vector<Task<unsigned>> tasks;
         tasks.reserve(TaskCount);
 
-        for(size_t i = 0; i < TaskCount; ++i)
+        for (size_t i = 0; i < TaskCount; ++i)
         {
             tasks.emplace_back(taskSource.getNextTask());
         }
 
         taskSource.resolve(ExpectedValue);
-        for(auto& task : tasks)
+        for (auto& task : tasks)
         {
             ASSERT_TRUE(task.isReady());
             ASSERT_FALSE(task.isRejected());
@@ -84,13 +84,13 @@ namespace nau::test
         std::vector<Task<>> tasks;
         tasks.reserve(TaskCount);
 
-        for(size_t i = 0; i < TaskCount; ++i)
+        for (size_t i = 0; i < TaskCount; ++i)
         {
             tasks.emplace_back(taskSource.getNextTask());
         }
 
         taskSource.reject(NauMakeError("test fail"));
-        for(auto& task : tasks)
+        for (auto& task : tasks)
         {
             ASSERT_TRUE(task.isReady());
             ASSERT_TRUE(task.isRejected());
@@ -207,19 +207,19 @@ namespace nau::test
         std::vector<Task<>> tasks;
         tasks.reserve(TaskCount);
 
-        for(size_t i = 0; i < TaskCount; ++i)
+        for (size_t i = 0; i < TaskCount; ++i)
         {
             tasks.emplace_back([](MultiTaskSource<std::string>& multiTaskSource, TaskSource<>& signal, std::atomic<size_t>& taskCounter) -> Task<>
             {
                 co_await Executor::getDefault();
 
-                if(++taskCounter > TaskCount / 2)
+                if (++taskCounter > TaskCount / 2)
                 {
                     signal.resolve();
                 }
 
                 const std::string value = co_await multiTaskSource.getNextTask();
-                if(value != "test")
+                if (value != "test")
                 {
                     co_yield NauMakeError("Invalid value");
                 }
@@ -235,7 +235,7 @@ namespace nau::test
 
         waitResult(whenAll(tasks)).ignore();
 
-        for(auto& task : tasks)
+        for (auto& task : tasks)
         {
             ASSERT_TRUE(task.isReady());
             ASSERT_FALSE(task.isRejected());
@@ -255,7 +255,7 @@ namespace nau::test
         std::vector<Task<bool>> tasks;
         tasks.reserve(TaskCount);
 
-        for(size_t i = 0; i < TaskCount; ++i)
+        for (size_t i = 0; i < TaskCount; ++i)
         {
             tasks.emplace_back([](MultiTaskSource<std::string>& signalSource, size_t val) -> Task<bool>
             {
@@ -281,10 +281,9 @@ namespace nau::test
         ASSERT_THAT(resolveCounter, Eq(1));
     }
 
-
     /**
         Test:
-            If setAutoResetOnReady is set, then taskSource will reset its inner state 
+            If setAutoResetOnReady is set, then taskSource will reset its inner state
             when it will resolved (i.e. result's data will be released immediately)
     */
     TEST(TestMultiTaskSource, Resolve_AutoResetOnReady)
@@ -319,7 +318,7 @@ namespace nau::test
 
     /**
         Test:
-            If setAutoResetOnReady is set, then taskSource will reset its inner state 
+            If setAutoResetOnReady is set, then taskSource will reset its inner state
             when it will rejected (i.e. result's data will be released immediately)
     */
     TEST(TestMultiTaskSource, Reject_AutoResetOnReady)

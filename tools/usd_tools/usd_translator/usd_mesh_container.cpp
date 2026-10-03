@@ -1,11 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "usd_mesh_container.h"
 
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/bindingAPI.h>
+
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/mesh_asset_accessor.h"
 #include "usd_mesh_composer.h"
@@ -39,10 +43,10 @@ namespace UsdTranslator
             };
         }
 
-        eastl::vector<VertAttribDescription> getVertAttribDescriptions() const override
+        std::vector<VertAttribDescription> getVertAttribDescriptions() const override
         {
             using namespace nau;
-            eastl::vector<VertAttribDescription> out =
+            std::vector<VertAttribDescription> out =
                 {
                     {.semantic = "POSITION",
                      .semanticIndex = 0,
@@ -85,7 +89,7 @@ namespace UsdTranslator
             return out;
         }
 
-        Result<> copyVertAttribs(eastl::span<OutputVertAttribDescription> outputLayout) const override
+        Result<> copyVertAttribs(std::span<OutputVertAttribDescription> outputLayout) const override
         {
             const auto check = [](OutputVertAttribDescription& desc, AttributeType attType, auto& attributeData) -> Result<>
             {
@@ -193,12 +197,12 @@ namespace UsdTranslator
     {
     }
 
-    nau::Ptr<> UsdMeshContainer::getAsset(eastl::string_view path)
+    nau::Ptr<> UsdMeshContainer::getAsset(std::string_view path)
     {
         return rtti::createInstance<UsdMeshAccessor, IAssetAccessor>(m_prim);
     }
 
-    eastl::vector<eastl::string> UsdMeshContainer::getContent() const
+    std::vector<std::string> UsdMeshContainer::getContent() const
     {
         return {};
     }

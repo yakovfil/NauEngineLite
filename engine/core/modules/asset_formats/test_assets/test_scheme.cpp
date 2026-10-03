@@ -1,6 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string_view>
+#include <tuple>
+#include <vector>
+
 #include "nau/assets/asset_content_provider.h"
 #include "nau/assets/asset_manager.h"
 #include "nau/assets/asset_path_resolver.h"
@@ -19,11 +23,11 @@ namespace nau::test
             NAU_TYPEID(nau::test::MyAssetPathResolver)
             NAU_CLASS_BASE(IAssetPathResolver)
 
-            static constexpr eastl::string_view SchemeToFile = "path2file";
-            static constexpr eastl::string_view SchemeToContent = "path2content";
-            static constexpr eastl::string_view SchemeToInvalid = "path2invalid";
+            static constexpr std::string_view SchemeToFile = "path2file";
+            static constexpr std::string_view SchemeToContent = "path2content";
+            static constexpr std::string_view SchemeToInvalid = "path2invalid";
 
-            eastl::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) override
+            std::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) override
             {
                 if (assetPath.hasScheme(SchemeToFile))
                 {
@@ -44,7 +48,7 @@ namespace nau::test
                 return {};
             }
 
-            eastl::vector<eastl::string_view> getSupportedSchemes() const override
+            std::vector<std::string_view> getSupportedSchemes() const override
             {
                 return {
                     SchemeToFile,
@@ -60,7 +64,7 @@ namespace nau::test
             NAU_TYPEID(nau::test::MyContentProvider)
             NAU_CLASS_BASE(IAssetContentProvider)
 
-            static constexpr eastl::string_view Scheme{"t_content"};
+            static constexpr std::string_view Scheme{"t_content"};
 
             Result<AssetContent> openStreamOrContainer(const AssetPath& assetPath) override
             {
@@ -86,7 +90,7 @@ namespace nau::test
                 return {std::move(stream), std::move(info)};
             }
 
-            eastl::vector<eastl::string_view> getSupportedSchemes() const override
+            std::vector<std::string_view> getSupportedSchemes() const override
             {
                 return {
                     Scheme};

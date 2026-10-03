@@ -3,15 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/initializer_list.h>
-#include <EASTL/optional.h>
+#include <initializer_list>
+#include <optional>
+#include <type_traits>
+#include <variant>
 
-#include "nau/math/math.h"
-
-#include "render/daBfg/virtualResourceRequest.h"
-#include "render/daBfg/detail/access.h"
 #include "nau/3d/dag_tex3d.h"
-
+#include "nau/math/math.h"
+#include "render/daBfg/detail/access.h"
+#include "render/daBfg/virtualResourceRequest.h"
 
 namespace dabfg
 {
@@ -53,7 +53,7 @@ class VirtualAttachmentRequest
 
 public:
 #ifndef DOXYGEN
-#define ENABLE_IF(...) class Dummy = void, class = eastl::enable_if_t<(__VA_ARGS__), Dummy>
+    #define ENABLE_IF(...) class Dummy = void, class = std::enable_if_t<(__VA_ARGS__), Dummy>
 #else
 #define ENABLE_IF(...) class = void
 #endif
@@ -110,9 +110,9 @@ public:
 #undef ENABLE_IF
 
 private:
-  eastl::variant<ResUid, const char *> image;
-  uint32_t mipLevel = 0;
-  uint32_t layer = 0;
+    std::variant<ResUid, const char*> image;
+    uint32_t mipLevel = 0;
+    uint32_t layer = 0;
 };
 
 } // namespace detail

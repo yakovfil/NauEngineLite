@@ -1,15 +1,24 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <EASTL/utility.h>
-#include <daECS/core/entityManager.h>
 #include <daECS/core/componentTypes.h>
 #include <daECS/core/ecsQuery.h>
+#include <daECS/core/entityManager.h>
+#include <daECS/core/internal/trackComponentAccess.h>
 #include <nau/async/thread_pool_executor.h>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "ecsPerformQueryInline.h"
 #include "nau/async/task.h"
 #include "nau/string/string.h"
-#include <daECS/core/internal/trackComponentAccess.h>
-#include "ecsPerformQueryInline.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 // todo: codegen should actually sort components by names. That would increase aliasing. Same for scripts.
 static constexpr int max_query_components_count = 256;
@@ -35,7 +44,7 @@ struct JobInfo //-V730
   const query_cb_t &__restrict fun;
   void *__restrict userData;
   int quant;
-  eastl::fixed_vector<uint32_t, 32, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> starts;
+  nau::InlineVector<uint32_t, 32, true> starts;
   JobInfo(EntityManager &mgr, const Query &__restrict query, const query_cb_t &__restrict fun, void *__restrict userData, int quant) :
     mgr(mgr), query(query), fun(fun), userData(userData), quant(quant)
   {}
@@ -147,9 +156,9 @@ static __forceinline void parallel_for(int num_jobs, EntityManager &mgr, const q
       j->doJob();
   };
 
-  eastl::vector<nau::async::Task<>> tasks;
+  std::vector<nau::async::Task<>> tasks;
 
- // auto wakeOnAdd = num_jobs <= num_jobs_to_wake_up_all ? threadpool::AddFlags::WakeOnAdd : threadpool::AddFlags::None;
+  // auto wakeOnAdd = num_jobs <= num_jobs_to_wake_up_all ? threadpool::AddFlags::WakeOnAdd : threadpool::AddFlags::None;
   {
     // TIME_PROFILE(add);
     for (int i = 0; i < num_jobs; ++i)
@@ -248,8 +257,8 @@ EntityManager::ResolvedStatus EntityManager::resolveQuery(uint32_t index, Resolv
   // TIME_PROFILE_DEV(resolveQuery);
   FRAMEMEM_REGION;
   DEBUG_VERY_VERBOSE_QUERY("try resolve query <{}> {}, resolve = {}", name,
-    &resDesc >= resolvedQueries.begin() && &resDesc < resolvedQueries.end() ? eastl::distance(resolvedQueries.begin(), &resDesc) : -1,
-    currentStatus);
+                           &resDesc >= resolvedQueries.begin() && &resDesc < resolvedQueries.end() ? std::distance(resolvedQueries.begin(), &resDesc) : -1,
+                           currentStatus);
   NAU_UNUSED(name);
   DAECS_EXT_ASSERT(desc.componentsRQ.size() + desc.componentsNO.size() + desc.componentsRW.size() + desc.componentsRO.size() > 0);
   uint8_t ret = RESOLVED_MASK;
@@ -393,17 +402,17 @@ static T *add_to_fixed_container(T *ft, Cnt &__restrict cnt, const T *__restrict
   if (size == 0)
     return ft;
   const size_t nextSize = cnt + size;
-  DAECS_EXT_ASSERT(nextSize <= eastl::numeric_limits<Cnt>::max());
+  DAECS_EXT_ASSERT(nextSize <= std::numeric_limits<Cnt>::max());
   if(!ft || (nullptr == nullptr) /* memresizeinplace_default(ft, nextSize * sizeof(T))  TODO Allocators Uncomment or delete*/)
   {
     T *next = (T *)realloc(ft, nextSize * sizeof(T));//memrealloc_default TODO Allocators
-    if (EASTL_UNLIKELY(next == nullptr))
+    if (NAU_UNLIKELY(next == nullptr))
     {
       next = (T *)malloc(nextSize * sizeof(T)); // so no mem setting //memalloc_default TODO Allocators
       memcpy(next, ft, cnt * sizeof(T));                  //-V575
       free(ft);//memfree_default TODO Allocators
     }
-    eastl::swap(ft, next);
+    std::swap(ft, next);
   }
   memcpy(ft + cnt, add, size * sizeof(T));
   cnt = nextSize;
@@ -411,7 +420,7 @@ static T *add_to_fixed_container(T *ft, Cnt &__restrict cnt, const T *__restrict
 }
 
 template <typename T, typename Cnt>
-static void add_to_FixedTab(eastl::unique_ptr<T[], memfree_deleter> &ft, Cnt &cnt, const T *add, size_t size)
+static void add_to_FixedTab(std::unique_ptr<T[], memfree_deleter>& ft, Cnt& cnt, const T* add, size_t size)
 {
   if (size != 0)
     ft.reset(add_to_fixed_container(ft.release(), cnt, add, size));
@@ -428,7 +437,7 @@ bool EntityManager::makeArchetypesQuery(archetype_t first_archetype, uint32_t in
   }
   ArchetypesQuery &query = archetypeQueries[index];
   ArchetypesEidQuery &queryEid = archetypeEidQueries[index];
-  if (EASTL_UNLIKELY(!wasFullyResolved))
+  if (NAU_UNLIKELY(!wasFullyResolved))
   {
     const uint32_t totalDataComponentsCount = resDesc.getRwCnt() + resDesc.getRoCnt();
     DEBUG_VERBOSE_QUERY("copying types and sizes to archetype query {} rw = {} ro ={}", index, resDesc.rw.cnt, resDesc.ro.cnt);
@@ -508,8 +517,8 @@ bool EntityManager::makeArchetypesQuery(archetype_t first_archetype, uint32_t in
 
   DAECS_EXT_ASSERT(archetypes.generation() == archetypes.size()); // todo: otherwise we can't incrementally update queries
 
-  eastl::fixed_vector<archetype_t, 4, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> queries;
-  eastl::fixed_vector<ArchetypesQuery::offset_type_t, 16, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> allComponentsArchOffsets;
+  nau::InlineVector<archetype_t, 4, true> queries;
+  nau::InlineVector<ArchetypesQuery::offset_type_t, 16, true> allComponentsArchOffsets;
 
   DEBUG_VERBOSE_QUERY("adding {} archetypes to query {}", archetypesCount - first_archetype,
     &query >= archetypeQueries.begin() && &query < archetypeQueries.end() ? &query - archetypeQueries.begin() : -1);
@@ -617,7 +626,7 @@ bool EntityManager::makeArchetypesQuery(archetype_t first_archetype, uint32_t in
   if (oldQueriesCount == 0)
     query.firstArch = *query.queriesBegin();
 
-  NAU_ASSERT(query.getQueriesCount() < eastl::numeric_limits<archetype_t>::max());
+  NAU_ASSERT(query.getQueriesCount() < std::numeric_limits<archetype_t>::max());
 
   // todo: only needed for eid queries. Not all queries are used in eid queries!
   const uint32_t newSubQueriesCount = uint32_t(query.queriesBegin()[newQueriesCount - 1] - query.firstArch) + 1;
@@ -637,36 +646,36 @@ bool EntityManager::makeArchetypesQuery(archetype_t first_archetype, uint32_t in
 
   if (query.rwCount && query.getArchetypesRelated()) // query write something
   {
-      eastl::fixed_vector<eastl::pair<component_index_t, component_index_t>, 8, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> trackedRw;
-    for (int i = 0, rwE = resDesc.getRW().cnt; i < rwE; ++i)
-    {
-      component_index_t cidx = resDesc.getComponents()[resDesc.getRW().start + i];
-      component_index_t oldCidx = dataComponents.getTrackedPair(cidx);
-      if (oldCidx == INVALID_COMPONENT_INDEX) // optimization, not all dataComponents are ever tracked in any archetype
-        continue;
-      trackedRw.emplace_back(cidx, oldCidx);
-    }
+      nau::InlineVector<std::pair<component_index_t, component_index_t>, 8, true> trackedRw;
+      for (int i = 0, rwE = resDesc.getRW().cnt; i < rwE; ++i)
+      {
+          component_index_t cidx = resDesc.getComponents()[resDesc.getRW().start + i];
+          component_index_t oldCidx = dataComponents.getTrackedPair(cidx);
+          if (oldCidx == INVALID_COMPONENT_INDEX)  // optimization, not all dataComponents are ever tracked in any archetype
+              continue;
+          trackedRw.emplace_back(cidx, oldCidx);
+      }
     if (trackedRw.size())
     {
-        eastl::fixed_vector<ScheduledArchetypeComponentTrack, 8, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> trackedChanges;
-      // everything earlier than that, is already scheduled in previous updates
-      for (auto aqi = query.queriesBegin() + oldQueriesCount, aqe = query.queriesBegin() + query.getQueriesCount(); aqi != aqe; ++aqi)
-      {
-        const auto aq = *aqi;
-        for (auto trackedPair : trackedRw)
+        nau::InlineVector<ScheduledArchetypeComponentTrack, 8, true> trackedChanges;
+        // everything earlier than that, is already scheduled in previous updates
+        for (auto aqi = query.queriesBegin() + oldQueriesCount, aqe = query.queriesBegin() + query.getQueriesCount(); aqi != aqe; ++aqi)
         {
-          component_index_t cidx = trackedPair.first;
-          component_index_t oldCidx = trackedPair.second;
-          DAECS_EXT_ASSERT(aq >= first_archetype);
-          auto oldComponentInArchetypeIndex = archetypes.getArchetypeComponentIdUnsafe(aq, oldCidx);
-          if (oldComponentInArchetypeIndex == INVALID_ARCHETYPE_COMPONENT_ID)
-            continue;
-          DAECS_EXT_ASSERT(archetypes.getArchetypeComponentIdUnsafe(aq, cidx) != INVALID_ARCHETYPE_COMPONENT_ID);
+            const auto aq = *aqi;
+            for (auto trackedPair : trackedRw)
+            {
+                component_index_t cidx = trackedPair.first;
+                component_index_t oldCidx = trackedPair.second;
+                DAECS_EXT_ASSERT(aq >= first_archetype);
+                auto oldComponentInArchetypeIndex = archetypes.getArchetypeComponentIdUnsafe(aq, oldCidx);
+                if (oldComponentInArchetypeIndex == INVALID_ARCHETYPE_COMPONENT_ID)
+                    continue;
+                DAECS_EXT_ASSERT(archetypes.getArchetypeComponentIdUnsafe(aq, cidx) != INVALID_ARCHETYPE_COMPONENT_ID);
 
-          trackedChanges.emplace_back(ScheduledArchetypeComponentTrack{aq, cidx});
+                trackedChanges.emplace_back(ScheduledArchetypeComponentTrack{aq, cidx});
+            }
+            // trackChangedArchetype(aq.archetype, cidx, oldCidx);
         }
-        // trackChangedArchetype(aq.archetype, cidx, oldCidx);
-      }
       add_to_FixedTab(query.trackedChanges, query.trackedChangesCount, trackedChanges.data(), trackedChanges.size());
     }
   }
@@ -687,7 +696,7 @@ bool EntityManager::makeArchetypesQueryInternal(archetype_t last_arch_count, uin
 {
   const ResolvedStatus status = getQueryStatus(index);
 
-  if (EASTL_UNLIKELY(!isFullyResolved(status)))
+  if (NAU_UNLIKELY(!isFullyResolved(status)))
   {
     DEBUG_VERBOSE_QUERY("updating = {} {}, as not fully resolved", queryDescs[index].getName(), index);
     if (should_re_resolve)
@@ -738,12 +747,12 @@ void EntityManager::clearQueries()
 uint32_t EntityManager::addOneQuery()
 {
   // todo: may be keep free list instead?
-  auto qi = freeQueriesCount ? eastl::find(queriesReferences.begin(), queriesReferences.end(), 0) : queriesReferences.end();
+  auto qi = freeQueriesCount ? std::find(queriesReferences.begin(), queriesReferences.end(), 0) : queriesReferences.end();
   if (qi != queriesReferences.end())
   {
     freeQueriesCount--;
     *qi = 1;
-    uint32_t index = eastl::distance(queriesReferences.begin(), qi);
+    uint32_t index = std::distance(queriesReferences.begin(), qi);
     archetypeQueries[index].reset();
     archetypeEidQueries[index].reset();
     resolvedQueries[index].reset();
@@ -810,15 +819,19 @@ inline void EntityManager::CopyQueryDesc::init(const EntityManager &mgr, const c
   components.clear();
   components.reserve(d.componentsRW.size() + d.componentsRO.size() + d.componentsRQ.size() + d.componentsNO.size());
   NAU_UNUSED(name_);
-  static constexpr uint32_t max_cnt = eastl::numeric_limits<decltype(rwCnt)>::max();
-  rwCnt = (uint8_t)eastl::min<uint32_t>(d.componentsRW.size(), max_cnt); //-V1029
-  roCnt = (uint8_t)eastl::min<uint32_t>(d.componentsRO.size(), max_cnt); //-V1029
-  rqCnt = (uint8_t)eastl::min<uint32_t>(d.componentsRQ.size(), max_cnt); //-V1029
-  noCnt = (uint8_t)eastl::min<uint32_t>(d.componentsNO.size(), max_cnt); //-V1029
-  components.insert(components.end(), d.componentsRW.begin(), d.componentsRW.begin() + rwCnt);
-  components.insert(components.end(), d.componentsRO.begin(), d.componentsRO.begin() + roCnt);
-  components.insert(components.end(), d.componentsRQ.begin(), d.componentsRQ.begin() + rqCnt);
-  components.insert(components.end(), d.componentsNO.begin(), d.componentsNO.begin() + noCnt);
+  static constexpr uint32_t max_cnt = std::numeric_limits<decltype(rwCnt)>::max();
+  rwCnt = (uint8_t)std::min<uint32_t>(d.componentsRW.size(), max_cnt);  //-V1029
+  roCnt = (uint8_t)std::min<uint32_t>(d.componentsRO.size(), max_cnt);  //-V1029
+  rqCnt = (uint8_t)std::min<uint32_t>(d.componentsRQ.size(), max_cnt);  //-V1029
+  noCnt = (uint8_t)std::min<uint32_t>(d.componentsNO.size(), max_cnt);  //-V1029
+  for (const auto& component : d.componentsRW.first(rwCnt))
+      components.push_back(component);
+  for (const auto& component : d.componentsRO.first(roCnt))
+      components.push_back(component);
+  for (const auto& component : d.componentsRQ.first(rqCnt))
+      components.push_back(component);
+  for (const auto& component : d.componentsNO.first(noCnt))
+      components.push_back(component);
   components.shrink_to_fit();
 #if NAU_DEBUG
   if (rwCnt != d.componentsRW.size() || roCnt != d.componentsRO.size() || rqCnt != d.componentsRQ.size() ||
@@ -830,8 +843,8 @@ inline void EntityManager::CopyQueryDesc::init(const EntityManager &mgr, const c
 #else
   auto getNameStr = [&](const ComponentDesc &cd) { return mgr.getDataComponents().findComponentName(cd.name); };
 #endif
-  typedef eastl::fixed_vector<component_t, 64, true, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> fixed_vector_components_t;
-  eastl::vector_set<component_t, eastl::less<component_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType, fixed_vector_components_t> requiredComponentsSet;
+  typedef nau::InlineVector<component_t, 64, true> fixed_vector_components_t;
+  nau::SortedVectorSet<component_t, std::less<component_t>, std::allocator<component_t>, fixed_vector_components_t> requiredComponentsSet;
   for (const auto &cd : d.componentsRQ)
   {
     if (cd.flags & CDF_OPTIONAL)
@@ -866,7 +879,7 @@ inline void EntityManager::CopyQueryDesc::init(const EntityManager &mgr, const c
                  cd.name);
       }
   }
-  requiredSetCount = eastl::min<uint32_t>(MAX_OPTIONAL_PARAMETERS, eastl::min<uint32_t>(requiredComponentsSet.size(), max_cnt));
+  requiredSetCount = std::min<uint32_t>(MAX_OPTIONAL_PARAMETERS, std::min<uint32_t>(requiredComponentsSet.size(), max_cnt));
   if (requiredComponentsSet.size() >= MAX_OPTIONAL_PARAMETERS)
   {
       logerr("too many optional data components in query <{}>. To fix, increase bitset size or add first-optional-component-no", name_);
@@ -951,7 +964,7 @@ void EntityManager::destroyQuery(QueryId h)
                                                                                           // of hashes
     resetQueryStatus(idx);
     archSubQueriesWasted += archetypeQueries[idx].archSubQueriesCount;
-    if (EASTL_UNLIKELY(idx == queriesReferences.size() - 1))
+    if (NAU_UNLIKELY(idx == queriesReferences.size() - 1))
     {
       // specially optimize create/destroy in pairs. that's happening in inspection, and pollutes queriesReferences with unused queries
       archetypeEidQueries.pop_back();
@@ -1028,8 +1041,8 @@ struct DataComponentsManagerAccess
     {
       // NAU_CORE_DEBUG_LF("comp {} offs = {}", compI, archetypeOffsets[compI]);
       auto archOfs = *archetypeOffsets;
-      if (EASTL_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET))
-        *componentData = (QueryView::ComponentsData)(chunk.getCompDataUnsafe(archOfs) + idInChunk * uint32_t(componentsSize[compI]));
+      if (NAU_LIKELY(archOfs != ArchetypesQuery::INVALID_OFFSET))
+          *componentData = (QueryView::ComponentsData)(chunk.getCompDataUnsafe(archOfs) + idInChunk * uint32_t(componentsSize[compI]));
       // we check for optional
       else
         *componentData = nullptr;
@@ -1046,7 +1059,7 @@ __forceinline void EntityManager::schedule_tracked_changes(const ScheduledArchet
   // it will also be faster on all 'big' queries (more than 8 tracked components for all archs),
   // as it is just one cache miss, though for big query we will at least miss cache twice (in binary search)
   // however, it is guaranteed cache-miss for all queries (even small)
-  if (EASTL_LIKELY(trackedChangesCount <= 64)) // heurestics. On smaller arrays linear search is faster then binary search
+  if (NAU_LIKELY(trackedChangesCount <= 64))  // heurestics. On smaller arrays linear search is faster then binary search
   {
     do // same as find_if but with do_while
     {
@@ -1058,8 +1071,11 @@ __forceinline void EntityManager::schedule_tracked_changes(const ScheduledArchet
   {
     // yet another mutable variable may be, for initial guess?
     // make it explicitly out of line?
-    trackedI = eastl::lower_bound(trackedI, trackedE, archetype,
-      [](const ScheduledArchetypeComponentTrack &a, uint32_t archetype) { return a.archetype < archetype; });
+    trackedI = std::lower_bound(trackedI, trackedE, archetype,
+                                [](const ScheduledArchetypeComponentTrack& a, uint32_t archetype)
+    {
+        return a.archetype < archetype;
+    });
   }
   if (trackedI == trackedE || trackedI->archetype != archetype)
     return;

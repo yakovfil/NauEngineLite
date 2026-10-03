@@ -4,9 +4,11 @@
 #pragma once
 
 #include <nau/utils/dag_hash.h>
-#include <EASTL/functional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+
+#include <functional>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
 namespace ecs
 {
@@ -60,18 +62,27 @@ struct HashedConstString
   }
 };
 
-#define ECS_HASH(a)      (::ecs::HashedConstString({a, ::eastl::integral_constant<ecs::hash_str_t, ecs_str_hash(a)>::value}))
+#define ECS_HASH(a) (::ecs::HashedConstString({a, ::std::integral_constant<ecs::hash_str_t, ecs_str_hash(a)>::value}))
 #define ECS_HASH_SLOW(a) (::ecs::HashedConstString({a, ecs_str_hash(a)}))
 
-inline hash_str_t ecs_hash(eastl::string_view str) { return ecs_mem_hash(str.data(), str.length()); }
+inline hash_str_t ecs_hash(std::string_view str)
+{
+    return ecs_mem_hash(str.data(), str.length());
+}
 
 struct EcsHasher
 {
-  size_t operator()(const eastl::string &str) const { return ecs_hash(str); }
+    size_t operator()(const std::string& str) const
+    {
+        return ecs_hash(str);
+    }
 };
 struct EcsSvHasher
 {
-  size_t operator()(eastl::string_view str) const { return ecs_hash(str); }
+    size_t operator()(std::string_view str) const
+    {
+        return ecs_hash(str);
+    }
 };
 
 } // namespace ecs

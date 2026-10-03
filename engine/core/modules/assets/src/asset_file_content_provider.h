@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <vector>
+
 #include "nau/assets/asset_content_provider.h"
 
 namespace nau
@@ -15,6 +18,6 @@ namespace nau
 
          Result<AssetContent> openStreamOrContainer(const AssetPath& assetPath) override;
 
-        eastl::vector<eastl::string_view> getSupportedSchemes() const override;
+         std::vector<std::string_view> getSupportedSchemes() const override;
     };
 }  // namespace nau

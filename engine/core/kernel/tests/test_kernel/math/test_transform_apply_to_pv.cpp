@@ -3,6 +3,8 @@
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
 
+#include <vector>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/math.h"
 #include "nau/math/transform.h"
@@ -15,7 +17,7 @@ namespace nau::test
     {
         Transform testTransform = {};
 
-        eastl::vector<Vector3> testVectors = {
+        std::vector<Vector3> testVectors = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -68,7 +70,7 @@ namespace nau::test
                 {  tx,    ty,  tz},
                 {  sx,    sy,  sz}
             };
-            for(auto& vector : testVectors)
+            for (auto& vector : testVectors)
             {
                 EXPECT_TRUE(testTransform.transformVector(vector).similar(testTransform.toMatrixWithScale() * vector));
             }
@@ -383,14 +385,13 @@ namespace nau::test
         testTransformApplyToVector3(50.000000000, 100.000000000, -1000.000000000, 0.00, 0.00, 0.00, 0.000000000, 0.000000000, 0.000000000);
         testTransformApplyToVector3(50.000000000, 100.000000000, -1000.000000000, 0.00, 0.00, 10.00, 1.000000000, 1.000000000, -10.000000000);
         testTransformApplyToVector3(50.000000000, 100.000000000, -1000.000000000, 30.00, 20.00, 10.00, 1.000000000, -10.000000000, 1.000000000);
-
     }
 
     TEST(TestMath, TransformApplyToPoint3)
     {
         Transform testTransform = {};
 
-        eastl::vector<Point3> testPoints = {
+        std::vector<Point3> testPoints = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -442,7 +443,7 @@ namespace nau::test
                 {  tx,    ty,  tz},
                 {  sx,    sy,  sz}
             };
-            for(auto& point : testPoints)
+            for (auto& point : testPoints)
             {
                 EXPECT_TRUE(testTransform.transformPoint(point).similar(testTransform.toMatrixWithScale() * point));
             }
@@ -757,12 +758,11 @@ namespace nau::test
         testTransformApplyToPoint3(50.000000000, 100.000000000, -1000.000000000, 0.00, 0.00, 0.00, 0.000000000, 0.000000000, 0.000000000);
         testTransformApplyToPoint3(50.000000000, 100.000000000, -1000.000000000, 0.00, 0.00, 10.00, 1.000000000, 1.000000000, -10.000000000);
         testTransformApplyToPoint3(50.000000000, 100.000000000, -1000.000000000, 30.00, 20.00, 10.00, 1.000000000, -10.000000000, 1.000000000);
-
     }
 
     TEST(TestMath, TransformApplyToQuat)
     {
-        eastl::vector<Quat> testQuats = {
+        std::vector<Quat> testQuats = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -815,7 +815,7 @@ namespace nau::test
                 {  tx,    ty,  tz},
                 {  sx,    sy,  sz}
             };
-            for(auto& quat : testQuats)
+            for (auto& quat : testQuats)
             {
                 EXPECT_TRUE(Matrix4::rotation(testTransform.transformRotation(quat)).similar(testTransform.toMatrixNoScale() * Matrix4::rotation(quat)));
             }

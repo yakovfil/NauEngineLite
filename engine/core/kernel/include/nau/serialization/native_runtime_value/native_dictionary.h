@@ -59,7 +59,6 @@ namespace nau::ser_detail
         std::string_view getKey(size_t index) const override
         {
             auto head = m_dict.begin();
-            // EASTL and std iterators have distinct category tags in libc++.
             for (size_t i = 0; i < index; ++i)
             {
                 ++head;
@@ -70,7 +69,7 @@ namespace nau::ser_detail
         RuntimeValue::Ptr getValue(std::string_view key) override
         {
             auto iter = m_dict.find(typename DictionaryType::key_type{key.data(), key.size()});
-            if(iter == m_dict.end())
+            if (iter == m_dict.end())
             {
                 return nullptr;
             }
@@ -85,7 +84,7 @@ namespace nau::ser_detail
 
         void clear() override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 NAU_FATAL(!this->hasChildren(), "Attempt to modify Runtime Collection while there is still referenced children");
 
@@ -100,12 +99,12 @@ namespace nau::ser_detail
 
         Result<> setValue([[maybe_unused]] std::string_view key, [[maybe_unused]] const RuntimeValue::Ptr& newValue) override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 value_changes_scope;
 
                 auto iter = m_dict.find(typename DictionaryType::key_type{key.data(), key.size()});
-                if(iter == m_dict.end())
+                if (iter == m_dict.end())
                 {
                     auto [emplacedIter, emplaceOk] = m_dict.try_emplace(typename DictionaryType::key_type{key.data(), key.size()});
                     NAU_ASSERT(emplaceOk);
@@ -124,7 +123,7 @@ namespace nau::ser_detail
 
         RuntimeValue::Ptr erase([[maybe_unused]] std::string_view key) override
         {
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 // value_changes_scope;
                 // DictionaryValueOperations<DictionaryType>::

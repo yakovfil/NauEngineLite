@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
+#include <span>
 
 #include "command_list_storage.h"
 #include "command_list_trace.h"
@@ -75,9 +75,9 @@ public:
   void configure();
   void beginCommandBuffer(ID3D12Device3 *device, ID3D12GraphicsCommandList *);
   void endCommandBuffer(ID3D12GraphicsCommandList *);
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>, eastl::span<const char>);
-  void endEvent(ID3D12GraphicsCommandList *, eastl::span<const char>);
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>);
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>, std::span<const char>);
+  void endEvent(ID3D12GraphicsCommandList*, std::span<const char>);
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>);
   void draw(const call_stack::CommandData &, D3DGraphicsCommandList *, const PipelineStageStateBase &, const PipelineStageStateBase &,
     BasePipeline &, PipelineVariant &, uint32_t, uint32_t, uint32_t, uint32_t, D3D12_PRIMITIVE_TOPOLOGY);
   void drawIndexed(const call_stack::CommandData &, D3DGraphicsCommandList *, const PipelineStageStateBase &,

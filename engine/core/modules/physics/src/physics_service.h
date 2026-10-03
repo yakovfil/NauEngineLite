@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include <optional>
+#include <span>
+
 #include "nau/app/main_loop/game_system.h"
 #include "nau/async/work_queue.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/physics/components/rigid_body_component.h"
 #include "nau/physics/core_physics.h"
 #include "nau/physics/internal/core_physics_internal.h"
@@ -47,13 +50,13 @@ namespace nau::physics
 
         async::Task<> shutdownService() override;
 
-        async::Task<> activateComponentsAsync(Uid, eastl::span<const scene::Component*> components, async::Task<> barrier) override;
+        async::Task<> activateComponentsAsync(Uid, std::span<const scene::Component*> components, async::Task<> barrier) override;
 
-        async::Task<> deactivateComponentsAsync(Uid, eastl::span<const scene::DeactivatedComponentData> components) override;
+        async::Task<> deactivateComponentsAsync(Uid, std::span<const scene::DeactivatedComponentData> components) override;
 
         async::Task<bool> update(std::chrono::milliseconds dt) override;
 
-        eastl::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override;
+        std::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override;
 
         void syncSceneState() override;
 

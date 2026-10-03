@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "test_ecs_common.h"
+
+#include <utility>
+#include <vector>
 using namespace nau::math;
 
 ecs::template_t create_template(ecs::ComponentsMap&& map, ecs::Template::component_set&& tracked, const char* name)
@@ -17,12 +20,12 @@ ecs::template_t create_template(ecs::ComponentsMap&& map, ecs::Template::compone
         sprintf(buf, "_t%d", tn++);
     }
     auto res = g_entity_mgr->addTemplate(
-        ecs::Template(buf, eastl::move(map), eastl::move(tracked), ecs::Template::component_set(), ecs::Template::component_set(), false));
+        ecs::Template(buf, std::move(map), std::move(tracked), ecs::Template::component_set(), ecs::Template::component_set(), false));
     NAU_ASSERT(res == ecs::TemplateDB::AR_OK);
     return g_entity_mgr->instantiateTemplate(g_entity_mgr->buildTemplateIdByName(buf));
 }
 
-void validateEntities(const eastl::vector<ecs::EntityId>& entities, uint32_t event_called, uint32_t update_called, uint32_t query_called)
+void validateEntities(const std::vector<ecs::EntityId>& entities, uint32_t event_called, uint32_t update_called, uint32_t query_called)
 {
     for(auto eid : entities)
     {
@@ -41,7 +44,7 @@ void validateEntities(const eastl::vector<ecs::EntityId>& entities, uint32_t eve
 void updateResourcesState(TestResourceManagerImpl* resourceManager)
 {
     g_entity_mgr->tick(1);
-    eastl::vector<ecs::EntityId> loadedEntities = resourceManager->wait_all_tasks();
+    std::vector<ecs::EntityId> loadedEntities = resourceManager->wait_all_tasks();
     g_entity_mgr->tick(1);
     for(auto eid : loadedEntities)
     {

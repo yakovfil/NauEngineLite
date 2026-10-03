@@ -1,11 +1,16 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "scene_asset_container.h"
 
-#include "nau/memory/eastl_aliases.h"
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/memory/stack_allocator.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/weak_ptr.h"
 #include "scene_serialization.h"
@@ -42,13 +47,13 @@ namespace nau
             return info;
         }
 
-        eastl::optional<Vector<ReferenceField>> getReferencesInfo() const override
+        std::optional<Vector<ReferenceField>> getReferencesInfo() const override
         {
             const auto container = m_container.lock();
             NAU_ASSERT(container, "Access to asset whose container is invalid");
             if (!container)
             {
-                return eastl::nullopt;
+                return std::nullopt;
             }
 
             const auto& header = container->getSceneHeader();
@@ -121,7 +126,7 @@ namespace nau
         return m_sceneHeader;
     }
 
-    nau::Ptr<> SceneAssetContainer::getAsset([[maybe_unused]] eastl::string_view path)
+    nau::Ptr<> SceneAssetContainer::getAsset([[maybe_unused]] std::string_view path)
     {
         NAU_ASSERT(path.empty(), "Currently only default asset is valid");
         if (!path.empty())
@@ -132,13 +137,13 @@ namespace nau
         return rtti::createInstance<SceneDefaultAsset>(*this);
     }
 
-    eastl::vector<eastl::string> SceneAssetContainer::getContent() const
+    std::vector<std::string> SceneAssetContainer::getContent() const
     {
         return {
-            eastl::string{}};
+            std::string{}};
     }
 
-    eastl::vector<eastl::string_view> SceneAssetLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> SceneAssetLoader::getSupportedAssetKind() const
     {
         return {"scene/nscene", "nscene", "nprefab", "scene/prefab"};
     }
@@ -154,10 +159,10 @@ namespace nau
         {
             co_await Executor::getDefault();
 
-            io::IStreamReader::Ptr stream = io::createReadonlyMemoryStream(eastl::span{buffer.data(), buffer.size()});
+            io::IStreamReader::Ptr stream = io::createReadonlyMemoryStream(std::span{buffer.data(), buffer.size()});
 
             // TODO: replace by StackVector, when allocators will support proper alignment
-            eastl::vector<SerializedSceneObject> objects;
+            std::vector<SerializedSceneObject> objects;
             RuntimeValue::Ptr value = *serialization::jsonParse(stream->as<io::IStreamReader&>());
             runtimeValueApply(objects, value).ignore();
 

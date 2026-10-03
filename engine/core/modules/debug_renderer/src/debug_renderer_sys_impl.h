@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string_view>
+#include <vector>
 
+#include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/assets/asset_manager.h"
 #include "nau/debugRenderer/debug_render_system.h"
-
-#include "graphics_assets/material_asset.h"
 
 namespace nau
 {
@@ -19,8 +20,8 @@ namespace nau
         DebugRenderSysImpl() = default;
 
     private:
-        static constexpr eastl::string_view PrimitivePipelineName = "line";
-        static constexpr eastl::string_view MeshPipelineName = "mesh";
+        static constexpr std::string_view PrimitivePipelineName = "line";
+        static constexpr std::string_view MeshPipelineName = "mesh";
 
         MaterialAssetView::Ptr m_debugMaterial;
 
@@ -36,10 +37,10 @@ namespace nau
                 math::E3DCOLOR color;
             };
 
-            eastl::vector<math::Point3> pointA;
-            eastl::vector<math::Point3> pointB;
-            eastl::vector<float> timer;
-            eastl::vector<math::E3DCOLOR> color;
+            std::vector<math::Point3> pointA;
+            std::vector<math::Point3> pointB;
+            std::vector<float> timer;
+            std::vector<math::E3DCOLOR> color;
             size_t size()
             {
                 return pointA.size();
@@ -79,7 +80,7 @@ namespace nau
 
         nau::threading::SpinLock m_linesRWMutex;
         LinesDescription m_lines;
-        eastl::vector<uint32_t> m_freeLineIndexes;
+        std::vector<uint32_t> m_freeLineIndexes;
 
         Sbuffer* m_verticesPrimPositionBuffer;
         Sbuffer* m_verticesPrimColorBuffer;
@@ -108,7 +109,7 @@ namespace nau
         };
 
         nau::threading::SpinLock m_meshRWMutex;
-        eastl::vector<MeshInfo> m_meshesInfo;
+        std::vector<MeshInfo> m_meshesInfo;
 
 #pragma endregion Meshes
 
@@ -124,7 +125,7 @@ namespace nau
         async::Task<> preInitService() override;
         async::Task<> initService() override;
         async::Task<> shutdownService() override;
-        eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override;
+        std::vector<const rtti::TypeInfo*> getServiceDependencies() const override;
 
         virtual ~DebugRenderSysImpl() override = default;
 

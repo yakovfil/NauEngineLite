@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
+#include <optional>
+#include <span>
+#include <string>
+#include <vector>
 
 #include "nau/assets/asset_accessor.h"
 #include "nau/async/task.h"
@@ -16,8 +18,8 @@ namespace nau
     struct SkeletonDataDescriptor
     {
         unsigned jointsCount = 0;
-        eastl::string skeletonPath;
-        eastl::string animationPath;
+        std::string skeletonPath;
+        std::string animationPath;
     };
 
     struct NAU_ABSTRACT_TYPE ISkeletonAssetAccessor : IAssetAccessor
@@ -25,8 +27,8 @@ namespace nau
         NAU_INTERFACE(nau::ISkeletonAssetAccessor, IAssetAccessor)
 
         virtual SkeletonDataDescriptor getDescriptor() const = 0;
-        
-        virtual void copyInverseBindMatrices(eastl::vector<math::mat4>& data) const = 0;
+
+        virtual void copyInverseBindMatrices(std::vector<math::mat4>& data) const = 0;
     };
 
 }  // namespace nau

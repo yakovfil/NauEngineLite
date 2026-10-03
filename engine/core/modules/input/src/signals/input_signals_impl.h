@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "nau/input_system.h"
 
 namespace nau
@@ -9,13 +11,13 @@ namespace nau
     class InputSignalImpl : public IInputSignal
     {
     public:
-        InputSignalImpl(const eastl::string& type);
+        InputSignalImpl(const std::string& type);
 
-        virtual const eastl::string& getName() const override;
+        virtual const std::string& getName() const override;
 
-        virtual void setName(const eastl::string& name);
+        virtual void setName(const std::string& name);
 
-        virtual const eastl::string& getType() const override;
+        virtual const std::string& getType() const override;
 
         virtual IInputController* getController() override;
 
@@ -53,15 +55,15 @@ namespace nau
 
     protected:
         template <typename T>
-        void addProperty(const eastl::string& key, const T& value)
+        void addProperty(const std::string& key, const T& value)
         {
             m_properties.add<T>(key, value);
         }
 
         void updateState(State state);
 
-        eastl::string m_name;
-        eastl::string m_type;
+        std::string m_name;
+        std::string m_type;
         math::vec4 m_vector = {0, 0, 0, 0};
         IInputController* m_controller = nullptr;
         InputSignalProperties m_properties;

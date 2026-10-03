@@ -5,6 +5,8 @@
 #include <daECS/core/entityManager.h>
 #include <daECS/core/sharedComponent.h>
 
+#include <utility>
+
 #define DECL_LIST_TYPE(lt, t) static_assert(ecs::ComponentTypeInfo<ecs::lt>::can_be_tracked);
 ECS_DECL_LIST_TYPES
 #undef DECL_LIST_TYPE
@@ -134,7 +136,7 @@ public:
         for(uint32_t i = 0; i < cnt; ++i)
         {
             if(ecs::MaybeChildComponent mbcomp = ecs::deserialize_child_component(cb))
-                arr.push_back(eastl::move(*mbcomp));
+                arr.push_back(std::move(*mbcomp));
             else
                 return false;
         }

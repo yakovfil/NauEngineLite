@@ -27,8 +27,8 @@
 #define __CC_EVENT_DISPATCHER_H__
 
 #include <functional>
-#include <EASTL/string.h>
-#include <EASTL/unordered_map.h>
+#include <string>
+#include <unordered_map>
 #include <unordered_map>
 #include <vector>
 #include <set>
@@ -88,7 +88,7 @@ public:
      * @param callback A given callback method that associated the event name.
      * @return the generated event. Needed in order to remove the event from the dispatcher
      */
-    EventListenerCustom* addCustomEventListener(const eastl::string &eventName, const std::function<void(EventCustom*)>& callback);
+    EventListenerCustom* addCustomEventListener(const std::string &eventName, const std::function<void(EventCustom*)>& callback);
 
     /////////////////////////////////////////////
     
@@ -117,7 +117,7 @@ public:
      *
      * @param customEventName A given event listener name which needs to be removed.
      */
-    void removeCustomEventListeners(const eastl::string& customEventName);
+    void removeCustomEventListeners(const std::string& customEventName);
 
     /** Removes all listeners.
      */
@@ -177,7 +177,7 @@ public:
      * @param eventName The name of the event which needs to be dispatched.
      * @param optionalUserData The optional user data, it's a void*, the default value is nullptr.
      */
-    void dispatchCustomEvent(const eastl::string &eventName, void *optionalUserData = nullptr);
+    void dispatchCustomEvent(const std::string &eventName, void *optionalUserData = nullptr);
 
     /** Query whether the specified event listener id has been added.
      *
@@ -317,10 +317,10 @@ protected:
     void cleanToRemovedListeners();
 
     /** Listeners map */
-    eastl::unordered_map<EventListener::ListenerID, EventListenerVector*> _listenerMap;
+    std::unordered_map<EventListener::ListenerID, EventListenerVector*> _listenerMap;
     
     /** The map of dirty flag */
-    eastl::unordered_map<EventListener::ListenerID, DirtyFlag> _priorityDirtyFlagMap;
+    std::unordered_map<EventListener::ListenerID, DirtyFlag> _priorityDirtyFlagMap;
     
     /** The map of node and event listeners */
     std::unordered_map<Node*, std::vector<EventListener*>*> _nodeListenersMap;
@@ -348,7 +348,7 @@ protected:
     
     int _nodePriorityIndex;
     
-    std::set<eastl::string> _internalCustomListenerIDs;
+    std::set<std::string> _internalCustomListenerIDs;
 };
 
 

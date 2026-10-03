@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "physics_world_state.h"
+
+#include <algorithm>
+#include <span>
 
 #include "nau/assets/asset_manager.h"
 #include "nau/physics/physics_assets.h"
@@ -48,7 +50,7 @@ namespace nau::physics
         m_physics->tick(secondsDt);
     }
 
-    async::Task<> PhysicsWorldState::activateComponents(eastl::span<const scene::Component*> components)
+    async::Task<> PhysicsWorldState::activateComponents(std::span<const scene::Component*> components)
     {
         using namespace nau::scene;
 
@@ -69,11 +71,11 @@ namespace nau::physics
         }
     }
 
-    void PhysicsWorldState::deactivateComponents(eastl::span<const scene::DeactivatedComponentData> components)
+    void PhysicsWorldState::deactivateComponents(std::span<const scene::DeactivatedComponentData> components)
     {
-        eastl::erase_if(m_bodies, [&components](const PhysicsBodyEntry& entry)
+        std::erase_if(m_bodies, [&components](const PhysicsBodyEntry& entry)
         {
-            return eastl::find_if(components.begin(), components.end(), [&entry](const scene::DeactivatedComponentData& c)
+            return std::any_of(components.begin(), components.end(), [&entry](const scene::DeactivatedComponentData& c)
             {
                 return c.componentUid == entry.componentUid;
             });

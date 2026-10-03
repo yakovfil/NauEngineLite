@@ -1,11 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-
-#include <EASTL/tuple.h>
-#include <EASTL/vector.h>
 
 #include <atomic>
 #include <concepts>
@@ -89,16 +85,16 @@ namespace nau
                     NAU_ASSERT(m_uid == 0);
                 };
 #endif
-                if(!m_valueRef)
+                if (!m_valueRef)
                 {
                     m_uid = 0;
                     return;
                 }
 
                 auto valueRef = std::move(m_valueRef);
-                if(const auto uid = std::exchange(m_uid, 0); uid > 0)
+                if (const auto uid = std::exchange(m_uid, 0); uid > 0)
                 {
-                    if(const auto value = valueRef.lock())
+                    if (const auto value = valueRef.lock())
                     {
                         value->unsubscribe(uid);
                     }

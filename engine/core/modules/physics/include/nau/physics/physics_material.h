@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <optional>
+#include <string_view>
+
 #include "nau/physics/physics_defines.h"
 #include "nau/rtti/rtti_impl.h"
-#include <EASTL/optional.h>
 
 namespace nau::physics
 {
@@ -31,7 +33,7 @@ namespace nau::physics
          * 
          * @return Name of the material.
          */
-        virtual eastl::string_view getName() const = 0;
+        virtual std::string_view getName() const = 0;
 
         /**
          * @brief Retrieves the friction value.
@@ -40,7 +42,7 @@ namespace nau::physics
          * 
          * See nau::physics::PhysicsBodyCreationData::friction for more information.
          */
-        virtual eastl::optional<TFloat> getFriction() const = 0;
+        virtual std::optional<TFloat> getFriction() const = 0;
 
         /**
          * @brief Retrieves the restitution value.
@@ -49,7 +51,7 @@ namespace nau::physics
          * 
          * See nau::physics::PhysicsBodyCreationData::restitution for more information.
          */
-        virtual eastl::optional<TFloat> getRestitution() const = 0;
+        virtual std::optional<TFloat> getRestitution() const = 0;
     };
 
 }  // namespace nau::physics

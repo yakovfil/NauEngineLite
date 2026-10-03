@@ -3,28 +3,30 @@
 
 #include "input_signals_impl.h"
 
+#include <string>
+
 #include "nau/service/service_provider.h"
 
 namespace nau
 {
     unsigned InputSignalImpl::g_signalIdx = 0;
 
-    InputSignalImpl::InputSignalImpl(const eastl::string& type) :
+    InputSignalImpl::InputSignalImpl(const std::string& type) :
         m_type(type)
     {
     }
 
-    const eastl::string& InputSignalImpl::getName() const
+    const std::string& InputSignalImpl::getName() const
     {
         return m_name;
     }
 
-    void InputSignalImpl::setName(const eastl::string& name)
+    void InputSignalImpl::setName(const std::string& name)
     {
         m_name = name;
     }
 
-    const eastl::string& InputSignalImpl::getType() const
+    const std::string& InputSignalImpl::getType() const
     {
         return m_type;
     }
@@ -57,7 +59,7 @@ namespace nau
 
     void InputSignalImpl::generateName()
     {
-        eastl::string name = getType() + "_" + eastl::to_string(g_signalIdx++);
+        std::string name = getType() + "_" + std::to_string(g_signalIdx++);
         for (size_t i = 0; i < name.size(); ++i)
         {
             char chr = name[i];

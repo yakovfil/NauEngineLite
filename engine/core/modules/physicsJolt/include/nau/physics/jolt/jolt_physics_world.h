@@ -4,23 +4,28 @@
 
 #pragma once
 
-#include "nau/rtti/rtti_impl.h"
-#include "nau/math/math.h"
-#include "nau/debugRenderer/debug_render_system.h"
-#include "nau/physics/physics_world.h"
-#include "nau/physics/physics_contact_listener.h"
-#include "nau/physics/jolt/jolt_physics_body.h"
-#include "nau/physics/jolt/jolt_physics_material.h"
-#include "nau/physics/jolt/jolt_debug_renderer.h"
-
-#include <EASTL/unique_ptr.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/tuple.h>
-
-#include <Jolt/Jolt.h>
 #include <Jolt/Core/Color.h>
 #include <Jolt/Core/Mutex.h>
+#include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/ContactListener.h>
+
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "nau/debugRenderer/debug_render_system.h"
+#include "nau/math/math.h"
+#include "nau/physics/jolt/jolt_debug_renderer.h"
+#include "nau/physics/jolt/jolt_physics_body.h"
+#include "nau/physics/jolt/jolt_physics_material.h"
+#include "nau/physics/physics_contact_listener.h"
+#include "nau/physics/physics_world.h"
+#include "nau/rtti/rtti_impl.h"
 
 namespace JPH
 {
@@ -137,22 +142,23 @@ namespace nau::physics::jolt
          * @brief Creates and registers a physical material.
          *
          * @param [in] name         Name to register the material under.
-         * @param [in] friction     Degree of how the body resists being dragged. It has to be between 0.0 (no friction) and 1.0 (the body will stick to the surface and stay immobile). You can pass `eastl::nullopt` if you don't want the material to override body default friction.
-         * @param [in] restitution  Degree of body tougheness on collision. It has to be between 0.0 (completely inelastic collision response) and 1.0 (completely elastic collision response). You can pass `eastl::nullopt` if you don't want the material to override body default restitution.
+         * @param [in] friction     Degree of how the body resists being dragged. It has to be between 0.0 (no friction) and 1.0 (the body will stick to the surface and stay immobile). You can pass `std::nullopt` if you don't want the material to override body default friction.
+         * @param [in] restitution  Degree of body tougheness on collision. It has to be between 0.0 (completely inelastic collision response) and 1.0 (completely elastic collision response). You can pass `std::nullopt` if you don't want the material to override body default restitution.
          * @return                  A pointer to the created material.
          */
-        virtual IPhysicsMaterial::Ptr createMaterial(eastl::string_view name,
-            eastl::optional<TFloat> friction = eastl::nullopt, eastl::optional<TFloat> restitution = eastl::nullopt) override;
+        virtual IPhysicsMaterial::Ptr createMaterial(std::string_view name,
+                                                     std::optional<TFloat> friction = std::nullopt,
+                                                     std::optional<TFloat> restitution = std::nullopt) override;
 
         /**
          * @brief Allows to cast a ray between to points and check if it hits any physical bodies.
          *
          * @param [in] query    Raycasting properties.
-         * @result              Hit data or `eastl::nullopt` is no hit has occurred.
+         * @result              Hit data or `std::nullopt` is no hit has occurred.
          */
-        virtual eastl::optional<RayCastResult> castRay(const nau::physics::RayCastQuery& query) const override;
+        virtual std::optional<RayCastResult> castRay(const nau::physics::RayCastQuery& query) const override;
 
-        async::Task<eastl::vector<RayCastResult>> castRaysAsync(eastl::vector<physics::RayCastQuery> queries) const override;
+        async::Task<std::vector<RayCastResult>> castRaysAsync(std::vector<physics::RayCastQuery> queries) const override;
 
         /**
          * @brief Performs physics debug drawing.
@@ -177,8 +183,8 @@ namespace nau::physics::jolt
          * @param [in] subShapeID   Index of the collision shape.
          * @return                  A tuple, containing friction, restitution and physical material of the collison shape.
          */
-        static eastl::tuple<float, float, const JoltPhysicsMaterial*> getFrictionAndRestitution(const JPH::Body& body,
-            const JPH::SubShapeID &subShapeID);
+        static std::tuple<float, float, const JoltPhysicsMaterial*> getFrictionAndRestitution(const JPH::Body& body,
+                                                                                              const JPH::SubShapeID& subShapeID);
 
         /**
          * @brief When called on contact, fills JPH::ContactSettings object with proper values.
@@ -196,7 +202,7 @@ namespace nau::physics::jolt
          * @param [in] manifold Object to extract the points from.
          * @return A vector of contact points.
          */
-        static eastl::vector<nau::math::vec3> calculateContactPoints(const JPH::ContactManifold& manifold);
+        static std::vector<nau::math::vec3> calculateContactPoints(const JPH::ContactManifold& manifold);
 
         /**
          * @brief Sends a line segment to rendering.
@@ -227,26 +233,25 @@ namespace nau::physics::jolt
             ContactNotificationKind kind;
             InternalContactManifold object1;
             InternalContactManifold object2;
-            eastl::vector<math::vec3> collisionWorldPoints;
-
+            std::vector<math::vec3> collisionWorldPoints;
         };
 
         struct ContactData
         {
             const JoltPhysicsBody* body1 = nullptr;
             const JoltPhysicsBody* body2 = nullptr;
-            eastl::set<JPH::SubShapeIDPair> contacts;
+            std::set<JPH::SubShapeIDPair> contacts;
         };
 
-        eastl::unique_ptr<JPH::ObjectLayerPairFilterTable> m_layerPairFilter; /** < Responsible for turning on or off collision between channels (layers).*/
-        eastl::unique_ptr<JPH::BroadPhaseLayerInterfaceTable> m_broadPhaseLayerInterface;
-        eastl::unique_ptr<JPH::ObjectVsBroadPhaseLayerFilter> m_objectOverBroadPhaseFilter;
-        eastl::unique_ptr<JoltBodyDrawFilterImpl> m_bodyDrawFilter; /** < Responsible for deciding whether to draw a body or not within a debug draw call. */
-        eastl::unique_ptr<DebugRendererImp> m_joltDebugRender; /** < Performs physics debug drawing. */
+        std::unique_ptr<JPH::ObjectLayerPairFilterTable> m_layerPairFilter; /** < Responsible for turning on or off collision between channels (layers).*/
+        std::unique_ptr<JPH::BroadPhaseLayerInterfaceTable> m_broadPhaseLayerInterface;
+        std::unique_ptr<JPH::ObjectVsBroadPhaseLayerFilter> m_objectOverBroadPhaseFilter;
+        std::unique_ptr<JoltBodyDrawFilterImpl> m_bodyDrawFilter; /** < Responsible for deciding whether to draw a body or not within a debug draw call. */
+        std::unique_ptr<DebugRendererImp> m_joltDebugRender;      /** < Performs physics debug drawing. */
 
-        eastl::unique_ptr<JPH::PhysicsSystem> m_joltPhysicsSystem;
-        eastl::unique_ptr<JPH::TempAllocatorImpl> m_joltTempAllocator;
-        eastl::unique_ptr<JPH::JobSystem> m_joltJobSystem;
+        std::unique_ptr<JPH::PhysicsSystem> m_joltPhysicsSystem;
+        std::unique_ptr<JPH::TempAllocatorImpl> m_joltTempAllocator;
+        std::unique_ptr<JPH::JobSystem> m_joltJobSystem;
 
         IPhysicsContactListener::Ptr m_engineContactListener;
         IPhysicsMaterial::Ptr m_engineDefaultMaterial;
@@ -262,10 +267,9 @@ namespace nau::physics::jolt
          * We keep track bodies that are currently in contact by ourselves, for Jolt system contact listener
          * provide only bodyIDs of removed contacts. See JPH::ContactListener::OnContactRemoved for details.
          */
-        eastl::map<eastl::pair<JPH::BodyID, JPH::BodyID>, ContactData> m_bodiesInContact;
+        std::map<std::pair<JPH::BodyID, JPH::BodyID>, ContactData> m_bodiesInContact;
 
-        eastl::vector<InternalContactManifoldEntry> m_contactsData;
-
+        std::vector<InternalContactManifoldEntry> m_contactsData;
     };
 } // namespace nau::physics::jolt
 

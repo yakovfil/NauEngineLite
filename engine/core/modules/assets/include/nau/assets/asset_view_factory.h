@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include <EASTL/vector.h>
+#include <vector>
 
 #include "nau/assets/asset_accessor.h"
 #include "nau/assets/asset_view.h"
@@ -26,8 +26,7 @@ namespace nau
          * 
          * @return A collection of all available asset view types.
          */
-        virtual eastl::vector<const rtti::TypeInfo*> getAssetViewTypes() const = 0;
-
+        virtual std::vector<const rtti::TypeInfo*> getAssetViewTypes() const = 0;
 
         /**
          * @brief Schedules asset view creation operation.

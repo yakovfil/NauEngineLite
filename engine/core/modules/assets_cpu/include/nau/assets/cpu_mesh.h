@@ -3,6 +3,7 @@
 #pragma once
 
 #include <array>
+#include <string_view>
 #include <vector>
 
 #include "nau/assets/asset_container.h"
@@ -35,7 +36,7 @@ namespace nau
     {
         NAU_INTERFACE(nau::CpuMeshContainerLoader, IAssetContainerLoader)
     public:
-        eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        std::vector<std::string_view> getSupportedAssetKind() const override;
         async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr, AssetContentInfo) override;
         RuntimeReadonlyDictionary::Ptr getDefaultImportSettings() const override
         {
@@ -48,7 +49,7 @@ namespace nau
     {
         NAU_CLASS_(nau::CpuMeshViewFactory, IAssetViewFactory, IRefCounted)
     public:
-        eastl::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
+        std::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
         async::Task<IAssetView::Ptr> createAssetView(nau::Ptr<>, const rtti::TypeInfo&) override;
     };
 }  // namespace nau

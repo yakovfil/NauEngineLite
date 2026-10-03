@@ -1,15 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "helpers/runtime_guard.h"
+
+#include <memory>
 
 #include "nau/async/async_timer.h"
 #include "nau/async/executor.h"
 #include "nau/async/thread_pool_executor.h"
 #include "nau/runtime/disposable.h"
 #include "nau/runtime/internal/runtime_component.h"
-
 #include "nau/utils/scope_guard.h"
 
 namespace nau::test
@@ -56,9 +56,9 @@ namespace nau::test
 
             components.push_back(m_defaultExecutor.get());
 
-            for(auto* const component : components)
+            for (auto* const component : components)
             {
-                if(auto* const disposable = component->as<IDisposable*>())
+                if (auto* const disposable = component->as<IDisposable*>())
                 {
                     disposable->dispose();
                 }
@@ -78,7 +78,7 @@ namespace nau::test
                 }
 
                 const auto* const refCounted = runtimeComponent->as<const IRefCounted*>();
-                return  refCounted && refCounted->getRefsCount() > 1;
+                return refCounted && refCounted->getRefsCount() > 1;
             };
 
             const auto anyComponentInUse = [&components, componentInUse]
@@ -86,7 +86,7 @@ namespace nau::test
                 return std::any_of(components.begin(), components.end(), componentInUse);
             };
 
-            while(anyComponentInUse())
+            while (anyComponentInUse())
             {
                 std::this_thread::sleep_for(50ms);
             }
@@ -97,6 +97,6 @@ namespace nau::test
 
     RuntimeGuard::Ptr RuntimeGuard::create()
     {
-        return eastl::make_unique<RuntimeGuardImpl>();
+        return std::make_unique<RuntimeGuardImpl>();
     }
 }  // namespace nau::test

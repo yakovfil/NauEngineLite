@@ -3,8 +3,10 @@
 
 #include "graphics_assets/static_mesh_asset.h"
 
-#include "nau/assets/mesh_asset_accessor.h"
+#include <functional>
+#include <optional>
 
+#include "nau/assets/mesh_asset_accessor.h"
 
 namespace nau
 {
@@ -83,13 +85,13 @@ namespace nau
         auto points = reinterpret_cast<float const*>(positionMemory);
 
         const std::size_t trVertCount = 3;
-        const auto readPoint3 = 
-            [&posBufferSize, &trVertCount, points](uint16_t const* indexPtr) -> eastl::optional<nau::math::vec3>
+        const auto readPoint3 =
+            [&posBufferSize, &trVertCount, points](uint16_t const* indexPtr) -> std::optional<nau::math::vec3>
         {
             unsigned index = *indexPtr;
             if (index + trVertCount - 1 >= posBufferSize) 
             {
-                return eastl::nullopt;
+                return std::nullopt;
             }
 
             return nau::math::vec3{
@@ -113,7 +115,7 @@ namespace nau
                 break;
             }
 
-            eastl::invoke(sink, *p1, *p2, *p3);
+            std::invoke(sink, *p1, *p2, *p3);
         }
     }
 

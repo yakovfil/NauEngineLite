@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "asio.hpp"
 #include "nau/network/napi/networking.h"
 
@@ -33,7 +37,7 @@ namespace nau
          * @param [in] data String data in implementation dependent format.
          * @return          `true`, if the string data has been successfully parsed and applied, `false` otherwise.
          */
-        bool applyConfig(const eastl::string& data) override;
+        bool applyConfig(const std::string& data) override;
 
         /**
          * @brief Initializes networking context. Call this function once before the first update.
@@ -68,29 +72,29 @@ namespace nau
          *
          * @return A pointer to the INetworkingListener instance or `NULL` in case of failure.
          */
-        eastl::shared_ptr<INetworkingListener> createListener() override;
+        std::shared_ptr<INetworkingListener> createListener() override;
 
         /**
          * @brief Creates a connector object.
          *
          * @return A pointer to the INetworkingConnector instance or `NULL` in case of failure.
          */
-        eastl::shared_ptr<INetworkingConnector> createConnector() override;
+        std::shared_ptr<INetworkingConnector> createConnector() override;
 
         /**
          * @brief Creates a NetworkingASIO instance.
          * 
          * @return A pointer to the created NetworkingASIO instance.
          */
-        static eastl::unique_ptr<nau::INetworking> create()
+        static std::unique_ptr<nau::INetworking> create()
         {
-            return eastl::make_unique<NetworkingASIO>();
+            return std::make_unique<NetworkingASIO>();
         }
 
     private:
-        eastl::string m_identity;
+        std::string m_identity;
         asio::io_context m_io_context;
-        eastl::vector<eastl::shared_ptr<NetworkingListenerASIO>> m_listeners;
-        eastl::vector<eastl::shared_ptr<NetworkingConnectorASIO>> m_connectors;
+        std::vector<std::shared_ptr<NetworkingListenerASIO>> m_listeners;
+        std::vector<std::shared_ptr<NetworkingConnectorASIO>> m_connectors;
     };
 }  // namespace nau

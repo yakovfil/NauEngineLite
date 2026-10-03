@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
+#include <type_traits>
 
 template <typename... Ts>
 struct TypePack
@@ -31,17 +31,17 @@ template <typename Base, typename... Versions>
 class VersionedPtr
 {
   using TypePackSet = TypePack<Base, Versions...>;
-  using PointerTypePackSet = TypePack<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<Versions>::type...>;
+  using PointerTypePackSet = TypePack<typename std::add_pointer<Base>::type, typename std::add_pointer<Versions>::type...>;
   Base *pointer = nullptr;
   size_t versionIndex = 0;
 
   template <typename T>
   static bool canCast(size_t from)
   {
-    static constexpr bool table[] = //
-      {eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value,
-        (eastl::is_convertible<typename eastl::add_pointer<Versions>::type, typename eastl::add_pointer<T>::type>::value)...};
-    return table[from];
+      static constexpr bool table[] =  //
+          {std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+           (std::is_convertible<typename std::add_pointer<Versions>::type, typename std::add_pointer<T>::type>::value)...};
+      return table[from];
   }
 
 public:
@@ -114,27 +114,29 @@ public:
   template <typename T>
   constexpr bool is() const
   {
-    return eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value;
+      return std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value;
   }
 
   template <typename T>
-  typename eastl::enable_if<
-    eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value, T *>::type
+  typename std::enable_if<
+      std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+      T*>::type
   as()
   {
     return static_cast<T *>(pointer);
   }
 
   template <typename T>
-  typename eastl::enable_if<
-    eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value, const T *>::type
+  typename std::enable_if<
+      std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+      const T*>::type
   as() const
   {
     return static_cast<const T *>(pointer);
   }
 
   template <typename T>
-  typename eastl::enable_if<eastl::is_same<T, Base>::value>::type reset(T *ptr)
+  typename std::enable_if<std::is_same<T, Base>::value>::type reset(T* ptr)
   {
     pointer = ptr;
   }
@@ -164,7 +166,7 @@ template <typename Base, typename... Versions>
 class VersionedComPtr
 {
   using TypePackSet = TypePack<Base, Versions...>;
-  using PointerTypePackSet = TypePack<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<Versions>::type...>;
+  using PointerTypePackSet = TypePack<typename std::add_pointer<Base>::type, typename std::add_pointer<Versions>::type...>;
   Base *pointer = nullptr;
   size_t versionIndex = 0;
   void tidy()
@@ -186,10 +188,10 @@ class VersionedComPtr
   template <typename T>
   static bool canCast(size_t from)
   {
-    static constexpr bool table[] = //
-      {eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value,
-        (eastl::is_convertible<typename eastl::add_pointer<Versions>::type, typename eastl::add_pointer<T>::type>::value)...};
-    return table[from];
+      static constexpr bool table[] =  //
+          {std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+           (std::is_convertible<typename std::add_pointer<Versions>::type, typename std::add_pointer<T>::type>::value)...};
+      return table[from];
   }
 
   template <typename T, typename U>
@@ -352,20 +354,22 @@ public:
   template <typename T>
   constexpr bool is() const
   {
-    return eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value;
+      return std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value;
   }
 
   template <typename T>
-  typename eastl::enable_if<
-    eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value, T *>::type
+  typename std::enable_if<
+      std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+      T*>::type
   as()
   {
     return static_cast<T *>(pointer);
   }
 
   template <typename T>
-  typename eastl::enable_if<
-    eastl::is_convertible<typename eastl::add_pointer<Base>::type, typename eastl::add_pointer<T>::type>::value, const T *>::type
+  typename std::enable_if<
+      std::is_convertible<typename std::add_pointer<Base>::type, typename std::add_pointer<T>::type>::value,
+      const T*>::type
   as() const
   {
     return static_cast<const T *>(pointer);
@@ -380,7 +384,7 @@ public:
   }
 
   template <typename T>
-  typename eastl::enable_if<eastl::is_same<T, Base>::value>::type reset(Base *ptr)
+  typename std::enable_if<std::is_same<T, Base>::value>::type reset(Base* ptr)
   {
     decRef();
     pointer = ptr;

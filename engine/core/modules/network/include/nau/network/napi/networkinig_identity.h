@@ -3,7 +3,7 @@
 // inetworkinig_identity.h
 
 #pragma once
-#include <EASTL\string.h>
+#include <string>
 
 namespace nau
 {
@@ -38,6 +38,6 @@ namespace nau
          * 
          * @return Networking ID text representation
          */
-        virtual eastl::string toString() const = 0;
+        virtual std::string toString() const = 0;
     };
 }  // namespace nau

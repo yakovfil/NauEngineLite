@@ -10,7 +10,7 @@
     #pragma clang diagnostic ignored "-Wshadow-uncaptured-local"
 #endif  // __clang__
 
-#include "EASTL/unique_ptr.h"
+#include <memory>
 
 #include "lua_toolkit/lua_headers.h"
 #include "lua_toolkit/lua_toolkit_config.h"
@@ -37,7 +37,7 @@ namespace nau::lua
     Result<> pushObject(lua_State* l, nau::Ptr<> object, IClassDescriptor::Ptr classDescriptor);
 
     NAU_LUATOOLKIT_EXPORT
-    Result<> pushObject(lua_State* l, eastl::unique_ptr<IRttiObject> object, IClassDescriptor::Ptr classDescriptor);
+    Result<> pushObject(lua_State* l, std::unique_ptr<IRttiObject> object, IClassDescriptor::Ptr classDescriptor);
 
     NAU_LUATOOLKIT_EXPORT
     Result<> pushDispatch(lua_State* l, nau::Ptr<> dispatch);

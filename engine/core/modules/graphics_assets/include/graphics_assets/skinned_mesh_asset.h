@@ -3,12 +3,15 @@
 
 #pragma once
 
-#include "nau/assets/asset_view.h"
-#include "nau/rtti/rtti_impl.h"
 #include <nau/3d/dag_drv3d.h>
+
+#include <vector>
+
 #include "graphics_assets/material_asset.h"
+#include "nau/assets/asset_view.h"
 #include "nau/assets/mesh_asset_accessor.h"
 #include "nau/math/dag_bounds3.h"
+#include "nau/rtti/rtti_impl.h"
 
 namespace nau
 {
@@ -55,8 +58,8 @@ namespace nau
     protected:
         nau::math::BSphere3 m_localBSphere;
 
-        eastl::vector<SkinnedMeshLod> lods;
-        eastl::vector<float> m_lodsScreenSpaceError;
+        std::vector<SkinnedMeshLod> lods;
+        std::vector<float> m_lodsScreenSpaceError;
         float cullDistance;
     };
 

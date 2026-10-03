@@ -1,7 +1,7 @@
+#include <vector>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // windows_app_impl.h
-
 
 #pragma once
 
@@ -66,9 +66,9 @@ namespace nau
         std::atomic<bool> m_isDisposed = false;
         nau::Ptr<WindowsWindow> m_window;
 
-        eastl::vector<async::Executor::Invocation> m_asyncInvocations;
-        eastl::vector<IWindowMessageHandler*> m_windowMessageHandlers;
-        eastl::vector<IWindowsApplicationMessageHandler*> m_appMessageHandlers;
+        std::vector<async::Executor::Invocation> m_asyncInvocations;
+        std::vector<IWindowMessageHandler*> m_windowMessageHandlers;
+        std::vector<IWindowsApplicationMessageHandler*> m_appMessageHandlers;
         std::mutex m_mutex;
         std::atomic<bool> m_isProcessAsyncInvocations = false;
     };

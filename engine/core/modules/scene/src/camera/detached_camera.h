@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include "camera/internal_camera_properties.h"
+#include <string_view>
 
+#include "camera/internal_camera_properties.h"
 #include "nau/math/transform.h"
 #include "nau/scene/camera/camera.h"
 #include "nau/scene/nau_object.h"
@@ -23,7 +24,7 @@ namespace nau::scene
         DetachedCamera(const DetachedCamera&) = delete;
         DetachedCamera(Uid worldUid);
 
-        void setCameraName(eastl::string_view name) override;
+        void setCameraName(std::string_view name) override;
 
         void setWorldTransform(const math::Transform& transform) override;
         void setTransform(const math::Transform& transform) override;

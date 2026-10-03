@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <vector>
+
 #include "nau/animation/controller/animation_controller.h"
 
 namespace nau::animation
@@ -20,7 +23,7 @@ namespace nau::animation
         virtual float getWeight(TAnimDescrParam animationId) const override;
         void setWeight(TAnimDescrParam animationId, float weight);
 
-        virtual const eastl::string_view getControllerTypeName() const override;
+        virtual const std::string_view getControllerTypeName() const override;
 
     protected:
         void updateWeights();
@@ -33,6 +36,6 @@ namespace nau::animation
             float weight = .0f;
         };
 
-        eastl::vector<AnimationPlaybackData> m_playbackTable;
+        std::vector<AnimationPlaybackData> m_playbackTable;
     };
 } // namespace nau::animation

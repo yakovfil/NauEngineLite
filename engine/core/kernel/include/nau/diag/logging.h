@@ -4,13 +4,13 @@
 // Core assert system header.
 #pragma once
 
-#include <EASTL/atomic.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
 #include <stdlib.h>
 
+#include <atomic>
+#include <memory>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include "nau/diag/source_info.h"
 #include "nau/kernel/kernel_config.h"
@@ -25,7 +25,7 @@ namespace nau::diag_detail
     };
 
     template <typename T, typename U>
-    struct CompatibleUniquePtr<eastl::shared_ptr<T>, U> : std::bool_constant<std::is_assignable_v<U&, T&>>
+    struct CompatibleUniquePtr<std::shared_ptr<T>, U> : std::bool_constant<std::is_assignable_v<U&, T&>>
     {
     };
 
@@ -63,16 +63,16 @@ namespace nau::diag
         uint32_t index;
         int64_t time;
         LogLevel level;
-        eastl::vector<eastl::string> tags;
+        std::vector<std::string> tags;
         SourceInfo source;
-        eastl::string data;
+        std::string data;
     };
 
     struct NAU_ABSTRACT_TYPE ILogSubscriber
     {
         NAU_TYPEID(nau::diag::ILogSubscriber)
 
-        using Ptr = eastl::shared_ptr<ILogSubscriber>;
+        using Ptr = std::shared_ptr<ILogSubscriber>;
 
         virtual ~ILogSubscriber() = default;
 
@@ -83,7 +83,7 @@ namespace nau::diag
     {
         NAU_TYPEID(nau::diag::ILogMessageFilter)
 
-        using Ptr = eastl::shared_ptr<ILogMessageFilter>;
+        using Ptr = std::shared_ptr<ILogMessageFilter>;
 
         virtual ~ILogMessageFilter() = default;
 
@@ -107,7 +107,7 @@ namespace nau::diag
     class NAU_ABSTRACT_TYPE Logger
     {
     public:
-        using Ptr = eastl::shared_ptr<Logger>;
+        using Ptr = std::shared_ptr<Logger>;
 
         class NAU_KERNEL_EXPORT [[nodiscard]] SubscriptionHandle
         {
@@ -132,7 +132,7 @@ namespace nau::diag
         private:
             SubscriptionHandle(Logger::Ptr&&, uint32_t);
 
-            eastl::weak_ptr<Logger> m_logger;
+            std::weak_ptr<Logger> m_logger;
             uint32_t m_id = 0;
 
             friend Logger;
@@ -140,7 +140,7 @@ namespace nau::diag
 
         virtual ~Logger() = default;
 
-        virtual void logMessage(LogLevel criticality, eastl::vector<eastl::string> tags, SourceInfo sourceInfo, eastl::string text) = 0;
+        virtual void logMessage(LogLevel criticality, std::vector<std::string> tags, SourceInfo sourceInfo, std::string text) = 0;
 
         template <LogSubscriberConcept TSubscriber, LogFilterConcept TFilter = std::nullptr_t>
         SubscriptionHandle subscribe(TSubscriber subscriber, TFilter filter = nullptr);
@@ -228,7 +228,7 @@ namespace nau::diag_detail
         }
 
         template <typename S, typename... Args>
-        void operator()(eastl::vector<eastl::string> tags, S&& formatStr, Args&&... args)
+        void operator()(std::vector<std::string> tags, S&& formatStr, Args&&... args)
         {
             if constexpr (sizeof...(Args) > 0)
             {
@@ -245,7 +245,7 @@ namespace nau::diag_detail
         template <typename S, typename... Args>
         void operator()(S&& formatStr, Args&&... args)
         {
-            operator()(eastl::vector<eastl::string>{}, std::forward<S>(formatStr), std::forward<Args>(args)...);
+            operator()(std::vector<std::string>{}, std::forward<S>(formatStr), std::forward<Args>(args)...);
         }
     };
 
@@ -259,7 +259,7 @@ namespace nau::diag
         if constexpr (IsInvocableLogMessageFilter<TFilter>)
         {
             using MessageFilter = diag_detail::FunctionalMessageFilter<TFilter>;
-            return eastl::make_shared<MessageFilter>(std::move(filter));
+            return std::make_shared<MessageFilter>(std::move(filter));
         }
         else if constexpr (std::is_null_pointer_v<TFilter>)
         {
@@ -278,7 +278,7 @@ namespace nau::diag
         if constexpr (IsInvocableLogSubscriber<TSubscriber>)
         {
             using Subscriber = diag_detail::FunctionalLogSubscriber<TSubscriber>;
-            subscriberPtr = eastl::make_shared<Subscriber>(std::move(subscriber));
+            subscriberPtr = std::make_shared<Subscriber>(std::move(subscriber));
         }
         else
         {
@@ -348,8 +348,8 @@ namespace nau::diag
 
 #define NAU_ENSURE_LOG(criticality, tags, formatStr, ...)                  \
     {                                                                      \
-        static eastl::atomic<bool> s_wasTrigered = false;                  \
-        bool value = s_wasTrigered.load(eastl::memory_order_relaxed);      \
+        static std::atomic<bool> s_wasTrigered = false;                    \
+        bool value = s_wasTrigered.load(std::memory_order_relaxed);        \
         if (!value && !s_wasTrigered.compare_exchange_strong(value, true)) \
         {                                                                  \
             NAU_LOG_MESSAGE(criticality)                                   \

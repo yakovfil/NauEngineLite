@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
+#include <type_traits>
 
 namespace ecs
 {
@@ -21,12 +21,12 @@ struct HasShouldProcess
   };
 
   template <typename U>
-  static eastl::false_type test(decltype(&U::should_process) *);
+  static std::false_type test(decltype(&U::should_process)*);
 
   template <typename U>
-  static eastl::true_type test(...);
+  static std::true_type test(...);
 
-  static bool const value = eastl::is_same<decltype(test<Derived>(0)), eastl::true_type>::value;
+  static bool const value = std::is_same<decltype(test<Derived>(0)), std::true_type>::value;
 };
 
 template <class ClassName, int shouldProcess = HasShouldProcess<ClassName>::value>

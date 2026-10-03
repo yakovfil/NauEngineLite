@@ -3,8 +3,10 @@
 
 
 #pragma once
-#include "render_list.h"
+#include <functional>
+
 #include "instance_group.h"
+#include "render_list.h"
 
 namespace nau
 {
@@ -16,8 +18,8 @@ namespace nau
     public:
         virtual void update() = 0;
         virtual RenderList::Ptr getRenderList(const nau::math::Vector3& viewerPosition,
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) = 0;
+                                              std::function<bool(const InstanceInfo&)>& filterFunc,
+                                              std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) = 0;
     };
 
 } // namespace nau

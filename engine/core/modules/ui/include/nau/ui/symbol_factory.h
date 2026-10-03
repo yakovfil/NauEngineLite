@@ -4,14 +4,10 @@
 
 #pragma once
 
-#include <unordered_map>
-#include <string>
 #include <memory>
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/vector.h>
-
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace cocos2d
 {
@@ -40,15 +36,15 @@ namespace nau::ui
         void unRegisterProvider(const std::string& fontFileName);
         bool tryGetSymbol(char32_t utf32Code, FontLetterDefinition& symbolDefinition, const std::u32string& font = U"") const;
         bool hasSymbol(char32_t utf32Code, const std::u32string& font = U"") const;
-        bool warmUpSymbosCache(const eastl::u32string& text) const;
+        bool warmUpSymbosCache(const std::u32string& text) const;
         cocos2d::Texture2D* getSymbolTexture(int textureId, char32_t utf32Code, const std::u32string& font = U"") const;
-        int* getHorizontalKerning(const eastl::u32string& text, int& outNumLetters) const;
+        int* getHorizontalKerning(const std::u32string& text, int& outNumLetters) const;
 
     private:
-        eastl::vector<eastl::shared_ptr<ISymbolProvider>> m_providers{};
+        std::vector<std::shared_ptr<ISymbolProvider>> m_providers{};
 
         std::string getFileExtension(const std::string& fileName) const;
         std::u32string extractFontName(const std::string& filePath) const;
-        eastl::shared_ptr<ISymbolProvider> getProvider(const std::u32string& fontName) const;
+        std::shared_ptr<ISymbolProvider> getProvider(const std::u32string& fontName) const;
     };
 }

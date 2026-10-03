@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./world_impl.h"
+
+#include <string_view>
+
 #include "scene_management/scene_manager_impl.h"
 
 namespace nau::scene
@@ -17,12 +19,12 @@ namespace nau::scene
         return getServiceProvider().get<SceneManagerImpl>();
     }
 
-    eastl::string_view WorldImpl::getName() const
+    std::string_view WorldImpl::getName() const
     {
         return m_name;
     }
 
-    void WorldImpl::setName(eastl::string_view name)
+    void WorldImpl::setName(std::string_view name)
     {
         m_name = name;
     }

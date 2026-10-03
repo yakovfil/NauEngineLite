@@ -7,6 +7,13 @@
 #include <nau/assets/scene_asset.h>
 #include <nau/scene/scene_factory.h>
 
+#include <algorithm>
+#include <iterator>
+#include <list>
+#include <span>
+#include <string>
+#include <vector>
+
 #include "nau/memory/stack_allocator.h"
 #include "nau/scene/scene_processor.h"
 #include "scene_impl.h"
@@ -183,7 +190,7 @@ namespace nau::scene
 
         if (m_sceneListener && !activatedObjectsForListener.empty())
         {
-            m_sceneListener->onAfterActivatingObjects(eastl::span{activatedObjectsForListener.data(), activatedObjectsForListener.size()});
+            m_sceneListener->onAfterActivatingObjects(std::span{activatedObjectsForListener.data(), activatedObjectsForListener.size()});
         }
     }
 
@@ -197,7 +204,7 @@ namespace nau::scene
 #ifdef NAU_ASSERT_ENABLED
         if (!components.empty())
         {
-            const bool belongsToTheSameWorld = eastl::all_of(components.begin(), components.end(), [&worldUid](const Component* component)
+            const bool belongsToTheSameWorld = std::all_of(components.begin(), components.end(), [&worldUid](const Component* component)
             {
                 return component->getParentObject().getScene()->getWorld()->getUid() == worldUid;
             });
@@ -207,7 +214,7 @@ namespace nau::scene
 #endif
 
         {
-            auto iter = eastl::remove_if(components.begin(), components.end(), [](const Component* component)
+            auto iter = std::remove_if(components.begin(), components.end(), [](const Component* component)
             {
                 return component->getActivationState() != ActivationState::Inactive;
             });
@@ -250,7 +257,7 @@ namespace nau::scene
 
         {  // Process IComponentsAsyncActivator. IComponentsAsyncActivator accept constant components collection.
             // Mutable components can not be used, because async activation can be performed in concurrent fashion (in background threads)
-            const eastl::span componentsConstSpan{const_cast<const Component**>(components.data()), components.size()};
+            const std::span componentsConstSpan{const_cast<const Component**>(components.data()), components.size()};
             auto componentAsyncActivators = getServiceProvider().getAll<IComponentsAsyncActivator>();
 
             activationTasks.reserve(componentAsyncActivators.size() + components.size());
@@ -299,7 +306,7 @@ namespace nau::scene
 
             if (notifyListener && m_sceneListener)
             {
-                m_sceneListener->onAfterActivatingComponents(eastl::span{const_cast<const Component**>(components.data()), components.size()});
+                m_sceneListener->onAfterActivatingComponents(std::span{const_cast<const Component**>(components.data()), components.size()});
             }
         };
 
@@ -331,7 +338,7 @@ namespace nau::scene
         Vector<Component*> components{&component};
         if (m_sceneListener)
         {
-            eastl::span<const Component*> componentsSpan{const_cast<const Component**>(components.data()), 1};
+            std::span<const Component*> componentsSpan{const_cast<const Component**>(components.data()), 1};
             m_sceneListener->onBeforeDeletingComponents(componentsSpan);
         }
 
@@ -343,13 +350,13 @@ namespace nau::scene
      */
     struct DeactivationSequence
     {
-        eastl::list<SceneObject*> objects;
+        std::list<SceneObject*> objects;
         Vector<Component*> components;
 
         DeactivationSequence(SceneObject& root)
         {
             visitObject(root, this);
-            eastl::reverse(components.begin(), components.end());
+            std::ranges::reverse(components);
         }
 
         static bool visitObject(SceneObject& obj, void* data)
@@ -408,7 +415,7 @@ namespace nau::scene
         if (m_sceneListener)
         {
             const SceneObject* objectPtr = &object;
-            eastl::span<const SceneObject*> objectsSpan{&objectPtr, 1};
+            std::span<const SceneObject*> objectsSpan{&objectPtr, 1};
             m_sceneListener->onBeforeDeletingObjects(objectsSpan);
         }
 
@@ -455,7 +462,7 @@ namespace nau::scene
 #ifdef NAU_ASSERT_ENABLED
         if (!components.empty())
         {
-            const bool belongsToTheSameWorld = eastl::all_of(components.begin(), components.end(), [&worldUid](const Component* component)
+            const bool belongsToTheSameWorld = std::all_of(components.begin(), components.end(), [&worldUid](const Component* component)
             {
                 return component->getParentObject().getScene()->getWorld()->getUid() == worldUid;
             });
@@ -475,7 +482,7 @@ namespace nau::scene
 
         {
             // must call IComponentsActivator::deactivateComponents prior detaching components from scene.
-            const eastl::span componentsSpan{components.data(), components.size()};
+            const std::span componentsSpan{components.data(), components.size()};
 
             for (IComponentsActivator* componentActivator : getServiceProvider().getAll<IComponentsActivator>())
             {
@@ -487,7 +494,7 @@ namespace nau::scene
         // because all deactivated components going to be non operable after first async co_await
         Vector<DeactivatedComponentData> deactivatedComponents;
         deactivatedComponents.reserve(components.size());
-        eastl::transform(components.begin(), components.end(), eastl::back_inserter(deactivatedComponents), [](Component* component)
+        std::transform(components.begin(), components.end(), std::back_inserter(deactivatedComponents), [](Component* component)
         {
             NAU_FATAL(component);
             const auto& parentObject = component->getParentObject();
@@ -568,7 +575,7 @@ namespace nau::scene
         Vector<Task<>> finalizationTasks;
         finalizationTasks.reserve(components.size());
 
-        eastl::erase_if(components, [&](Component* component)
+        std::erase_if(components, [&](Component* component)
         {
             component->changeActivationState(ActivationState::Inactive);
             if (auto task = component->finalizeAsyncOperations(); task && !task.isReady())
@@ -665,7 +672,7 @@ namespace nau::scene
 
     IWorld::WeakRef SceneManagerImpl::findWorld(Uid worldUid) const
     {
-        auto iter = eastl::find_if(m_worlds.begin(), m_worlds.end(), [&worldUid](const ObjectUniquePtr<WorldImpl>& world)
+        auto iter = std::find_if(m_worlds.begin(), m_worlds.end(), [&worldUid](const ObjectUniquePtr<WorldImpl>& world)
         {
             return world->getUid() == worldUid;
         });
@@ -856,7 +863,7 @@ namespace nau::scene
         m_worlds.erase(++m_worlds.begin(), m_worlds.end());
     }
 
-    eastl::list<SceneManagerImpl::SceneEntry>::iterator SceneManagerImpl::getSceneIter(IScene* scene)
+    std::list<SceneManagerImpl::SceneEntry>::iterator SceneManagerImpl::getSceneIter(IScene* scene)
     {
         if (!scene)
         {
@@ -888,10 +895,10 @@ namespace nau::scene
         {
             StackVector<const Component*> components;
             components.resize(m_changedComponents.size());
-            eastl::copy(m_changedComponents.begin(), m_changedComponents.end(), components.begin());
+            std::copy(m_changedComponents.begin(), m_changedComponents.end(), components.begin());
             m_changedComponents.clear();
 
-            m_sceneListener->onComponentsChange(eastl::span{components.begin(), components.size()});
+            m_sceneListener->onComponentsChange(std::span{components.data(), components.size()});
         }
 
         m_sceneListener->onSceneEnd();
@@ -927,7 +934,7 @@ namespace nau::scene
         }
     }
 
-    async::Task<IScene::Ptr> openScene(const eastl::string& path)
+    async::Task<IScene::Ptr> openScene(const std::string& path)
     {
         AssetRef<> sceneAssetRef{path};
 

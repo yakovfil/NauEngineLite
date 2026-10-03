@@ -3,17 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/3d/dag_drv3d.h"
-#include <EASTL/vector.h>
-#include <EASTL/variant.h>
-#include <EASTL/span.h>
-#include "nau/threading/critical_section.h"
-#include "nau/supp/dag_comPtr.h"
+#include <span>
+#include <variant>
+#include <vector>
 
-#include "image_view_state.h"
-#include "sampler_state.h"
 #include "container_mutex_wrapper.h"
-
+#include "image_view_state.h"
+#include "nau/3d/dag_drv3d.h"
+#include "nau/supp/dag_comPtr.h"
+#include "nau/threading/critical_section.h"
+#include "sampler_state.h"
 
 namespace drv3d_dx12
 {
@@ -43,20 +42,20 @@ class BindlessManager
     Image *image;
     ImageViewState view;
   };
-  using ResourceSlotInfoType = eastl::variant<eastl::monostate, BufferSlotUsage, TextureSlotUsage>;
+  using ResourceSlotInfoType = std::variant<std::monostate, BufferSlotUsage, TextureSlotUsage>;
 
   struct State
   {
-    eastl::vector<ValueRange<uint32_t>> freeSlotRanges;
-    eastl::vector<ResourceSlotInfoType> resourceSlotInfo;
-    eastl::vector<SamplerState> samplerTable;
+      std::vector<ValueRange<uint32_t>> freeSlotRanges;
+      std::vector<ResourceSlotInfoType> resourceSlotInfo;
+      std::vector<SamplerState> samplerTable;
   };
 
   ContainerMutexWrapper<State, dag::CriticalSection> state;
 
 public:
   uint32_t registerSampler(Device &device, DeviceContext &ctx, BaseTex *texture);
-  void unregisterBufferDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors);
+  void unregisterBufferDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors);
 
   uint32_t allocateBindlessResourceRange(uint32_t count);
   uint32_t resizeBindlessResourceRange(DeviceContext &ctx, uint32_t index, uint32_t current_count, uint32_t new_count);
@@ -128,7 +127,7 @@ public:
   void init(ID3D12Device *device);
   void shutdown();
   void preRecovery();
-  void recover(ID3D12Device *device, const eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &bindless_samplers);
+  void recover(ID3D12Device* device, const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& bindless_samplers);
 
   void setResourceDescriptor(ID3D12Device *device, uint32_t slot, D3D12_CPU_DESCRIPTOR_HANDLE descriptor);
   // This is supposed to be called after descriptor space for bindless was reserved (this->reserveResourceHeap),

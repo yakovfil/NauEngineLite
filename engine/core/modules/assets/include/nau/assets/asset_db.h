@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include <EASTL/vector.h>
+#include <string>
+#include <vector>
+
 #include "nau/assets/asset_meta_info.h"
 #include "nau/io/fs_path.h"
 #include "nau/rtti/type_info.h"
@@ -20,15 +22,15 @@ namespace nau
         virtual void reloadAssetDB(io::FsPath dbPath) = 0;
 
         virtual AssetMetaInfoBase findAssetMetaInfoByUid(const Uid& uid) const = 0;
-        virtual eastl::vector<AssetMetaInfoBase> findAssetMetaInfoByKind(const eastl::string& kind) const = 0;
+        virtual std::vector<AssetMetaInfoBase> findAssetMetaInfoByKind(const std::string& kind) const = 0;
 
-        virtual eastl::string getNausdPathFromUid(const Uid& uid) const = 0;
-        virtual Uid getUidFromNausdPath(const eastl::string& nausdPath) const = 0;
+        virtual std::string getNausdPathFromUid(const Uid& uid) const = 0;
+        virtual Uid getUidFromNausdPath(const std::string& nausdPath) const = 0;
 
-        virtual eastl::string getSourcePathFromUid(const Uid& uid) const = 0;
-        virtual Uid getUidFromSourcePath(const eastl::string& sourcePath) const = 0;
+        virtual std::string getSourcePathFromUid(const Uid& uid) const = 0;
+        virtual Uid getUidFromSourcePath(const std::string& sourcePath) const = 0;
 
-        virtual eastl::string getSourcePathFromNausdPath(const eastl::string& nausdPath) const = 0;
-        virtual eastl::string getNausdPathFromSourcePath(const eastl::string& sourcePath) const = 0;
+        virtual std::string getSourcePathFromNausdPath(const std::string& nausdPath) const = 0;
+        virtual std::string getNausdPathFromSourcePath(const std::string& sourcePath) const = 0;
     };
 }  // namespace nau

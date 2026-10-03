@@ -1,18 +1,19 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <list>
+#include <vector>
 
 #include "nau/io/virtual_file_system.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/threading/spin_lock.h"
-
 
 namespace nau::io
 {
     class VirtualFileSystemImpl final : public IVirtualFileSystem
     {
         NAU_CLASS_(nau::io::VirtualFileSystemImpl, IVirtualFileSystem)
-        
+
     private:
         struct FileSystemEntry
         {
@@ -24,8 +25,10 @@ namespace nau::io
         class FsNode
         {
         public:
-            FsNode(std::string name): m_name(std::move(name))
-            {}
+            FsNode(std::string name) :
+                m_name(std::move(name))
+            {
+            }
 
             FsNode(const FsNode&) = delete;
 
@@ -43,24 +46,22 @@ namespace nau::io
 
             void unmount(const IFileSystem::Ptr&);
 
-            eastl::vector<FileSystemEntry> getMountedFs();
+            std::vector<FileSystemEntry> getMountedFs();
 
             bool hasMounts();
 
         private:
-            
             decltype(auto) findChildIter(std::string_view name)
             {
                 return std::find_if(m_children.begin(), m_children.end(), [name](const FsNode& c)
-                    {
-                        return c.m_name == name;
-                    });
+                {
+                    return c.m_name == name;
+                });
             }
 
-
             const std::string m_name;
-            eastl::list<FsNode> m_children;
-            eastl::vector<FileSystemEntry> m_mountedFs;
+            std::list<FsNode> m_children;
+            std::vector<FileSystemEntry> m_mountedFs;
             threading::SpinLock m_mutex;
         };
 
@@ -91,11 +92,8 @@ namespace nau::io
         std::wstring resolveToNativePath(const FsPath& path) override;
 
     private:
-      
-
         std::tuple<FsPath, FsNode*> findFsNodeForPath(const FsPath& path);
 
         FsNode m_root;
-
     };
 }  // namespace nau::io

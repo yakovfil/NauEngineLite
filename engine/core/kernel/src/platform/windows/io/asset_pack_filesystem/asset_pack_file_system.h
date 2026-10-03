@@ -1,10 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <EASTL/functional.h>
+#include <functional>
+#include <list>
+#include <string_view>
+#include <tuple>
+#include <unordered_set>
 
 #include "nau/async/task_collection.h"
 #include "nau/io/asset_pack.h"
@@ -73,7 +76,7 @@ namespace nau::io
 }  // namespace nau::io
 
 template <>
-struct eastl::hash<nau::io::MemPages>
+struct std::hash<nau::io::MemPages>
 {
     [[nodiscard]] size_t operator()(const nau::io::MemPages& memPages) const
     {
@@ -131,11 +134,11 @@ namespace nau::io
 
             const std::string m_filePath;
             MapView m_view{0, 0};
-            eastl::list<AssetPackNode> m_children;
+            std::list<AssetPackNode> m_children;
             threading::SpinLock m_mutex;
         };
 
-        AssetPackFileSystemImpl(eastl::u8string_view assetPacksPath, AssetPackFileSystemSettings settings);
+        AssetPackFileSystemImpl(std::u8string_view assetPacksPath, AssetPackFileSystemSettings settings);
         ~AssetPackFileSystemImpl();
 
         async::Task<> disposeAsync() override;
@@ -154,7 +157,7 @@ namespace nau::io
 
         FsEntry incrementDirIterator(void*) override;
 
-        eastl::tuple<void*, size_t> requestRead(size_t offset, size_t size);
+        std::tuple<void*, size_t> requestRead(size_t offset, size_t size);
 
         void notifyStreamCreated(size_t offset, size_t size);
 
@@ -180,7 +183,7 @@ namespace nau::io
             }
         };
 
-        eastl::tuple<FsPath, AssetPackNode*> findAssetPackNodeForPath(const FsPath& path);
+        std::tuple<FsPath, AssetPackNode*> findAssetPackNodeForPath(const FsPath& path);
 
         HANDLE m_fileHandle = nullptr;
         HANDLE m_fileMapHandle = nullptr;
@@ -188,7 +191,7 @@ namespace nau::io
         size_t m_fileTimeCreated = 0;
 
         Vector<LiveFileEntry> m_liveFiles;
-        eastl::unordered_set<MemPages> m_memPages;
+        std::unordered_set<MemPages> m_memPages;
 
         size_t m_memPageSize = g_PageAlignment;
         size_t m_maxCacheSize = 0;
@@ -198,7 +201,7 @@ namespace nau::io
         async::TaskCollection m_taskCollection;
         std::atomic<bool> m_gcIsPending = false;
 
-        const eastl::u8string_view m_assetPackPath;
+        const std::u8string_view m_assetPackPath;
         AssetPackNode m_root;
 
         std::shared_mutex m_mutex;

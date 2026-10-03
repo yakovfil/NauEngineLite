@@ -4,6 +4,11 @@
 
 #include "net_snapshots_impl.h"
 
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/diag/logging.h"
 #include "nau/network/napi/networking_factory.h"
 #include "nau/serialization/json.h"
@@ -23,17 +28,17 @@ namespace nau
             {
             }
 
-            virtual eastl::string_view getPeerId() override
+            virtual std::string_view getPeerId() override
             {
                 return m_peerId;
             }
 
-            virtual eastl::string_view getSceneName() override
+            virtual std::string_view getSceneName() override
             {
                 return m_sceneName;
             }
 
-            virtual IComponentNetSync* getOrCreateComponent(eastl::string_view path, eastl::string_view type) override
+            virtual IComponentNetSync* getOrCreateComponent(std::string_view path, std::string_view type) override
             {
                 return nullptr;
             }
@@ -51,12 +56,12 @@ namespace nau
             {
             }
 
-            virtual eastl::string_view getSceneName() override
+            virtual std::string_view getSceneName() override
             {
                 return m_sceneName;
             }
 
-            virtual eastl::string_view getComponentPath() override
+            virtual std::string_view getComponentPath() override
             {
                 return m_componentPath;
             }
@@ -82,12 +87,12 @@ namespace nau
             }
 
             // Text (JSON) serialization
-            virtual void netWrite(eastl::string& buffer) override
+            virtual void netWrite(std::string& buffer) override
             {
                 buffer = "TestSyncComponentSerialized";
             }
 
-            virtual void netRead(const eastl::string& buffer) override
+            virtual void netRead(const std::string& buffer) override
             {
             }
 
@@ -107,15 +112,15 @@ namespace nau
         TestSyncComponent tsyc1(componentPath, sceneName);
         peer1.writeComponent(sceneName, &tsyc1);
 
-        eastl::string frameBuffer;
+        std::string frameBuffer;
         peer1.serializeFrame(1, frameBuffer);
 
         //
-        eastl::unique_ptr<INetworking> networking;
-        eastl::shared_ptr<INetworkingListener> listener;
-        eastl::shared_ptr<INetworkingConnector> connector;
-        eastl::shared_ptr<nau::INetworkingTransport> transportIncoming;
-        eastl::shared_ptr<nau::INetworkingTransport> transportOutgoing;
+        std::unique_ptr<INetworking> networking;
+        std::shared_ptr<INetworkingListener> listener;
+        std::shared_ptr<INetworkingConnector> connector;
+        std::shared_ptr<nau::INetworkingTransport> transportIncoming;
+        std::shared_ptr<nau::INetworkingTransport> transportOutgoing;
 
         auto service = nau::getServiceProvider().find<NetworkingFactory>();
         networking = service->create("ASIO");
@@ -124,7 +129,7 @@ namespace nau
         listener = networking->createListener();
         listener->listen(
             "tcp://127.0.0.1:9999/",
-            [&transportIncoming](eastl::shared_ptr<nau::INetworkingTransport> incomingTransport) -> void
+            [&transportIncoming](std::shared_ptr<nau::INetworkingTransport> incomingTransport) -> void
         {
             transportIncoming = incomingTransport;
         },
@@ -135,7 +140,7 @@ namespace nau
         connector = networking->createConnector();
         connector->connect(
             "tcp://127.0.0.1:9999/",
-            [&transportOutgoing](eastl::shared_ptr<nau::INetworkingTransport> outgoingTransport) -> void
+            [&transportOutgoing](std::shared_ptr<nau::INetworkingTransport> outgoingTransport) -> void
         {
             transportOutgoing = outgoingTransport;
         },
@@ -148,7 +153,7 @@ namespace nau
         transportOutgoing->write(NetworkingMessage(frameBuffer));
         networking->update();
 
-        eastl::vector<nau::NetworkingMessage> messages;
+        std::vector<nau::NetworkingMessage> messages;
         transportIncoming->read(messages);
         if (messages.size() > 0)
         {
@@ -156,7 +161,7 @@ namespace nau
             auto& peer2 = (*res2.first).second;
 
             const char* ptr = (const char*)messages[0].buffer.data();
-            eastl::string incomingFrameBuffer(ptr, ptr + messages[0].buffer.size());
+            std::string incomingFrameBuffer(ptr, ptr + messages[0].buffer.size());
 
             //
 

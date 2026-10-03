@@ -3,12 +3,15 @@
 
 #include "nau/animation/components/animation_component.h"
 
+#include <algorithm>
+#include <string>
+
+#include "../animation_helper.h"
 #include "nau/animation/animation_manager.h"
 #include "nau/animation/playback/animation_instance.h"
 #include "nau/animation/playback/animation_mixer.h"
-#include "nau/utils/enum/enum_reflection.h"
 #include "nau/scene/scene_object.h"
-#include "../animation_helper.h"
+#include "nau/utils/enum/enum_reflection.h"
 
 namespace nau::animation
 {
@@ -227,7 +230,7 @@ namespace nau::animation
         return m_controller.get();
     }
 
-    const eastl::string& AnimationComponent::getName() const
+    const std::string& AnimationComponent::getName() const
     {
         return m_name;
     }
@@ -261,23 +264,24 @@ namespace nau::animation
     {
         if (auto* animInstance = animInstancePtr.get())
         {
-            AnimTrackCreationInfo* creationInfoIt = eastl::find_if(
+            auto creationInfoIt = std::find_if(
                 m_tracksCreationInfo.begin(),
                 m_tracksCreationInfo.end(),
                 [animInstance](auto& it)
-                {
-                    return it.owningInstance.acquire().get() == animInstance;
-                });
+            {
+                return it.owningInstance.acquire().get() == animInstance;
+            });
 
             if (creationInfoIt == m_tracksCreationInfo.end())
             {
-                creationInfoIt = &m_tracksCreationInfo.emplace_back();
+                m_tracksCreationInfo.emplace_back();
+                creationInfoIt = std::prev(m_tracksCreationInfo.end());
                 creationInfoIt->owningInstance = animInstance;
             }
 
             creationInfoIt->animationName = animInstance->getName();
             auto playModeValue = EnumTraits<nau::animation::PlayMode>::toString(animInstance->getPlayMode());
-            creationInfoIt->playMode = eastl::string { playModeValue.data(), playModeValue.size() };
+            creationInfoIt->playMode = std::string{playModeValue.data(), playModeValue.size()};
             creationInfoIt->initialWeight = animInstance->getWeight();
             creationInfoIt->channelTargetPath = "";
             switch (animInstance->getBlendMethod())

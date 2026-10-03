@@ -1,16 +1,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <util/dag_stdint.h>
-#include <EASTL/string.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/fixed_vector.h>
-#include <memory/dag_framemem.h>
-#include <daECS/core/entityId.h>
 #include <daECS/core/entityComponent.h>
-#include "connid.h"
+#include <daECS/core/entityId.h>
+#include <memory/dag_framemem.h>
+#include <util/dag_stdint.h>
+
+#include <functional>
+#include <string>
+#include <vector>
+
 #include "compver.h"
+#include "connid.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace danet
 {
@@ -29,7 +32,7 @@ void clear_cached_replicated_components();
 struct ObjectReplica;
 class Connection;
 
-typedef eastl::vector_map<ecs::component_index_t, compver_t> CompVersMap;
+typedef nau::SortedVectorMap<ecs::component_index_t, compver_t> CompVersMap;
 struct CompRevision
 {
   ecs::component_index_t compIdx;
@@ -43,7 +46,9 @@ class Object
 public:
   ecs::EntityId getEid() const { return eid; }
 
-  EA_NON_COPYABLE(Object);
+  Object(const Object&) = delete;
+  Object& operator=(const Object&) = delete;
+  ;
 
   bool isReplica() const;
   ConnectionId getControlledBy() const { return controlledBy; }
@@ -65,8 +70,7 @@ private:
 
   void initCompVers();
   void addToDirty();
-  void serializeComps(const Connection *conn, danet::BitStream &bs, const ObjectReplica &repl,
-    eastl::vector<CompRevision> &comps_serialized) const;
+  void serializeComps(const Connection* conn, danet::BitStream& bs, const ObjectReplica& repl, std::vector<CompRevision>& comps_serialized) const;
   bool deserializeComps(const danet::BitStream &bs, Connection *conn);
 
   friend class Connection;
@@ -77,9 +81,8 @@ private:
   friend void replication_validation_es_event_handler(const ecs::Event &, net::Object &);
   friend struct ComponentFiltersHelper;
 
-  typedef eastl::vector_set<ecs::EntityId, eastl::less<ecs::EntityId>, EASTLAllocatorType,
-    eastl::fixed_vector<ecs::EntityId, 32, /*bOverflow*/ true>>
-    dirty_entities_list_t;
+  typedef nau::SortedVectorSet<ecs::EntityId, std::less<ecs::EntityId>, std::allocator<ecs::EntityId>, nau::InlineVector<ecs::EntityId, 32, /*bOverflow*/ true>>
+      dirty_entities_list_t;
   static dirty_entities_list_t dirtyList; // list of objects that need to be updated
   CompVersMap compVers;                   // versions of active (i.e. changed at least once) replicated components
   ObjectReplica *replicasLinkList = NULL; // linked list of replicas for this object (one for each connection)
@@ -90,7 +93,7 @@ private:
   bool isReplicaFlag = false; // it actually is not even a bool (isReplica). if it's replica or not can be determ by connection type
   bool isMeantToBeDestroyed = false; // to be written by server-driven code
   static bool do_not_verify_destruction;
-  static eastl::vector_set<ecs::EntityId> pending_destroys;
+  static nau::SortedVectorSet<ecs::EntityId> pending_destroys;
 
   CompVersMap::iterator insertNewCompVer(ecs::component_index_t cidx, CompVersMap::iterator cit); // iterator in compVers, returns
                                                                                                   // position at compVers

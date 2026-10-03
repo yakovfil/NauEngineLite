@@ -1,8 +1,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/net/connection.h>
 #include <daECS/net/message.h>
-#include <EASTL/unique_ptr.h>
 #include <daNet/daNetPeerInterface.h>
+
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <utility>
+
 #include "utils.h"
 
 #define DANET_SLEEP_TIME_MS 10
@@ -32,33 +37,33 @@ public:
 
   void destroy() override
   {
-    eastl::destroy_at(this);
-    eastl::destroy_at(&getPeerIface());
-    memfree(this, defaultmem);
+      std::destroy_at(this);
+      std::destroy_at(&getPeerIface());
+      memfree(this, defaultmem);
   }
 
   bool initListen(const char *listenurl, int max_connections, uint16_t *o_port)
   {
-    max_connections = eastl::max(max_connections, 2); // for isServer() implementation
-    PARSEURL(listenurl, "", DEFAULT_PORT);
-    host[0] = '\0'; // always bind to INADDR_ANY as listenurl is public ip which might not be equal to available internal one
-    SocketDescriptor sd(port, host);
-    for (int i = 0; i < (o_port ? MAX_PORTS_TO_TRY : 1); ++i)
-    {
-      sd.port = port + i;
-      if (getPeerIface().Startup(max_connections, DANET_SLEEP_TIME_MS, &sd))
+      max_connections = std::max(max_connections, 2);  // for isServer() implementation
+      PARSEURL(listenurl, "", DEFAULT_PORT);
+      host[0] = '\0';  // always bind to INADDR_ANY as listenurl is public ip which might not be equal to available internal one
+      SocketDescriptor sd(port, host);
+      for (int i = 0; i < (o_port ? MAX_PORTS_TO_TRY : 1); ++i)
       {
-        if (o_port)
-          *o_port = sd.port;
-        return true;
-      }
+          sd.port = port + i;
+          if (getPeerIface().Startup(max_connections, DANET_SLEEP_TIME_MS, &sd))
+          {
+              if (o_port)
+                  *o_port = sd.port;
+              return true;
+          }
     }
     return false; // failed to bind port?
   }
 
   bool initListen(const SocketDescriptor &sd, int max_connections)
   {
-    return getPeerIface().Startup(eastl::max(max_connections, 2), DANET_SLEEP_TIME_MS, &sd);
+      return getPeerIface().Startup(std::max(max_connections, 2), DANET_SLEEP_TIME_MS, &sd);
   }
 
   bool initConnect(const char *connecturl, uint16_t ext_protov)
@@ -76,7 +81,10 @@ public:
   }
 
   virtual void *getControlIface() const override { return (void *)&getPeerIface(); }
-  virtual eastl::optional<danet::EchoResponse> receiveEchoResponse() override { return getPeerIface().ReceiveEchoResponse(); }
+  virtual std::optional<danet::EchoResponse> receiveEchoResponse() override
+  {
+      return getPeerIface().ReceiveEchoResponse();
+  }
   virtual Packet *receive(int) override { return getPeerIface().Receive(); }
   virtual void free(Packet *pkt) override { getPeerIface().DeallocatePacket(pkt); }
   virtual void shutdown(int wait_ms) override { getPeerIface().Shutdown(wait_ms); }
@@ -96,8 +104,9 @@ class DaNetConnection final : public Connection
 public:
   DaNetPeerInterface *peerIface;
 
-  DaNetConnection(INetDriver *drv, ConnectionId id_, scope_query_cb_t &&scope_query_) :
-    Connection(id_, eastl::move(scope_query_)), peerIface(static_cast<DaNetPeerInterface *>(drv->getControlIface()))
+  DaNetConnection(INetDriver* drv, ConnectionId id_, scope_query_cb_t&& scope_query_) :
+      Connection(id_, std::move(scope_query_)),
+      peerIface(static_cast<DaNetPeerInterface*>(drv->getControlIface()))
   {
     NAU_ASSERT(peerIface);
   }
@@ -122,11 +131,11 @@ public:
   virtual bool isResponsive() const override { return peerIface->IsPeerResponsive(getId()); }
 };
 
-static eastl::unique_ptr<DaNetDriver, DestroyDeleter<DaNetDriver>> create_net_driver_common()
+static std::unique_ptr<DaNetDriver, DestroyDeleter<DaNetDriver>> create_net_driver_common()
 {
   void *mem = nullptr;
   DaNetPeerInterface *daif = DaNetPeerInterface::create(sizeof(DaNetDriver), &mem);
-  return eastl::unique_ptr<DaNetDriver, DestroyDeleter<DaNetDriver>>(new (mem/*, _NEW_INPLACE*/) DaNetDriver(daif));
+  return std::unique_ptr<DaNetDriver, DestroyDeleter<DaNetDriver>>(new(mem /*, _NEW_INPLACE*/) DaNetDriver(daif));
 }
 
 INetDriver *create_net_driver_listen(const char *listenurl, int max_connections, uint16_t *o_port)
@@ -149,7 +158,7 @@ INetDriver *create_net_driver_connect(const char *connecturl, uint16_t protov)
 
 Connection *create_net_connection(INetDriver *drv, ConnectionId id, scope_query_cb_t &&scope_query)
 {
-  return new DaNetConnection(drv, id, eastl::move(scope_query));
+    return new DaNetConnection(drv, id, std::move(scope_query));
 }
 
 }; // namespace net

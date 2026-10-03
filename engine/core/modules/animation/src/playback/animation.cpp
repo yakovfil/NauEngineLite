@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/playback/animation.h"
+
+#include <algorithm>
+#include <span>
+#include <string>
 
 #include "nau/animation/playback/animation_player_keyframe.h"
 
@@ -13,7 +16,7 @@ namespace nau::animation
         return weight * blendInOutWeight;
     }
 
-    bool AnimationState::addEvent(const eastl::string& id, bool pin)
+    bool AnimationState::addEvent(const std::string& id, bool pin)
     {
         for (auto& event : events)
         {
@@ -34,7 +37,7 @@ namespace nau::animation
         return false;
     }
 
-    bool AnimationState::removeEvent(const eastl::string& id)
+    bool AnimationState::removeEvent(const std::string& id)
     {
         for (auto& event : events)
         {
@@ -61,20 +64,20 @@ namespace nau::animation
         return rtti::createInstance<KeyFrameAnimationPlayer>(instance);
     }
 
-    const eastl::span<const FrameEvent> Animation::getEvents(int frame) const
+    const std::span<const FrameEvent> Animation::getEvents(int frame) const
     {
-        auto it = eastl::lower_bound(m_perFrameData.begin(), m_perFrameData.end(), Frame { frame },
-            [](const auto& a, const auto& b)
-            {
-                return a.frame < b.frame;
-            });
+        auto it = std::lower_bound(m_perFrameData.begin(), m_perFrameData.end(), Frame{frame},
+                                   [](const auto& a, const auto& b)
+        {
+            return a.frame < b.frame;
+        });
 
         if (it != m_perFrameData.end() && it->frame == frame)
         {
-            return eastl::span(it->events);
+            return std::span(it->events);
         }
 
-        return eastl::span<FrameEvent>();
+        return std::span<FrameEvent>();
     }
 
     void Animation::sortFrames()

@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "lua_toolkit/lua_utils.h"
+
+#include <string>
 
 #include "lua_toolkit/lua_interop.h"
 #include "nau/utils/scope_guard.h"
@@ -61,7 +62,7 @@ namespace nau::lua
 
         size_t len;
         const char* const message = lua_tolstring(l, -1, &len);
-        return NauMakeError(eastl::string{message, len});
+        return NauMakeError(std::string{message, len});
     }
 
     int getAbsoluteStackPos(lua_State* l, int index)

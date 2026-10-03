@@ -3,8 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "render/daBfg/detail/virtualResourceHandleBase.h"
-#include "dabfg/frontend/resourceProvider.h"
 
+#include <tuple>
+#include <variant>
+
+#include "dabfg/frontend/resourceProvider.h"
 
 namespace dabfg::detail
 {
@@ -15,7 +18,7 @@ T VirtualResourceHandleBase::getResourceView() const
   auto& storage = resUid.history ? provider->providedHistoryResources : provider->providedResources;
   if (auto it = storage.find(resUid.resId); it != storage.end())
   {
-      return eastl::get<T>(it->second);
+      return std::get<T>(it->second);
   }
   else
   {

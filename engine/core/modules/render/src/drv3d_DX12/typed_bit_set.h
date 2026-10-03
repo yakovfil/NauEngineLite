@@ -3,13 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/bitset.h>
-
+#include <bitset>
 
 template <typename T, size_t BIT_COUNT = static_cast<size_t>(T::COUNT)>
-class TypedBitSet : private eastl::bitset<BIT_COUNT>
+class TypedBitSet : private std::bitset<BIT_COUNT>
 {
-  using BaseType = eastl::bitset<BIT_COUNT>;
+    using BaseType = std::bitset<BIT_COUNT>;
 
 public:
   using BaseType::all;

@@ -41,7 +41,7 @@ def minimal_graph(build):
     assert {"NauKernel", "NauFrameworkMinimal", "PlatformApp", "MinimalAppSample", "NauMinimalLifecycleTests"} <= graph.keys()
     assert not {"NauFramework", "CoreScene", "Graphics", "ui", "VFX", "ShaderCompilerTool"} & graph.keys()
     allowed_dependencies = {
-        "EABase", "EASTL", "tiny-utf8", "fmt", "utfcpp", "ModifiedSonyMath",
+        "tiny-utf8", "fmt", "utfcpp", "ModifiedSonyMath",
         "jsoncpp", "wyhash", "fast_float", "googletest",
     }
     for target in graph.values():
@@ -100,7 +100,7 @@ def diagnostics():
         fixture = scratch / "cmake"
         fixture.mkdir()
         shutil.copy2(profile, fixture / profile.name)
-        for dependency in ("EABase", "EASTL", "tiny-utf8"):
+        for dependency in ("tiny-utf8",):
             path = scratch / "engine/3rdparty_libs" / dependency
             path.mkdir(parents=True)
             (path / "CMakeLists.txt").touch()

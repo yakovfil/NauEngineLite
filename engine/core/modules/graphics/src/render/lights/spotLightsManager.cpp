@@ -4,8 +4,10 @@
 
 #include "nau/render/spotLightsManager.h"
 
-#include <EASTL/algorithm.h>
-#include <EASTL/unique_ptr.h>
+#include <algorithm>
+#include <bitset>
+#include <memory>
+#include <vector>
 
 #include "lights_common.h"
 #include "nau/debugRenderer/debug_render_system.h"
@@ -50,9 +52,9 @@ namespace nau::render
 
     template <bool use_small>
     void SpotLightsManager::prepare(const nau::math::NauFrustum& frustum,
-                                    eastl::vector<uint16_t>& lights_inside_plane,
-                                    eastl::vector<uint16_t>& lights_outside_plane,
-                                    eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                                    std::vector<uint16_t>& lights_inside_plane,
+                                    std::vector<uint16_t>& lights_outside_plane,
+                                    std::bitset<MAX_LIGHTS>* visibleIdBitset,
                                     Occlusion* occlusion,
                                     nau::math::BBox3& inside_box,
                                     nau::math::BBox3& outside_box,
@@ -333,9 +335,9 @@ namespace nau::render
     }
 
     template void SpotLightsManager::prepare<true>(const nau::math::NauFrustum& frustum,
-                                                   eastl::vector<uint16_t>& lights_inside_plane,
-                                                   eastl::vector<uint16_t>& lights_outside_plane,
-                                                   eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                                                   std::vector<uint16_t>& lights_inside_plane,
+                                                   std::vector<uint16_t>& lights_outside_plane,
+                                                   std::bitset<MAX_LIGHTS>* visibleIdBitset,
                                                    Occlusion*,
                                                    nau::math::BBox3& inside_box,
                                                    nau::math::BBox3& outside_box,
@@ -346,9 +348,9 @@ namespace nau::render
                                                    mask_type_t accept_mask) const;
 
     template void SpotLightsManager::prepare<false>(const nau::math::NauFrustum& frustum,
-                                                    eastl::vector<uint16_t>& lights_inside_plane,
-                                                    eastl::vector<uint16_t>& lights_outside_plane,
-                                                    eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                                                    std::vector<uint16_t>& lights_inside_plane,
+                                                    std::vector<uint16_t>& lights_outside_plane,
+                                                    std::bitset<MAX_LIGHTS>* visibleIdBitset,
                                                     Occlusion*,
                                                     nau::math::BBox3& inside_box,
                                                     nau::math::BBox3& outside_box,

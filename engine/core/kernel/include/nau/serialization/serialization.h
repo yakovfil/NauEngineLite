@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/serialization/serialization.h
 
-
 #pragma once
 
 #include <fmt/format.h>
+
+#include <string>
+#include <string_view>
 
 #include "nau/diag/error.h"
 #include "nau/diag/source_info.h"
@@ -30,7 +32,7 @@ namespace nau::serialization
     {
         NAU_ERROR(nau::serialization::SerializationError, nau::DefaultError<>)
     public:
-        SerializationError(const diag::SourceInfo& sourceInfo, eastl::string message) :
+        SerializationError(const diag::SourceInfo& sourceInfo, std::string message) :
             DefaultError<>(sourceInfo, std::move(message))
         {
         }
@@ -43,32 +45,32 @@ namespace nau::serialization
         NAU_ERROR(nau::serialization::RequiredFieldMissedError, SerializationError)
 
     public:
-        RequiredFieldMissedError(diag::SourceInfo sourceInfo, eastl::string typeName, eastl::string fieldName) :
+        RequiredFieldMissedError(diag::SourceInfo sourceInfo, std::string typeName, std::string fieldName) :
             SerializationError(sourceInfo, makeMessage(typeName, fieldName)),
             m_typeName(std::move(typeName)),
             m_fieldName(std::move(fieldName))
         {
         }
 
-        eastl::string_view getTypeName() const
+        std::string_view getTypeName() const
         {
             return m_typeName;
         }
 
-        eastl::string_view getFieldName() const
+        std::string_view getFieldName() const
         {
             return m_fieldName;
         }
 
     private:
-        static eastl::string makeMessage(eastl::string_view type, eastl::string_view field)
+        static std::string makeMessage(std::string_view type, std::string_view field)
         {
             std::string message = ::fmt::format("Required field ({}.{}) missed", type, field);
-            return eastl::string{message.data(), message.size()};
+            return std::string{message.data(), message.size()};
         }
 
-        const eastl::string m_typeName;
-        const eastl::string m_fieldName;
+        const std::string m_typeName;
+        const std::string m_fieldName;
     };
 
     /**
@@ -78,32 +80,32 @@ namespace nau::serialization
         NAU_ERROR(nau::serialization::TypeMismatchError, SerializationError)
 
     public:
-        TypeMismatchError(diag::SourceInfo sourceInfo, eastl::string expectedTypeName, eastl::string actualTypeName) :
+        TypeMismatchError(diag::SourceInfo sourceInfo, std::string expectedTypeName, std::string actualTypeName) :
             SerializationError(sourceInfo, makeMessage(expectedTypeName, actualTypeName)),
             m_expectedTypeName(std::move(expectedTypeName)),
             m_actualTypeName(std::move(actualTypeName))
         {
         }
 
-        eastl::string_view getExpectedTypeName() const
+        std::string_view getExpectedTypeName() const
         {
             return m_expectedTypeName;
         }
 
-        eastl::string_view getActualTypeName() const
+        std::string_view getActualTypeName() const
         {
             return m_actualTypeName;
         }
 
     private:
-        static eastl::string makeMessage(eastl::string_view expectedType, eastl::string_view actualType)
+        static std::string makeMessage(std::string_view expectedType, std::string_view actualType)
         {
             std::string message = ::fmt::format("Expected type(category):({}), but:({})", expectedType, actualType);
-            return eastl::string{message.data(), message.size()};
+            return std::string{message.data(), message.size()};
         }
 
-        const eastl::string m_expectedTypeName;
-        const eastl::string m_actualTypeName;
+        const std::string m_expectedTypeName;
+        const std::string m_actualTypeName;
     };
 
     /**

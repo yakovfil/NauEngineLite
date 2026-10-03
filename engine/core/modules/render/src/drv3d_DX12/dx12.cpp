@@ -2,11 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "device.h"
+#include <iterator>
+#include <memory>
+#include <span>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "drv3d_commonCode/stereoHelper.h"
+#include "device.h"
 #include "drv3d_commonCode/dxgi_utils.h"
 #include "drv3d_commonCode/gpuConfig.h"
+#include "drv3d_commonCode/stereoHelper.h"
 #include "drv3d_commonCode/validate_sbuf_flags.h"
 
 //#include <../hid_mouse/api_wrappers.h>
@@ -21,15 +28,13 @@
 #include "nau/image/dag_texPixel.h"
 //#include <math/integer/dag_IPoint2.h>
 
-#include <EASTL/sort.h>
-
-#include <drv3d_commonCode/drv_utils.h>
 #include <drv3d_commonCode/drv_returnAddrStore.h>
+#include <drv3d_commonCode/drv_utils.h>
 
-#include "frontend_state.h"
+#include <algorithm>
 
 #include "drv3d_commonCode/frameStateTM.inc.h"
-
+#include "frontend_state.h"
 #include "nau/dataBlock/dag_dataBlock.h"
 
 //#include <util/dag_watchdog.h>
@@ -55,9 +60,9 @@ extern "C"
 
 namespace drv3d_dx12
 {
-eastl::add_pointer_t<decltype(::WaitOnAddress)> WaitOnAddress;
-eastl::add_pointer_t<decltype(::WakeByAddressAll)> WakeByAddressAll;
-eastl::add_pointer_t<decltype(::WakeByAddressSingle)> WakeByAddressSingle;
+    std::add_pointer_t<decltype(::WaitOnAddress)> WaitOnAddress;
+    std::add_pointer_t<decltype(::WakeByAddressAll)> WakeByAddressAll;
+    std::add_pointer_t<decltype(::WakeByAddressSingle)> WakeByAddressSingle;
 } // namespace drv3d_dx12
 
 namespace
@@ -86,10 +91,13 @@ D3D_FEATURE_LEVEL make_feature_level(int major, int minor)
   FeatureLevelTableEntry featureLevelTable[] = //
     {{11, 0, D3D_FEATURE_LEVEL_11_0}, {11, 1, D3D_FEATURE_LEVEL_11_1}, {12, 0, D3D_FEATURE_LEVEL_12_0},
       {12, 1, D3D_FEATURE_LEVEL_12_1}};
-  auto ref = eastl::find_if(eastl::begin(featureLevelTable), eastl::end(featureLevelTable),
-    [=](const FeatureLevelTableEntry &flte) { return major == flte.major && minor == flte.minor; });
-  if (ref != eastl::end(featureLevelTable))
-    return ref->level;
+  auto ref = std::find_if(std::begin(featureLevelTable), std::end(featureLevelTable),
+                          [=](const FeatureLevelTableEntry& flte)
+  {
+      return major == flte.major && minor == flte.minor;
+  });
+  if (ref != std::end(featureLevelTable))
+      return ref->level;
   return D3D_FEATURE_LEVEL_12_0;
 }
 } // namespace
@@ -429,11 +437,11 @@ struct ApiState
 #endif
   Device device;
   HRESULT lastErrorCode;
-  eastl::string deviceName;
+  std::string deviceName;
   bool deviceWasLost;
   Driver3dDesc driverDesc = {};
   DriverMutex globalLock;
-  eastl::vector<uint8_t> screenCaptureBuffer;
+  std::vector<uint8_t> screenCaptureBuffer;
   FrontendState state;
   ShaderProgramDatabase shaderProgramDatabase;
 #if _TARGET_PC_WIN
@@ -803,8 +811,7 @@ APISupport check_adapter(Direct3D12Enviroment &d3d12_env, D3D_FEATURE_LEVEL feat
   return APISupport::FULL_SUPPORT;
 }
 
-void check_and_add_adapter(Direct3D12Enviroment &d3d12_env, D3D_FEATURE_LEVEL feature_level, const nau::DataBlock *gpu_driver_cfg,
-  ComPtr<IDXGIAdapter1> &adapter, eastl::vector<Device::AdapterInfo> &adapter_list)
+void check_and_add_adapter(Direct3D12Enviroment& d3d12_env, D3D_FEATURE_LEVEL feature_level, const nau::DataBlock* gpu_driver_cfg, ComPtr<IDXGIAdapter1>& adapter, std::vector<Device::AdapterInfo>& adapter_list)
 {
   Device::AdapterInfo info{};
   adapter->GetDesc1(&info.info);
@@ -848,20 +855,21 @@ void check_and_add_adapter(Direct3D12Enviroment &d3d12_env, D3D_FEATURE_LEVEL fe
     return;
   }
 
-  info.adapter = eastl::move(adapter);
-  adapter_list.push_back(eastl::move(info));
+  info.adapter = std::move(adapter);
+  adapter_list.push_back(std::move(info));
 }
 
 // sort from dedicated to integrated by vram memory size
-void sort_adapters_by_perf(eastl::vector<Device::AdapterInfo> &adapter_list)
+void sort_adapters_by_perf(std::vector<Device::AdapterInfo>& adapter_list)
 {
-  eastl::sort(begin(adapter_list), end(adapter_list), [](const Device::AdapterInfo &l, const Device::AdapterInfo &r) {
-    return l.info.DedicatedVideoMemory > r.info.DedicatedVideoMemory;
-  });
+    std::sort(begin(adapter_list), end(adapter_list), [](const Device::AdapterInfo& l, const Device::AdapterInfo& r)
+    {
+        return l.info.DedicatedVideoMemory > r.info.DedicatedVideoMemory;
+    });
 }
 
 // sort from integrated to dedicated by testing for UMA
-void sort_adapters_by_integrated(eastl::vector<Device::AdapterInfo> &adapter_list, D3D_FEATURE_LEVEL feature_level)
+void sort_adapters_by_integrated(std::vector<Device::AdapterInfo>& adapter_list, D3D_FEATURE_LEVEL feature_level)
 {
   for (Device::AdapterInfo &adapter : adapter_list)
   {
@@ -876,10 +884,11 @@ void sort_adapters_by_integrated(eastl::vector<Device::AdapterInfo> &adapter_lis
     }
   }
 
-  eastl::sort(begin(adapter_list), end(adapter_list), [](const Device::AdapterInfo &l, const Device::AdapterInfo &r) {
-    if (l.integrated != r.integrated)
-      return l.integrated;
-    return l.info.DedicatedVideoMemory > r.info.DedicatedVideoMemory;
+  std::sort(begin(adapter_list), end(adapter_list), [](const Device::AdapterInfo& l, const Device::AdapterInfo& r)
+  {
+      if (l.integrated != r.integrated)
+          return l.integrated;
+      return l.info.DedicatedVideoMemory > r.info.DedicatedVideoMemory;
   });
 }
 } // namespace
@@ -988,9 +997,9 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
   auto init_device = [&](ComPtr<IDXGIAdapter1> adapter1, ComPtr<IDXGIOutput> output) {
     DXGI_ADAPTER_DESC1 info = {};
     adapter1->GetDesc1(&info);
-    sci.output = eastl::move(output);
-    if (drv3d_dx12::api_state.device.init(drv3d_dx12::api_state.dxgi14.Get(), {eastl::move(adapter1), info}, featureLevel, drv3d_dx12::api_state.d3d12Env,
-          eastl::move(sci), drv3d_dx12::api_state.debugState, deviceCfg, dxCfg, cb ? cb->desiredStereoRender() : false))
+    sci.output = std::move(output);
+    if (drv3d_dx12::api_state.device.init(drv3d_dx12::api_state.dxgi14.Get(), {std::move(adapter1), info}, featureLevel, drv3d_dx12::api_state.d3d12Env,
+                                          std::move(sci), drv3d_dx12::api_state.debugState, deviceCfg, dxCfg, cb ? cb->desiredStereoRender() : false))
     {
       char strBuffer[sizeof(DXGI_ADAPTER_DESC1::Description) * 2 + 1];
       const size_t size = wcstombs(strBuffer, info.Description, sizeof(strBuffer));
@@ -1006,7 +1015,7 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
   {
     NAU_LOG_DEBUG("DX12: WARP requested, DXGIFactory4::EnumWarpAdapter...");
     if (SUCCEEDED(drv3d_dx12::api_state.dxgi14->EnumWarpAdapter(COM_ARGS(&adapter1))))
-      init_device(eastl::move(adapter1), nullptr);
+        init_device(std::move(adapter1), nullptr);
   }
 
   if (!drv3d_dx12::api_state.device.isInitialized())
@@ -1021,7 +1030,7 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
 
       NAU_LOG_DEBUG("DX12: DXGIFactory4::EnumAdapterByLuid({})...", luidValue);
       if (SUCCEEDED(drv3d_dx12::api_state.dxgi14->EnumAdapterByLuid(luid, COM_ARGS(&adapter1))))
-        init_device(eastl::move(adapter1), nullptr);
+          init_device(std::move(adapter1), nullptr);
     }
   }
 
@@ -1035,8 +1044,8 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
       for (uint32_t adapterIndex = 0; SUCCEEDED(drv3d_dx12::api_state.dxgi14->EnumAdapters1(adapterIndex, &adapter1)); adapterIndex++)
       {
         ComPtr<IDXGIOutput> output = get_output_monitor_by_name(adapter1.Get(), displayName);
-        if (output.Get() && init_device(eastl::move(adapter1), eastl::move(output)))
-          break;
+        if (output.Get() && init_device(std::move(adapter1), std::move(output)))
+            break;
       }
     }
   }
@@ -1044,7 +1053,7 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
   if (!drv3d_dx12::api_state.device.isInitialized())
   {
     const nau::DataBlock *gpuCfg = dxCfg->getBlockByName("gpuPreferences");
-    eastl::vector<Device::AdapterInfo> adapterList;
+    std::vector<Device::AdapterInfo> adapterList;
     ComPtr<IDXGIFactory6> dxgi6;
     //if (SUCCEEDED(drv3d_dx12::api_state.dxgi14.As(&dxgi6)))
     //{
@@ -1090,8 +1099,8 @@ bool d3d::init_video(void *hinst, main_wnd_f *wnd_proc, const char *wcname, int 
       strBuffer[size] = '\0';
       sci.output = get_default_monitor(adapter.adapter.Get());
       NAU_LOG_DEBUG("DX12: Trying with device {}", strBuffer);
-      if (drv3d_dx12::api_state.device.init(drv3d_dx12::api_state.dxgi14.Get(), eastl::move(adapter), featureLevel, drv3d_dx12::api_state.d3d12Env, eastl::move(sci),
-            drv3d_dx12::api_state.debugState, deviceCfg, dxCfg, cb ? cb->desiredStereoRender() : false))
+      if (drv3d_dx12::api_state.device.init(drv3d_dx12::api_state.dxgi14.Get(), std::move(adapter), featureLevel, drv3d_dx12::api_state.d3d12Env, std::move(sci),
+                                            drv3d_dx12::api_state.debugState, deviceCfg, dxCfg, cb ? cb->desiredStereoRender() : false))
       {
         drv3d_dx12::api_state.deviceName = strBuffer;
         break;
@@ -1354,8 +1363,8 @@ int on_driver_command_compile_pipeline_set(void *par1)
     renderStates = drv3d_dx12::api_state.device.getRenderStateSystem().loadStaticStatesFromBlk(drv3d_dx12::api_state.device.getContext(), drv3d_dx12::api_state.driverDesc,
       sets->renderStateSet, defaultFormat);
   }
-  drv3d_dx12::api_state.device.getContext().compilePipelineSet(sets->featureSet, eastl::move(inputLayouts), eastl::move(renderStates),
-    sets->outputFormatSet, sets->graphicsPipelineSet, sets->meshPipelineSet, sets->computePipelineSet, defaultFormat);
+  drv3d_dx12::api_state.device.getContext().compilePipelineSet(sets->featureSet, std::move(inputLayouts), std::move(renderStates),
+                                                               sets->outputFormatSet, sets->graphicsPipelineSet, sets->meshPipelineSet, sets->computePipelineSet, defaultFormat);
   return 1;
 }
 
@@ -1678,9 +1687,9 @@ int d3d::driver_command(int command, void *par1, void *par2, void *par3)
 #if _TARGET_PC_WIN
     case DRV3D_COMMAND_GET_MONITORS:
     {
-      eastl::vector<nau::string>& monitorList = *reinterpret_cast<eastl::vector<nau::string> *>(par1);
-      drv3d_dx12::api_state.device.enumerateActiveMonitors(monitorList);
-      return 1;
+        std::vector<nau::string>& monitorList = *reinterpret_cast<std::vector<nau::string>*>(par1);
+        drv3d_dx12::api_state.device.enumerateActiveMonitors(monitorList);
+        return 1;
     }
     case DRV3D_COMMAND_GET_MONITOR_INFO:
     {
@@ -1692,7 +1701,7 @@ int d3d::driver_command(int command, void *par1, void *par2, void *par3)
     case DRV3D_COMMAND_GET_RESOLUTIONS_FROM_MONITOR:
     {
       const char *displayName = resolve_monitor_name(*reinterpret_cast<const char **>(par1));
-      eastl::vector<nau::string> &resolutions = *reinterpret_cast<eastl::vector<nau::string> *>(par2);
+      std::vector<nau::string>& resolutions = *reinterpret_cast<std::vector<nau::string>*>(par2);
       clear_and_shrink(resolutions);
 
       ComPtr<IDXGIOutput> output = drv3d_dx12::api_state.device.getOutputMonitorByNameOrDefault(displayName);
@@ -1963,8 +1972,8 @@ bool d3d::reset_device()
       SwapchainCreateInfo sci{};
       set_sci_hdr_config(sci);
       sci.output = get_output_monitor_by_name_or_default(adapter1.Get(), displayName);
-      drv3d_dx12::api_state.device.recover(drv3d_dx12::api_state.dxgi14.Get(), eastl::move(adapter1), featureLevel, drv3d_dx12::api_state.d3d12Env,
-        reinterpret_cast<HWND>(drv3d_dx12::api_state.windowState.getMainWindow()), eastl::move(sci));
+      drv3d_dx12::api_state.device.recover(drv3d_dx12::api_state.dxgi14.Get(), std::move(adapter1), featureLevel, drv3d_dx12::api_state.d3d12Env,
+                                           reinterpret_cast<HWND>(drv3d_dx12::api_state.windowState.getMainWindow()), std::move(sci));
     }
     else
     {
@@ -2283,7 +2292,7 @@ VPROG d3d::create_vertex_shader(const uint32_t *native_code)
   return drv3d_dx12::api_state.shaderProgramDatabase.newVertexShader(drv3d_dx12::api_state.device.getContext(), native_code).exportValue();
 }
 
-VPROG d3d::create_raw_vertex_shader(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, VDECL inputLayout)
+VPROG d3d::create_raw_vertex_shader(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, VDECL inputLayout)
 {
   dxil::ShaderHeader rawVSHeader = {};
   rawVSHeader.shaderType = static_cast<uint16_t>(dxil::ShaderStage::VERTEX);
@@ -2326,7 +2335,7 @@ NAU_RENDER_EXPORT VPROG d3d::create_raw_vs_hs_ds_gs(VertexHullDomainGeometryShad
     return vs.exportValue();
 }
 
-FSHADER d3d::create_raw_pixel_shader(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable)
+FSHADER d3d::create_raw_pixel_shader(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable)
 {
     dxil::ShaderHeader psHeader = {};
     psHeader.shaderType = static_cast<uint16_t>(dxil::ShaderStage::PIXEL);
@@ -2401,7 +2410,7 @@ PROGRAM d3d::create_program_cs(const uint32_t *cs_native, CSPreloaded preloaded)
   return drv3d_dx12::api_state.shaderProgramDatabase.newComputeProgram(drv3d_dx12::api_state.device.getContext(), cs_native, preloaded).exportValue();
 }
 
-NAU_RENDER_EXPORT PROGRAM d3d::create_raw_program_cs(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, CSPreloaded preloaded)
+NAU_RENDER_EXPORT PROGRAM d3d::create_raw_program_cs(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, CSPreloaded preloaded)
 {
     dxil::ShaderHeader CSHeader = {};
     CSHeader.shaderType = static_cast<uint16_t>(dxil::ShaderStage::COMPUTE);
@@ -2509,7 +2518,7 @@ bool d3d::set_const(unsigned stage, unsigned first, const void *data, unsigned c
 {
   NAU_ASSERT(stage < STAGE_MAX);
   drv3d_dx12::api_state.state.setConstRegisters(stage, first,
-    {reinterpret_cast<const ConstRegisterType *>(data), static_cast<decltype(eastl::dynamic_extent)>(count)});
+                                                {reinterpret_cast<const ConstRegisterType*>(data), static_cast<decltype(std::dynamic_extent)>(count)});
 
   return true;
 }
@@ -2810,7 +2819,7 @@ bool d3d::get_render_target_size(int &w, int &h, BaseTexture *rt_tex, int lev)
   return true;
 }
 
-bool d3d::setviews(eastl::span<const Viewport> viewports)
+bool d3d::setviews(std::span<const Viewport> viewports)
 {
   CHECK_MAIN_THREAD();
   NAU_ASSERT(viewports.size() < Viewport::MAX_VIEWPORT_COUNT);
@@ -2845,13 +2854,14 @@ bool d3d::setscissor(int x, int y, int w, int h)
   return setscissors(make_span_const(&s, 1));
 }
 
-bool d3d::setscissors(eastl::span<const ScissorRect> scissorRects)
+bool d3d::setscissors(std::span<const ScissorRect> scissorRects)
 {
   CHECK_MAIN_THREAD();
   NAU_ASSERT(scissorRects.size() < Viewport::MAX_VIEWPORT_COUNT);
   D3D12_RECT rects[Viewport::MAX_VIEWPORT_COUNT];
-  eastl::transform(scissorRects.begin(), scissorRects.end(), rects, [](auto &scissor) {
-    return D3D12_RECT{scissor.x, scissor.y, scissor.x + scissor.w, scissor.y + scissor.h};
+  std::transform(scissorRects.begin(), scissorRects.end(), rects, [](auto& scissor)
+  {
+      return D3D12_RECT{scissor.x, scissor.y, scissor.x + scissor.w, scissor.y + scissor.h};
   });
   drv3d_dx12::api_state.state.setScissorRects(make_span_const(rects, scissorRects.size()));
   return true;
@@ -3444,11 +3454,14 @@ d3d::EventQuery *d3d::create_event_query()
   // Check for completion is to compare its current value with completed progress counter and if
   // the completed progress is equal or larger than the sored value, the fence has passed.
   // Initial progress of 0 will always pass, as first progress pushed to GPU will be 1 and initially is 0.
-  auto event = eastl::make_unique<uint64_t>(0);
+  auto event = std::make_unique<uint64_t>(0);
   return (d3d::EventQuery *)(event.release());
 }
 
-void d3d::release_event_query(d3d::EventQuery *fence) { eastl::unique_ptr<uint64_t> ptr{reinterpret_cast<uint64_t *>(fence)}; }
+void d3d::release_event_query(d3d::EventQuery* fence)
+{
+    std::unique_ptr<uint64_t> ptr{reinterpret_cast<uint64_t*>(fence)};
+}
 
 bool d3d::issue_event_query(d3d::EventQuery *fence)
 {
@@ -3487,7 +3500,10 @@ bool d3d::get_event_query_status(d3d::EventQuery *fence, bool flush)
 }
 
 #if _TARGET_PC
-void d3d::get_video_modes_list(eastl::vector<nau::string> &list) { drv3d_dx12::api_state.device.enumerateDisplayModes(list); }
+void d3d::get_video_modes_list(std::vector<nau::string>& list)
+{
+    drv3d_dx12::api_state.device.enumerateDisplayModes(list);
+}
 #endif
 
 Vbuffer* d3d::create_vb(int size, int flg, const char8_t *name)
@@ -3740,7 +3756,7 @@ APISupport get_dx12_support_status(bool use_any_device = true)
   {
     NAU_LOG_DEBUG("DX12: Scanning for viable devices...");
 
-    eastl::vector<Device::AdapterInfo> adapterList;
+    std::vector<Device::AdapterInfo> adapterList;
     for (UINT index = 0; dxgi14->EnumAdapters1(index, &adapter1) != DXGI_ERROR_NOT_FOUND; ++index)
       check_and_add_adapter(d3d12Env, featureLevel, nullptr, adapter1, adapterList);
 
@@ -4400,8 +4416,8 @@ Sbuffer *d3d::place_buffere_in_resource_heap(ResourceHeap *heap, const ResourceD
   {
     return nullptr;
   }
-  return drv3d_dx12::api_state.device.newBufferObject(eastl::move(buffer), desc.asBufferRes.elementSizeInBytes, desc.asBufferRes.elementCount,
-    desc.asBasicRes.cFlags, desc.asBufferRes.viewFormat, name);
+  return drv3d_dx12::api_state.device.newBufferObject(std::move(buffer), desc.asBufferRes.elementSizeInBytes, desc.asBufferRes.elementCount,
+                                                      desc.asBasicRes.cFlags, desc.asBufferRes.viewFormat, name);
 }
 
 BaseTexture *d3d::place_texture_in_resource_heap(ResourceHeap *heap, const ResourceDescription &desc, size_t offset,

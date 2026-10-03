@@ -7,7 +7,7 @@ ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_executable(${TargetName} ${Sources})
-add_test(NAME ProjectTools COMMAND ${TargetName})
+add_test(NAME BuildTools COMMAND ${TargetName})
 
 set_target_properties(
   ${TargetName}

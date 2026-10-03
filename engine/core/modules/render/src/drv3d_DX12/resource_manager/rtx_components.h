@@ -3,18 +3,17 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include "nau/3d/rayTrace/dag_drvRayTrace.h"
-#include "nau/threading/spin_lock.h"
-#include "nau/threading/lock_guard.h"
-#include "nau/generic/dag_objectPool.h"
+#include <utility>
+#include <vector>
 
-#include "driver.h"
 #include "container_mutex_wrapper.h"
-
-#include "resource_manager/raytrace_acceleration_structure.h"
+#include "driver.h"
+#include "nau/3d/rayTrace/dag_drvRayTrace.h"
+#include "nau/generic/dag_objectPool.h"
+#include "nau/threading/lock_guard.h"
+#include "nau/threading/spin_lock.h"
 #include "resource_manager/buffer_components.h"
-
+#include "resource_manager/raytrace_acceleration_structure.h"
 
 namespace drv3d_dx12
 {
@@ -30,7 +29,7 @@ class RaytraceScratchBufferProvider : public BufferHeap
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<BasicBuffer> deletedRaytraceScratchBuffers;
+      std::vector<BasicBuffer> deletedRaytraceScratchBuffers;
   };
 
   RaytraceScratchBufferProvider() = default;
@@ -80,10 +79,13 @@ public:
     }
     if (*scratchBufferAccess)
     {
-      accessRecodingPendingFrameCompletion<PendingForCompletedFrameData>(
-        [&](auto &data) { data.deletedRaytraceScratchBuffers.push_back(eastl::move(*scratchBufferAccess)); });
+        accessRecodingPendingFrameCompletion<PendingForCompletedFrameData>(
+            [&](auto& data)
+        {
+            data.deletedRaytraceScratchBuffers.push_back(std::move(*scratchBufferAccess));
+        });
 
-      *scratchBufferAccess = {};
+        *scratchBufferAccess = {};
     }
 
     D3D12_RESOURCE_DESC desc;
@@ -145,8 +147,8 @@ protected:
 
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<RaytraceAccelerationStructure *> deletedBottomAccelerationStructure;
-    eastl::vector<RaytraceAccelerationStructure *> deletedTopAccelerationStructure;
+      std::vector<RaytraceAccelerationStructure*> deletedBottomAccelerationStructure;
+      std::vector<RaytraceAccelerationStructure*> deletedTopAccelerationStructure;
   };
 
   void completeFrameExecution(const CompletedFrameExecutionInfo &info, PendingForCompletedFrameData &data)

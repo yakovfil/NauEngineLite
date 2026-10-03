@@ -2,8 +2,11 @@
 #pragma once
 
 #include <daECS/core/entityId.h>
-#include <daECS/core/internal/typesAndLimits.h> //for ecs::component_index_t
-#include <EASTL/internal/function.h>
+#include <daECS/core/internal/typesAndLimits.h>  //for ecs::component_index_t
+
+#include <functional>
+#include <limits>
+
 #include "connid.h"
 
 namespace net
@@ -22,12 +25,12 @@ enum class CompReplicationFilter : uint8_t
 };
 
 using component_replication_filter =
-  eastl::function<CompReplicationFilter(ecs::EntityId, ConnectionId controlled_by, const IConnection *conn)>;
+    std::function<CompReplicationFilter(ecs::EntityId, ConnectionId controlled_by, const IConnection* conn)>;
 
 typedef uint8_t replicate_component_filter_index_t;
 static constexpr replicate_component_filter_index_t replicate_everywhere_filter_id = 0;
 static constexpr replicate_component_filter_index_t invalid_filter_id =
-  eastl::numeric_limits<replicate_component_filter_index_t>::max();
+    std::numeric_limits<replicate_component_filter_index_t>::max();
 
 // register new filter with name, will return error if such filter is already registered for different function
 replicate_component_filter_index_t register_component_filter(const char *name, component_replication_filter filter);

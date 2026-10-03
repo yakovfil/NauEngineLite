@@ -1,13 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "graphics_impl.h"
 
-#include <EASTL/unique_ptr.h>
 #include <imgui.h>
-#include "nau/input.h"
-#include "nau/scene/scene_manager.h"
+
+#include <memory>
+#include <span>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "graphics_assets/shader_asset.h"
 #include "graphics_assets/texture_asset.h"
@@ -23,15 +25,16 @@
 #include "nau/gui/imguiInput.h"
 #include "nau/image/dag_texPixel.h"
 #include "nau/input.h"
+#include "nau/memory/heap_byte_allocator.h"
 #include "nau/module/module_manager.h"
 #include "nau/osApiWrappers/dag_cpuJobs.h"
-#include "nau/shaders/shader_defines.h"
+#include "nau/scene/scene_manager.h"
 #include "nau/service/service_provider.h"
+#include "nau/shaders/shader_defines.h"
 #include "nau/shaders/shader_globals.h"
 #include "nau/ui.h"
 #include "nau/utils/performance_profiling.h"
 #include "render/daBfg/bfg.h"
-
 
 #define USE_SHADER_CACHE 1
 #define VIEWPORT_AUTO_RESIZE 0
@@ -153,7 +156,7 @@ namespace nau
 
         auto& sceneManager = getServiceProvider().get<nau::scene::ISceneManager>();
         m_defaultWorld = sceneManager.getDefaultWorld().getUid();
-        m_worldToGraphicScene[m_defaultWorld] = eastl::make_unique<GraphicsScene>(m_defaultWorld);
+        m_worldToGraphicScene[m_defaultWorld] = std::make_unique<GraphicsScene>(m_defaultWorld);
         co_await m_worldToGraphicScene[m_defaultWorld]->initialize();
 
         Ptr<nau::render::RenderWindowImpl> rendWindow = rtti::createInstance<nau::render::RenderWindowImpl>();
@@ -257,8 +260,7 @@ namespace nau
         m_renderWindows[swapchain] = rendWindow;
         m_hwndToSwapChain[hwnd] = swapchain;
 
-
-        rendWindow->initialize("RenderWindow #" + eastl::to_string(m_renderWindowsIds++), swapchain, hwnd);
+        rendWindow->initialize("RenderWindow #" + std::to_string(m_renderWindowsIds++), swapchain, hwnd);
         rendWindow->setWorkQueue(getPreRenderExecutor());
         rendWindow->setWorld(m_defaultWorld);
 
@@ -374,7 +376,7 @@ namespace nau
             return;
         }
 
-        eastl::allocator texAlloc;
+        nau::HeapByteAllocator texAlloc;
         TexImage32* genImg = TexImage32::create(800, 800, &texAlloc);
 
         auto pixPtr = genImg->getPixels();
@@ -430,7 +432,7 @@ namespace nau
         }
     }
 
-    async::Task<> GraphicsImpl::activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
+    async::Task<> GraphicsImpl::activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
     {
         NAU_ASSERT(worldUid != NullUid);
         ASYNC_SWITCH_EXECUTOR(getPreRenderExecutor());
@@ -439,14 +441,14 @@ namespace nau
         if (worldEntry == m_worldToGraphicScene.end())
         {
             [[maybe_unused]] bool emplaceOk;
-            eastl::tie(worldEntry, emplaceOk) = m_worldToGraphicScene.emplace(worldUid, eastl::make_unique<GraphicsScene>(worldUid));
+            std::tie(worldEntry, emplaceOk) = m_worldToGraphicScene.emplace(worldUid, std::make_unique<GraphicsScene>(worldUid));
             co_await worldEntry->second->initialize();
         }
 
         co_await worldEntry->second->activateComponents(components, async::Task<>::makeResolved());
     }
 
-    async::Task<> GraphicsImpl::deactivateComponentsAsync(Uid worldUid, eastl::span<const scene::DeactivatedComponentData> components)
+    async::Task<> GraphicsImpl::deactivateComponentsAsync(Uid worldUid, std::span<const scene::DeactivatedComponentData> components)
     {
         if (auto worldEntry = m_worldToGraphicScene.find(worldUid); worldEntry != m_worldToGraphicScene.end())
         {
@@ -494,7 +496,7 @@ namespace nau
             m_preRenderJobs.clear();
         }
 
-        eastl::vector<Task<>> tasks;
+        std::vector<Task<>> tasks;
         tasks.reserve(jobs.size());
 
         for (auto& work : jobs)
@@ -513,7 +515,7 @@ namespace nau
         return WeakPtr<render::IRenderWindow>(m_defaultRenderWindow);
     }
 
-    void GraphicsImpl::getRenderWindows(eastl::vector<WeakPtr<nau::render::IRenderWindow>>& windows)
+    void GraphicsImpl::getRenderWindows(std::vector<WeakPtr<nau::render::IRenderWindow>>& windows)
     {
         windows.clear();
         windows.reserve(m_renderWindows.size());

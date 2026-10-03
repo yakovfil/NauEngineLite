@@ -11,9 +11,9 @@
 
 // clang-format off
 
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <string>
+#include <memory>
+#include <vector>
 
 #include <d3d12.h>
 #include <d3dcompiler.h>

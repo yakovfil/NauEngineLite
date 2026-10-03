@@ -3,7 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "drv_returnAddrStore.h"
-#include <EASTL/vector_set.h>
+
+#include "nau/utils/sorted_vector.h"
 
 thread_local const void *saved_return_address = nullptr;
 
@@ -28,14 +29,14 @@ const void *ScopedReturnAddressStore::get_threadlocal_saved_address() { return s
 
 namespace lockreturnaddr
 {
-static eastl::vector_set<const void *> global_ptrs;
-thread_local const void *thread_local_ptr = nullptr;
+    static nau::SortedVectorSet<const void*> global_ptrs;
+    thread_local const void* thread_local_ptr = nullptr;
 
-void before_lock(const void *return_address)
-{
-  if (thread_local_ptr == nullptr)
-    thread_local_ptr = return_address;
-}
+    void before_lock(const void* return_address)
+    {
+        if (thread_local_ptr == nullptr)
+            thread_local_ptr = return_address;
+    }
 void after_successful_lock(const void *return_address)
 {
   if (return_address && thread_local_ptr == return_address)

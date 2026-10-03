@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "app/platform_window_service.h"
 #include "concurrent_execution_container.h"
 #include "nau/app/main_loop/game_system.h"
@@ -22,6 +25,10 @@ namespace nau
     public:
         void doGameStep(float dt);
 
+        void setApplicationStartupTask(async::Task<> task);
+
+        bool isApplicationStartupReady() const;
+
         async::Task<> shutdownMainLoop();
 
         void pollShutdown();
@@ -31,16 +38,17 @@ namespace nau
 
         async::Task<> preInitService() override;
         async::Task<> initService() override;
-        eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override
+        std::vector<const rtti::TypeInfo*> getServiceDependencies() const override
         {
             return {&rtti::getTypeInfo<PlatformWindowService>()};
         }
         async::Task<> shutdownService() override;
 
-        eastl::vector<IGamePreUpdate*> m_preUpdate;
-        eastl::vector<IGamePostUpdate*> m_postUpdate;
-        eastl::vector<IGameSceneUpdate*> m_sceneUpdate;
-        eastl::vector<eastl::unique_ptr<ConcurrentExecutionContainer> > m_concurrentContainers;
+        std::vector<IGamePreUpdate*> m_preUpdate;
+        async::Task<> m_applicationStartupTask;
+        std::vector<IGamePostUpdate*> m_postUpdate;
+        std::vector<IGameSceneUpdate*> m_sceneUpdate;
+        std::vector<std::unique_ptr<ConcurrentExecutionContainer> > m_concurrentContainers;
 
 #if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
         scene::ISceneManagerInternal* m_sceneManager = nullptr;

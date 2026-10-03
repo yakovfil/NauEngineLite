@@ -3,6 +3,8 @@
 
 #include "../../include/graphics_assets/texture_asset.h"
 
+#include <vector>
+
 #include "nau/assets/texture_asset_accessor.h"
 
 #define LOAD_TEXTURE_ASYNC
@@ -94,7 +96,7 @@ namespace nau
             int stride;
             tex->lockimg(&texDataPtr, stride, mipLevel, TEXLOCK_WRITE);
 
-            eastl::vector<DestTextureData> dstData(1);
+            std::vector<DestTextureData> dstData(1);
             DestTextureData& data = dstData[0];
 
             data.outputBuffer = texDataPtr;

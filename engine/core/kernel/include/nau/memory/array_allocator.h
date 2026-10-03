@@ -8,28 +8,29 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
+#include "nau/diag/assertion.h"
+#include "nau/memory/aligned_allocator_debug.h"
+#include "nau/memory/heap_allocator.h"
 #include "nau/memory/mem_allocator.h"
 #include "nau/memory/mem_section_ptr.h"
-#include "nau/memory/heap_allocator.h"
-#include "nau/memory/aligned_allocator_debug.h"
-#include "nau/diag/assertion.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/threading/thread_local_value.h"
-#include "EASTL/memory.h"
-#include "EASTL/stack.h"
 
 namespace nau
 {
     /**
      * @brief ArrayAllocator class is a custom memory allocator for arrays with a minimum size.
      * This allocator is useful for managing memory more efficiently by reusing previously allocated memory blocks and minimizing fragmentation
-     * The ArrayAllocator manages memory blocks using a linked list of headers (Head structures) 
-     * that store information about each allocated block. 
+     * The ArrayAllocator manages memory blocks using a linked list of headers (Head structures)
+     * that store information about each allocated block.
      * Each block also includes a signature to ensure the integrity of the memory allocation.
-     * 
+     *
      * @tparam MinimumArraySize The minimum size of the array to be allocated.
      */
-    template<int MinimumArraySize>
+    template <int MinimumArraySize>
     class ArrayAllocator final : public IAlignedAllocatorDebug
     {
     public:
@@ -38,33 +39,33 @@ namespace nau
          */
         ~ArrayAllocator() = default;
 
-         /**
+        /**
          * @brief Gets the singleton instance of the ArrayAllocator.
-         * 
+         *
          * @return ArrayAllocator& Reference to the singleton instance.
          */
         static ArrayAllocator& instance()
         {
             static auto* instance = new ArrayAllocator<MinimumArraySize>;
             static RAIIFunction releaser(nullptr, [&]()
+            {
+                instance->m_readyToRelease = true;
+                int total = 0;
+                instance->m_allocs.visitAll([&total](auto& val)
                 {
-                    instance->m_readyToRelease = true;
-                    int total = 0;
-                    instance->m_allocs.visitAll([&total](auto& val)
-                        {
-                            total += val;
-                        });
-                    if (!total)
-                        delete instance;
+                    total += val;
                 });
+                if (!total)
+                    delete instance;
+            });
 
             return *instance;
         }
 
         /**
-         * @brief Allocates Allocates a block of memory of the given size and returns a pointer to it. 
+         * @brief Allocates Allocates a block of memory of the given size and returns a pointer to it.
          * If a suitable memory block is available in the free list, it is reused; otherwise, a new block is allocated.
-         * 
+         *
          * @param size Size of the memory to allocate.
          * @return void* Pointer to the allocated memory.
          */
@@ -112,7 +113,7 @@ namespace nau
 
         /**
          * @brief Reallocates the memory block at the given pointer to a new size.
-         * 
+         *
          * @param ptr Pointer to the existing memory block.
          * @param size New size for the memory block.
          * @return void* Pointer to the reallocated memory block.
@@ -139,7 +140,7 @@ namespace nau
 
         /**
          * @brief Frees the memory allocated at the given pointer.
-         * 
+         *
          * @param ptr Pointer to the memory to free.
          */
         void deallocate(void* ptr) override
@@ -154,9 +155,9 @@ namespace nau
             {
                 int total = 0;
                 m_allocs.visitAll([&total](auto& val)
-                    {
-                        total += val;
-                    });
+                {
+                    total += val;
+                });
                 if (!total)
                     delete this;
             }
@@ -164,7 +165,7 @@ namespace nau
 
         /**
          * @brief Gets the size of the allocated memory block.
-         * 
+         *
          * @param ptr Pointer to the memory block.
          * @return size_t Size of the memory block.
          */
@@ -177,9 +178,7 @@ namespace nau
             return pagePtr->size;
         }
 
-
     private:
-
         struct alignas(std::max_align_t) Head
         {
             size_t reserve = 0;
@@ -197,12 +196,14 @@ namespace nau
 
         bool m_readyToRelease = false;
         ThreadLocalValue<int> m_allocs;
-        ThreadLocalValue<eastl::shared_ptr<Head*>> m_freePointersPool;
+        ThreadLocalValue<std::shared_ptr<Head*>> m_freePointersPool;
         ThreadLocalValue<MemSectionPtr> m_memSection;
 
-        ArrayAllocator()
-            : m_allocs([](auto& val) {val = 0; })
-        {};
+        ArrayAllocator() :
+            m_allocs([](auto& val)
+        {
+            val = 0;
+        }) {};
         ArrayAllocator(const ArrayAllocator&) = delete;
         ArrayAllocator& operator=(const ArrayAllocator&) = delete;
         ArrayAllocator(ArrayAllocator&&) = delete;
@@ -211,8 +212,8 @@ namespace nau
         MemSectionPtr& getSection()
         {
             auto& memSection = m_memSection.value();
-            if(!memSection.valid())
-                memSection = HeapAllocator::instance().getSection("ArrayAllocator<" + eastl::to_string(MinimumArraySize) + ">");
+            if (!memSection.valid())
+                memSection = HeapAllocator::instance().getSection("ArrayAllocator<" + std::to_string(MinimumArraySize) + ">");
 
             auto sizeRequest = MinimumArraySize + sizeof(Head) + sizeof(Signature);
             if (memSection->getPageSize() < sizeRequest)
@@ -225,11 +226,10 @@ namespace nau
             auto& val = m_freePointersPool.value();
             if (!val)
             {
-                val = eastl::make_shared<Head*>();
+                val = std::make_shared<Head*>();
                 *val = nullptr;
             }
             return *val;
-
         }
 
         Head* getHead(void* clientPtr)
@@ -256,4 +256,4 @@ namespace nau
         }
     };
 
-}
+}  // namespace nau

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 #pragma once
 
-#include "nau/utils/functor.h"
-#include "nau/io/stream.h"
-#include "nau/rtti/rtti_object.h"
-#include "nau/rtti/ptr.h"
+#include <string>
+#include <vector>
+
 #include "nau/io/asset_pack.h"
+#include "nau/io/stream.h"
+#include "nau/rtti/ptr.h"
+#include "nau/rtti/rtti_object.h"
+#include "nau/utils/functor.h"
 
 /**
  * @brief This file defines structures and functions for building and reading asset packages.
@@ -26,7 +29,7 @@ namespace nau
         using StreamFactory = Functor<io::IStreamReader::Ptr()>;
 
         StreamFactory stream; ///< Functor that creates an instance of IStreamReader for the input file.
-        eastl::string filePathInPack; ///< The path to the file within the asset package.
+        std::string filePathInPack;  ///< The path to the file within the asset package.
     };
 
     /**
@@ -37,9 +40,9 @@ namespace nau
      */
     struct PackBuildOptions
     {
-        eastl::string contentType = "application/json"; ///< The content type of the asset package.
-        eastl::string version = "0.1"; ///< The version of the asset package.
-        eastl::string description; ///< A human-readable description of the asset package.
+        std::string contentType = "application/json";  ///< The content type of the asset package.
+        std::string version = "0.1";                   ///< The version of the asset package.
+        std::string description;                       ///< A human-readable description of the asset package.
     };
 
     /**
@@ -53,7 +56,7 @@ namespace nau
      * @return Result<> Indicates the success or failure of the operation.
      */
     NAU_ASSETPACKTOOL_EXPORT
-    Result<> buildAssetPackage(const eastl::vector<PackInputFileData>& content, PackBuildOptions buildOptions, io::IStreamWriter::Ptr outputStream);
+    Result<> buildAssetPackage(const std::vector<PackInputFileData>& content, PackBuildOptions buildOptions, io::IStreamWriter::Ptr outputStream);
 
     /**
      * @brief Reads an asset package from the given input stream.

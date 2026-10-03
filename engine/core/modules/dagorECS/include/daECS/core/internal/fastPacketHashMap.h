@@ -3,10 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #pragma once
-#include <vecmath/dag_vecMath.h>
 #include <math/dag_mathBase.h>
 #include <util/dag_globDef.h>
-#include <EASTL/unique_ptr.h>
+#include <vecmath/dag_vecMath.h>
+
+#include <limits>
+#include <memory>
+#include <utility>
 
 // simple implementation of ever growing packet hash map
 // it is linear probing with fixed distance - 4.
@@ -23,7 +26,7 @@ struct FastPacketHashMap
   {
     CNT = 4,
     EMPTY_KEY = 0,
-    INVALID_VAL = eastl::numeric_limits<Val>::max()
+    INVALID_VAL = std::numeric_limits<Val>::max()
   };
   typedef Key key_type;
 #pragma pack(push, 1)
@@ -56,7 +59,7 @@ struct FastPacketHashMap
   void clear()
   {
     mask = 0;
-    packets = eastl::make_unique<Packet[]>(1);
+    packets = std::make_unique<Packet[]>(1);
   }
 
 protected:
@@ -67,7 +70,7 @@ protected:
     Val vals[CNT] = {INVALID_VAL};
   };
 #pragma pack(pop)
-  eastl::unique_ptr<Packet[]> packets = eastl::make_unique<Packet[]>(1);
+  std::unique_ptr<Packet[]> packets = std::make_unique<Packet[]>(1);
   uint32_t mask = 0; // bucket size is mask +1
 
   __forceinline const Val *find4_s(key_type key) const
@@ -89,7 +92,7 @@ protected:
     return mm == 0 ? nullptr : &packet.vals[__bsf_unsafe(mm)];
   }
 
-  static __forceinline Val *try_insert(eastl::unique_ptr<Packet[]> &packets2, uint32_t mask2, const key_type key)
+  static __forceinline Val* try_insert(std::unique_ptr<Packet[]>& packets2, uint32_t mask2, const key_type key)
   {
     const uint32_t index = key & mask2;
     auto &packet = packets2[index];
@@ -110,7 +113,7 @@ protected:
   {
     const uint32_t size = (mask + 1);
     const uint32_t newMask = newSize - 1;
-    eastl::unique_ptr<Packet[]> newPackets = eastl::make_unique<Packet[]>(newSize);
+    std::unique_ptr<Packet[]> newPackets = std::make_unique<Packet[]>(newSize);
     for (uint32_t i = 0; i < size; ++i)
       for (uint32_t j = 0; j < CNT; ++j)
       {
@@ -126,6 +129,6 @@ protected:
         *v = packets[i].vals[j];
       }
     mask = newMask;
-    eastl::swap(packets, newPackets);
+    std::swap(packets, newPackets);
   }
 };

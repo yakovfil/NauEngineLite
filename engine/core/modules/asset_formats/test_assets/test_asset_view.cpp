@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string_view>
+#include <vector>
+
 #include "helpers/my_asset_view.h"
 #include "nau/assets/asset_container.h"
 #include "nau/assets/asset_content_provider.h"
@@ -19,7 +22,7 @@ namespace nau::test
             NAU_TYPEID(MyContainerLoader)
             NAU_CLASS_BASE(IAssetContainerLoader)
 
-            eastl::vector<eastl::string_view> getSupportedAssetKind() const override
+            std::vector<std::string_view> getSupportedAssetKind() const override
             {
                 return {"test", "broken_asset"};
             }
@@ -47,7 +50,7 @@ namespace nau::test
             NAU_TYPEID(nau::test::MyContentProvider)
             NAU_CLASS_BASE(IAssetContentProvider)
 
-            static constexpr eastl::string_view BrokenScheme{"broken_asset"};
+            static constexpr std::string_view BrokenScheme{"broken_asset"};
 
             Result<AssetContent> openStreamOrContainer(const AssetPath& assetPath) override
             {
@@ -66,7 +69,7 @@ namespace nau::test
                 return {std::move(stream), std::move(info)};
             }
 
-            eastl::vector<eastl::string_view> getSupportedSchemes() const override
+            std::vector<std::string_view> getSupportedSchemes() const override
             {
                 return {BrokenScheme};
             }

@@ -23,6 +23,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerTouch.h"
 #include "base/CCEventDispatcher.h"
 #include "base/CCEventTouch.h"
@@ -32,7 +33,7 @@
 
 NS_CC_BEGIN
 
-const eastl::string EventListenerTouchOneByOne::LISTENER_ID = "__cc_touch_one_by_one";
+const std::string EventListenerTouchOneByOne::LISTENER_ID = "__cc_touch_one_by_one";
 
 EventListenerTouchOneByOne::EventListenerTouchOneByOne()
 : onTouchBegan(nullptr)
@@ -119,7 +120,7 @@ EventListenerTouchOneByOne* EventListenerTouchOneByOne::clone()
 
 /////////
 
-const eastl::string EventListenerTouchAllAtOnce::LISTENER_ID = "__cc_touch_all_at_once";
+const std::string EventListenerTouchAllAtOnce::LISTENER_ID = "__cc_touch_all_at_once";
 
 EventListenerTouchAllAtOnce::EventListenerTouchAllAtOnce()
 : onTouchesBegan(nullptr)

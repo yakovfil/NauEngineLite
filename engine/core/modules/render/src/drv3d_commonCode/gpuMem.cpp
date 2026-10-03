@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <array>
+#include <span>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3dCmd.h"
 #include "nau/dataBlock/dag_dataBlock.h"
@@ -19,26 +22,26 @@
 #include "gpuVendor.h"
 #include "nau/diag/logging.h"
 
-static eastl::array<const char *, 7> nvidia_dll_names = {
-  "nvapi.dll", "nvapi64.dll", "nvd3dum.dll", "nvd3dumx.dll", "nvwgf2um.dll", "nvwgf2umx.dll", "nv4_disp.dll"};
+static std::array<const char*, 7> nvidia_dll_names = {
+    "nvapi.dll", "nvapi64.dll", "nvd3dum.dll", "nvd3dumx.dll", "nvwgf2um.dll", "nvwgf2umx.dll", "nv4_disp.dll"};
 
 // There are other dlls but they have different version numbering we have no use for.
-static eastl::array<const char *, 4> ati_dll_names = {"aticfx32.dll", "aticfx64.dll", "atidxx32.dll", "atidxx64.dll"};
+static std::array<const char*, 4> ati_dll_names = {"aticfx32.dll", "aticfx64.dll", "atidxx32.dll", "atidxx64.dll"};
 
-static eastl::array<const char *, 8> intel_dll_names = {"igd10iumd32.dll", "igd10iumd64.dll", "igd10umd32.dll", "igd10umd64.dll",
-  "igdumd32.dll", "igdumd64.dll", "igdumdim32.dll", "igdumdim64.dll"};
+static std::array<const char*, 8> intel_dll_names = {"igd10iumd32.dll", "igd10iumd64.dll", "igd10umd32.dll", "igd10umd64.dll",
+                                                     "igdumd32.dll", "igdumd64.dll", "igdumdim32.dll", "igdumdim64.dll"};
 
-static const eastl::array<eastl::span<const char *>, D3D_VENDOR_COUNT> vendor_dll_names{
-  eastl::span<const char *>(), // D3D_VENDOR_NONE
-  eastl::span<const char *>(), // D3D_VENDOR_MESA
-  eastl::span<const char *>(), // D3D_VENDOR_IMGTEC
-  eastl::span<const char *>(ati_dll_names),                  // D3D_VENDOR_ATI
-  eastl::span<const char *>(nvidia_dll_names),               // D3D_VENDOR_NVIDIA
-  eastl::span<const char *>(intel_dll_names),                // D3D_VENDOR_INTEL
-  eastl::span<const char *>(), // D3D_VENDOR_APPLE
-  eastl::span<const char *>(), // D3D_VENDOR_SHIM_DRIVER
-  eastl::span<const char *>(), // D3D_VENDOR_ARM
-  eastl::span<const char *>()  // D3D_VENDOR_QUALCOMM
+static const std::array<std::span<const char*>, D3D_VENDOR_COUNT> vendor_dll_names{
+    std::span<const char*>(),                  // D3D_VENDOR_NONE
+    std::span<const char*>(),                  // D3D_VENDOR_MESA
+    std::span<const char*>(),                  // D3D_VENDOR_IMGTEC
+    std::span<const char*>(ati_dll_names),     // D3D_VENDOR_ATI
+    std::span<const char*>(nvidia_dll_names),  // D3D_VENDOR_NVIDIA
+    std::span<const char*>(intel_dll_names),   // D3D_VENDOR_INTEL
+    std::span<const char*>(),                  // D3D_VENDOR_APPLE
+    std::span<const char*>(),                  // D3D_VENDOR_SHIM_DRIVER
+    std::span<const char*>(),                  // D3D_VENDOR_ARM
+    std::span<const char*>()                   // D3D_VENDOR_QUALCOMM
 };
 
 using namespace gpu;
@@ -113,7 +116,7 @@ static bool get_driver_info_from_dll(const char *dllName, uint32_t drv_ver[4], n
   return (drv_ver[0] != 0 && drv_date.year != 0);
 }
 
-static bool get_driver_info_from_dlls(eastl::span<const char *> dlls, uint32_t drv_ver[4], nau::hal::DagorDateTime &drv_date)
+static bool get_driver_info_from_dlls(std::span<const char*> dlls, uint32_t drv_ver[4], nau::hal::DagorDateTime& drv_date)
 {
   for (int dllNo = 0; dllNo < dlls.size(); ++dllNo)
     if (get_driver_info_from_dll(dlls[dllNo], drv_ver, drv_date))

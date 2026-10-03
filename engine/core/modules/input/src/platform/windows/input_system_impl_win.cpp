@@ -1,16 +1,17 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "input_system_impl_win.h"
+
+#include <memory>
+#include <vector>
 
 #include "input_system_impl.h"
 #include "nau/service/service_provider.h"
 
-
 namespace nau::input
 {
-    void InputSystemImplWin::setGetSources(nau::Functor<void(eastl::vector<eastl::shared_ptr<InputSource>>& sources)> getSources)
+    void InputSystemImplWin::setGetSources(nau::Functor<void(std::vector<std::shared_ptr<InputSource>>& sources)> getSources)
     {
         m_getSources = std::move(getSources);
     }
@@ -32,7 +33,7 @@ namespace nau::input
                 {
                     // Update sources list
                     m_windowMapping.clear();
-                    eastl::vector<eastl::shared_ptr<InputSource>> sources;
+                    std::vector<std::shared_ptr<InputSource>> sources;
                     m_getSources(sources);
                     for (auto& source : sources)
                     {

@@ -3,16 +3,16 @@
 
 #pragma once
 
+#include <nau/scene/scene.h>
 
-#include "usd_translator/usd_translator_api.h"
-#include "usd_translator/usd_prim_adapter.h"
-#include "usd_proxy/usd_proxy.h"
+#include <string>
+#include <vector>
 
 #include "nau/animation/components/skeleton_component.h"
 #include "nau/assets/skeleton_asset_accessor.h"
-
-#include <nau/scene/scene.h>
-
+#include "usd_proxy/usd_proxy.h"
+#include "usd_translator/usd_prim_adapter.h"
+#include "usd_translator/usd_translator_api.h"
 
 namespace UsdTranslator
 {
@@ -21,21 +21,21 @@ namespace UsdTranslator
         NAU_CLASS_(UsdTranslator::UsdAnimationSkelAccessor, ISkeletonAssetAccessor);
 
     public:
-        static eastl::vector<eastl::string> getOzzAnimationPaths(const pxr::UsdPrim& skelPrim, const std::string& assetPath);
-        static eastl::string getOzzSkeletonPath(const std::string& assetPath);
+        static std::vector<std::string> getOzzAnimationPaths(const pxr::UsdPrim& skelPrim, const std::string& assetPath);
+        static std::string getOzzSkeletonPath(const std::string& assetPath);
 
         UsdAnimationSkelAccessor(const pxr::UsdPrim& prim, const std::string& assetPath);
 
         void reset(const std::string& assetPath);
 
         nau::SkeletonDataDescriptor getDescriptor() const override;
-        void copyInverseBindMatrices(eastl::vector<nau::math::mat4>& data) const override;
+        void copyInverseBindMatrices(std::vector<nau::math::mat4>& data) const override;
 
     private:
         pxr::UsdPrim m_skelPrim;
-        eastl::string m_skeletonAssetPath;
+        std::string m_skeletonAssetPath;
         nau::SkeletonDataDescriptor m_skeletonDesc;
-        eastl::vector<nau::math::mat4> m_bindMatrixList;
+        std::vector<nau::math::mat4> m_bindMatrixList;
     };
 
 

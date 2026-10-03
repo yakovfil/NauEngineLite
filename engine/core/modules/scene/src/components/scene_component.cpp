@@ -7,6 +7,16 @@ namespace nau::scene
 {
     NAU_IMPLEMENT_DYNAMIC_OBJECT(SceneComponent)
 
+    SceneComponent::~SceneComponent()
+    {
+        // Transform membership must end while both list and nodes are alive,
+        // including inactive trees destroyed without scene-manager deactivation.
+        if (m_transformParent)
+            m_transformParent->removeTransformChild(*this);
+        while (!m_transformChildren.empty())
+            removeTransformChild(static_cast<SceneComponent&>(m_transformChildren.front()));
+    }
+
     const math::Transform& SceneComponent::getWorldTransform() const
     {
         if (!m_worldTransformCache)

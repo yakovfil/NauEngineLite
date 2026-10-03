@@ -4,14 +4,20 @@
 
 #pragma once
 
-#include <EASTL/unordered_set.h>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "nau/assets/asset_ref.h"
 #include "nau/assets/asset_view.h"
 #include "nau/assets/material.h"
 #include "nau/async/task_base.h"
 #include "nau/rtti/rtti_impl.h"
-
+#include "nau/string/string_hash.h"
 #include "shader_asset.h"
 #include "texture_asset.h"
 
@@ -82,7 +88,7 @@ namespace nau
          * 
          * @param [in] pipelineName The name of the pipeline to bind.
          */
-        virtual void bindPipeline(eastl::string_view pipelineName) = 0;
+        virtual void bindPipeline(std::string_view pipelineName) = 0;
 
         /**
          * @brief Retrieves the program associated with the specified pipeline.
@@ -90,14 +96,14 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @return                  The program associated with the pipeline.
          */
-        virtual PROGRAM getPipelineProgram(eastl::string_view pipelineName) const = 0;
+        virtual PROGRAM getPipelineProgram(std::string_view pipelineName) const = 0;
 
         /**
          * @brief Retrieves a set of all pipeline names.
          * 
          * @return A set containing the names of all pipelines.
          */
-        virtual eastl::unordered_set<eastl::string> getPipelineNames() const;
+        virtual std::unordered_set<std::string> getPipelineNames() const;
 
         /**
          * @brief Sets the cull mode for the specified pipeline.
@@ -105,7 +111,7 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @param [in] cullMode     The cull mode to set.
          */
-        virtual void setCullMode(eastl::string_view pipelineName, CullMode cullMode);
+        virtual void setCullMode(std::string_view pipelineName, CullMode cullMode);
 
         /**
          * @brief Gets the cull mode for the specified pipeline.
@@ -113,7 +119,7 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @return                  The cull mode of the pipeline.
          */
-        virtual CullMode getCullMode(eastl::string_view pipelineName) const;
+        virtual CullMode getCullMode(std::string_view pipelineName) const;
 
         /**
          * @brief Sets the depth mode for the specified pipeline.
@@ -121,15 +127,15 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @param [in] depthMode    The depth mode to set.
          */
-        virtual void setDepthMode(eastl::string_view pipelineName, DepthMode depthMode);
-        
+        virtual void setDepthMode(std::string_view pipelineName, DepthMode depthMode);
+
         /**
          * @brief Gets the depth mode for the specified pipeline.
          * 
          * @param [in] pipelineName The name of the pipeline.
          * @return                  The depth mode of the pipeline.
          */
-        virtual DepthMode getDepthMode(eastl::string_view pipelineName) const;
+        virtual DepthMode getDepthMode(std::string_view pipelineName) const;
 
         /**
          * @brief Sets the blend mode for the specified pipeline.
@@ -137,15 +143,15 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @param [in] blendMode    The blend mode to set.
          */
-        virtual void setBlendMode(eastl::string_view pipelineName, BlendMode blendMode);
-        
+        virtual void setBlendMode(std::string_view pipelineName, BlendMode blendMode);
+
         /**
          * @brief Gets the blend mode for the specified pipeline.
          * 
          * @param [in] pipelineName The name of the pipeline.
          * @return                  The blend mode of the pipeline.
          */
-        virtual BlendMode getBlendMode(eastl::string_view pipelineName) const;
+        virtual BlendMode getBlendMode(std::string_view pipelineName) const;
 
         /**
          * @brief Enables or disables the scissor test for the specified pipeline.
@@ -153,7 +159,7 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @param [in] isEnabled    `true` to enable the scissor test, `false` to disable it.
          */
-        virtual void setScissorsEnabled(eastl::string_view pipelineName, bool isEnabled);
+        virtual void setScissorsEnabled(std::string_view pipelineName, bool isEnabled);
 
         /**
          * @brief Checks if the scissor test is enabled for the specified pipeline.
@@ -161,14 +167,17 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @return                  `true` if the scissor test is enabled, `false` otherwise.
          */
-        virtual bool isScissorsEnabled(eastl::string_view pipelineName) const;
+        virtual bool isScissorsEnabled(std::string_view pipelineName) const;
 
         /**
          * @brief Retrieves the name.
          * 
          * @return The name as a string.
          */
-        eastl::string getName() const { return m_name; }
+        std::string getName() const
+        {
+            return m_name;
+        }
 
         size_t getNameHash() const { return m_nameHash; }
 
@@ -194,7 +203,7 @@ namespace nau
          * @param [in] value        The new value to set for the property.
          */
         template <typename T>
-        void setProperty(eastl::string_view pipelineName, eastl::string_view propertyName, const T& value);
+        void setProperty(std::string_view pipelineName, std::string_view propertyName, const T& value);
 
         /**
          * @brief Retrieves a property value for a specified pipeline.
@@ -204,7 +213,7 @@ namespace nau
          * @return                  The value of the property, cast to the specified type `T`.
          */
         template <typename T>
-        T getProperty(eastl::string_view pipelineName, eastl::string_view propertyName);
+        T getProperty(std::string_view pipelineName, std::string_view propertyName);
 
         /**
          * @brief Sets a constant buffer for a specified pipeline.
@@ -213,7 +222,7 @@ namespace nau
          * @param [in] bufferName   The name of the constant buffer.
          * @param [in] cbuffer      A pointer to the constant buffer to set.
          */
-        void setCBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* cbuffer);
+        void setCBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* cbuffer);
 
         /**
          * @brief Retrieves a constant buffer for a specified pipeline.
@@ -222,7 +231,7 @@ namespace nau
          * @param [in] bufferName   The name of the constant buffer to retrieve.
          * @return                  A pointer to the constant buffer.
          */
-        Sbuffer* getCBuffer(eastl::string_view pipelineName, eastl::string_view bufferName);
+        Sbuffer* getCBuffer(std::string_view pipelineName, std::string_view bufferName);
 
         /**
          * @brief Sets a texture property for a specified pipeline.
@@ -231,7 +240,7 @@ namespace nau
          * @param [in] propertyName The name of the texture property to set.
          * @param [in] texture      A pointer to the texture to assign.
          */
-        void setTexture(eastl::string_view pipelineName, eastl::string_view propertyName, BaseTexture* texture);
+        void setTexture(std::string_view pipelineName, std::string_view propertyName, BaseTexture* texture);
 
         /**
          * @brief Sets a solid color texture for a pipeline property.
@@ -240,7 +249,7 @@ namespace nau
          * @param [in] propertyName The name of the texture property.
          * @param [in] color        The color to set for the texture (in RGBA format).
          */
-        void setSolidColorTexture(eastl::string_view pipelineName, eastl::string_view propertyName, math::E3DCOLOR color);
+        void setSolidColorTexture(std::string_view pipelineName, std::string_view propertyName, math::E3DCOLOR color);
 
         /**
          * @brief Sets a texture for a pipeline property from an asset.
@@ -249,7 +258,7 @@ namespace nau
          * @param [in] propertyName The name of the texture property.
          * @param [in] textureAsset The asset reference for the texture.
          */
-        async::Task<> setTextureFromAsset(eastl::string_view pipelineName, eastl::string_view propertyName, eastl::string_view textureAsset);
+        async::Task<> setTextureFromAsset(std::string_view pipelineName, std::string_view propertyName, std::string_view textureAsset);
 
         /**
          * @brief Creates a read-write buffer for a specified pipeline.
@@ -258,7 +267,7 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to create.
          * @param [in] desc         The buffer description.
          */
-        void createRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const BufferDesc& desc);
+        void createRwBuffer(std::string_view pipelineName, std::string_view bufferName, const BufferDesc& desc);
 
         /**
          * @brief Writes data to a read-write buffer in a specified pipeline.
@@ -268,8 +277,8 @@ namespace nau
          * @param [in] data         The data to write to the buffer.
          * @param [in] size         The size of the data to write.
          */
-        void writeRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size);
-        
+        void writeRwBuffer(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size);
+
         /**
          * @brief Reads data from a read-write buffer in a specified pipeline.
          *
@@ -278,8 +287,8 @@ namespace nau
          * @param [out] data        The memory where the data will be copied.
          * @param [in] size         The size of the data to read.
          */
-        void readRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, void* data, size_t size);
-        
+        void readRwBuffer(std::string_view pipelineName, std::string_view bufferName, void* data, size_t size);
+
         /**
          * @brief Sets a read-write buffer for a specified pipeline.
          *
@@ -287,8 +296,8 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to set.
          * @param [in] rwBuffer     The buffer to assign to the pipeline.
          */
-        void setRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* rwBuffer);
-        
+        void setRwBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* rwBuffer);
+
         /**
          * @brief Retrieves a read-write buffer from a specified pipeline.
          *
@@ -296,8 +305,8 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to retrieve.
          * @return The read-write buffer if found.
          */
-        Sbuffer* getRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName);
-        
+        Sbuffer* getRwBuffer(std::string_view pipelineName, std::string_view bufferName);
+
         /**
          * @brief Creates a read-only buffer for a specified pipeline.
          *
@@ -305,8 +314,8 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to create.
          * @param [in] desc         The buffer description.
          */
-        void createRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const BufferDesc& desc);
-        
+        void createRoBuffer(std::string_view pipelineName, std::string_view bufferName, const BufferDesc& desc);
+
         /**
          * @brief Writes data to a read-only buffer in a specified pipeline.
          *
@@ -315,7 +324,7 @@ namespace nau
          * @param [in] data         The data to write to the buffer.
          * @param [in] size         The size of the data to write.
          */
-        void writeRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size);
+        void writeRoBuffer(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size);
 
         /**
          * @brief Sets a read-only buffer for a specified pipeline.
@@ -324,7 +333,7 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to set.
          * @param [in] rwBuffer     The buffer to assign to the pipeline.
          */
-        void setRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* roBuffer);
+        void setRoBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* roBuffer);
 
         /**
          * @brief Retrieves a read-only buffer from a specified pipeline.
@@ -333,8 +342,8 @@ namespace nau
          * @param [in] bufferName   The name of the buffer to retrieve.
          * @return The read-only buffer if found.
          */
-        Sbuffer* getRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName);
-        
+        Sbuffer* getRoBuffer(std::string_view pipelineName, std::string_view bufferName);
+
         /**
          * @brief Creates a read-write texture for a specified pipeline.
          *
@@ -342,7 +351,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to create.
          * @param [in] desc         The texture description.
          */
-        void createRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const TextureDesc& desc);
+        void createRwTexture(std::string_view pipelineName, std::string_view bufferName, const TextureDesc& desc);
 
         /**
          * @brief Writes data to a read-write texture in a specified pipeline.
@@ -352,7 +361,7 @@ namespace nau
          * @param [in] data         The data to write to the texture.
          * @param [in] size         The size of the data to write.
          */
-        void writeRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size);
+        void writeRwTexture(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size);
 
         /**
          * @brief Reads data from a read-write texture in a specified pipeline.
@@ -362,7 +371,7 @@ namespace nau
          * @param [out] data        The memory where the data will be copied.
          * @param [in] size         The size of the data to read.
          */
-        void readRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, void* data, size_t size);
+        void readRwTexture(std::string_view pipelineName, std::string_view bufferName, void* data, size_t size);
 
         /**
          * @brief Sets a read-write texture for a specified pipeline.
@@ -371,7 +380,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to set.
          * @param [in] rwTexture    The texture to assign to the pipeline.
          */
-        void setRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, BaseTexture* rwTexture);
+        void setRwTexture(std::string_view pipelineName, std::string_view bufferName, BaseTexture* rwTexture);
 
         /**
          * @brief Retrieves a read-write texture from a specified pipeline.
@@ -380,7 +389,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to retrieve.
          * @return The read-write texture if found.
          */
-        BaseTexture* getRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName);
+        BaseTexture* getRwTexture(std::string_view pipelineName, std::string_view bufferName);
 
         /**
          * @brief Creates a read-only texture for a specified pipeline.
@@ -389,7 +398,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to create.
          * @param [in] desc         The texture description.
          */
-        void createRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const TextureDesc& desc);
+        void createRoTexture(std::string_view pipelineName, std::string_view bufferName, const TextureDesc& desc);
 
         /**
          * @brief Writes data to a read-only texture in a specified pipeline.
@@ -401,7 +410,7 @@ namespace nau
          * @param [in] data         The data to write to the texture.
          * @param [in] size         The size of the data to write.
          */
-        void writeRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size);
+        void writeRoTexture(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size);
 
         /**
          * @brief Sets a read-only texture for a specified pipeline.
@@ -410,7 +419,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to set.
          * @param [in] roTexture    The texture to assign to the pipeline.
          */
-        void setRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, BaseTexture* roTexture);
+        void setRoTexture(std::string_view pipelineName, std::string_view bufferName, BaseTexture* roTexture);
 
         /**
          * @brief Retrieves a read-only texture from a specified pipeline.
@@ -419,7 +428,7 @@ namespace nau
          * @param [in] bufferName   The name of the texture to retrieve.
          * @return The read-only texture if found.
          */
-        BaseTexture* getRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName);
+        BaseTexture* getRoTexture(std::string_view pipelineName, std::string_view bufferName);
 
         /**
          * @brief Dispatches a compute shader workload to a compute pipeline.
@@ -438,7 +447,7 @@ namespace nau
          */
         struct BufferCache
         {
-            eastl::unordered_set<ShaderStage> stages;
+            std::unordered_set<ShaderStage> stages;
             const ShaderInputBindDescription* reflection;
             Sbuffer* buffer;
             uint32_t slot;
@@ -451,7 +460,7 @@ namespace nau
          */
         struct TextureCache
         {
-            eastl::unordered_set<ShaderStage> stages;
+            std::unordered_set<ShaderStage> stages;
             ReloadableAssetView::Ptr textureView;         ///< Caches the texture asset persistently to prevent repeated loading.
             BaseTexture* texture = nullptr;
             uint32_t slot;
@@ -477,7 +486,7 @@ namespace nau
          */
         struct SamplerCache
         {
-            eastl::unordered_set<ShaderStage> stages;
+            std::unordered_set<ShaderStage> stages;
             d3d::SamplerHandle handle;
             uint32_t slot;
         };
@@ -524,32 +533,32 @@ namespace nau
          */
         struct Pipeline
         {
-            eastl::vector<ShaderAssetView::Ptr> shaders;
-            
-            eastl::unordered_map<eastl::string, ConstantBufferVariable> properties;
-            eastl::unordered_map<eastl::string, SampledTextureProperty> texProperties;
+            std::vector<ShaderAssetView::Ptr> shaders;
 
-            eastl::unordered_map<eastl::string, BufferCache> constantBuffers;
-            eastl::unordered_map<eastl::string, BufferCache> systemCBuffers;
-            
-            eastl::unordered_map<eastl::string, BufferCache> rwBuffers;
-            eastl::unordered_map<eastl::string, BufferCache> roBuffers;
-            
-            eastl::unordered_map<eastl::string, TextureCache> rwTextures;
-            eastl::unordered_map<eastl::string, TextureCache> roTextures;
-            
-            eastl::unordered_map<eastl::string, TextureCache> samplerTextures;
-            eastl::unordered_map<eastl::string, SamplerCache> samplers;
-            
+            std::unordered_map<std::string, ConstantBufferVariable, nau::StringHash, std::equal_to<>> properties;
+            std::unordered_map<std::string, SampledTextureProperty, nau::StringHash, std::equal_to<>> texProperties;
+
+            std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> constantBuffers;
+            std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> systemCBuffers;
+
+            std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> rwBuffers;
+            std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> roBuffers;
+
+            std::unordered_map<std::string, TextureCache, nau::StringHash, std::equal_to<>> rwTextures;
+            std::unordered_map<std::string, TextureCache, nau::StringHash, std::equal_to<>> roTextures;
+
+            std::unordered_map<std::string, TextureCache, nau::StringHash, std::equal_to<>> samplerTextures;
+            std::unordered_map<std::string, SamplerCache, nau::StringHash, std::equal_to<>> samplers;
+
             PROGRAM programID;
 
-            eastl::optional<shaders::RenderStateId> renderStateId;
+            std::optional<shaders::RenderStateId> renderStateId;
 
-            eastl::optional<CullMode> cullMode;
-            eastl::optional<DepthMode> depthMode;
-            eastl::optional<BlendMode> blendMode;
-            eastl::optional<bool> isScissorsEnabled;
-            eastl::optional<ComparisonFunc> stencilCmpFunc;
+            std::optional<CullMode> cullMode;
+            std::optional<DepthMode> depthMode;
+            std::optional<BlendMode> blendMode;
+            std::optional<bool> isScissorsEnabled;
+            std::optional<ComparisonFunc> stencilCmpFunc;
 
             bool isDirty;
             bool isRenderStateDirty;
@@ -563,8 +572,8 @@ namespace nau
          * @param [in] shaders          A span of shader asset views to bind to the pipeline.
          * @return                      A task that provides the constructed pipeline and its operation status once complete.
          */
-        static async::Task<Pipeline> makeMasterPipeline(eastl::string_view pipelineName, const MaterialPipeline& materialPipeline, eastl::span<ShaderAssetView::Ptr> shaders);
-        
+        static async::Task<Pipeline> makeMasterPipeline(std::string_view pipelineName, const MaterialPipeline& materialPipeline, std::span<ShaderAssetView::Ptr> shaders);
+
         /**
          * @brief Constructs an instance of a render pipeline based on a master pipeline and material properties.
          *
@@ -573,8 +582,8 @@ namespace nau
          * @param [in] masterPipeline   The master pipeline containing the base properties, textures, buffers, and other resources.
          * @return                      A task that provides the constructed pipeline instance once complete.
          */
-        static async::Task<Pipeline> makeInstancePipeline(eastl::string_view pipelineName, const MaterialPipeline& materialPipeline, Pipeline& masterPipeline);
-        
+        static async::Task<Pipeline> makeInstancePipeline(std::string_view pipelineName, const MaterialPipeline& materialPipeline, Pipeline& masterPipeline);
+
         /**
          * @brief Sets the culling mode for the given render state.
          *
@@ -612,14 +621,14 @@ namespace nau
          *
          * @param pipelineName [in] The name of the pipeline for which constant buffers are updated.
          */
-        void updateBuffers(eastl::string_view pipelineName);
+        void updateBuffers(std::string_view pipelineName);
 
         /**
          * @brief Updates the render state for the specified pipeline based on the pipeline's settings.
          *
          * @param pipelineName [in] The name of the pipeline for which the render state is updated.
          */
-        void updateRenderState(eastl::string_view pipelineName);
+        void updateRenderState(std::string_view pipelineName);
 
         /**
          * @brief Checks if any of the pipelines have a compute shader.
@@ -629,10 +638,10 @@ namespace nau
         bool hasComputeShader() const;
 
         // Map storing pipeline objects by their names.
-        eastl::unordered_map<eastl::string, Pipeline> m_pipelines;
+        std::unordered_map<std::string, Pipeline, nau::StringHash, std::equal_to<>> m_pipelines;
 
         // The name associated with this material asset view.
-        eastl::string m_name;
+        std::string m_name;
 
         // Hash of the material name
         size_t m_nameHash;
@@ -674,7 +683,7 @@ namespace nau
          *
          * @param [in] pipelineName The name of the pipeline to bind.
          */
-        void bindPipeline(eastl::string_view pipelineName) override;
+        void bindPipeline(std::string_view pipelineName) override;
 
         /**
          * @brief Retrieves the program associated with the specified pipeline.
@@ -682,14 +691,14 @@ namespace nau
          * @param [in] pipelineName The name of the pipeline.
          * @return                  The program associated with the pipeline.
          */
-        PROGRAM getPipelineProgram(eastl::string_view pipelineName) const override;
+        PROGRAM getPipelineProgram(std::string_view pipelineName) const override;
 
     private:
         // TODO(MaxWolf): remove this in NAU-2398.
-        void setGlobals(eastl::string_view pipelineName);
+        void setGlobals(std::string_view pipelineName);
 
         // Stores the name of the default program associated with the first pipeline.
-        eastl::string m_defaultProgram;
+        std::string m_defaultProgram;
     };
 
 
@@ -727,7 +736,7 @@ namespace nau
          *
          * @param [in] pipelineName The name of the pipeline to bind.
          */
-        void bindPipeline(eastl::string_view pipelineName) override;
+        void bindPipeline(std::string_view pipelineName) override;
 
         /**
          * @brief Retrieves the program associated with the specified pipeline from the master material.
@@ -737,7 +746,7 @@ namespace nau
          *
          * @note The instance does not own the program; it references the program from the master material.
          */
-        PROGRAM getPipelineProgram(eastl::string_view pipelineName) const override;
+        PROGRAM getPipelineProgram(std::string_view pipelineName) const override;
 
     private:
         void syncBuffers(const Pipeline& masterPipeline, Pipeline& instancePipeline);
@@ -746,9 +755,8 @@ namespace nau
         MasterMaterialAssetView::Ptr m_masterMaterial;
     };
 
-
     template <typename T>
-    void MaterialAssetView::setProperty(eastl::string_view pipelineName, eastl::string_view propertyName, const T& value)
+    void MaterialAssetView::setProperty(std::string_view pipelineName, std::string_view propertyName, const T& value)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -770,7 +778,7 @@ namespace nau
     }
 
     template <typename T>
-    T MaterialAssetView::getProperty(eastl::string_view pipelineName, eastl::string_view propertyName)
+    T MaterialAssetView::getProperty(std::string_view pipelineName, std::string_view propertyName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];

@@ -10,24 +10,21 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/algorithm.h>
-#include <EASTL/list.h>
-#include <EASTL/map.h>
-#include <EASTL/span.h>
-#include <EASTL/vector.h>
-
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <numeric>
 #include <optional>
 #include <random>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>

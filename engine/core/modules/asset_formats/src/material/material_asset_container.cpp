@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "material_asset_container.h"
+
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/material.h"
 #include "nau/serialization/json_utils.h"
@@ -37,9 +40,9 @@ namespace nau
             Result<> fillMaterial(Material& material);
 
         private:
-            nau::Ptr<> getAsset(eastl::string_view path) override;
+            nau::Ptr<> getAsset(std::string_view path) override;
 
-            eastl::vector<eastl::string> getContent() const override;
+            std::vector<std::string> getContent() const override;
 
         private:
             io::IStreamReader::Ptr m_stream;
@@ -60,7 +63,7 @@ namespace nau
 
         Result<> MaterialAssetContainer::fillMaterial(Material& material)
         {
-            eastl::u8string json;
+            std::u8string json;
             json.resize(m_size);
 
             lock_(m_mutex);
@@ -82,12 +85,12 @@ namespace nau
             return ResultSuccess;
         }
 
-        nau::Ptr<> MaterialAssetContainer::getAsset(eastl::string_view path)
+        nau::Ptr<> MaterialAssetContainer::getAsset(std::string_view path)
         {
             return rtti::createInstance<MaterialAssetAccessor>(*this);
         }
 
-        eastl::vector<eastl::string> MaterialAssetContainer::getContent() const
+        std::vector<std::string> MaterialAssetContainer::getContent() const
         {
             // TODO: return material names.
             return {};
@@ -111,7 +114,7 @@ namespace nau
         }
     } // anonymous namespace
 
-    eastl::vector<eastl::string_view> MaterialAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> MaterialAssetContainerLoader::getSupportedAssetKind() const
     {
         return {"Material/*", "nmat_json", "nmat_inst_json"};
     }

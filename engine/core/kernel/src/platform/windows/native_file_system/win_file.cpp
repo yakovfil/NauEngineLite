@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./win_file.h"
+
+#include <string>
 
 #include "nau/platform/windows/diag/win_error.h"
 
@@ -435,7 +436,7 @@ namespace nau::io
 
         // NAU_ASSERT(!(accessMode && AccessMode::Async), "Async IO not supported yet");
 
-        const eastl::wstring wcsPath = strings::utf8ToWString(path);
+        const std::wstring wcsPath = strings::utf8ToWString(path);
 
         if (accessMode == AccessMode::Read)
         {

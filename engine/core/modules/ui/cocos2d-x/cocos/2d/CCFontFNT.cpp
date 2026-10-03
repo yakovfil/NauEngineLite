@@ -34,7 +34,7 @@
 #include "base/ccUTF8.h"
 #include "renderer/CCTextureCache.h"
 
-#include <EASTL/string.h>
+#include <string>
 
 #include <cmath>
 
@@ -130,10 +130,9 @@ BMFontConfiguration::~BMFontConfiguration()
     CC_SAFE_DELETE(_characterSet);
 }
 
-eastl::string BMFontConfiguration::description() const
+std::string BMFontConfiguration::description() const
 {
-    return eastl::string(eastl::string::CtorSprintf{},
-        "<BMFontConfiguration = " CC_FORMAT_PRINTF_SIZE_T " | Glphys:%d Kernings:%d | Image = %s>",
+    return cocos2d::StringUtils::format("<BMFontConfiguration = " CC_FORMAT_PRINTF_SIZE_T " | Glphys:%d Kernings:%d | Image = %s>",
         (size_t)this,
         static_cast<int>(_fontDefDictionary.size()),
         static_cast<int>(_kerningDictionary.size()),
@@ -608,7 +607,7 @@ void FontFNT::purgeCachedData()
     }
 }
 
-int * FontFNT::getHorizontalKerningForTextUTF32(const eastl::u32string& text, int &outNumLetters) const
+int * FontFNT::getHorizontalKerningForTextUTF32(const std::u32string& text, int &outNumLetters) const
 {
     outNumLetters = static_cast<int>(text.length());
     

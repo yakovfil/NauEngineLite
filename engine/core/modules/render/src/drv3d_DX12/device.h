@@ -18,34 +18,38 @@
 
 ////////////////////////////////////
 
+    #include <algorithm>
+    #include <bitset>
+    #include <iterator>
+    #include <memory>
+    #include <utility>
+    #include <vector>
 
-#include "nau/generic/dag_objectPool.h"
+    #include "bindless.h"
+    #include "descriptor_heap.h"
+    #include "device_context.h"
+    #include "device_queue.h"
+    #include "driver.h"
+    #include "nau/generic/dag_objectPool.h"
+    #include "pipeline.h"
+    #include "pipeline/blk_cache.h"
+    #include "pipeline_cache.h"
+    #include "platform.h"
+    #include "query_manager.h"
+    #include "shader.h"
+    #include "swapchain.h"
+    #include "tagged_handles.h"
 
-#include "driver.h"
-#include "platform.h"
-#include "device_queue.h"
-#include "shader.h"
-#include "pipeline_cache.h"
-#include "descriptor_heap.h"
-#include "swapchain.h"
-#include "pipeline.h"
-#include "bindless.h"
-#include "device_context.h"
-#include "query_manager.h"
-#include "tagged_handles.h"
-#include "pipeline/blk_cache.h"
+    // #include <debug/dag_debug.h>
+    #include <atomic>
+    #include <mutex>
+    #include "nau/3d/dag_drv3d.h"
+    #include "nau/diag/logging.h"
 
-//#include <debug/dag_debug.h>
-#include <atomic>
-#include <mutex>
-#include "nau/3d/dag_drv3d.h"
-#include "nau/diag/logging.h"
+    #include "nau/supp/dag_comPtr.h"
+    #include "nau/osApiWrappers/dag_miscApi.h"
 
-
-#include "nau/supp/dag_comPtr.h"
-#include "nau/osApiWrappers/dag_miscApi.h"
-
-#include "nau/util/common.h"
+    #include "nau/util/common.h"
 
 template <>
 struct fmt::formatter<D3D12_RESOURCE_STATES> : fmt::formatter<const char*>
@@ -143,9 +147,9 @@ inline uint64_t calculate_texture_staging_buffer_size(const Image &texture, Subr
 #if D3D_HAS_RAY_TRACING
 
 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS toAccelerationStructureBuildFlags(RaytraceBuildFlags flags);
-eastl::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
-raytraceGeometryDescriptionToGeometryDesc(const RaytraceGeometryDescription &desc);
-#endif
+std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
+raytraceGeometryDescriptionToGeometryDesc(const RaytraceGeometryDescription& desc);
+    #endif
 
 enum class BufferViewType
 {
@@ -318,9 +322,12 @@ class DeviceErrorObserver
 {
   struct ObserverThread : public DaThread
   {
-    ObserverThread(D *target, ComPtr<ID3D12Fence> detector) :
-      DaThread{"DX12 Error Watch"}, detector{eastl::move(detector)}, target{target}
-    {}
+      ObserverThread(D* target, ComPtr<ID3D12Fence> detector) :
+          DaThread{"DX12 Error Watch"},
+          detector{std::move(detector)},
+          target{target}
+      {
+      }
     void execute() override
     {
       // Change priority as the priority param of DaThread gets clamped, but this thread needs to be
@@ -349,7 +356,7 @@ class DeviceErrorObserver
     D *target;
   };
 
-  eastl::unique_ptr<ObserverThread> observer;
+  std::unique_ptr<ObserverThread> observer;
   ComPtr<ID3D12Fence> detector;
 
 protected:
@@ -361,7 +368,7 @@ protected:
       return;
     }
 
-    observer = eastl::make_unique<ObserverThread>(static_cast<D *>(this), detector);
+    observer = std::make_unique<ObserverThread>(static_cast<D*>(this), detector);
     if (!observer->start())
     {
       NAU_LOG_ERROR("DX12: Unable to setup device error observer, failed to start observer thread");
@@ -371,8 +378,8 @@ protected:
   using ErrorObserverShutdownToken = ComPtr<ID3D12Fence>;
   ErrorObserverShutdownToken enterDeviceErrorObserverInShutdownMode()
   {
-    auto result = eastl::move(detector);
-    return result;
+      auto result = std::move(detector);
+      return result;
   }
   void stopDeviceErrorObserver(ErrorObserverShutdownToken &&token)
   {
@@ -552,7 +559,7 @@ private:
 
       MAX
     };
-    typedef eastl::bitset<MAX> Type;
+    typedef std::bitset<MAX> Type;
   };
 #if _TARGET_PC_WIN
   ComPtr<DXGIAdapter> adapter;
@@ -561,7 +568,7 @@ private:
   DeviceQueueGroup queues;
   Caps::Type caps;
   Config config; //-V730_NOINIT
-  eastl::vector<DeviceResetEventHandler *> deviceResetEventHandlers;
+  std::vector<DeviceResetEventHandler*> deviceResetEventHandlers;
   RenderStateSystem renderStateSystem;
   PipelineManager pipeMan;
   PipelineCache pipelineCache;
@@ -629,11 +636,11 @@ private:
   template <typename T, typename... As>
   T checkFeatureSupport(As &&...as)
   {
-    T result{eastl::forward<As>(as)...};
-    if (S_OK != device->CheckFeatureSupport(FeatureID<T>::value, &result, sizeof(result)))
-    {
-      result = {};
-    }
+      T result{std::forward<As>(as)...};
+      if (S_OK != device->CheckFeatureSupport(FeatureID<T>::value, &result, sizeof(result)))
+      {
+          result = {};
+      }
     return result;
   }
 
@@ -719,9 +726,9 @@ public:
 #if _TARGET_PC_WIN
   AdapterInfo getAdapterInfo();
   uint64_t getAdapterLuid();
-  void enumerateDisplayModes(eastl::vector<nau::string> &list);
-  void enumerateDisplayModesFromOutput(IDXGIOutput *dxgi_output, eastl::vector<nau::string> &list);
-  void enumerateActiveMonitors(eastl::vector<nau::string> &result);
+  void enumerateDisplayModes(std::vector<nau::string>& list);
+  void enumerateDisplayModesFromOutput(IDXGIOutput* dxgi_output, std::vector<nau::string>& list);
+  void enumerateActiveMonitors(std::vector<nau::string>& result);
   ComPtr<IDXGIOutput> getOutputMonitorByNameOrDefault(const char *monitorName);
   HRESULT findClosestMatchingMode(DXGI_MODE_DESC *out_desc);
 #endif
@@ -888,19 +895,19 @@ public:
   template <typename T>
   void visitHeaps(T clb)
   {
-    resources.visitHeaps(eastl::forward<T>(clb));
+      resources.visitHeaps(std::forward<T>(clb));
   }
 
   template <typename T>
   void visitBuffers(T clb)
   {
-    resources.visitBuffers(eastl::forward<T>(clb));
+      resources.visitBuffers(std::forward<T>(clb));
   }
 
   template <typename T>
   void visitImageObjects(T clb)
   {
-    resources.visitImageObjects(eastl::forward<T>(clb));
+      resources.visitImageObjects(std::forward<T>(clb));
   }
 
 #if DAGOR_DBGLEVEL > 0
@@ -922,13 +929,13 @@ public:
   template <typename... Args>
   TextureInterfaceBase *newTextureObject(Args &&...args)
   {
-    return resources.newTextureObject(eastl::forward<Args>(args)...);
+      return resources.newTextureObject(std::forward<Args>(args)...);
   }
 
   template <typename T>
   void visitTextureObjects(T &&clb)
   {
-    resources.visitTextureObjects(eastl::forward<T>(clb));
+      resources.visitTextureObjects(std::forward<T>(clb));
   }
 
   void reserveTextureObjects(size_t count) { resources.reserveTextureObjects(count); }
@@ -940,13 +947,13 @@ public:
   template <typename... Args>
   GenericBufferInterface *newBufferObject(Args &&...args)
   {
-    return resources.newBufferObject(eastl::forward<Args>(args)...);
+      return resources.newBufferObject(std::forward<Args>(args)...);
   }
 
   template <typename T>
   void visitBufferObjects(T &&clb)
   {
-    resources.visitBufferObjects(eastl::forward<T>(clb));
+      resources.visitBufferObjects(std::forward<T>(clb));
   }
 
   void deleteBufferObject(GenericBufferInterface *buffer) { resources.deleteBufferObject(buffer); }
@@ -1142,7 +1149,7 @@ inline void PipelineStageStateBase::pushSamplers(ID3D12Device *device, SamplerDe
     *it++ = sRegisters[i].ptr ? sRegisters[i] : ((cmp_sampler_mask & (1u << i)) ? default_cmp_sampler : default_sampler);
   }
 
-  uint32_t count = eastl::distance(samplerTable, it);
+  uint32_t count = std::distance(samplerTable, it);
   auto index = heap.findInScratchSegment(samplerTable, count);
   if (!index)
   {
@@ -1171,7 +1178,7 @@ inline void PipelineStageStateBase::pushUnorderedViews(ID3D12Device *device, Sha
     *it++ = uRegisters[i].is(resType, resDim) ? uRegisters[i].view : null_table.get(resType, resDim);
   }
 
-  uint32_t count = eastl::distance(table, it);
+  uint32_t count = std::distance(table, it);
 
   DescriptorHeapIndex index;
 #if DX12_REUSE_UNORDERD_ACCESS_VIEW_DESCRIPTOR_RANGES
@@ -1203,7 +1210,7 @@ inline void PipelineStageStateBase::pushShaderResourceViews(ID3D12Device *device
     *it++ = tRegisters[i].is(resType, resDim) ? tRegisters[i].view : null_table.get(resType, resDim);
   }
 
-  uint32_t count = eastl::distance(table, it);
+  uint32_t count = std::distance(table, it);
 
   DescriptorHeapIndex index;
 #if DX12_REUSE_SHADER_RESOURCE_VIEW_DESCRIPTOR_RANGES
@@ -1310,14 +1317,17 @@ inline FrontendQueryManager::HeapPredicate *FrontendQueryManager::newPredicateHe
   {
     return nullptr;
   }
-  return &predicateHeaps.emplace_back(eastl::move(newHeap));
+  return &predicateHeaps.emplace_back(std::move(newHeap));
 }
 inline uint64_t FrontendQueryManager::createPredicate(Device &device, ID3D12Device *dx_device)
 {
   dag::CSAutoLock lock(predicateGuard);
   HeapPredicate *ptr = nullptr;
-  auto ref = eastl::find_if(begin(predicateHeaps), end(predicateHeaps),
-    [](const FrontendQueryManager::HeapPredicate &heap) { return heap.hasAnyFree(); });
+  auto ref = std::find_if(begin(predicateHeaps), end(predicateHeaps),
+                          [](const FrontendQueryManager::HeapPredicate& heap)
+  {
+      return heap.hasAnyFree();
+  });
   if (ref == end(predicateHeaps))
   {
     ptr = newPredicateHeap(device, dx_device);
@@ -1347,7 +1357,7 @@ inline void FrontendQueryManager::shutdownPredicate(DeviceContext &ctx)
       if (heap.qArr[i])
         deleteQuery(heap.qArr[i]);
     }
-    ctx.destroyBuffer(eastl::move(heap.buffer), u8"QueryBuffer");
+    ctx.destroyBuffer(std::move(heap.buffer), u8"QueryBuffer");
   }
   predicateHeaps.clear();
 }
@@ -1569,12 +1579,12 @@ inline DynamicArray<StaticRenderStateID> RenderStateSystem::loadStaticStatesFrom
 
 inline StaticRenderStateID RenderStateSystem::registerStaticState(DeviceContext &ctx, const StaticState &def)
 {
-  auto ref = eastl::find(begin(staticStateTable), end(staticStateTable), def);
-  if (ref == end(staticStateTable))
-  {
-    ref = staticStateTable.insert(end(staticStateTable), def);
-    ctx.registerStaticRenderState(StaticRenderStateID{static_cast<int>(ref - begin(staticStateTable))}, *ref);
-  }
+    auto ref = std::find(begin(staticStateTable), end(staticStateTable), def);
+    if (ref == end(staticStateTable))
+    {
+        ref = staticStateTable.insert(end(staticStateTable), def);
+        ctx.registerStaticRenderState(StaticRenderStateID{static_cast<int>(ref - begin(staticStateTable))}, *ref);
+    }
   return StaticRenderStateID{static_cast<int>(ref - begin(staticStateTable))};
 }
 
@@ -1592,8 +1602,8 @@ inline BufferInterfaceConfigCommon::BufferType PlatformBufferInterfaceConfig::di
 {
   G_UNUSED(size);
   auto &device = get_device();
-  auto nextBuffer = device.getContext().discardBuffer(eastl::move(current_buffer), memory_class, view_format, structure_size,
-    0 != (buf_flags & SBCF_MISC_ALLOW_RAW), 0 != (buf_flags & SBCF_MISC_STRUCTURED), getResourcFlags(buf_flags), buf_flags, name);
+  auto nextBuffer = device.getContext().discardBuffer(std::move(current_buffer), memory_class, view_format, structure_size,
+                                                      0 != (buf_flags & SBCF_MISC_ALLOW_RAW), 0 != (buf_flags & SBCF_MISC_STRUCTURED), getResourcFlags(buf_flags), buf_flags, name);
   // notify state system, that it has to mark all uses as dirty
   notify_discard(self, SBCF_BIND_VERTEX & buf_flags, SBCF_BIND_CONSTANT & buf_flags, SBCF_BIND_SHADER_RES & buf_flags,
     SBCF_BIND_UNORDERED & buf_flags);
@@ -1602,7 +1612,7 @@ inline BufferInterfaceConfigCommon::BufferType PlatformBufferInterfaceConfig::di
 
 inline void BufferInterfaceConfigCommon::deleteBuffer(BufferReferenceType buffer, const char8_t *name)
 {
-  get_device().getContext().destroyBuffer(eastl::move(buffer), name);
+    get_device().getContext().destroyBuffer(std::move(buffer), name);
 }
 
 inline void BufferInterfaceConfigCommon::addRawResourceView(BufferReferenceType buffer)
@@ -1836,9 +1846,9 @@ inline BaseTex *DeviceContext::getSwapchainColorTexture(SWAPID id)
     NAU_ASSERT(back.addSwapchains.count(id));
     return back.addSwapchains[id].getColorTexture();
 }
-inline eastl::vector<BaseTex*> DeviceContext::getSwapchainsColorTextures()
+inline std::vector<BaseTex*> DeviceContext::getSwapchainsColorTextures()
 {
-    eastl::vector<BaseTex*> scTextures;
+    std::vector<BaseTex*> scTextures;
     scTextures.push_back(getSwapchainColorTexture());
     for (auto& [id, swapchain] : back.addSwapchains)
     {

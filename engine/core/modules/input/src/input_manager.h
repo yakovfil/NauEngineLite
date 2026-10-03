@@ -3,15 +3,14 @@
 
 #pragma once
 
-#include <EASTL/vector.h>
 #include <gainput/gainput.h>
 
+#include <vector>
 
 #include "nau/input.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/service/service.h"
-
 
 namespace nau::input
 {

@@ -3,12 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/3d/dag_resPtr.h"
-#include <EASTL/string.h>
 #include <imgui.h>
+
+#include <string>
+
+#include "nau/3d/dag_resPtr.h"
 #include "render/daBfg/detail/nodeNameId.h"
 #include "render/daBfg/detail/resNameId.h"
-
 
 namespace dabfg
 {

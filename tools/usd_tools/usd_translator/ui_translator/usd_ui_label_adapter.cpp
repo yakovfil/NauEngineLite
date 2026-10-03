@@ -1,18 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "usd_ui_label_adapter.h"
-#include "nau/dataBlock/dag_dataBlock.h"
-#include "usd_proxy/usd_proxy_decorators_regestry.h"
 
-#include "pxr/base/gf/vec2i.h"
-#include "pxr/base/gf/vec2d.h"
-#include "pxr/base/gf/vec4d.h"
+#include <memory>
+#include <utility>
 
 #include "nau/NauGuiSchema/nauGuiLabel.h"
-
+#include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/ui/label.h"
+#include "pxr/base/gf/vec2d.h"
+#include "pxr/base/gf/vec2i.h"
+#include "pxr/base/gf/vec4d.h"
+#include "usd_proxy/usd_proxy_decorators_regestry.h"
 
 using namespace nau;
 using namespace PXR_NS;
@@ -125,10 +125,10 @@ namespace UsdTranslator
         PXR_NS::SdfAssetPath sdfPath;
         usdLabel.GetFontFontAttr().Get(&sdfPath);
         const auto sourcePath = getSourcePath(sdfPath);
-        auto factory = eastl::make_unique<nau::ui::SymbolFactory>();
+        auto factory = std::make_unique<nau::ui::SymbolFactory>();
         factory->registerProvider(sourcePath);
 
-        auto label = nau::ui::NauLabel::create(eastl::move(factory));
+        auto label = nau::ui::NauLabel::create(std::move(factory));
         id = label->getUid();
 
         return label;

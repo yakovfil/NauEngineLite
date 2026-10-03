@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <string_view>
+
 #include "break_point.h"
 #include "device_state.h"
 
@@ -21,15 +24,23 @@ public:
 
   void debugFramePresent(DeviceState &) {}
 
-  void debugEventBegin(DeviceState &, ID3D12GraphicsCommandList *, eastl::string_view) {}
+  void debugEventBegin(DeviceState&, ID3D12GraphicsCommandList*, std::string_view)
+  {
+  }
   void debugEventEnd(DeviceState &, ID3D12GraphicsCommandList *) {}
-  void debugMarkerSet(DeviceState &, ID3D12GraphicsCommandList *, eastl::string_view) {}
+  void debugMarkerSet(DeviceState&, ID3D12GraphicsCommandList*, std::string_view)
+  {
+  }
 
-  void debugFrameCaptureBegin(DeviceState &, ID3D12CommandQueue *, uint32_t, eastl::span<const wchar_t>) {}
+  void debugFrameCaptureBegin(DeviceState&, ID3D12CommandQueue*, uint32_t, std::span<const wchar_t>)
+  {
+  }
 
   void debugFrameCaptureEnd(DeviceState &, ID3D12CommandQueue *) {}
 
-  void debugFrameCaptureQueueNextFrames(DeviceState &, ID3D12CommandQueue *, uint32_t, eastl::span<const wchar_t>, int) {}
+  void debugFrameCaptureQueueNextFrames(DeviceState&, ID3D12CommandQueue*, uint32_t, std::span<const wchar_t>, int)
+  {
+  }
 
   void debugRecordDraw(DeviceState &, D3DGraphicsCommandList *, const PipelineStageStateBase &, const PipelineStageStateBase &,
     BasePipeline &, PipelineVariant &, uint32_t, uint32_t, uint32_t, uint32_t, D3D12_PRIMITIVE_TOPOLOGY)

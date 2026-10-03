@@ -4,10 +4,11 @@
 
 #pragma once
 
-#include <EASTL/functional.h>
+#include <functional>
+
 #include "nau/math/math.h"
 
-using GlobalInputHandler = eastl::function<bool(/*key_down*/ bool, /*key_idx*/ int, /*key_modif*/ unsigned int)>;
+using GlobalInputHandler = std::function<bool(/*key_down*/ bool, /*key_idx*/ int, /*key_modif*/ unsigned int)>;
 
 const nau::math::IVector2 &imgui_get_saved_mouse_pos();
 bool imgui_handle_special_keys_down(bool ctrl, bool shift, bool alt, int btn_idx, unsigned int key_modif);

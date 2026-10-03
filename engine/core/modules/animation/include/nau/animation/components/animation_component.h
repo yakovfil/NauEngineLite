@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "nau/animation/controller/animation_controller.h"
@@ -29,11 +30,11 @@ namespace nau::animation
             CLASS_FIELD(blendMethod),
             CLASS_FIELD(animationAsset))
 
-        eastl::string animationName;      // keyframe + skeletal
-        eastl::string playMode;           // keyframe + skeletal
+        std::string animationName;        // keyframe + skeletal
+        std::string playMode;             // keyframe + skeletal
         float initialWeight;              // keyframe + skeletal
-        eastl::string channelTargetPath;  // keyframe
-        eastl::string blendMethod;        // skeletal
+        std::string channelTargetPath;    // keyframe
+        std::string blendMethod;          // skeletal
 
         AnimationAssetRef animationAsset;  // keyframe + skeletal
 
@@ -149,7 +150,7 @@ namespace nau::animation
         /**
          * @brief Retrieves the component name.
          */
-        const eastl::string& getName() const;
+        const std::string& getName() const;
 
     private:
         AnimationController* getOrCreateController();
@@ -181,14 +182,14 @@ namespace nau::animation
             }
         };
 
-        eastl::string m_animControllerType;
-        eastl::vector<AnimTrackCreationInfo> m_tracksCreationInfo;
+        std::string m_animControllerType;
+        std::vector<AnimTrackCreationInfo> m_tracksCreationInfo;
 
         nau::Ptr<AnimationController> m_controller;
         nau::math::Transform m_rootTransform;
         math::Transform m_frameTransform;
         std::vector<AnimationTargetData> m_targets;
-        eastl::string m_name;
+        std::string m_name;
         TransformAnimationActionsFlag m_pendingTransforms = {};
     };
 }  // namespace nau::animation

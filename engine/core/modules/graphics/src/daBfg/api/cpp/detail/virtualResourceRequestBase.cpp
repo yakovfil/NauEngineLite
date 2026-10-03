@@ -3,10 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "render/daBfg/detail/virtualResourceRequestBase.h"
-#include "dabfg/frontend/internalRegistry.h"
-#include "render/daBfg/resourceCreation.h"
-#include "nau/diag/logging.h"
 
+#include <optional>
+#include <variant>
+
+#include "dabfg/frontend/internalRegistry.h"
+#include "nau/diag/logging.h"
+#include "render/daBfg/resourceCreation.h"
 
 namespace dabfg::detail
 {
@@ -20,7 +23,7 @@ void VirtualResourceRequestBase::texture(const Texture2dCreateInfo &info)
 
   TextureResourceDescription desc{};
   desc.clearValue = make_clear_value(0u, 0u, 0u, 0u);
-  if (auto p = eastl::get_if<nau::math::IVector2>(&info.resolution))
+  if (auto p = std::get_if<nau::math::IVector2>(&info.resolution))
   {
     desc.width = p->getX();
     desc.height = p->getY();
@@ -29,10 +32,10 @@ void VirtualResourceRequestBase::texture(const Texture2dCreateInfo &info)
   desc.mipLevels = info.mipLevels;
   res.type = ResourceType::Texture;
   res.creationInfo = ResourceDescription{desc};
-  if (auto r = eastl::get_if<AutoResolutionRequest>(&info.resolution); r)
-    res.resolution = AutoResolutionData{r->autoResTypeId, r->multiplier};
+  if (auto r = std::get_if<AutoResolutionRequest>(&info.resolution); r)
+      res.resolution = AutoResolutionData{r->autoResTypeId, r->multiplier};
   else
-    res.resolution = eastl::nullopt;
+      res.resolution = std::nullopt;
 }
 
 void VirtualResourceRequestBase::buffer(const BufferCreateInfo &info)
@@ -82,20 +85,20 @@ static void bind_to_shader_var_impl(const char *shader_var_name, ResUid res_uid,
   //
   auto& bindings = registry->nodes[node_id].bindings;
 
-  //if (EASTL_UNLIKELY(bindings.find(svId) != bindings.end()))
+  // if (NAU_UNLIKELY(bindings.find(svId) != bindings.end()))
   //{
-  //  NAU_LOG_ERROR("Encountered duplicate shader var '{}' binding requests within"
-  //         " '{}' frame graph node! Ignoring one of them!",
-  //    shader_var_name, registry->knownNames.getName(node_id));
-  //  return;
-  //}
-  //bindings[svId] = binding_info;
+  //   NAU_LOG_ERROR("Encountered duplicate shader var '{}' binding requests within"
+  //          " '{}' frame graph node! Ignoring one of them!",
+  //     shader_var_name, registry->knownNames.getName(node_id));
+  //   return;
+  // }
+  // bindings[svId] = binding_info;
 }
 
 static void bind_as_view_impl(NodeNameId node_id, InternalRegistry *registry, const Binding &binding_info)
 {
   auto &bindings = registry->nodes[node_id].bindings;
-  if (EASTL_UNLIKELY(bindings.find(FAKE_ID_FOR_VIEW_MATRIX_BINDINGS) != bindings.end()))
+  if (NAU_UNLIKELY(bindings.find(FAKE_ID_FOR_VIEW_MATRIX_BINDINGS) != bindings.end()))
   {
     NAU_LOG_ERROR("Encountered duplicate view matrix binding requests within"
            " '%s' frame graph node! Ignoring one of them!",
@@ -108,7 +111,7 @@ static void bind_as_view_impl(NodeNameId node_id, InternalRegistry *registry, co
 static void bind_as_proj_impl(NodeNameId node_id, InternalRegistry *registry, const Binding &binding_info)
 {
   auto &bindings = registry->nodes[node_id].bindings;
-  if (EASTL_UNLIKELY(bindings.find(FAKE_ID_FOR_PROJ_MATRIX_BINDINGS) != bindings.end()))
+  if (NAU_UNLIKELY(bindings.find(FAKE_ID_FOR_PROJ_MATRIX_BINDINGS) != bindings.end()))
   {
     NAU_LOG_ERROR("Encountered duplicate proj matrix binding requests within"
            " '%s' frame graph node! Ignoring one of them!",

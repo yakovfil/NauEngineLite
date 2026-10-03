@@ -8,7 +8,13 @@
 #include <nau/utils/le2be.h>
 #include <nau/utils/mum_hash.h>
 
-#include "EASTL/internal/char_traits.h"
+#include <memory>
+#include <span>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "blk_comments_def.h"
 #include "blk_iterate.h"
 #include "blk_shared.h"
@@ -17,11 +23,11 @@
 #include "nau/osApiWrappers/dag_files.h"
 #include "nau/utils/dag_globDef.h"
 // #include <memory/dag_framemem.h>
-#include <stdio.h>  // sprintf
 #include <nau/dag_ioSys/dag_chainedMemIo.h>
 #include <nau/dag_ioSys/dag_fileIo.h>
 #include <nau/osApiWrappers/dag_direct.h>
 #include <nau/osApiWrappers/dag_files.h>
+#include <stdio.h>  // sprintf
 
 #define BLK_MAX_MEMORY_FOR_NAMES (256 << 20)  // 256 MB
 
@@ -30,23 +36,23 @@ namespace nau
     static void writeIndent(iosys::IGenSave& cb, int n)
     {
         static const char* space8 = "        ";
-        for(; n >= 8; n -= 8)
+        for (; n >= 8; n -= 8)
             cb.write(space8, 8);
-        if(n > 0)
+        if (n > 0)
             cb.write(space8, n);
     }
 
     static void writeString(iosys::IGenSave& cb, const char* s)
     {
-        if(!s || !*s)
+        if (!s || !*s)
             return;
-        int l = static_cast<int>(eastl::CharStrlen(s));
+        int l = static_cast<int>(std::char_traits<char>::length(s));
         cb.write(s, l);
     }
 
     static void writeStringValue(iosys::IGenSave& cb, const char* s)
     {
-        if(!s)
+        if (!s)
             s = "";
 
         const char* quot = "\"";
@@ -54,43 +60,43 @@ namespace nau
         {
             // choose quotation type to minimize escaping
             bool has_ln = false, has_quot = false, has_tick = false;
-            for(const char* p = s; *p; ++p)
+            for (const char* p = s; *p; ++p)
             {
-                if(*p == '\n' || *p == '\r')
+                if (*p == '\n' || *p == '\r')
                     has_ln = true;
-                else if(*p == '\"')
+                else if (*p == '\"')
                     has_quot = true;
-                else if(*p == '\'')
+                else if (*p == '\'')
                     has_tick = true;
                 else
                     continue;
-                if(has_ln && has_quot && has_tick)
+                if (has_ln && has_quot && has_tick)
                     break;
             }
-            if(has_ln && !has_quot)
+            if (has_ln && !has_quot)
                 quot_len = 4, quot = "\"\"\"\n\"\"\"";
-            else if(has_ln && !has_tick)
+            else if (has_ln && !has_tick)
                 quot_len = 4, quot = "'''\n'''";
-            else if(has_ln)
+            else if (has_ln)
                 quot_len = 4, quot = "\"\"\"\n\"\"\"";
-            else if(has_quot && !has_tick)
+            else if (has_quot && !has_tick)
                 quot = "'";
         }
 
         cb.write(quot, quot_len);
 
-        for(; *s; ++s)
+        for (; *s; ++s)
         {
             char c = *s;
-            if(c == '~')
+            if (c == '~')
                 cb.write("~~", 2);
-            else if(c == quot[0] && (quot_len == 1 || s[1] == c))
+            else if (c == quot[0] && (quot_len == 1 || s[1] == c))
                 cb.write(c == '\"' ? "~\"" : "~\'", 2);
-            else if(c == '\r' && quot_len == 1)
+            else if (c == '\r' && quot_len == 1)
                 cb.write("~r", 2);
-            else if(c == '\n' && quot_len == 1)
+            else if (c == '\n' && quot_len == 1)
                 cb.write("~n", 2);
-            else if(c == '\t')
+            else if (c == '\t')
                 cb.write("~t", 2);
             else
                 cb.write(&c, 1);
@@ -105,43 +111,43 @@ namespace nau
         const char* eol = (level >= 0 && !print_with_limits) ? "\r\n" : "\n";
         const uint32_t eolLen = (level >= 0 && !print_with_limits) ? 2 : 1;
 
-#define CHECK_LINES_LIMIT()     \
-    if(print_with_limits)       \
-        if(--max_lines[0] == 0) \
+#define CHECK_LINES_LIMIT()      \
+    if (print_with_limits)       \
+        if (--max_lines[0] == 0) \
     return false
 
         auto oldParams = getParamsImpl();
         int skipped_comments = 0;
         bool skip_next_indent = false;
-        for(uint32_t i = 0, e = paramCount(); i < e; ++i, ++oldParams)
+        for (uint32_t i = 0, e = paramCount(); i < e; ++i, ++oldParams)
         {
             const Param& p = *oldParams;
 
             bool isCIdent = true;
             const char* keyName = getName(p.nameId);
-            if(!keyName)
+            if (!keyName)
                 keyName = "";
-            if(!*keyName)
+            if (!*keyName)
                 isCIdent = false;
-            for(const char* c = keyName; *c && isCIdent; ++c)
+            for (const char* c = keyName; *c && isCIdent; ++c)
                 isCIdent = dblk::is_ident_char(*c);
 
-            if(NAU_LIKELY(!DataBlock::parseCommentsAsParams) && p.type == TYPE_STRING && CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName)))
+            if (NAU_LIKELY(!DataBlock::parseCommentsAsParams) && p.type == TYPE_STRING && CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName)))
             {
                 skipped_comments++;
                 continue;
             }
 
-            if(level > 0)
+            if (level > 0)
             {
-                if(!skip_next_indent)
+                if (!skip_next_indent)
                     writeIndent(cb, level * 2);
                 else
                     skip_next_indent = false;
             }
-            if(p.type == TYPE_STRING && keyName[0] == '@')
+            if (p.type == TYPE_STRING && keyName[0] == '@')
             {
-                if(strcmp(reinterpret_cast<const char*>(keyName), "@include") == 0)
+                if (strcmp(reinterpret_cast<const char*>(keyName), "@include") == 0)
                 {
                     cb.write("include ", 8);
                     writeStringValue(cb, getStr(i));
@@ -149,16 +155,16 @@ namespace nau
                     CHECK_LINES_LIMIT();
                     continue;
                 }
-                else if(CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName))) [[unlikely]]
+                else if (CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName))) [[unlikely]]
                 {
-                    if(IS_COMMENT_C(keyName))
+                    if (IS_COMMENT_C(keyName))
                     {
                         cb.write("/*", 2);
                         writeString(cb, getStr(i));
                         cb.write("*/", 2);
                         cb.write(eol, eolLen);
                     }
-                    if(IS_COMMENT_CPP(keyName))
+                    if (IS_COMMENT_CPP(keyName))
                     {
                         cb.write("//", 2);
                         writeString(cb, getStr(i));
@@ -172,7 +178,7 @@ namespace nau
             writeString(cb, ":");
             writeString(cb, dblk::resolve_short_type(p.type));
             writeString(cb, "=");
-            if(p.type == TYPE_STRING)
+            if (p.type == TYPE_STRING)
             {
                 writeStringValue(cb, getStr(i));  // getParamString<string_t>(p.v)
             }
@@ -183,7 +189,7 @@ namespace nau
                 const int64_t* cdi64 = (const int64_t*)paramData;
                 const float* cd = (const float*)paramData;
                 char buf[256];
-                switch(p.type)
+                switch (p.type)
                 {
                     case TYPE_BOOL:
                         snprintf(buf, sizeof(buf), *paramData ? "yes" : "no");
@@ -210,11 +216,11 @@ namespace nau
                         snprintf(buf, sizeof(buf), "%d, %d, %d", cdi[0], cdi[1], cdi[2]);
                         break;
                     case TYPE_E3DCOLOR:
-                        {
-                            math::E3DCOLOR c = getE3dcolor(i);
-                            snprintf(buf, sizeof(buf), "%d, %d, %d, %d", c.r, c.g, c.b, c.a);
-                            break;
-                        }
+                    {
+                        math::E3DCOLOR c = getE3dcolor(i);
+                        snprintf(buf, sizeof(buf), "%d, %d, %d, %d", c.r, c.g, c.b, c.a);
+                        break;
+                    }
                     case TYPE_MATRIX:
                         snprintf(buf, sizeof(buf), "[[%g, %g, %g] [%g, %g, %g] [%g, %g, %g] [%g, %g, %g]]", cd[0 * 3 + 0], cd[0 * 3 + 1],
                                  cd[0 * 3 + 2], cd[1 * 3 + 0], cd[1 * 3 + 1], cd[1 * 3 + 2], cd[2 * 3 + 0], cd[2 * 3 + 1], cd[2 * 3 + 2], cd[3 * 3 + 0],
@@ -228,14 +234,14 @@ namespace nau
                 }
                 writeString(cb, reinterpret_cast<const char*>(buf));
             }
-            if(level < 0 && paramCount() == 1 && blockCount() == 0)
+            if (level < 0 && paramCount() == 1 && blockCount() == 0)
                 cb.write(";", 1);
             else
             {
-                if(DataBlock::parseCommentsAsParams && i + 1 < paramCount()) [[unlikely]]
+                if (DataBlock::parseCommentsAsParams && i + 1 < paramCount()) [[unlikely]]
                 {
                     const char* keyName = getName((oldParams + 1)->nameId);
-                    if(CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName)) && IS_COMMENT_POST(keyName))
+                    if (CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(keyName)) && IS_COMMENT_POST(keyName))
                     {
                         cb.write(" ", 1);
                         skip_next_indent = true;
@@ -248,18 +254,18 @@ namespace nau
         }
 
         bool params_blocks_sep = false;
-        for(uint32_t i = 0, e = blockCount(); i < e; ++i)
+        for (uint32_t i = 0, e = blockCount(); i < e; ++i)
         {
             const DataBlock& b = *getBlock(i);
             bool isCIdent = true;
             const char* blkName = b.getName(b.getNameId());
-            if(CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(blkName))) [[unlikely]]
+            if (CHECK_COMMENT_PREFIX(reinterpret_cast<const char*>(blkName))) [[unlikely]]
             {
-                if(NAU_LIKELY(!DataBlock::parseCommentsAsParams))
+                if (NAU_LIKELY(!DataBlock::parseCommentsAsParams))
                     continue;
-                if(level > 0)
+                if (level > 0)
                 {
-                    if(!params_blocks_sep && paramCount() > skipped_comments)
+                    if (!params_blocks_sep && paramCount() > skipped_comments)
                     {
                         params_blocks_sep = true;
                         cb.write(eol, eolLen);
@@ -268,14 +274,14 @@ namespace nau
                     writeIndent(cb, level * 2);
                 }
 
-                if(IS_COMMENT_PRE_C(blkName))
+                if (IS_COMMENT_PRE_C(blkName))
                 {
                     cb.write("/*", 2);
                     writeString(cb, b.getStr(0));
                     cb.write("*/", 2);
                     cb.write(eol, eolLen);
                 }
-                else if(IS_COMMENT_PRE_CPP(blkName))
+                else if (IS_COMMENT_PRE_CPP(blkName))
                 {
                     cb.write("//", 2);
                     writeString(cb, b.getStr(0));
@@ -285,21 +291,21 @@ namespace nau
                 continue;
             }
 
-            if(level >= 0 && !params_blocks_sep && paramCount() > skipped_comments)
+            if (level >= 0 && !params_blocks_sep && paramCount() > skipped_comments)
             {
                 params_blocks_sep = true;
                 cb.write(eol, eolLen);
                 CHECK_LINES_LIMIT();
             }
-            if(level > 0)
+            if (level > 0)
                 writeIndent(cb, level * 2);
 
-            if(!*blkName)
+            if (!*blkName)
                 isCIdent = false;
-            for(const char* c = blkName; *c && isCIdent; ++c)
+            for (const char* c = blkName; *c && isCIdent; ++c)
                 isCIdent = dblk::is_ident_char(*c);
             (isCIdent ? writeString : writeStringValue)(cb, blkName);
-            if(b.isEmpty())
+            if (b.isEmpty())
             {
                 cb.write("{}", 2);
                 cb.write(eol, eolLen);
@@ -308,29 +314,29 @@ namespace nau
             }
 
             cb.write("{", 1);
-            if(print_with_limits && max_levels == 1)
+            if (print_with_limits && max_levels == 1)
             {
                 cb.write(" ... }", 6);
                 cb.write(eol, eolLen);
                 CHECK_LINES_LIMIT();
                 continue;
             }
-            if(!(level < 0 && b.paramCount() == 1 && b.blockCount() == 0))
+            if (!(level < 0 && b.paramCount() == 1 && b.blockCount() == 0))
             {
                 cb.write(eol, eolLen);
                 CHECK_LINES_LIMIT();
             }
 
-            if(
+            if (
                 !b.writeText<print_with_limits>(cb, level >= 0 ? level + 1 : level, max_lines, print_with_limits ? max_levels - 1 : max_levels))
                 return false;
-            if(level > 0)
+            if (level > 0)
                 writeIndent(cb, level * 2);
             cb.write("}", 1);
             cb.write(eol, eolLen);
             CHECK_LINES_LIMIT();
 
-            if(i != e - 1 && level >= 0)
+            if (i != e - 1 && level >= 0)
             {
                 cb.write(eol, eolLen);
                 CHECK_LINES_LIMIT();
@@ -369,13 +375,13 @@ namespace nau
     template <typename T, typename C>
     static void writeCompressedUnsignedGeneric(T v, C& cb)
     {
-        NAU_STATIC_ASSERT(eastl::is_unsigned<T>::value);
-        for(uint32_t i = 0; i < sizeof(v) + 1; ++i)
+        NAU_STATIC_ASSERT(std::is_unsigned<T>::value);
+        for (uint32_t i = 0; i < sizeof(v) + 1; ++i)
         {
             uint8_t byte = uint8_t(v) | (v >= (1 << 7) ? (1 << 7) : 0);
             cb.write(&byte, 1);
             v >>= 7;
-            if(!v)
+            if (!v)
                 break;
         }
     }
@@ -383,22 +389,22 @@ namespace nau
     template <typename T, typename C>
     static void writeCompressedSignedGeneric(T v, C& cb)
     {
-        NAU_STATIC_ASSERT(eastl::is_signed<T>::value);
+        NAU_STATIC_ASSERT(std::is_signed<T>::value);
         T vu = (v << 1) ^ (v >> (sizeof(T) * CHAR_BIT - 1));
-        writeCompressedUnsignedGeneric(typename eastl::make_unsigned<T>::type(vu), cb);
+        writeCompressedUnsignedGeneric(typename std::make_unsigned<T>::type(vu), cb);
     }
 
     template <typename T, typename C>
     static bool readCompressedUnsignedGeneric(T& v, C& cb)
     {
-        NAU_STATIC_ASSERT(eastl::is_unsigned<T>::value);
+        NAU_STATIC_ASSERT(std::is_unsigned<T>::value);
         v = 0;
-        for(uint32_t i = 0; i < sizeof(v) + 1; ++i)
+        for (uint32_t i = 0; i < sizeof(v) + 1; ++i)
         {
             uint8_t byte = 0;
             cb.read(&byte, 1);
             v |= T(byte & ~(1 << 7)) << (i * 7);
-            if((byte & (1 << 7)) == 0)
+            if ((byte & (1 << 7)) == 0)
                 break;
         }
         return true;
@@ -407,9 +413,9 @@ namespace nau
     template <typename T, typename C>
     static bool readCompressedSignedGeneric(T& v, C& cb)
     {
-        NAU_STATIC_ASSERT(eastl::is_signed<T>::value);
-        typename eastl::make_unsigned<T>::type vu;
-        if(!readCompressedUnsignedGeneric(vu, cb))
+        NAU_STATIC_ASSERT(std::is_signed<T>::value);
+        typename std::make_unsigned<T>::type vu;
+        if (!readCompressedUnsignedGeneric(vu, cb))
             return false;
         v = static_cast<T>((vu >> 1) ^ (-(vu & 1)));
         return true;
@@ -417,12 +423,12 @@ namespace nau
 
     struct ComplexDataContainer
     {
-        eastl::vector<char> data;
+        std::vector<char> data;
         struct DataId
         {
             uint32_t ofs, sz;
         };
-        eastl::vector<DataId> keys;
+        std::vector<DataId> keys;
         typedef uint32_t hash_t;
         dag::HashedKeyMap<hash_t, uint32_t> hashToKeyId;
         static inline hash_t hash(const char* s, size_t len)
@@ -433,10 +439,10 @@ namespace nau
         void alignTo(size_t al)
         {
             al -= 1;
-            if((data.size() & al) != 0)
+            if ((data.size() & al) != 0)
             {
                 const uint32_t add = uint32_t(((data.size() + al) & (~al)) - data.size());
-                memset(data.insert(data.end(), add, decltype(data)::value_type{}), 0, add);
+                data.resize(data.size() + add, 0);
             }
         }
         uint32_t addDataId(const char* val, uint32_t len, hash_t hash)
@@ -446,10 +452,10 @@ namespace nau
             {
                 return keys[id].sz == len && memcmp(data.data() + keys[id].ofs, val, len) == 0;
             });
-            if(it != -1)
+            if (it != -1)
                 return keys[it].ofs;
             const uint32_t ofs = data.size();
-            memcpy(data.insert(data.end(), len, decltype(data)::value_type{}), val, len);
+            data.insert(data.end(), val, val + len);
             const uint32_t id = keys.size();
             keys.emplace_back(DataId{ofs, len});
             hashToKeyId.emplace(hash, id);
@@ -468,34 +474,34 @@ namespace nau
             // fixme: todo: allow skipping name Ids (holes)
             uint32_t totalNames = names.nameCount();
             writeCompressedUnsignedGeneric(totalNames, cwr);
-            if(names_hash)
+            if (names_hash)
                 *names_hash = 0;
-            if(totalNames)
+            if (totalNames)
             {
                 uint32_t totalNamesSize = 0;
-                for(uint32_t i = 0, e = names.nameCount(); i < e; ++i)
+                for (uint32_t i = 0, e = names.nameCount(); i < e; ++i)
                     totalNamesSize += (uint32_t)strlen(names.getName(i)) + 1;  //-V575
                 writeCompressedUnsignedGeneric(totalNamesSize, cwr);
-                eastl::unique_ptr<char[]> fullNames;
-                if(names_hash)
-                    fullNames = eastl::make_unique<char[]>(totalNamesSize);
+                std::unique_ptr<char[]> fullNames;
+                if (names_hash)
+                    fullNames = std::make_unique<char[]>(totalNamesSize);
                 char* namesForHash = fullNames.get();
                 // uint64_t calc_hash = totalNames;
-                for(uint32_t i = 0, e = names.nameCount(); i < e; ++i)
+                for (uint32_t i = 0, e = names.nameCount(); i < e; ++i)
                 {
                     const char* name = names.getName(i);
                     const uint32_t nameLen = (uint32_t)strlen(name) + 1;  //-V575
                     cwr.write(name, nameLen);
-                    if(names_hash)
+                    if (names_hash)
                     {
                         memcpy(namesForHash, name, nameLen);
                         namesForHash += nameLen;
                     }
                 }
-                if(names_hash)
+                if (names_hash)
                 {
                     *names_hash = mum_hash(fullNames.get(), totalNamesSize, names.nameCount());
-                    if(!*names_hash)
+                    if (!*names_hash)
                         *names_hash = 1;
                 }
             }
@@ -520,42 +526,42 @@ namespace nau
             uint32_t totalNamesSize = 0, totalNames = names.nameCount();
             names.reset();
             readCompressedUnsignedGeneric(totalNames, cr);
-            if(names_hash)
+            if (names_hash)
                 *names_hash = 0;
-            if(totalNames)
+            if (totalNames)
             {
                 readCompressedUnsignedGeneric(totalNamesSize, cr);
-                if(!totalNamesSize || totalNamesSize > BLK_MAX_MEMORY_FOR_NAMES)
+                if (!totalNamesSize || totalNamesSize > BLK_MAX_MEMORY_FOR_NAMES)
                     return false;
                 auto page = names.allocator.addPageUnsafe(totalNamesSize + 1);
                 cr.read(page->data.get(), totalNamesSize);
                 page->data.get()[totalNamesSize] = 0;
-                if(names_hash)
+                if (names_hash)
                 {
                     *names_hash = mum_hash(page->data.get(), totalNamesSize, totalNames);
-                    if(!*names_hash)
+                    if (!*names_hash)
                         *names_hash = 1;
                 }
                 names.strings.resize(totalNames);
                 names.hashToStringId.reserve(totalNames);
-                eastl::swap(page->used, page->left);  // page is empty
+                std::swap(page->used, page->left);  // page is empty
                 names.allocator.page_shift = nau::math::get_bigger_log2(totalNamesSize);
                 names.allocator.start_page_shift = names.allocator.page_shift;
                 names.allocator.max_page_shift = Vectormath::max(names.allocator.page_shift, names.allocator.max_page_shift);
 
                 const char* name = page->data.get();
                 const char* endOfNamesPtr = name + totalNamesSize;
-                for(uint32_t i = 0; i < totalNames; ++i)
+                for (uint32_t i = 0; i < totalNames; ++i)
                 {
-                    if(name > endOfNamesPtr)
+                    if (name > endOfNamesPtr)
                         return false;
 
                     const size_t len = strlen(name);
                     DBNameMap::hash_t hash = DBNameMap::string_hash(name, len);
                     int current = names.hashToStringId.findOr(hash, -1);
-                    if(current != -1)
+                    if (current != -1)
                     {
-                        if(memcmp(name, names.getStringDataUnsafe(current), len) != 0)
+                        if (memcmp(name, names.getStringDataUnsafe(current), len) != 0)
                         {
                             names.noCollisions() = 0;
                             current = -1;
@@ -566,10 +572,10 @@ namespace nau
                             names.strings[i] = current;
                         }
                     }
-                    if(current == -1)
+                    if (current == -1)
                     {
                         names.strings[i] = (uint32_t)(name - page->data.get());
-                        names.hashToStringId.emplace(eastl::move(hash), eastl::move(i));
+                        names.hashToStringId.emplace(std::move(hash), std::move(i));
                     }
                     name += len + 1;
                 }
@@ -600,7 +606,7 @@ namespace nau
         writeCompressedUnsignedGeneric(d.nameId, cwr);  // only nameId == -1 is allowed, so nameId +1 is positive
         writeCompressedUnsignedGeneric(d.paramsCount, cwr);
         writeCompressedUnsignedGeneric(d.blocksCount, cwr);
-        if(d.blocksCount)
+        if (d.blocksCount)
             writeCompressedUnsignedGeneric(d.fBlock, cwr);
     }
     static void read_packed(DataBlockInfo& d, iosys::IGenLoad& cr)
@@ -608,7 +614,7 @@ namespace nau
         readCompressedUnsignedGeneric(d.nameId, cr);
         readCompressedUnsignedGeneric(d.paramsCount, cr);
         readCompressedUnsignedGeneric(d.blocksCount, cr);
-        if(d.blocksCount)
+        if (d.blocksCount)
             readCompressedUnsignedGeneric(d.fBlock, cr);
         else
             d.fBlock = 0;
@@ -634,7 +640,7 @@ namespace nau
         {
             *(bfsBlocks++) = &d;
         };
-        if(blocks_count <= MAX_BLK_ON_STACK)
+        if (blocks_count <= MAX_BLK_ON_STACK)
         {
             // FRAMEMEM_REGION;
             iterate_blocks_bfs<decltype(bfs_block_iter) /*, framemem_allocator*/>(*this, bfs_block_iter);
@@ -646,30 +652,30 @@ namespace nau
         dag::RelocatableFixedVector<DataBlock::Param, MAX_BLK_ON_STACK, true> newParams(totalParamsCount);
         DataBlock::Param* __restrict cParam = newParams.data();
         uint32_t currentBlocks = 1;
-        for(auto dbP : bfsOrderBlocks)  // first, intern all strings
+        for (auto dbP : bfsOrderBlocks)  // first, intern all strings
         {
             auto& d = *dbP;
             auto oldParams = d.getParamsImpl();
-            for(uint32_t i = 0, e = d.paramCount(); i < e; ++i, ++oldParams, ++cParam)
+            for (uint32_t i = 0, e = d.paramCount(); i < e; ++i, ++oldParams, ++cParam)
             {
                 *cParam = *oldParams;
-                if(differentNameMap)
+                if (differentNameMap)
                 {
                     // can be optimized if nameId is in same shared namemap
                     const char* name = getName(cParam->nameId);
                     NAU_ASSERT(name);
                     cParam->nameId = name ? names.getNameId(name) : 0;
                 }
-                if(cParam->type == DataBlock::TYPE_STRING)
+                if (cParam->type == DataBlock::TYPE_STRING)
                 {
-                    if(!(cParam->v & IS_NAMEMAP_ID) || differentNameMap)  // otherwise already interned
+                    if (!(cParam->v & IS_NAMEMAP_ID) || differentNameMap)  // otherwise already interned
                     {
                         const char* paramData = d.getParamData(*oldParams);
                         const int name_id = names.getNameId(paramData);  // try to intern
-                        if(name_id >= 0)
+                        if (name_id >= 0)
                             cParam->v = name_id | IS_NAMEMAP_ID;
                         else
-                            cParam->v = complex.addDataId(paramData, static_cast<uint32_t>(eastl::CharStrlen(paramData)) + 1);
+                            cParam->v = complex.addDataId(paramData, static_cast<uint32_t>(std::char_traits<char>::length(paramData)) + 1);
                     }
                 }
             }
@@ -677,22 +683,22 @@ namespace nau
         bool aligned = false;
         DataBlockInfo* __restrict cBlock = dataBlocks.data();
         cParam = newParams.data();
-        for(auto dbP : bfsOrderBlocks)
+        for (auto dbP : bfsOrderBlocks)
         {
             auto& d = *dbP;
             *cBlock = DataBlockInfo{
                 uint32_t(d.nameIdAndFlags & NAME_ID_MASK), d.paramsCount, d.blocksCount, d.blocksCount ? currentBlocks : (uint32_t)0};
-            if(differentNameMap && cBlock->nameId != 0)
+            if (differentNameMap && cBlock->nameId != 0)
                 cBlock->nameId = names.getNameId(getName(cBlock->nameId - 1)) + 1;
             currentBlocks += d.blocksCount;
             auto oldParams = d.getParamsImpl();
             // eastl::stable_sort(cParam, cParam+d.paramCount(), [](auto &a, auto &b) {return a.nameId<b.nameId;});
-            for(uint32_t i = 0, e = d.paramCount(); i < e; ++i, ++oldParams, ++cParam)
+            for (uint32_t i = 0, e = d.paramCount(); i < e; ++i, ++oldParams, ++cParam)
             {
                 const uint32_t sz = dblk::get_type_size(cParam->type);
-                if(sz > d.INPLACE_PARAM_SIZE && cParam->type != DataBlock::TYPE_STRING)
+                if (sz > d.INPLACE_PARAM_SIZE && cParam->type != DataBlock::TYPE_STRING)
                 {
-                    if(!aligned)
+                    if (!aligned)
                     {
                         complex.alignTo(4);
                         aligned = true;
@@ -709,7 +715,7 @@ namespace nau
         writeCompressedUnsignedGeneric(complex.data.size(), cwr);
         cwr.write(complex.data.data(), complex.data.size());
         cwr.write(newParams.data(), newParams.size() * sizeof(DataBlock::Param));
-        for(auto& d : dataBlocks)
+        for (auto& d : dataBlocks)
             write_packed(d, cwr);
     }
 
@@ -721,7 +727,7 @@ namespace nau
         shared = NULL;
         DBNameMapBase rw;
         uint64_t hash;
-        if(!dblk::read_names_base(cr, rw, &hash))
+        if (!dblk::read_names_base(cr, rw, &hash))
             return false;
         uint32_t roDataBlocks = 0, paramsCnt = 0, complexDataSize = 0;
         readCompressedUnsignedGeneric(roDataBlocks, cr);
@@ -729,25 +735,25 @@ namespace nau
         readCompressedUnsignedGeneric(complexDataSize, cr);
         uint32_t blocksStartsAt = complexDataSize + paramsCnt * sizeof(DataBlock::Param);
         size_t sharedSize = roDataBlocks * sizeof(DataBlock) + blocksStartsAt + sizeof(DataBlockShared);
-        shared = new (nau::getDefaultAllocator()->allocate(sharedSize) /*memalloc(sharedSize, tmpmem), _NEW_INPLACE*/) DataBlockShared;
+        shared = new(nau::getDefaultAllocator()->allocate(sharedSize) /*memalloc(sharedSize, tmpmem), _NEW_INPLACE*/) DataBlockShared;
         nameIdAndFlags |= IS_TOPMOST;
         shared->roDataBlocks = roDataBlocks;
         shared->blocksStartsAt = blocksStartsAt;
         shared->ro = ro;
-        if(shared->ro)
+        if (shared->ro)
             shared->ro->addRef();
         shared->blkFlags = blkFlags;
-        eastl::swap(shared->rw, rw);
+        std::swap(shared->rw, rw);
 
         cr.read(shared->get(0), complexDataSize);
         cr.read(shared->get(complexDataSize), paramsCnt * sizeof(DataBlock::Param));
         uint32_t cOfs = complexDataSize;
         DataBlock* blData = shared->getROBlockUnsafe(0);
-        for(uint32_t i = 0, e = shared->roDataBlocks; i < e; ++i, ++blData)
+        for (uint32_t i = 0, e = shared->roDataBlocks; i < e; ++i, ++blData)
         {
             DataBlockInfo d;
             read_packed(d, cr);
-            new (blData /*, _NEW_INPLACE*/) DataBlock(shared, d.nameId - 1, d.paramsCount, d.blocksCount, d.fBlock, cOfs);
+            new(blData /*, _NEW_INPLACE*/) DataBlock(shared, d.nameId - 1, d.paramsCount, d.blocksCount, d.fBlock, cOfs);
             cOfs += d.paramsCount * sizeof(DataBlock::Param);
         }
         blData = shared->getROBlockUnsafe(0);
@@ -762,12 +768,12 @@ namespace nau
     static void calc_namemap_diff(DBNameMapBase& diff, const DBNameMapBase& ro, const DataBlockShared& names)
     {
         diff.reset();
-        for(uint32_t i = 0, e = names.nameCount(); i != e; ++i)
+        for (uint32_t i = 0, e = names.nameCount(); i != e; ++i)
         {
             const char* name = names.getName(i);
-            const size_t nameLen = eastl::CharStrlen(name);  //-V575
+            const size_t nameLen = std::char_traits<char>::length(name);  //-V575
             int nid = ro.getNameId(reinterpret_cast<const char*>(name), nameLen);
-            if(nid < 0)
+            if (nid < 0)
                 diff.addNameId(reinterpret_cast<const char*>(name), nameLen);
         }
     }
@@ -775,7 +781,7 @@ namespace nau
     {
         dblk::iterate_blocks(d, [&rw](auto& db)
         {
-            if(const char* nm = db.getBlockName())
+            if (const char* nm = db.getBlockName())
                 rw.addNameId(reinterpret_cast<const char*>(nm));
             dblk::iterate_params(db, [&](int, int pnid, int)
             {
@@ -792,10 +798,10 @@ namespace nau
 
     void DataBlock::appendNamemapToSharedNamemap(DBNameMap& to, const DBNameMap* skip) const
     {
-        if(shared->ro && shared->ro != skip)
-            for(uint32_t i = 0, e = shared->ro->nameCount(); i != e; ++i)
+        if (shared->ro && shared->ro != skip)
+            for (uint32_t i = 0, e = shared->ro->nameCount(); i != e; ++i)
                 to.addNameId(shared->ro->getName(i));
-        for(uint32_t i = 0, e = shared->rw.nameCount(); i != e; ++i)
+        for (uint32_t i = 0, e = shared->rw.nameCount(); i != e; ++i)
             to.addNameId(shared->rw.getName(i));
     }
 
@@ -805,11 +811,11 @@ namespace nau
         {
             DataBlockShared diff;
             const DataBlockShared* dbShared = shared;
-            if(ro != shared->ro)
+            if (ro != shared->ro)
             {
                 dbShared = &diff;
                 diff.ro = ro;
-                if(ro)
+                if (ro)
                     calc_namemap_diff(diff.rw, *ro, *shared);
                 else
                     fill_namemap(*this, diff.rw);
@@ -838,7 +844,7 @@ namespace nau
         clearData();
 
         setParamsFrom(from);
-        for(uint32_t i = 0, ie = from.blockCount(); i < ie; ++i)
+        for (uint32_t i = 0, ie = from.blockCount(); i < ie; ++i)
             addNewBlock(from.getBlock(i)->getBlockName())->setFrom(*from.getBlock(i));
     }
 
@@ -847,11 +853,11 @@ namespace nau
         NAU_ASSERT(this != &emptyBlock);
         clearParams();
 
-        for(uint32_t i = 0, ie = blk.paramCount(); i < ie; ++i)
+        for (uint32_t i = 0, ie = blk.paramCount(); i < ie; ++i)
         {
             const char* name = blk.getParamName(i);
 
-            switch(blk.getParamType(i))
+            switch (blk.getParamType(i))
             {
                 case TYPE_STRING:
                     addStr(name, blk.getStr(i));
@@ -895,7 +901,6 @@ namespace nau
         }
     }
 
-
     namespace dblk
     {
         static bool save_to_text_file_ex(const DataBlock& blk, const char* filename, bool compact);
@@ -905,7 +910,7 @@ namespace nau
             friend void dblk::set_flag(DataBlock& blk, dblk::ReadFlags flg_to_add);
             friend void dblk::clr_flag(DataBlock& blk, dblk::ReadFlags flg_to_clr);
             friend bool dblk::load(DataBlock& blk, const char* fname, dblk::ReadFlags flg, DataBlock::IFileNotify* fnotify);
-            friend bool dblk::load_text(DataBlock& blk, const eastl::span<char> text, dblk::ReadFlags flg, const char* fname, DataBlock::IFileNotify* fnotify);
+            friend bool dblk::load_text(DataBlock& blk, const std::span<char> text, dblk::ReadFlags flg, const char* fname, DataBlock::IFileNotify* fnotify);
             friend bool dblk::load_from_stream(DataBlock& blk, iosys::IGenLoad& crd, dblk::ReadFlags flg, const char* fname, DataBlock::IFileNotify* fnotify, unsigned hint_size);
             friend bool dblk::save_to_text_file_ex(const DataBlock& blk, const char* filename, bool compact);
             friend bool dblk::print_to_text_stream_limited(const DataBlock& blk, iosys::IGenSave& cwr, int max_ln, int max_lev, int init_lev);
@@ -915,7 +920,7 @@ namespace nau
     static bool dblk::save_to_text_file_ex(const DataBlock& blk, const char* filename, bool compact)
     {
         hal::file_ptr_t h = hal::df_open(reinterpret_cast<const char*>(filename), hal::DF_WRITE | hal::DF_CREATE);
-        if(!h)
+        if (!h)
             return false;
 
 #if _TARGET_C3
@@ -955,9 +960,9 @@ namespace nau
     {
         NAU_TRY
         {
-            if(max_ln < 0)
+            if (max_ln < 0)
                 max_ln = 0x7FFFFFFF;
-            if(!static_cast<const dblk::OpenDataBlock&>(blk).writeText<true>(cwr, init_lev, &max_ln, max_lev))
+            if (!static_cast<const dblk::OpenDataBlock&>(blk).writeText<true>(cwr, init_lev, &max_ln, max_lev))
             {
                 cwr.write("...\n", 4);
                 return false;
@@ -973,7 +978,7 @@ namespace nau
     bool dblk::save_to_binary_file(const DataBlock& blk, const char* filename)
     {
         iosys::FullFileSaveCB cwr(reinterpret_cast<const char*>(filename));
-        if(!cwr.fileHandle)
+        if (!cwr.fileHandle)
             return false;
 
         NAU_TRY
@@ -992,18 +997,18 @@ namespace nau
     auto* shared = static_cast<OpenDataBlock&>(blk).shared;                          \
     bool prev_robust = shared->blkRobustLoad(), prev_bin = shared->blkBinOnlyLoad(); \
     bool prev_allow_ss = DataBlock::allowSimpleString;                               \
-    if(flg & ReadFlag::ROBUST)                                                       \
+    if (flg & ReadFlag::ROBUST)                                                      \
         shared->setBlkRobustLoad(1), shared->setBlkRobustOps(1);                     \
-    if(flg & ReadFlag::BINARY_ONLY)                                                  \
+    if (flg & ReadFlag::BINARY_ONLY)                                                 \
         shared->setBlkBinOnlyLoad(1);                                                \
-    if(flg & ReadFlag::ALLOW_SS)                                                     \
+    if (flg & ReadFlag::ALLOW_SS)                                                    \
     DataBlock::allowSimpleString = true
 
 #define RESTORE_FLAGS_EPILOGUE()                                                                                          \
     shared = static_cast<OpenDataBlock&>(blk).shared;                                                                     \
-    if(flg & ReadFlag::RESTORE_FLAGS)                                                                                     \
+    if (flg & ReadFlag::RESTORE_FLAGS)                                                                                    \
         shared->setBlkRobustLoad(prev_robust), shared->setBlkRobustOps(prev_robust), shared->setBlkBinOnlyLoad(prev_bin); \
-    if(flg & ReadFlag::ALLOW_SS)                                                                                          \
+    if (flg & ReadFlag::ALLOW_SS)                                                                                         \
     DataBlock::allowSimpleString = prev_allow_ss
 
     bool dblk::load(DataBlock& blk, const char* fname, dblk::ReadFlags flg, DataBlock::IFileNotify* fnotify)
@@ -1014,7 +1019,7 @@ namespace nau
         return res;
     }
 
-    bool dblk::load_text(DataBlock& blk, const eastl::span<char> text, dblk::ReadFlags flg, const char* fname, DataBlock::IFileNotify* fnotify)
+    bool dblk::load_text(DataBlock& blk, const std::span<char> text, dblk::ReadFlags flg, const char* fname, DataBlock::IFileNotify* fnotify)
     {
         PARSE_FLAGS_PROLOGUE();
         bool res = static_cast<dblk::OpenDataBlock&>(blk).loadText(text.data(), text.size_bytes(), fname, fnotify);
@@ -1036,26 +1041,26 @@ namespace nau
     {
         auto& shared = *static_cast<const OpenDataBlock&>(blk).shared;
         ReadFlags f;
-        if(shared.blkRobustLoad())
+        if (shared.blkRobustLoad())
             f |= ReadFlag::ROBUST;
-        if(shared.blkBinOnlyLoad())
+        if (shared.blkBinOnlyLoad())
             f |= ReadFlag::BINARY_ONLY;
         return f;
     }
     void dblk::set_flag(DataBlock& blk, dblk::ReadFlags flg_to_add)
     {
         auto& shared = *static_cast<const OpenDataBlock&>(blk).shared;
-        if(flg_to_add & ReadFlag::ROBUST)
+        if (flg_to_add & ReadFlag::ROBUST)
             shared.setBlkRobustLoad(true), shared.setBlkRobustOps(true);
-        if(flg_to_add & ReadFlag::BINARY_ONLY)
+        if (flg_to_add & ReadFlag::BINARY_ONLY)
             shared.setBlkBinOnlyLoad(true);
     }
     void dblk::clr_flag(DataBlock& blk, dblk::ReadFlags flg_to_clr)
     {
         auto& shared = *static_cast<const OpenDataBlock&>(blk).shared;
-        if(flg_to_clr & ReadFlag::ROBUST)
+        if (flg_to_clr & ReadFlag::ROBUST)
             shared.setBlkRobustLoad(false), shared.setBlkRobustOps(false);
-        if(flg_to_clr & ReadFlag::BINARY_ONLY)
+        if (flg_to_clr & ReadFlag::BINARY_ONLY)
             shared.setBlkBinOnlyLoad(false);
     }
     DBNameMap* dblk::create_db_names()

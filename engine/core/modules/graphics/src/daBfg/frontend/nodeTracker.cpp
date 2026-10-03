@@ -114,8 +114,8 @@ void NodeTracker::wipeContextNodes(void *context)
 void NodeTracker::updateNodeDeclarations()
 {
   if (randomize_order)
-    eastl::random_shuffle(deferredDeclarationQueue.begin(), deferredDeclarationQueue.end(),
-      [](uint32_t n) { return static_cast<uint32_t>(grnd() % n); });
+      for (size_t i = 1; i < deferredDeclarationQueue.size(); ++i)
+          std::swap(deferredDeclarationQueue[i], deferredDeclarationQueue[grnd() % (i + 1)]);
 
   for (auto nodeId : deferredDeclarationQueue)
     if (auto &declare = registry.nodes.get(nodeId).declare)

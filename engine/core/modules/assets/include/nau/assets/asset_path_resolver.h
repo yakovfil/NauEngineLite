@@ -3,11 +3,11 @@
 
 
 #pragma once
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/tuple.h>
-#include <EASTL/vector.h>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <vector>
 
 #include "nau/assets/asset_content_provider.h"
 #include "nau/assets/asset_path.h"
@@ -24,8 +24,8 @@ namespace nau
 
         virtual ~IAssetPathResolver() = default;
 
-        virtual eastl::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) = 0;
+        virtual std::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) = 0;
 
-        virtual eastl::vector<eastl::string_view> getSupportedSchemes() const = 0;
+        virtual std::vector<std::string_view> getSupportedSchemes() const = 0;
     };
 }  // namespace nau

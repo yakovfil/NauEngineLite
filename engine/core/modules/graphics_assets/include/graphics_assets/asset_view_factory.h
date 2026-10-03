@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/assets/asset_view_factory.h"
 
 namespace nau
@@ -16,7 +18,7 @@ namespace nau
         GraphicsAssetViewFactory() = default;
 
     private:
-        eastl::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
+        std::vector<const rtti::TypeInfo*> getAssetViewTypes() const override;
 
         async::Task<IAssetView::Ptr> createAssetView(nau::Ptr<> accessor, const rtti::TypeInfo& viewType) override;
     };

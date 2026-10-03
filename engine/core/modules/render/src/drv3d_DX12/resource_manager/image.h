@@ -3,7 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <dag/dag_vector.h>
+// #include <iterator>
+#include <utility>
+#include <vector>
+// #include <dag/dag_vector.h>
 #include "nau/supp/dag_comPtr.h"
 #include "nau/threading/spin_lock.h"
 #include "nau/threading/lock_guard.h"
@@ -45,7 +48,7 @@ public:
 private:
   ResourceMemory memory;
   Extent3D extent{};
-  typedef eastl::vector<ViewInfo> old_views_t;
+  typedef std::vector<ViewInfo> old_views_t;
 
   ViewInfo recentView = {}; // most recent view
   old_views_t oldViews;
@@ -128,7 +131,7 @@ public:
   const ViewInfo &getRecentView() const { return recentView; }
   void updateRecentView(old_views_t::const_iterator iter)
   {
-    eastl::swap(oldViews[eastl::distance(oldViews.cbegin(), iter)], recentView); // update LRU entry
+      std::swap(oldViews[std::distance(oldViews.cbegin(), iter)], recentView);  // update LRU entry
   }
   void addView(const ViewInfo &view)
   {
@@ -208,38 +211,35 @@ public:
       calculate_subresource_index(mip.index(), layer.index(), plane_index.index(), mipLevels.count(), layerCount.count()));
   }
 
-  Image(ResourceMemory mem, ComPtr<ID3D12Resource> img, D3D12_RESOURCE_DIMENSION type, D3D12_TEXTURE_LAYOUT layout, FormatStore fmt,
-    Extent3D ext, MipMapCount levels, ArrayLayerCount layers, ImageGlobalSubresouceId sub_res_base, uint8_t msaa_level) :
-    memory{mem},
-    msaaLevel{msaa_level},
-    imageType{type},
+  Image(ResourceMemory mem, ComPtr<ID3D12Resource> img, D3D12_RESOURCE_DIMENSION type, D3D12_TEXTURE_LAYOUT layout, FormatStore fmt, Extent3D ext, MipMapCount levels, ArrayLayerCount layers, ImageGlobalSubresouceId sub_res_base, uint8_t msaa_level) :
+      memory{mem},
+      msaaLevel{msaa_level},
+      imageType{type},
 #ifdef _TARGET_XBOX
-    textureLayout{layout},
+      textureLayout{layout},
 #endif
-    layerCount{layers},
-    image{eastl::move(img)},
-    format{fmt},
-    extent{ext},
-    mipLevels{levels},
-    globalSubResBase{ExtendedImageGlobalSubresouceId::make(sub_res_base)}
+      layerCount{layers},
+      image{std::move(img)},
+      format{fmt},
+      extent{ext},
+      mipLevels{levels},
+      globalSubResBase{ExtendedImageGlobalSubresouceId::make(sub_res_base)}
   {
     G_UNUSED(layout);
   }
 
 #if DX12_USE_ESRAM
-  Image(ResourceMemory mem, ComPtr<ID3D12Resource> img, D3D12_RESOURCE_DIMENSION type, FormatStore fmt, Extent3D ext,
-    MipMapCount levels, ArrayLayerCount layers, ImageGlobalSubresouceId sub_res_base, const EsramResource &esram_resource,
-    uint8_t msaa_level) :
-    memory{mem},
-    msaaLevel{msaa_level},
-    imageType{type},
-    layerCount{layers},
-    image{eastl::move(img)},
-    format{fmt},
-    extent{ext},
-    mipLevels{levels},
-    globalSubResBase{ExtendedImageGlobalSubresouceId::make(sub_res_base)},
-    esramResource{esram_resource}
+  Image(ResourceMemory mem, ComPtr<ID3D12Resource> img, D3D12_RESOURCE_DIMENSION type, FormatStore fmt, Extent3D ext, MipMapCount levels, ArrayLayerCount layers, ImageGlobalSubresouceId sub_res_base, const EsramResource& esram_resource, uint8_t msaa_level) :
+      memory{mem},
+      msaaLevel{msaa_level},
+      imageType{type},
+      layerCount{layers},
+      image{std::move(img)},
+      format{fmt},
+      extent{ext},
+      mipLevels{levels},
+      globalSubResBase{ExtendedImageGlobalSubresouceId::make(sub_res_base)},
+      esramResource{esram_resource}
   {}
 
   EsramResource &getEsramResource() { return esramResource; }

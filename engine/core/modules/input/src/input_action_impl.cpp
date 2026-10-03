@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "input_action_impl.h"
+
+#include <memory>
+#include <string>
 
 #include "nau/service/service_provider.h"
 
@@ -40,7 +42,7 @@ namespace nau
             size_t i = 0;
             for (auto& tag : m_tags)
             {
-                tags->addStr(eastl::to_string(i).c_str(), tag.c_str());
+                tags->addStr(std::to_string(i).c_str(), tag.c_str());
             }
         }
     }
@@ -66,7 +68,7 @@ namespace nau
         {
             for (size_t i = 0; true; ++i)
             {
-                auto* tag = tags->getStr(eastl::to_string(i).c_str(), nullptr);
+                auto* tag = tags->getStr(std::to_string(i).c_str(), nullptr);
                 if (tag == nullptr)
                 {
                     break;
@@ -91,21 +93,21 @@ namespace nau
         {
             return false;
         }
-        m_signal = eastl::shared_ptr<IInputSignal>(signal);
+        m_signal = std::shared_ptr<IInputSignal>(signal);
         return m_signal->deserialize(signalBlock);
     }
 
-    void InputActionImpl::addContextTag(const eastl::string& tag)
+    void InputActionImpl::addContextTag(const std::string& tag)
     {
         m_tags.emplace(tag);
     }
 
-    void InputActionImpl::removeContextTag(const eastl::string& tag)
+    void InputActionImpl::removeContextTag(const std::string& tag)
     {
         m_tags.erase(tag);
     }
 
-    bool InputActionImpl::isContextTag(const eastl::string& tag) const
+    bool InputActionImpl::isContextTag(const std::string& tag) const
     {
         if (tag.empty() && m_tags.empty())
         {

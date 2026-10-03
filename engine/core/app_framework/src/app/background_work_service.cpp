@@ -3,7 +3,7 @@
 
 #include "nau/app/background_work_service.h"
 
-#include <EASTL/unique_ptr.h>
+#include <memory>
 
 #include "nau/async/work_queue.h"
 #include "nau/runtime/disposable.h"
@@ -80,8 +80,8 @@ namespace nau
         std::atomic<bool> m_isCompleted = false;
     };
 
-    eastl::unique_ptr<IRttiObject> createBackgroundWorkService()
+    std::unique_ptr<IRttiObject> createBackgroundWorkService()
     {
-        return eastl::make_unique<BackgroundWorkServiceImpl>();
+        return std::make_unique<BackgroundWorkServiceImpl>();
     }
 }  // namespace nau

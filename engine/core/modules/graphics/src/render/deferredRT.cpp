@@ -4,11 +4,14 @@
 
 #include "nau/render/deferredRT.h"
 
+#include <string_view>
+#include <utility>
+
 namespace nau::render
 {
     namespace
     {
-        inline void initShaderVar(eastl::string_view name, size_t size)
+        inline void initShaderVar(std::string_view name, size_t size)
         {
             if (nau::shader_globals::containsName(name))
             {
@@ -80,7 +83,7 @@ namespace nau::render
             NAU_FAILURE("can't create intzDepthTex (INTZ, DF24, RAWZ) due to err '%s'", d3d::get_last_error());
         }
 
-        m_depth = eastl::move(m_depthTex);
+        m_depth = std::move(m_depthTex);
 
         m_depth.get()->texfilter(TEXFILTER_POINT);
         m_depth.get()->texaddr(TEXADDR_CLAMP);

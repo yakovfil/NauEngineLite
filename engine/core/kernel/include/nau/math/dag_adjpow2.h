@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#include "nau/kernel/kernel_config.h"
+
 namespace nau::math
 {
 
@@ -38,12 +40,12 @@ namespace nau::math
         return v && !(v & (v - 1));
     }
 
-    __forceinline uint32_t get_log2i(uint32_t v) // branchless version
+    NAU_FORCE_INLINE uint32_t get_log2i(uint32_t v)  // branchless version
     {
 #if HAS_BIT_SCAN_FORWARD
         return v ? __bsr_unsafe(v) : 0;
 #else
-        uint32_t r; // result of log2(v) will go here
+        uint32_t r;  // result of log2(v) will go here
         uint32_t shift;
         r = (v > 0xFFFF) << 4;
         v >>= r;
@@ -61,7 +63,7 @@ namespace nau::math
 #endif
     }
 
-    __forceinline uint32_t get_log2i_unsafe(uint32_t v) // branchless version, assumes v>0, otherwise UNDEFINED
+    NAU_FORCE_INLINE uint32_t get_log2i_unsafe(uint32_t v)  // branchless version, assumes v>0, otherwise UNDEFINED
     {
 #if HAS_BIT_SCAN_FORWARD
         return __bsr_unsafe(v);
@@ -70,13 +72,12 @@ namespace nau::math
 #endif
     }
 
-
-    __forceinline uint16_t get_log2w(uint16_t v) // branchless version
+    NAU_FORCE_INLINE uint16_t get_log2w(uint16_t v)  // branchless version
     {
 #if HAS_BIT_SCAN_FORWARD
         return get_log2i(v);
 #else
-        uint16_t r; // result of log2(v) will go here
+        uint16_t r;  // result of log2(v) will go here
         uint16_t shift;
         r = (v > 0xFF) << 3;
         v >>= r;
@@ -93,7 +94,7 @@ namespace nau::math
 
     // returns UB for 0, 0 for 1
     // 1 for 2, etc
-    __forceinline uint32_t get_bigger_log2_unsafe(uint32_t v)
+    NAU_FORCE_INLINE uint32_t get_bigger_log2_unsafe(uint32_t v)
     {
 #if HAS_BIT_SCAN_FORWARD
         uint32_t r = __bsr_unsafe(v);
@@ -103,18 +104,23 @@ namespace nau::math
 #endif
     }
 
-
     // returns 0 for 0, 0 for 1
     // 1 for 2, etc
-    inline uint32_t get_bigger_log2(uint32_t v) { return v ? get_bigger_log2_unsafe(v) : 0; }
+    inline uint32_t get_bigger_log2(uint32_t v)
+    {
+        return v ? get_bigger_log2_unsafe(v) : 0;
+    }
 
-    static constexpr uint32_t get_const_log2(uint32_t w) { return w > 1 ? 1 + get_const_log2(w >> 1) : 0; }
+    static constexpr uint32_t get_const_log2(uint32_t w)
+    {
+        return w > 1 ? 1 + get_const_log2(w >> 1) : 0;
+    }
     static constexpr uint32_t get_const_bigger_log2(uint32_t w)
     {
         return (1 << get_const_log2(w)) == w ? get_const_log2(w) : get_const_log2(w) + 1;
     }
 
-    inline uint32_t get_log2i_of_pow2(uint32_t v) // branchless version
+    inline uint32_t get_log2i_of_pow2(uint32_t v)  // branchless version
     {
 #if HAS_BIT_SCAN_FORWARD
         return get_log2i(v);
@@ -128,7 +134,7 @@ namespace nau::math
 #endif
     }
 
-    inline unsigned int get_log2i_of_pow2w(uint16_t v) // branchless version, this one is still faster than using bsr
+    inline unsigned int get_log2i_of_pow2w(uint16_t v)  // branchless version, this one is still faster than using bsr
     {
         unsigned int r = (v & 0xAAAA) != 0;
         r |= ((v & 0xFF00) != 0) << 3;
@@ -144,5 +150,4 @@ namespace nau::math
         return (value & (value - 1)) == 0;
     }
 
-
-}
+}  // namespace nau::math

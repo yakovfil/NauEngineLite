@@ -3,6 +3,8 @@
 
 #include "./texture_asset_container_builder.h"
 
+#include <vector>
+
 #include "nau/assets/texture_asset_accessor.h"
 #include "texture/texture_utils.h"
 #include "tinydds.h"
@@ -48,9 +50,9 @@ namespace nau
         TextureDescription textureDescription = textureAssetAccessor->getDescription();
 
         const uint32_t channels = TinyImageFormat_ChannelCount(textureDescription.format);
-        eastl::vector<uint32_t> dataSize(textureDescription.numMipmaps);
-        eastl::vector<const void*> test(textureDescription.numMipmaps);
-        eastl::vector<DestTextureData> dstData(textureDescription.numMipmaps);
+        std::vector<uint32_t> dataSize(textureDescription.numMipmaps);
+        std::vector<const void*> test(textureDescription.numMipmaps);
+        std::vector<DestTextureData> dstData(textureDescription.numMipmaps);
         for (size_t i = 0; i < dstData.size(); ++i)
         {
             int width, height;

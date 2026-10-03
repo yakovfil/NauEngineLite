@@ -3,25 +3,24 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/array.h>
+#include <array>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
-#include <EASTL/vector.h>
-#include "nau/3d/dag_drv3d.h"
-#include "nau/utils/init_on_demand.h"
-
-#include "dabfg/frontend/internalRegistry.h"
-#include "dabfg/frontend/nameResolver.h"
-#include "dabfg/frontend/dependencyDataCalculator.h"
-#include "dabfg/frontend/nodeTracker.h"
-#include "dabfg/frontend/irGraphBuilder.h"
-
+#include "dabfg/backend/intermediateRepresentation.h"
 #include "dabfg/backend/nodeScheduler.h"
 #include "dabfg/backend/resourceScheduling/resourceScheduler.h"
-#include "dabfg/backend/intermediateRepresentation.h"
-
-#include "dabfg/runtime/nodeExecutor.h"
+#include "dabfg/frontend/dependencyDataCalculator.h"
+#include "dabfg/frontend/internalRegistry.h"
+#include "dabfg/frontend/irGraphBuilder.h"
+#include "dabfg/frontend/nameResolver.h"
+#include "dabfg/frontend/nodeTracker.h"
 #include "dabfg/runtime/compilationStage.h"
-
+#include "dabfg/runtime/nodeExecutor.h"
+#include "nau/3d/dag_drv3d.h"
+#include "nau/utils/init_on_demand.h"
 
 template <typename, bool>
 struct InitOnDemand;
@@ -63,9 +62,9 @@ public:
   void requestCompleteGraphRecompilation();
 
   // TODO: remove
-  void dumpGraph(const eastl::string &filename) const;
+  void dumpGraph(const std::string& filename) const;
 
-private:
+  private:
   CompilationStage currentStage = CompilationStage::UP_TO_DATE;
   multiplexing::Extents currentMultiplexingExtents;
 
@@ -90,7 +89,7 @@ private:
 
   NodeScheduler cullingScheduler{nodeTracker};
 
-  eastl::unique_ptr<ResourceScheduler> resourceScheduler;
+  std::unique_ptr<ResourceScheduler> resourceScheduler;
 
   // ===
 
@@ -101,7 +100,7 @@ private:
   ResourceScheduler::EventsCollectionRef allResourceEvents;
 
   // Deferred init
-  eastl::optional<NodeExecutor> nodeExec;
+  std::optional<NodeExecutor> nodeExec;
 
   uint32_t frameIndex = 0;
 

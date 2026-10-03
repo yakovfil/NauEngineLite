@@ -1,9 +1,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/schemelessEventSerialize.h>
+#include <daECS/core/componentTypes.h>
 #include <daECS/core/schemelessEvent.h>
+#include <daECS/net/schemelessEventSerialize.h>
 #include <daECS/net/serialize.h>
 #include <daNet/bitStream.h>
-#include <daECS/core/componentTypes.h>
+
+#include <utility>
 
 namespace ecs
 {
@@ -24,7 +26,7 @@ MaybeSchemelessEvent deserialize_from(const danet::BitStream &bs)
   constexpr ecs::component_type_t objType = ecs::ComponentTypeInfo<ecs::Object>::type;
   if (ecs::MaybeChildComponent mbcomp = deserialize_init_component_typeless(objType, ecs::INVALID_COMPONENT_INDEX, cb))
     if (mbcomp->getUserType() == objType)
-      return SchemelessEvent(evtt, eastl::move(mbcomp->getRW<ecs::Object>()));
+        return SchemelessEvent(evtt, std::move(mbcomp->getRW<ecs::Object>()));
   return MaybeSchemelessEvent{};
 }
 

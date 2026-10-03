@@ -3,37 +3,34 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
-#include <EASTL/fixed_string.h>
-#include <EASTL/variant.h>
-#include <EASTL/optional.h>
-#include <EASTL/fixed_map.h>
-
-#include "nau/utils/dag_fixedVectorSet.h"
-#include "nau/utils/dag_relocatableFixedVector.h"
-#include "nau/3d/dag_drv3d.h"
-#include "nau/3d/dag_resPtr.h"
-#include "nau/shaders/dag_shaderCommon.h"
-
-#include "render/daBfg/externalResources.h"
-#include "render/daBfg/multiplexing.h"
-#include "render/daBfg/priority.h"
-#include "render/daBfg/usage.h"
-#include "render/daBfg/stage.h"
-#include "render/daBfg/history.h"
-
-#include "render/daBfg/detail/nodeNameId.h"
-#include "render/daBfg/detail/resNameId.h"
-#include "render/daBfg/detail/blob.h"
-#include "render/daBfg/detail/projectors.h"
-#include "render/daBfg/detail/access.h"
+#include <optional>
+#include <span>
+#include <tuple>
+#include <variant>
+#include <vector>
 
 #include "dabfg/common/autoResolutionData.h"
 #include "dabfg/common/bindingType.h"
-
 #include "dabfg/id/idIndexedMapping.h"
 #include "dabfg/id/idSentinels.h"
-
+#include "nau/3d/dag_drv3d.h"
+#include "nau/3d/dag_resPtr.h"
+#include "nau/shaders/dag_shaderCommon.h"
+#include "nau/utils/dag_fixedVectorSet.h"
+#include "nau/utils/dag_relocatableFixedVector.h"
+#include "nau/utils/fixed_map.h"
+#include "nau/utils/inline_string.h"
+#include "render/daBfg/detail/access.h"
+#include "render/daBfg/detail/blob.h"
+#include "render/daBfg/detail/nodeNameId.h"
+#include "render/daBfg/detail/projectors.h"
+#include "render/daBfg/detail/resNameId.h"
+#include "render/daBfg/externalResources.h"
+#include "render/daBfg/history.h"
+#include "render/daBfg/multiplexing.h"
+#include "render/daBfg/priority.h"
+#include "render/daBfg/stage.h"
+#include "render/daBfg/usage.h"
 
 // This files contains an intermediate representation of the graph which
 // decouples internal FG algorithms user-facing classes.
@@ -95,67 +92,79 @@ struct Node
 
 struct ScheduledResource
 {
-  eastl::variant<ResourceDescription, BlobDescription> description;
-  ResourceType resourceType;
-  eastl::optional<AutoResolutionData> resolutionType;
-  History history;
+    std::variant<ResourceDescription, BlobDescription> description;
+    ResourceType resourceType;
+    std::optional<AutoResolutionData> resolutionType;
+    History history;
 
-  bool isGpuResource() const { return eastl::holds_alternative<ResourceDescription>(description); }
-  bool isCpuResource() const { return eastl::holds_alternative<BlobDescription>(description); }
+    bool isGpuResource() const
+    {
+        return std::holds_alternative<ResourceDescription>(description);
+    }
+    bool isCpuResource() const
+    {
+        return std::holds_alternative<BlobDescription>(description);
+    }
 
   const ResourceDescription &getGpuDescription() const
   {
     NAU_ASSERT(isGpuResource());
-    return eastl::get<ResourceDescription>(description);
+    return std::get<ResourceDescription>(description);
   }
   const BlobDescription &getCpuDescription() const
   {
     NAU_ASSERT(isCpuResource());
-    return eastl::get<BlobDescription>(description);
+    return std::get<BlobDescription>(description);
   }
 };
 
 struct Resource
 {
-  eastl::variant<ScheduledResource, ExternalResource> resource;
+    std::variant<ScheduledResource, ExternalResource> resource;
 
-  // Renaming a resource changes its' ResNameId, but still leaves it
-  // the same resource conceptually, so we map all such resources to same
-  // IR resource.
-  dag::FixedVectorSet<ResNameId, 8> frontendResources;
+    // Renaming a resource changes its' ResNameId, but still leaves it
+    // the same resource conceptually, so we map all such resources to same
+    // IR resource.
+    dag::FixedVectorSet<ResNameId, 8> frontendResources;
 
-  // Multiplexing iteration this resource is produced on
-  MultiplexingIndex multiplexingIndex;
+    // Multiplexing iteration this resource is produced on
+    MultiplexingIndex multiplexingIndex;
 
-  bool isExternal() const { return eastl::holds_alternative<ExternalResource>(resource); }
-  bool isScheduled() const { return eastl::holds_alternative<ScheduledResource>(resource); }
+    bool isExternal() const
+    {
+        return std::holds_alternative<ExternalResource>(resource);
+    }
+    bool isScheduled() const
+    {
+        return std::holds_alternative<ScheduledResource>(resource);
+    }
   bool isExternalTex() const
   {
-    return isExternal() && eastl::holds_alternative<ManagedTexView>(eastl::get<ExternalResource>(resource));
+      return isExternal() && std::holds_alternative<ManagedTexView>(std::get<ExternalResource>(resource));
   }
   ManagedTexView getExternalTex() const
   {
     NAU_ASSERT(isExternalTex());
-    return eastl::get<ManagedTexView>(eastl::get<ExternalResource>(resource));
+    return std::get<ManagedTexView>(std::get<ExternalResource>(resource));
   }
   bool isExternalBuf() const
   {
-    return isExternal() && eastl::holds_alternative<ManagedBufView>(eastl::get<ExternalResource>(resource));
+      return isExternal() && std::holds_alternative<ManagedBufView>(std::get<ExternalResource>(resource));
   }
   ManagedBufView getExternalBuf() const
   {
     NAU_ASSERT(isExternalBuf());
-    return eastl::get<ManagedBufView>(eastl::get<ExternalResource>(resource));
+    return std::get<ManagedBufView>(std::get<ExternalResource>(resource));
   }
   ScheduledResource &asScheduled()
   {
     NAU_ASSERT(isScheduled());
-    return eastl::get<ScheduledResource>(resource);
+    return std::get<ScheduledResource>(resource);
   }
   const ScheduledResource &asScheduled() const
   {
     NAU_ASSERT(isScheduled());
-    return eastl::get<ScheduledResource>(resource);
+    return std::get<ScheduledResource>(resource);
   }
   ResourceType getResType() const
   {
@@ -170,7 +179,7 @@ struct Resource
 struct Binding
 {
   BindingType type = BindingType::Invalid;
-  eastl::optional<ResourceIndex> resource = eastl::nullopt;
+  std::optional<ResourceIndex> resource = std::nullopt;
   bool history = false;
 
   // projected type of "what"
@@ -180,7 +189,7 @@ struct Binding
 };
 
 //using BindingsMap = dag::FixedVectorMap<int, Binding, 8>;
-using BindingsMap = eastl::fixed_map<int, Binding, 8>;
+using BindingsMap = nau::FixedMap<int, Binding, 8>;
 
 struct VrsState
 {
@@ -201,9 +210,9 @@ struct SubresourceRef
 // No subresource ref means we want an empty binding for that attachment
 struct RenderPass
 {
-  dag::RelocatableFixedVector<eastl::optional<SubresourceRef>, 8> colorAttachments;
-  eastl::optional<SubresourceRef> depthAttachment;
-  bool depthReadOnly = true;
+    dag::RelocatableFixedVector<std::optional<SubresourceRef>, 8> colorAttachments;
+    std::optional<SubresourceRef> depthAttachment;
+    bool depthReadOnly = true;
 };
 
 struct ShaderBlockBindings
@@ -216,19 +225,19 @@ struct ShaderBlockBindings
 struct RequiredNodeState
 {
   bool wire = false;
-  eastl::optional<VrsState> vrs;
+  std::optional<VrsState> vrs;
   // NOTE: we can be within a render pass even with no attachments bound
-  eastl::optional<RenderPass> pass;
-  eastl::optional<shaders::OverrideState> shaderOverrides;
+  std::optional<RenderPass> pass;
+  std::optional<shaders::OverrideState> shaderOverrides;
   BindingsMap bindings;
   ShaderBlockBindings shaderBlockLayers;
 };
 
 class Mapping;
 
-using DebugNodeName = eastl::fixed_string<char, 64>;
+using DebugNodeName = nau::InlineString<char, 64>;
 // Resource names are longer due to renaming chains
-using DebugResourceName = eastl::fixed_string<char, 128>;
+using DebugResourceName = nau::InlineString<char, 128>;
 
 struct Graph
 {
@@ -241,7 +250,7 @@ struct Graph
 
   // Choses a subgraph by selecting some nodes and specifying their order
   // Argument must map "old -> new" index and not contain any gaps
-  void choseSubgraph(eastl::span<const intermediate::NodeIndex> old_to_new_index_mapping);
+  void choseSubgraph(std::span<const intermediate::NodeIndex> old_to_new_index_mapping);
 
   // Calculates the original resources/nodes -> IR resources/nodes mapping
   Mapping calculateMapping();
@@ -282,12 +291,12 @@ private:
   uint32_t mappedNodeNameIdCount_{0};
   uint32_t mappedResNameIdCount_{0};
 
-  eastl::vector<NodeIndex> nodeNameIdMapping_{};
-  eastl::vector<ResourceIndex> resNameIdMapping_{};
+  std::vector<NodeIndex> nodeNameIdMapping_{};
+  std::vector<ResourceIndex> resNameIdMapping_{};
 };
 
 } // namespace dabfg::intermediate
 
 DAG_DECLARE_RELOCATABLE(dabfg::intermediate::Binding);
 DAG_DECLARE_RELOCATABLE(dabfg::intermediate::Request);
-DAG_DECLARE_RELOCATABLE(eastl::optional<dabfg::intermediate::SubresourceRef>);
+DAG_DECLARE_RELOCATABLE(std::optional<dabfg::intermediate::SubresourceRef>);

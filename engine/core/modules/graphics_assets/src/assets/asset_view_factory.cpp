@@ -3,15 +3,17 @@
 
 #include "../../include/graphics_assets/asset_view_factory.h"
 
+#include <vector>
+
 #include "../../include/graphics_assets/material_asset.h"
 #include "../../include/graphics_assets/shader_asset.h"
+#include "../../include/graphics_assets/skinned_mesh_asset.h"
 #include "../../include/graphics_assets/static_mesh_asset.h"
 #include "../../include/graphics_assets/texture_asset.h"
-#include "../../include/graphics_assets/skinned_mesh_asset.h"
 
 namespace nau
 {
-    eastl::vector<const rtti::TypeInfo*> GraphicsAssetViewFactory::getAssetViewTypes() const
+    std::vector<const rtti::TypeInfo*> GraphicsAssetViewFactory::getAssetViewTypes() const
     {
         return {
             &rtti::getTypeInfo<StaticMeshAssetView>(),

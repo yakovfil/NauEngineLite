@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <string>
+#include <string_view>
 
 #include "nau/memory/bytes_buffer.h"
 #include "nau/network/components/net_component_api.h"
@@ -48,7 +49,7 @@ namespace nau
          * 
          * @note The callback should take the peer ID and the scene name as parameters.
          */
-        virtual void setOnSceneMissing(nau::Functor<void(eastl::string_view peerId, eastl::string_view sceneName)> callback) = 0;
+        virtual void setOnSceneMissing(nau::Functor<void(std::string_view peerId, std::string_view sceneName)> callback) = 0;
 
         /**
          * @brief Callback that is dispatched when an IComponentNetSync scene component is activated.

@@ -9,7 +9,7 @@ cmake --preset win_vs2026_x64
 cmake --build build/win_vs2026_x64 --config Debug --target SceneBaseSample
 ```
 
-Sample targets are retained. Windows MSVC presets now use `win_vs2026_x64*` and require VS 2026/v145 with CMake 4.2+. Source paths use `NAU_SAMPLES_SOURCE_DIR`, defaulting to `../NauSamples` relative to the engine; binary paths remain under the engine build directory, including `samples/<sample>` intermediate files and `bin/<configuration>` native executables.
+Sample targets are retained. Windows MSVC presets now use `win_vs2026_x64*` and require VS 2026/v145 with CMake 4.2+. The engine and samples now use the C++20 toolchain standard library; the migration is source/ABI breaking, so do not combine these sources with pre-migration engine binaries or CMake caches. Rebuild the engine, samples, and generated consumers together. Source paths use `NAU_SAMPLES_SOURCE_DIR`, defaulting to `../NauSamples` relative to the engine; binary paths remain under the engine build directory, including `samples/<sample>` intermediate files and `bin/<configuration>` native executables.
 
 For a relocated sample checkout, configure with a quoted absolute path:
 

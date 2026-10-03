@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <EASTL/map.h>
-#include <EASTL/string.h>
-#include <EASTL/utility.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "nau/network/napi/networking.h"
 #include "nau/network/netsync/net_connector.h"
@@ -26,36 +28,36 @@ namespace nau
         async::Task<> initService() override;
 
         void init() override;
-        void init(eastl::unique_ptr<INetworking>& net);
+        void init(std::unique_ptr<INetworking>& net);
 
-        void listen(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& url) override;
-        void getListeners(eastl::vector<ConnectionData>& listeners) override;
+        void listen(const std::string& localPeerId, const std::string& remotePeerId, const std::string& url) override;
+        void getListeners(std::vector<ConnectionData>& listeners) override;
 
-        void connect(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& url) override;
-        void getConnectors(eastl::vector<ConnectionData>& connectors) override;
+        void connect(const std::string& localPeerId, const std::string& remotePeerId, const std::string& url) override;
+        void getConnectors(std::vector<ConnectionData>& connectors) override;
 
-        void getConnections(const eastl::string& peerId, eastl::vector<eastl::string>& peers) override;
-        void getConnections(eastl::vector<eastl::weak_ptr<IConnection>>& connections) override;
+        void getConnections(const std::string& peerId, std::vector<std::string>& peers) override;
+        void getConnections(std::vector<std::weak_ptr<IConnection>>& connections) override;
 
-        void writeFrame(const eastl::string& peerId, const eastl::string& frame) override;
-        bool readFrame(const eastl::string& peerId, const eastl::string& fromPeerId, eastl::string& frame) override;
+        void writeFrame(const std::string& peerId, const std::string& frame) override;
+        bool readFrame(const std::string& peerId, const std::string& fromPeerId, std::string& frame) override;
 
         void update() override;
 
     private:
         struct Connection : public IConnection
         {
-            eastl::string m_localPeerId;
-            eastl::string m_remotePeerId;
+            std::string m_localPeerId;
+            std::string m_remotePeerId;
             State m_state = none;
-            eastl::shared_ptr<INetworkingTransport> m_transport;
+            std::shared_ptr<INetworkingTransport> m_transport;
 
             // Temporary measure until we implement some message protocol for stream connections, like ASIO TCP
-            eastl::string m_recBuffer;
+            std::string m_recBuffer;
 
-            eastl::string m_frameBuffer;
+            std::string m_frameBuffer;
 
-            Connection(const eastl::string& localPeerId, const eastl::string& remotePeerId) :
+            Connection(const std::string& localPeerId, const std::string& remotePeerId) :
                 m_localPeerId(localPeerId),
                 m_remotePeerId(remotePeerId)
             {
@@ -66,30 +68,30 @@ namespace nau
                 return m_state;
             }
 
-            virtual const eastl::string& localPeerId() override
+            virtual const std::string& localPeerId() override
             {
                 return m_localPeerId;
             }
 
-            virtual const eastl::string& remotePeerId() override
+            virtual const std::string& remotePeerId() override
             {
                 return m_remotePeerId;
             }
 
-            virtual const eastl::string& localEndPoint() override
+            virtual const std::string& localEndPoint() override
             {
                 return m_transport->localEndPoint();
             }
 
-            virtual const eastl::string& remoteEndPoint() override
+            virtual const std::string& remoteEndPoint() override
             {
                 return m_transport->remoteEndPoint();
             }
 
             void update();
             void processMessages();
-            void processMessage(const eastl::string& message);
-            void writeFrame(const eastl::string& frame);
+            void processMessage(const std::string& message);
+            void writeFrame(const std::string& frame);
             void requestRemoteId();
             void sendId();
 
@@ -97,10 +99,10 @@ namespace nau
             bool m_verbose = true;
         };
 
-        eastl::unique_ptr<INetworking> m_networking;
-        eastl::vector<eastl::pair<eastl::shared_ptr<INetworkingListener>, ConnectionData>> m_listeners;
-        eastl::vector<eastl::pair<eastl::shared_ptr<INetworkingConnector>, ConnectionData>> m_connectors;
-        eastl::vector<eastl::shared_ptr<Connection>> m_connections;
+        std::unique_ptr<INetworking> m_networking;
+        std::vector<std::pair<std::shared_ptr<INetworkingListener>, ConnectionData>> m_listeners;
+        std::vector<std::pair<std::shared_ptr<INetworkingConnector>, ConnectionData>> m_connectors;
+        std::vector<std::shared_ptr<Connection>> m_connections;
 
         // Debug
         bool m_verbose = true;

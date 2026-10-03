@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <functional>
+#include <string>
+
 #include "nau/3d/dag_tex3d.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/scene/scene.h"
@@ -25,8 +28,8 @@ namespace nau::ui
     {
         NAU_TYPEID(nau::ui::UiManager)
 
-        using TElementChangedCallback = eastl::function<void(class Node*)>;
-        using TCanvasLoadedCallback  = eastl::function<void(const eastl::string& canvasName)>;
+        using TElementChangedCallback = std::function<void(class Node*)>;
+        using TCanvasLoadedCallback = std::function<void(const std::string& canvasName)>;
         using TCallbackHandle = uint32_t;
         const static TCallbackHandle INVALID_CB_HANDLE = 0;
 
@@ -55,14 +58,14 @@ namespace nau::ui
          * @param [in] canvasName   Name of the canvas object to retrieve.
          * @return                  A pointer to the requested canvas object or `NULL` if the canvas has not been found.
          */
-        virtual Canvas* getCanvas(const eastl::string& canvasName) = 0;
+        virtual Canvas* getCanvas(const std::string& canvasName) = 0;
 
         /**
          * @brief Removes the canvas from the GUI hierarchy.
          * 
          * @param [in] canvasName Name of the canvas to delete.
          */
-        virtual void removeCanvas(const eastl::string& canvasName) = 0;
+        virtual void removeCanvas(const std::string& canvasName) = 0;
         virtual void updateCanvases() = 0;
         virtual TCallbackHandle setOnCanvasLoadedCallback(TCanvasLoadedCallback&& callback) = 0;
         virtual bool setOnCanvasLoadedCallback(TCallbackHandle handle) = 0;
@@ -77,8 +80,8 @@ namespace nau::ui
          * @param [in] canvasName   Name of the canvas that the object is attached to.
          * @return                  A pointer to the object that the cursor is currenrly pointing at or `NULL` if the cursor is not currently pointing at anything.
          */
-        virtual Node* getCanvasChildUnderCursor(const eastl::string& canvasName) = 0;
-        
+        virtual Node* getCanvasChildUnderCursor(const std::string& canvasName) = 0;
+
         /**
          * @brief Sets a function that is called when a GUI element is modified in update.
          * 

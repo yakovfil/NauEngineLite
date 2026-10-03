@@ -27,7 +27,7 @@
 #define __cocos2d_libs__TouchEvent__
 
 #include "base/CCEvent.h"
-#include <EASTL/vector.h>
+#include <vector>
 
 /**
  * @addtogroup base
@@ -73,7 +73,7 @@ public:
      *
      * @return The touches of the event.
      */
-    const eastl::vector<Touch*>& getTouches() const { return _touches; }
+    const std::vector<Touch*>& getTouches() const { return _touches; }
 
     /** Set the event code.
      * 
@@ -84,12 +84,12 @@ public:
      *
      * @param touches A given touches vector.
      */
-    void setTouches(const eastl::vector<Touch*>& touches) { _touches = touches; };
-    void setTouches(eastl::vector<Touch*>&& touches) { _touches = std::move(touches); };
+    void setTouches(const std::vector<Touch*>& touches) { _touches = touches; };
+    void setTouches(std::vector<Touch*>&& touches) { _touches = std::move(touches); };
     
 private:
     EventCode _eventCode;
-    eastl::vector<Touch*> _touches;
+    std::vector<Touch*> _touches;
 
     friend class RenderView;
 };

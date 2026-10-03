@@ -25,7 +25,6 @@ nau_collect_files(Headers
 add_library(${TargetName} ${Sources} ${Headers})
 
 target_link_libraries(${TargetName}
-  EASTL
   NauKernel
 )
 

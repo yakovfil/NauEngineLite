@@ -2,19 +2,21 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "device.h"
-#include "frontend_state.h"
-
-#include "d3dformat.h"
-
-#include "nau/dag_ioSys/dag_memIo.h"
-#include "nau/image/dag_texPixel.h"
-#include "nau/math/dag_adjpow2.h"
-#include "nau/3d/dag_drv3d_pc.h"
-#include <EASTL/tuple.h>
 #include <drv3d_commonCode/basetexture.h>
 #include <drv3d_commonCode/validateUpdateSubRegion.h>
 
+#include <span>
+#include <string>
+#include <tuple>
+#include <utility>
+
+#include "d3dformat.h"
+#include "device.h"
+#include "frontend_state.h"
+#include "nau/3d/dag_drv3d_pc.h"
+#include "nau/dag_ioSys/dag_memIo.h"
+#include "nau/image/dag_texPixel.h"
+#include "nau/math/dag_adjpow2.h"
 
 #if 0
 #define VERBOSE_DEBUG debug
@@ -856,7 +858,7 @@ void BaseTex::setDsvBinding(bool s)
 Bitset<Driver3dRenderTarget::MAX_SIMRT> BaseTex::getRtvBinding() const
 {
   Bitset<Driver3dRenderTarget::MAX_SIMRT> ret;
-  ret.from_uint64((stateBitSet >> active_binding_rtv_offset).to_uint64());
+  ret = Bitset<Driver3dRenderTarget::MAX_SIMRT>((stateBitSet >> active_binding_rtv_offset).to_ullong());
   return ret;
 }
 
@@ -924,8 +926,8 @@ BaseTexture *BaseTex::makeTmpTexResCopy(int w, int h, int d, int l, bool staging
   BaseTex *clonedTex = get_device().newTextureObject(resType, cflg | (staging_tex ? TEXCF_SYSMEM : 0));
   if (!staging_tex)
     clonedTex->tidXored = tidXored, clonedTex->stubTexIdx = stubTexIdx;
-  
-  nau::string tempStr = eastl::string(staging_tex ? "stg:" : "tmp:");
+
+  nau::string tempStr = std::string(staging_tex ? "stg:" : "tmp:");
   tempStr.append(getTexName());
   clonedTex->setParams(w, h, d, l, tempStr.c_str());//String::mk_str_cat(staging_tex ? "stg:" : "tmp:", getTexName()));
   clonedTex->setIsPreallocBeforeLoad(true);
@@ -946,12 +948,12 @@ void BaseTex::replaceTexResObject(BaseTexture *&other_tex)
     memcpy(&tex, &other->tex, sizeof(tmp));
     memcpy(&other->tex, tmp, sizeof(tmp));
     // swap dimensions
-    eastl::swap(width, other->width);
-    eastl::swap(height, other->height);
-    eastl::swap(depth, other->depth);
-    eastl::swap(mipLevels, other->mipLevels);
-    eastl::swap(minMipLevel, other->minMipLevel);
-    eastl::swap(maxMipLevel, other->maxMipLevel);
+    std::swap(width, other->width);
+    std::swap(height, other->height);
+    std::swap(depth, other->depth);
+    std::swap(mipLevels, other->mipLevels);
+    std::swap(minMipLevel, other->minMipLevel);
+    std::swap(maxMipLevel, other->maxMipLevel);
 
 #if DAGOR_DBGLEVEL > 0
     other->setWasUsed();
@@ -1707,8 +1709,8 @@ void BaseTex::unlockimgRes3d()
       // Copy all mips is required after that action.
       tex.stagingMemory.flush();
       auto copies = calculate_texture_mips_copy_info(*tex.image, mipLevels);
-      const eastl::span<BufferImageCopy> fullResource{copies};
-      const eastl::span<BufferImageCopy> oneSubresource{&copies[calculate_mip_slice_from_index(lockedSubRes, mipLevels)], 1};
+      const std::span<BufferImageCopy> fullResource{copies};
+      const std::span<BufferImageCopy> oneSubresource{&copies[calculate_mip_slice_from_index(lockedSubRes, mipLevels)], 1};
       const auto uploadRegions = stateBitSet.test(unlock_image_is_upload_skipped) ? fullResource : oneSubresource;
       ctx.uploadToImage(tex.image, uploadRegions.data(), uploadRegions.size(), tex.stagingMemory, DeviceQueueType::UPLOAD, false);
       stateBitSet.set(unlock_image_is_upload_skipped, false);

@@ -2,6 +2,8 @@
 #include <daECS/net/reliabilitySys.h>
 #include <debug/dag_assert.h>
 
+#include <algorithm>
+
 namespace net
 {
 
@@ -10,9 +12,12 @@ namespace net
 void ReliabilitySystem::packetSent(int cur_time, int timeout_ms)
 {
 #if _DEBUG
-  bool alreadyExist = eastl::find_if(pendingAcks.begin(), pendingAcks.end(),
-                        [this](const PendingAckRec &qr) { return qr.sequence == localSequence; }) != pendingAcks.end();
-  NAU_ASSERT(!alreadyExist);
+    bool alreadyExist = std::find_if(pendingAcks.begin(), pendingAcks.end(),
+                                     [this](const PendingAckRec& qr)
+    {
+        return qr.sequence == localSequence;
+    }) != pendingAcks.end();
+    NAU_ASSERT(!alreadyExist);
 #endif
   pendingAcks.insert(PendingAckRec{localSequence, 0, cur_time + timeout_ms});
   incLocalSequence();

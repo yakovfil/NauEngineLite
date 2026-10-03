@@ -3,12 +3,14 @@
 
 #include "nau/ui/scroll.h"
 
-#include "2d/CCDrawNode.h"
-#include "base/CCEventListenerMouse.h"
-#include "base/CCEventDispatcher.h"
 #include <cocos/base/CCDirector.h>
-#include "nau/ui/elements/clipping_node.h"
 
+#include <algorithm>
+
+#include "2d/CCDrawNode.h"
+#include "base/CCEventDispatcher.h"
+#include "base/CCEventListenerMouse.h"
+#include "nau/ui/elements/clipping_node.h"
 
 namespace nau::ui
 {
@@ -61,7 +63,7 @@ namespace nau::ui
         for (const auto& contentItem : m_content) 
         {
             const math::vec2 itemSize = contentItem->getContentSize();
-            totalContentSize.setX(eastl::max(totalContentSize.getX(), itemSize.getX()));
+            totalContentSize.setX(std::max(totalContentSize.getX(), itemSize.getX()));
             totalContentSize.setY(totalContentSize.getY() + itemSize.getY());
         }
 
@@ -98,7 +100,7 @@ namespace nau::ui
         for (const auto& contentItem : m_content) {
             const math::vec2 itemSize = contentItem->getContentSize();
             totalContentSize.setX(totalContentSize.getX() + itemSize.getX());
-            totalContentSize.setY(eastl::max(totalContentSize.getY(), itemSize.getY()));
+            totalContentSize.setY(std::max(totalContentSize.getY(), itemSize.getY()));
         }
 
         m_contentRoot->setContentSize(totalContentSize);
@@ -371,9 +373,8 @@ namespace nau::ui
         }
         else
         {
-            m_contentRoot->setContentSize({
-                contentSize.getX() + itemSize.getX(),
-                eastl::max(contentSize.getY(),  itemSize.getY())});    
+            m_contentRoot->setContentSize({contentSize.getX() + itemSize.getX(),
+                                           std::max(contentSize.getY(), itemSize.getY())});
         }
 
         m_contentRoot->addChild(item);     
@@ -408,9 +409,8 @@ namespace nau::ui
         }
         else
         {
-            m_contentRoot->setContentSize({
-                eastl::max(contentSize.getX(),  itemSize.getX()),
-                contentSize.getY() + itemSize.getY()});    
+            m_contentRoot->setContentSize({std::max(contentSize.getX(), itemSize.getX()),
+                                           contentSize.getY() + itemSize.getY()});
         }
 
         m_contentRoot->addChild(item);     
@@ -433,7 +433,7 @@ namespace nau::ui
         }
 
         markDirty();
-        auto it = eastl::find(m_content.begin(), m_content.end(), item);
+        auto it = std::find(m_content.begin(), m_content.end(), item);
         if (it != m_content.end())
         {
             it = m_content.erase(it);
@@ -465,7 +465,7 @@ namespace nau::ui
 
     void NauScroll::removeChildAsHorizontally(Node* item)
     {
-        auto it = eastl::find(m_content.begin(), m_content.end(), item);
+        auto it = std::find(m_content.begin(), m_content.end(), item);
         if (it != m_content.end())
         {
             it = m_content.erase(it);
@@ -501,7 +501,7 @@ namespace nau::ui
 
     void NauScroll::removeChildAsVertically(Node* item)
     {
-        auto it = eastl::find(m_content.begin(), m_content.end(), item);
+        auto it = std::find(m_content.begin(), m_content.end(), item);
         if (it != m_content.end())
         {
             it = m_content.erase(it);
@@ -641,7 +641,7 @@ namespace nau::ui
             return;
         }
 
-        auto it = eastl::find(m_content.begin(), m_content.end(), contentNode);
+        auto it = std::find(m_content.begin(), m_content.end(), contentNode);
 
         if (it == m_content.end()) 
         {

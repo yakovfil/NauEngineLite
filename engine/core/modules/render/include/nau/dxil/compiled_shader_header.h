@@ -3,13 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <generic/dag_tab.h>
-#include "nau/util/dag_bindump_ext.h"
-#include "nau/string/string.h"
-#include <EASTL/vector.h>
-#include "nau/shaders/dag_shaderHash.h"
-#include "nau/3d/shader_header.h"
+// #include <generic/dag_tab.h>
+#include <vector>
 
+#include "nau/3d/shader_header.h"
+#include "nau/shaders/dag_shaderHash.h"
+#include "nau/string/string.h"
+#include "nau/util/dag_bindump_ext.h"
 
 namespace dxil
 {
@@ -86,8 +86,7 @@ const SemanticInfo *getSemanticInfoFromIndex(uint32_t index);
 // NOTE: for something like TEXCOORD1 the input has to be "TEXCOOORD" for name and 1 for index
 uint32_t getIndexFromSementicAndSemanticIndex(const char *name, uint32_t index);
 
-ShaderHeaderCompileResult compileHeaderFromReflectionData(ShaderStage stage, const eastl::vector<uint8_t> &reflection,
-  uint32_t max_const_count, uint32_t bone_const_used, void *dxc_lib);
+ShaderHeaderCompileResult compileHeaderFromReflectionData(ShaderStage stage, const std::vector<uint8_t>& reflection, uint32_t max_const_count, uint32_t bone_const_used, void* dxc_lib);
 
 // identifies simple shader blob with one shader
 const uint32_t SHADER_IDENT = _MAKE4C('SX12');

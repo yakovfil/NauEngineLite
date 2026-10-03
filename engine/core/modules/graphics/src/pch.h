@@ -12,10 +12,10 @@
 
 // clang-format off
 
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <optional>
+#include <string>
+#include <memory>
+#include <vector>
 
 
 #include <d3d12.h>

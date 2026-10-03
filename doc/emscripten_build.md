@@ -8,6 +8,12 @@ Minimal runtime packages are staged and tested separately. The scene-driven
 [NauDemo browser guide](naudemo_web.md) describes the new demo presets, WebGL 2
 requirements, complete packages and fresh-checkout acceptance.
 
+The browser graphs use the C++20 toolchain standard library directly. EASTL and
+EABase are not active browser dependencies; retain the standard exception-free
+Wasm configuration and rebuild engine, sample, and package consumers together
+when migrating interfaces. Do not reuse pre-migration CMake caches or mix
+pre-migration and migrated JS/Wasm artifacts.
+
 ## Install and activate explicitly
 
 Use Windows PowerShell. Git, CMake 3.24+ and Ninja must be on PATH. Tested versions
@@ -101,11 +107,11 @@ both configurations to audit the real graph and its 97 compile commands.
 
 ## Desktop coexistence validation
 
-The existing `win_vs2022_x64` preset configured successfully without `EMSDK` in
+The existing `win_vs2026_x64` preset configured successfully without `EMSDK` in
 separate `build/desktop-platform-before` and `build/desktop-platform-after`
-directories. Its preset definitions and 36 selected compiler/cache settings
-matched. The platform test verified that browser configuration left the original
-native cache untouched. To repeat the comparison with those directories present:
+directories. Its preset definitions and selected compiler/cache settings match;
+the browser checks leave the native cache untouched. To repeat the comparison
+with those directories present:
 
 ```powershell
 python cmake/probes/emscripten/test_platform_options.py --native-before build/desktop-platform-before --native-after build/desktop-platform-after
@@ -118,9 +124,9 @@ unverified. Native minimal Debug/Release builds and lifecycle tests pass; see
 [the profile guide](minimal_runtime_profile.md).
 
 CMake 4.2.1 produces an SDK warning about shared-library support. The probe and
-browser application use static linking. A native VS 2022 C++20 smoke test
-also configured, built and ran with MSVC v143 and Windows SDK 10.0.26100.0;
-full desktop application regression remains pending.
+browser application use static linking. Native minimal Debug/Release builds and
+lifecycle tests use the selected VS 2026/v145 toolchain and pass; the full
+integrated desktop matrix remains recorded separately in the migration evidence.
 
 ## Integration and delivery boundary
 

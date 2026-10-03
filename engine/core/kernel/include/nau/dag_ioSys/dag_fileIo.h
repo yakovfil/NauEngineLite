@@ -2,9 +2,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
 #include <nau/dag_ioSys/dag_baseIo.h>
 #include <nau/kernel/kernel_config.h>
+
+#include <span>
+#include <string>
 namespace nau::iosys
 {
     // forward declarations for external classes
@@ -24,7 +26,7 @@ namespace nau::iosys
     {
     public:
         file_ptr_t fileHandle;
-        eastl::string targetFilename;
+        std::string targetFilename;
 
         LFileGeneralSaveCB(file_ptr_t handle = NULL);
 
@@ -45,7 +47,7 @@ namespace nau::iosys
     {
     public:
         file_ptr_t fileHandle;
-        eastl::string targetFilename;
+        std::string targetFilename;
 
         LFileGeneralLoadCB(file_ptr_t handle = NULL);
 
@@ -90,7 +92,7 @@ namespace nau::iosys
         {
             return targetDataSz;
         }
-        virtual eastl::span<const char> getTargetRomData() const override;
+        virtual std::span<const char> getTargetRomData() const override;
     };
 
     /// Callback for writing whole file. Closes file in destructor.

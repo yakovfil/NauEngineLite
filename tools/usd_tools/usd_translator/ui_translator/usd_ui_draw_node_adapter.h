@@ -9,7 +9,10 @@
 
 #include "usd_ui_node_adapter.h"
 
-namespace nau::ui { class nau::ui::DrawNode; }
+namespace nau::ui
+{
+    class DrawNode;
+}
 
 namespace UsdTranslator
 {

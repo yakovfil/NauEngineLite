@@ -1,11 +1,11 @@
+#include <utility>
 // Copyright 2026 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
-
-#include "browser_window_manager.h"
 
 #include <emscripten.h>
 #include <emscripten/threading.h>
 
+#include "browser_window_manager.h"
 #include "nau/runtime/internal/runtime_object_registry.h"
 
 namespace nau
@@ -177,13 +177,13 @@ namespace nau
             {
                 return access(5) != 0;
             }
-            eastl::pair<unsigned, unsigned> getSize() const override
+            std::pair<unsigned, unsigned> getSize() const override
             {
                 unsigned values[2]{};
                 access(1, values);
                 return {values[0], values[1]};
             }
-            eastl::pair<unsigned, unsigned> getClientSize() const override
+            std::pair<unsigned, unsigned> getClientSize() const override
             {
                 unsigned values[2]{};
                 access(2, values);
@@ -202,7 +202,7 @@ namespace nau
             {
                 NAU_LOG_WARNING("Browser desktop positioning is unsupported");
             }
-            eastl::pair<unsigned, unsigned> getPosition() const override
+            std::pair<unsigned, unsigned> getPosition() const override
             {
                 return {0, 0};
             }

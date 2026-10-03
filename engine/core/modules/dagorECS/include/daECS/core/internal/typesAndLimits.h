@@ -4,7 +4,8 @@
 #pragma once
 
 #include <stdint.h>
-#include "EASTL/numeric_limits.h"
+
+#include <limits>
 
 namespace ecs
 {
@@ -16,19 +17,19 @@ typedef uint32_t component_type_t; // this is hash of name
 typedef uint32_t component_t;      // this is hash of name
 
 typedef uint16_t type_index_t; // limit types to 64k
-static constexpr type_index_t INVALID_COMPONENT_TYPE_INDEX = EASTL_LIMITS_MAX_U(type_index_t);
+static constexpr type_index_t INVALID_COMPONENT_TYPE_INDEX = std::numeric_limits<type_index_t>::max();
 
 typedef uint16_t component_index_t; // limit different components 64k
-static constexpr component_index_t INVALID_COMPONENT_INDEX = EASTL_LIMITS_MAX_U(component_index_t);
+static constexpr component_index_t INVALID_COMPONENT_INDEX = std::numeric_limits<component_index_t>::max();
 
 typedef uint16_t template_t; // limit different templates to 64k
-static constexpr template_t INVALID_TEMPLATE_INDEX = EASTL_LIMITS_MAX_U(template_t);
+static constexpr template_t INVALID_TEMPLATE_INDEX = std::numeric_limits<template_t>::max();
 
 typedef uint16_t archetype_component_id;
-static constexpr archetype_component_id INVALID_ARCHETYPE_COMPONENT_ID = EASTL_LIMITS_MAX_U(archetype_component_id);
+static constexpr archetype_component_id INVALID_ARCHETYPE_COMPONENT_ID = std::numeric_limits<archetype_component_id>::max();
 
 typedef uint32_t ecs_query_handle_t;
-static constexpr ecs_query_handle_t INVALID_QUERY_HANDLE_VAL = EASTL_LIMITS_MAX_U(ecs_query_handle_t);
+static constexpr ecs_query_handle_t INVALID_QUERY_HANDLE_VAL = std::numeric_limits<ecs_query_handle_t>::max();
 
 static constexpr uint32_t max_alignment_bits = 4; // if we wil be working in AVX, it will have to be 256 bits, i.e. 32. Currently
                                                   // assume it is 16
@@ -42,11 +43,10 @@ typedef uint8_t chunk_type_t;
 typedef uint16_t id_in_chunk_type_t;
 // #define ECS_MAX_CHUNK_ID_BITS 16
 static constexpr int ECS_MAX_CHUNK_ID_BITS = sizeof(id_in_chunk_type_t) * 8;
-static constexpr int MAX_CHUNKS_COUNT = eastl::numeric_limits<chunk_type_t>::max();
+static constexpr int MAX_CHUNKS_COUNT = std::numeric_limits<chunk_type_t>::max();
 
 typedef uint16_t archetype_t;
-static constexpr archetype_t INVALID_ARCHETYPE = EASTL_LIMITS_MAX_U(archetype_t);
-
+static constexpr archetype_t INVALID_ARCHETYPE = std::numeric_limits<archetype_t>::max();
 
 typedef uint16_t component_flags_t;
 

@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <EASTL/numeric_limits.h>
-
 #include <optional>
 #include <string_view>
 

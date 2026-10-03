@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_nau_ptr.cpp
 
+#include <memory>
 
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_impl.h"
@@ -51,20 +52,20 @@ namespace nau::test
 
     TEST(TestPtr, EastlUniquePtrCast)
     {
-        eastl::unique_ptr<ITestInterface1> itf1 = eastl::make_unique<TestService12>();
+        std::unique_ptr<ITestInterface1> itf1 = std::make_unique<TestService12>();
 
         static_assert(!std::is_constructible_v<std::unique_ptr<ITestInterface2>, decltype(itf1)>);
 
         auto itf2 = rtti::pointer_cast<ITestInterface2>(std::move(itf1));
-        static_assert(std::is_same_v<eastl::unique_ptr<ITestInterface2>, decltype(itf2)>);
+        static_assert(std::is_same_v<std::unique_ptr<ITestInterface2>, decltype(itf2)>);
 
         ASSERT_TRUE(itf2);
         ASSERT_FALSE(itf1);
 
-        static_assert(std::is_constructible_v<eastl::unique_ptr<IRttiObject>, decltype(itf2)>);
+        static_assert(std::is_constructible_v<std::unique_ptr<IRttiObject>, decltype(itf2)>);
 
         auto itf3 = rtti::pointer_cast<IRttiObject>(std::move(itf2));
-        static_assert(std::is_same_v<eastl::unique_ptr<IRttiObject>, decltype(itf3)>);
+        static_assert(std::is_same_v<std::unique_ptr<IRttiObject>, decltype(itf3)>);
 
         ASSERT_TRUE(itf3);
         ASSERT_FALSE(itf2);

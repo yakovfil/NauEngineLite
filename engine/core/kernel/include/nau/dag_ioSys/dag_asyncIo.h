@@ -4,6 +4,8 @@
 
 #include <nau/dag_ioSys/dag_baseIo.h>
 #include <nau/kernel/kernel_config.h>
+
+#include <string>
 namespace nau::iosys
 {
     // generic load interface implemented as async reader
@@ -24,7 +26,7 @@ namespace nau::iosys
             int pos;
             char* data;
         } buf;
-        eastl::string targetFilename;
+        std::string targetFilename;
 
         void readBuffered(void* ptr, int size);
 

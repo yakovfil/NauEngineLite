@@ -4,6 +4,7 @@
 #include "./application_impl.h"
 
 #include <cstdio>
+#include <string>
 
 #include "nau/diag/device_error.h"
 #include "nau/service/internal/service_provider_initialization.h"
@@ -180,7 +181,7 @@ namespace nau
     {
         if (task && task.isRejected())
         {
-            eastl::string message = m_lifecycleError ? m_lifecycleError->getMessage() + "\n" : eastl::string{};
+            std::string message = m_lifecycleError ? m_lifecycleError->getMessage() + "\n" : std::string{};
             message += phase;
             message += ": ";
             message += task.getError()->getDiagMessage();

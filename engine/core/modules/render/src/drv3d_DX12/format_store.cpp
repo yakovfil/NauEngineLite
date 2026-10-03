@@ -2,8 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "device.h"
+#include <algorithm>
 
+#include "device.h"
 #include "format_traits.h"
 
 using namespace drv3d_dx12;
@@ -900,19 +901,19 @@ bool FormatStore::isCopyConvertible(FormatStore other) const
 
   for (auto &e : format_copy_conversion_pair_table)
   {
-    if (end(e.from) != eastl::find(begin(e.from), end(e.from), thisLinearFormat))
-    {
-      if (end(e.to) != eastl::find(begin(e.to), end(e.to), otherLinearFormat))
+      if (end(e.from) != std::find(begin(e.from), end(e.from), thisLinearFormat))
       {
-        return true;
-      }
+          if (end(e.to) != std::find(begin(e.to), end(e.to), otherLinearFormat))
+          {
+              return true;
+          }
     }
-    else if (end(e.to) != eastl::find(begin(e.to), end(e.to), thisLinearFormat))
+    else if (end(e.to) != std::find(begin(e.to), end(e.to), thisLinearFormat))
     {
-      if (end(e.from) != eastl::find(begin(e.from), end(e.from), otherLinearFormat))
-      {
-        return true;
-      }
+        if (end(e.from) != std::find(begin(e.from), end(e.from), otherLinearFormat))
+        {
+            return true;
+        }
     }
   }
 

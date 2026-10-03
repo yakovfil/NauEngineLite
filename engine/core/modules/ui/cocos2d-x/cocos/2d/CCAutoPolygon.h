@@ -29,7 +29,7 @@ THE SOFTWARE.
 #ifndef COCOS_2D_CCAUTOPOLYGON_H__
 #define COCOS_2D_CCAUTOPOLYGON_H__
 
-#include <EASTL/string.h>
+#include <string>
 #include <vector>
 #include "platform/CCImage.h"
 #include "renderer/CCTrianglesCommand.h"

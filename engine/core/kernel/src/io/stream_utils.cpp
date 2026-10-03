@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/io/stream_utils.h"
+
+#include <string_view>
 
 namespace nau::io
 {
-    GenLoadOverStream::GenLoadOverStream(IStreamReader::Ptr stream, eastl::string_view targetName) :
+    GenLoadOverStream::GenLoadOverStream(IStreamReader::Ptr stream, std::string_view targetName) :
         m_stream(std::move(stream)),
         m_targetName(targetName)
     {

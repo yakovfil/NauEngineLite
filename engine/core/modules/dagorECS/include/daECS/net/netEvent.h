@@ -1,9 +1,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <daECS/core/event.h>
 #include <daECS/core/entityManager.h>
+#include <daECS/core/event.h>
 #include <daECS/net/msgDecl.h>
+
+#include <utility>
 
 namespace net
 {
@@ -58,7 +60,7 @@ struct EventRegRecordT : public EventRegRecord
     NAU_ASSERT(msg);
     Evt evt(typename Evt::TupleType(*static_cast<const typename Msg::Tuple *>(msg)));
     NAU_FAST_ASSERT(((EvtRt == net::Er::Unicast) && eid) || ((EvtRt != net::Er::Unicast) && !eid));
-    mgr.dispatchEvent(eid, eastl::move(evt));
+    mgr.dispatchEvent(eid, std::move(evt));
   }
   EventRegRecordT(const MessageClass &mcls) : EventRegRecord(Evt::staticType(), mcls, EvtRt, event2msg, msg2event) {}
 };

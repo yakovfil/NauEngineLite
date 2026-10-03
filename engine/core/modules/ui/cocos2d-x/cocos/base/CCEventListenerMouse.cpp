@@ -24,11 +24,12 @@
 
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerMouse.h"
 
 NS_CC_BEGIN
 
-const eastl::string EventListenerMouse::LISTENER_ID = "__cc_mouse";
+const std::string EventListenerMouse::LISTENER_ID = "__cc_mouse";
 
 bool EventListenerMouse::checkAvailable()
 {

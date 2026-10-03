@@ -38,7 +38,7 @@ target_link_libraries(replay
     NAU::engine2_ioSys
     NAU::dagorInclude
 )  
-target_link_libraries(replay eastl)
+target_link_libraries(replay )
 
 target_include_directories(replay PUBLIC 
 	$<BUILD_INTERFACE:${NAU_ENGINE_ROOT}/prog/engine/dagorInclude>

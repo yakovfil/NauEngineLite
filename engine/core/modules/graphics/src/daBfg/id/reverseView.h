@@ -3,19 +3,27 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/iterator.h>
-
+#include <iterator>
+#include <utility>
 
 template <class Container>
 class ReverseView
 {
 public:
-  template <class T>
-  ReverseView(T &&cont) : container_{eastl::forward<T>(cont)}
-  {}
+    template <class T>
+    ReverseView(T&& cont) :
+        container_{std::forward<T>(cont)}
+    {
+    }
 
-  auto begin() const { return eastl::reverse_iterator(eastl::end(container_)); }
-  auto end() const { return eastl::reverse_iterator(eastl::begin(container_)); }
+    auto begin() const
+    {
+        return std::reverse_iterator(std::end(container_));
+    }
+    auto end() const
+    {
+        return std::reverse_iterator(std::begin(container_));
+    }
 
 private:
   Container container_;

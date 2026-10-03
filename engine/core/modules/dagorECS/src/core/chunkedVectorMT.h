@@ -3,8 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 #include <stdint.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/atomic.h>
+
+#include <algorithm>
+#include <atomic>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace ecs
 {
@@ -14,17 +18,17 @@ struct ChunkedVectorSingleThreaded
 {
   struct Chunk
   {
-    eastl::unique_ptr<char[]> data;
-    uint32_t size = 0, stackAt = 0;
-    void init(uint32_t sz)
-    {
-      data.reset();
-      data = eastl::make_unique<char[]>(size = sz);
-      stackAt = 0;
-    }
+      std::unique_ptr<char[]> data;
+      uint32_t size = 0, stackAt = 0;
+      void init(uint32_t sz)
+      {
+          data.reset();
+          data = std::make_unique<char[]>(size = sz);
+          stackAt = 0;
+      }
   };
   Chunk top;
-  eastl::vector<Chunk> chunks;
+  std::vector<Chunk> chunks;
 
   Type *__restrict getStack() { return (Type *__restrict)(top.data.get() + top.stackAt); }
   const Type *__restrict getStackEnd() const { return (Type *__restrict)(top.data.get() + top.size); }
@@ -55,16 +59,16 @@ struct ChunkedVectorSingleThreaded
     const char *curStack = top.data.get() + top.stackAt;
     const uint32_t currentlyUsed = (const char *)at - curStack;
     NAU_FAST_ASSERT(at + step > end && end == getStackEnd() && at >= getStack() && at <= end && curStack <= (const char *)at);
-    const uint32_t nextSize = (eastl::max(top.size << 1, uint32_t(top.size + sizeof(Type) * step)) + page_mask) & ~page_mask;
+    const uint32_t nextSize = (std::max(top.size << 1, uint32_t(top.size + sizeof(Type) * step)) + page_mask) & ~page_mask;
 
     Chunk nextTop;
     nextTop.init(nextSize);
     if (top.size)
     {
       memcpy(nextTop.data.get(), curStack, currentlyUsed);
-      chunks.emplace_back(eastl::move(top));
+      chunks.emplace_back(std::move(top));
     }
-    top = eastl::move(nextTop);
+    top = std::move(nextTop);
     at = (Type *)(top.data.get() + currentlyUsed);
     end = getStackEnd();
     return (Type *)top.data.get(); // stackAt == 0 no
@@ -93,7 +97,7 @@ struct ChunkedVectorSingleThreaded
         nextSize = lastNotEnough + page_size;
     }
     const uint32_t alignedSize = (nextSize + page_mask) & ~page_mask;
-    chunks.set_capacity(0);
+    decltype(chunks){}.swap(chunks);
     if (top.size != alignedSize)
       top.init(alignedSize);
     else
@@ -141,9 +145,9 @@ struct MTLinkedList
 
   static Data &getData()
   {
-    if (EASTL_LIKELY(thread_data != nullptr))
-      return thread_data->data;
-    return newNode().data;
+      if (NAU_LIKELY(thread_data != nullptr))
+          return thread_data->data;
+      return newNode().data;
   }
   NAU_NOINLINE
   static Node &newNode()

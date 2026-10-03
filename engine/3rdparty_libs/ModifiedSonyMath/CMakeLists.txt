@@ -17,7 +17,6 @@ nau_collect_files(Sources
 
 add_library(${TargetName} INTERFACE ${Sources})
 
-target_link_libraries(${TargetName} INTERFACE EASTL)
 
 target_include_directories(${TargetName} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>  

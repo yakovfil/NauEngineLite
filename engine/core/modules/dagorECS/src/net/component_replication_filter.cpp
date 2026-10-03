@@ -1,29 +1,34 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include "component_replication_filters.h"
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
 #include <daECS/core/entityManager.h>
 #include <debug/dag_logSys.h>
+
+#include <algorithm>
+#include <limits>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "component_replication_filters.h"
 
 #define VERBOSE_DEBUG(...)
 
 namespace net
 {
 
-eastl::vector<replicate_component_filter_index_t> replicate_component_filter_index; // we use eastl::vector, as it's size() is faster.
-eastl::vector<component_replication_filter> replicate_component_filters;
+    std::vector<replicate_component_filter_index_t> replicate_component_filter_index;  // we use std::vector, as it's size() is faster.
+    std::vector<component_replication_filter> replicate_component_filters;
 
-uint32_t dirty_component_filter_mask = 0;
-static uint32_t last_components_count = 0;
+    uint32_t dirty_component_filter_mask = 0;
+    static uint32_t last_components_count = 0;
 
-ska::flat_hash_map<eastl::string, replicate_component_filter_index_t> replicate_component_filter_map;
-static eastl::vector<eastl::pair<ecs::component_t, replicate_component_filter_index_t>> delayed_components_filter;
+    ska::flat_hash_map<std::string, replicate_component_filter_index_t> replicate_component_filter_map;
+    static std::vector<std::pair<ecs::component_t, replicate_component_filter_index_t>> delayed_components_filter;
 
-static CompReplicationFilter filter_everywhere(ecs::EntityId, ConnectionId, const IConnection *)
-{
-  return CompReplicationFilter::ReplicateForConnection;
-}
+    static CompReplicationFilter filter_everywhere(ecs::EntityId, ConnectionId, const IConnection*)
+    {
+        return CompReplicationFilter::ReplicateForConnection;
+    }
 
 static void init_replicate_component_filters()
 {
@@ -51,9 +56,12 @@ void reset_replicate_component_filters()
 
 const char *get_component_filter_name(replicate_component_filter_index_t fit)
 {
-  auto it = eastl::find_if(replicate_component_filter_map.begin(), replicate_component_filter_map.end(),
-    [fit](auto a) { return a.second == fit; });
-  return it == replicate_component_filter_map.end() ? nullptr : it->first.c_str();
+    auto it = std::find_if(replicate_component_filter_map.begin(), replicate_component_filter_map.end(),
+                           [fit](auto a)
+    {
+        return a.second == fit;
+    });
+    return it == replicate_component_filter_map.end() ? nullptr : it->first.c_str();
 }
 
 replicate_component_filter_index_t find_component_filter(const char *name)
@@ -67,8 +75,11 @@ replicate_component_filter_index_t find_component_filter_for_component(ecs::comp
   ecs::component_index_t cidx = g_entity_mgr->getDataComponents().findComponentId(component);
   if (cidx != ecs::INVALID_COMPONENT_INDEX)
     return cidx < replicate_component_filter_index.size() ? replicate_component_filter_index[cidx] : replicate_everywhere_filter_id;
-  auto it = eastl::find_if(delayed_components_filter.rbegin(), delayed_components_filter.rend(),
-    [component](auto a) { return a.first == component; });
+  auto it = std::find_if(delayed_components_filter.rbegin(), delayed_components_filter.rend(),
+                         [component](auto a)
+  {
+      return a.first == component;
+  });
   return it == delayed_components_filter.rend() ? replicate_everywhere_filter_id : it->second;
 }
 
@@ -81,7 +92,7 @@ replicate_component_filter_index_t register_component_filter(const char *name, c
     replicate_component_filters[it->second] = filter;
     return it->second;
   }
-  if (replicate_component_filters.size() == eastl::numeric_limits<replicate_component_filter_index_t>::max())
+  if (replicate_component_filters.size() == std::numeric_limits<replicate_component_filter_index_t>::max())
   {
     logerr("too many filters already registered, replace replicate_component_filter_index_t type");
     return replicate_everywhere_filter_id;

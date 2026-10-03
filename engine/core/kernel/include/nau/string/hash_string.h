@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/service/hash_string.h
 
-
 #pragma once
+#include <functional>
+
 #include "nau/string/string.h"
 
 namespace nau
@@ -20,7 +21,7 @@ namespace nau
             size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
             const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
 
-            while(*input && (len--))
+            while (*input && (len--))
             {
                 hash ^= static_cast<size_t>(*input);
                 hash *= prime;
@@ -32,23 +33,23 @@ namespace nau
 
         hash_string(size_t hash) :
             m_data(""),
-            m_stringHash(hash){
+            m_stringHash(hash) {
 
             };
 
         hash_string(string other) :
             m_data(std::move(other)),
-            m_stringHash(constHash(m_data.c_str(), m_data.size())){
+            m_stringHash(constHash(m_data.c_str(), m_data.size())) {
 
             };
 
         hash_string(const hash_string& other) :
             m_data(other.m_data),
-            m_stringHash(other.m_stringHash){};
+            m_stringHash(other.m_stringHash) {};
 
         hash_string(hash_string&& other) noexcept :
             m_data(other.m_data),
-            m_stringHash(other.m_stringHash){
+            m_stringHash(other.m_stringHash) {
 
             };
 
@@ -96,15 +97,6 @@ namespace nau
         }
     }  // namespace string_literals
 }  // namespace nau
-
-template <>
-struct eastl::hash<nau::hash_string>
-{
-    size_t operator()(const nau::hash_string& s) const
-    {
-        return s.toHash();
-    }
-};
 
 template <>
 struct std::hash<nau::hash_string>

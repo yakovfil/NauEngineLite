@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include <cstdio>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "./application_impl.h"
 #include "./global_properties_impl.h"
@@ -17,13 +21,13 @@ namespace nau
 {
     Result<> initAndApplyConfiguration(ApplicationInitDelegate& initDelegate);
 
-    eastl::unique_ptr<IRttiObject> createBackgroundWorkService();
+    std::unique_ptr<IRttiObject> createBackgroundWorkService();
 
     Result<> setupCoreServicesAndConfigure(ApplicationInitDelegate& initDelegate)
     {
         // diagnostics:
         diag::setDeviceError(diag::createDefaultDeviceError());
-        eastl::unique_ptr<LoggingService> loggingService = eastl::make_unique<LoggingService>();
+        std::unique_ptr<LoggingService> loggingService = std::make_unique<LoggingService>();
 
         setDefaultServiceProvider(createServiceProvider());
 
@@ -34,7 +38,7 @@ namespace nau
         serviceProvider.addService(std::move(loggingService));
         serviceProvider.addService(io::createVirtualFileSystem());
         serviceProvider.addService(AsyncMessageSource::create());
-        serviceProvider.addService(eastl::make_unique<GlobalPropertiesImpl>());
+        serviceProvider.addService(std::make_unique<GlobalPropertiesImpl>());
 
         return initAndApplyConfiguration(initDelegate);
     }
@@ -43,7 +47,7 @@ namespace nau
     {
         auto& globalProps = getServiceProvider().get<GlobalProperties>();
 
-        globalProps.addVariableResolver("folder", [](eastl::string_view folderStr) -> eastl::optional<eastl::string>
+        globalProps.addVariableResolver("folder", [](std::string_view folderStr) -> std::optional<std::string>
         {
             using namespace nau::strings;
             namespace fs = std::filesystem;
@@ -52,7 +56,7 @@ namespace nau
             if (!parse(toStringView(folderStr), folder))
             {
                 NAU_FAILURE("Bad known_folder value ({})", folderStr);
-                return eastl::string{"BAD_FOLDER"};
+                return std::string{"BAD_FOLDER"};
             }
 
             const fs::path folderPath = io::getKnownFolderPath(folder);
@@ -60,9 +64,9 @@ namespace nau
 
             const std::wstring wcsPath = folderPath.wstring();
 
-            auto utf8String = wstringToUtf8(eastl::wstring_view{wcsPath.data(), wcsPath.size()});
+            auto utf8String = wstringToUtf8(std::wstring_view{wcsPath.data(), wcsPath.size()});
 
-            return eastl::string{reinterpret_cast<const char*>(utf8String.data()), utf8String.size()};
+            return std::string{reinterpret_cast<const char*>(utf8String.data()), utf8String.size()};
         });
 
         return initDelegate.configureApplication();
@@ -99,7 +103,7 @@ namespace nau
 
     }  // namespace
 
-    Result<eastl::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate& initDelegate)
+    Result<std::unique_ptr<Application>> createApplicationChecked(ApplicationInitDelegate& initDelegate)
     {
         if (applicationExists() || hasServiceProvider() || hasModuleManager())
         {
@@ -112,7 +116,7 @@ namespace nau
         {
             IModuleManager::Ptr modules;
             const auto cleanup = cleanupFailedApplication(*runtime, modules);
-            auto message = eastl::string("Configuration: ") + configuration.getError()->getDiagMessage();
+            auto message = std::string("Configuration: ") + configuration.getError()->getDiagMessage();
             if (!cleanup)
             {
                 message += "\nCleanup: ";
@@ -121,12 +125,12 @@ namespace nau
             return NauMakeError(message);
         }
 
-        auto application = eastl::make_unique<ApplicationImpl>(std::move(runtime));
+        auto application = std::make_unique<ApplicationImpl>(std::move(runtime));
 
         if (Result<> initRes = initDelegate.initializeApplication(); !initRes)
         {
             const auto cleanup = application->abortCreation();
-            auto message = eastl::string("Application setup: ") + initRes.getError()->getDiagMessage();
+            auto message = std::string("Application setup: ") + initRes.getError()->getDiagMessage();
             if (!cleanup)
             {
                 message += "\nCleanup: ";
@@ -135,10 +139,10 @@ namespace nau
             return NauMakeError(message);
         }
 
-        return eastl::unique_ptr<Application>{std::move(application)};
+        return std::unique_ptr<Application>{std::move(application)};
     }
 
-    eastl::unique_ptr<Application> createApplication(ApplicationInitDelegate& initDelegate)
+    std::unique_ptr<Application> createApplication(ApplicationInitDelegate& initDelegate)
     {
         auto result = createApplicationChecked(initDelegate);
         if (!result)
@@ -149,7 +153,7 @@ namespace nau
         return std::move(*result);
     }
 
-    eastl::unique_ptr<Application> createApplication(Functor<Result<>()> preInitCallback)
+    std::unique_ptr<Application> createApplication(Functor<Result<>()> preInitCallback)
     {
         TempAppInitDelegate initDelegate(std::move(preInitCallback));
         return createApplication(initDelegate);

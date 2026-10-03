@@ -15,7 +15,7 @@ class RichTextLexer
 public:
     RichTextLexer() = default;
 
-    RichTextParseResult Parse(const eastl::u32string& text, size_t startIndex);
+    RichTextParseResult Parse(const std::u32string& text, size_t startIndex);
 
 private:
     char32_t Peek() const;
@@ -29,6 +29,6 @@ private:
     bool IsAlpha(char32_t c);
 
 private:
-    const eastl::u32string* _text = nullptr;
+    const std::u32string* _text = nullptr;
     int _index = 0;
 };

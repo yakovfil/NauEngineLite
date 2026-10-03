@@ -7,7 +7,7 @@
 */
 #pragma once
 
-#include <EASTL/vector.h>
+#include <vector>
 
 #include "binPack2D_config.h"
 #include "Rect.h"
@@ -68,11 +68,11 @@ public:
 	/// @param rectChoice The free rectangle choice heuristic rule to use.
 	/// @param splitMethod The free rectangle split heuristic rule to use.
     /// @param usedRects result rects
-	void Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &usedRects, bool merge, 
+	void Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &usedRects, bool merge,
 		FreeRectChoiceHeuristic rectChoice, GuillotineSplitHeuristic splitMethod, bool allowFlip);
 
 // Implements GUILLOTINE-MAXFITTING, an experimental heuristic that's really cool but didn't quite work in practice.
-//	void InsertMaxFitting(eastl::vector<RectSize> &rects, eastl::vector<Rect> &dst, bool merge, 
+//	void InsertMaxFitting(std::vector<RectSize> &rects, std::vector<Rect> &dst, bool merge,
 //		FreeRectChoiceHeuristic rectChoice, GuillotineSplitHeuristic splitMethod);
 
 	/// Computes the ratio of used/total surface area. 0.00 means no space is yet used, 1.00 means the whole bin is used.
@@ -94,7 +94,7 @@ public:
 	/// Returns the internal list of disjoint rectangles that track the free area of the bin. You may alter this vector
 	/// any way desired, as long as the end result still is a list of disjoint rectangles.
     // however, usedSurfaceArea won't be updated
-	eastl::vector<Rect> &GetFreeRectangles() { return freeRectangles; }
+	std::vector<Rect> &GetFreeRectangles() { return freeRectangles; }
 
     // add one of previously allocated rects to free. beware that it is actually one of allocated!
     void freeUsedRect(const Rect &rect, bool try_merge_it);
@@ -108,7 +108,7 @@ private:
     unsigned short maxFreeW, maxFreeH;
 
 	/// Stores a list of rectangles that represents the free area of the bin. This rectangles in this list are disjoint.
-	eastl::vector<Rect> freeRectangles;
+	std::vector<Rect> freeRectangles;
 
 #ifdef _DEBUG
 	/// Used to track that the packer produces proper packings.

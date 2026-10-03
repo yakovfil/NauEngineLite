@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include "base/CCScheduler.h"
 #include "base/ccMacros.h"
 #include "base/CCDirector.h"
@@ -188,7 +189,7 @@ TimerTargetCallback::TimerTargetCallback()
 {
 }
 
-bool TimerTargetCallback::initWithCallback(Scheduler* scheduler, const ccSchedulerFunc& callback, void *target, const eastl::string& key, float seconds, unsigned int repeat, float delay)
+bool TimerTargetCallback::initWithCallback(Scheduler* scheduler, const ccSchedulerFunc& callback, void *target, const std::string& key, float seconds, unsigned int repeat, float delay)
 {
     _scheduler = scheduler;
     _target = target;
@@ -246,12 +247,12 @@ void Scheduler::removeHashElement(_hashSelectorEntry *element)
     free(element);
 }
 
-void Scheduler::schedule(const ccSchedulerFunc& callback, void *target, float interval, bool paused, const eastl::string& key)
+void Scheduler::schedule(const ccSchedulerFunc& callback, void *target, float interval, bool paused, const std::string& key)
 {
     this->schedule(callback, target, interval, CC_REPEAT_FOREVER, 0.0f, paused, key);
 }
 
-void Scheduler::schedule(const ccSchedulerFunc& callback, void *target, float interval, unsigned int repeat, float delay, bool paused, const eastl::string& key)
+void Scheduler::schedule(const ccSchedulerFunc& callback, void *target, float interval, unsigned int repeat, float delay, bool paused, const std::string& key)
 {
     CCASSERT(target, "Argument target must be non-nullptr");
     CCASSERT(!key.empty(), "key should not be empty!");
@@ -300,7 +301,7 @@ void Scheduler::schedule(const ccSchedulerFunc& callback, void *target, float in
     timer->release();
 }
 
-void Scheduler::unschedule(const eastl::string &key, void *target)
+void Scheduler::unschedule(const std::string &key, void *target)
 {
     // explicit handle nil arguments when removing an object
     if (target == nullptr || key.empty())
@@ -469,7 +470,7 @@ void Scheduler::schedulePerFrame(const ccSchedulerFunc& callback, void *target, 
     }
 }
 
-bool Scheduler::isScheduled(const eastl::string& key, const void *target) const
+bool Scheduler::isScheduled(const std::string& key, const void *target) const
 {
     CCASSERT(!key.empty(), "Argument key must not be empty");
     CCASSERT(target, "Argument target must be non-nullptr");

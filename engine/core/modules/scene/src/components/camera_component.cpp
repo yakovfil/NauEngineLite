@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/scene/components/camera_component.h"
+
+#include <string_view>
 
 #include "nau/scene/scene_object.h"
 #include "nau/scene/world.h"
@@ -24,12 +25,12 @@ namespace nau::scene
         return world ? world->getUid() : NullUid;
     }
 
-    eastl::string_view CameraComponent::getCameraName() const
+    std::string_view CameraComponent::getCameraName() const
     {
         return m_cameraName.empty() ? getParentObject().getName() : m_cameraName;
     }
 
-    void CameraComponent::setCameraName(eastl::string_view name)
+    void CameraComponent::setCameraName(std::string_view name)
     {
         value_changes_scope;
         m_cameraName = name;

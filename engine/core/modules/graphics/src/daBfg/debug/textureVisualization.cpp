@@ -3,16 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "textureVisualization.h"
+
+#include <string>
+
 #include "dabfg/frontend/internalRegistry.h"
-#include "render/daBfg/bfg.h"
 #include "nau/diag/logging.h"
-
-
+#include "nau/utils/inline_string.h"
+#include "render/daBfg/bfg.h"
 
 static const ImVec4 DISABLED_TEXT_COLOR = ImGuiStyle().Colors[ImGuiCol_TextDisabled];
 static float fgDebugTexBrightness = 0.f;
-static eastl::string consoleInput = "";
-static eastl::string showTexArgs = "";
+static std::string consoleInput = "";
+static std::string showTexArgs = "";
 static int copiedTextureChannelCount = 0;
 static bool selectedResourceIsATexture = true;
 static bool runShowTex = false;
@@ -149,7 +151,7 @@ auto reconstruct_namespace_request(dabfg::Registry reg, const char *full_path)
     if (next == nullptr)
       break;
 
-    eastl::fixed_string<char, 256> folderName(current, next);
+    nau::InlineString<char, 256> folderName(current, next);
     nameSpaceReq = nameSpaceReq / folderName.c_str();
 
     current = next + 1;

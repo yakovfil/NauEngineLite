@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include "symbol_provider.h"
-#include "nau/ui/label.h"
+
+#include <optional>
 
 #include "2d/CCFontAtlas.h"
 #include "2d/CCFontFNT.h"
 #include "2d/CCFontFreeType.h"
-
+#include "nau/ui/label.h"
 
 void ISymbolProvider::addDefinition(char32_t symbol, const nau::ui::FontLetterDefinition& definition)
 {
     m_symbolsCache[symbol] = definition;
 }
 
-eastl::optional<nau::ui::FontLetterDefinition> ISymbolProvider::getDefinition(char32_t symbol) const
+std::optional<nau::ui::FontLetterDefinition> ISymbolProvider::getDefinition(char32_t symbol) const
 {
     auto it = m_symbolsCache.find(symbol);
     if (it != m_symbolsCache.end()) 
@@ -22,7 +23,7 @@ eastl::optional<nau::ui::FontLetterDefinition> ISymbolProvider::getDefinition(ch
         return it->second;
     }
 
-    return eastl::nullopt;
+    return std::nullopt;
 }
 
 bool ISymbolProvider::containsDefinition(char32_t symbol) const

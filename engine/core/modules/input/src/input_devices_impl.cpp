@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "input_devices_impl.h"
+
+#include <string>
+#include <string_view>
 
 namespace nau
 {
@@ -12,7 +14,7 @@ namespace nau
         m_id = m_inputManager.CreateDevice<gainput::InputDeviceKeyboard>();
     }
 
-    eastl::string GAKeyboardDevice::getName() const
+    std::string GAKeyboardDevice::getName() const
     {
         return "keyboard";
     }
@@ -41,7 +43,7 @@ namespace nau
         return 0;
     }
 
-    eastl::string GAKeyboardDevice::getKeyName(unsigned keyId) const
+    std::string GAKeyboardDevice::getKeyName(unsigned keyId) const
     {
         auto* device = m_inputManager.GetDevice(m_id);
         char buffer[64];
@@ -49,12 +51,12 @@ namespace nau
         return buffer;
     }
 
-    eastl::string GAKeyboardDevice::getAxisName(unsigned axisId) const
+    std::string GAKeyboardDevice::getAxisName(unsigned axisId) const
     {
         return "";
     }
 
-    unsigned GAKeyboardDevice::getKeyByName(const eastl::string_view keyName) const
+    unsigned GAKeyboardDevice::getKeyByName(const std::string_view keyName) const
     {
         auto* device = m_inputManager.GetDevice(m_id);
         if (device != nullptr)
@@ -64,7 +66,7 @@ namespace nau
         return UINT_MAX;
     }
 
-    unsigned GAKeyboardDevice::getAxisByName(const eastl::string_view axisName) const
+    unsigned GAKeyboardDevice::getAxisByName(const std::string_view axisName) const
     {
         return UINT_MAX;
     }
@@ -93,7 +95,7 @@ namespace nau
         m_id = m_inputManager.CreateDevice<gainput::InputDeviceMouse>();
     }
 
-    eastl::string GAMouseDevice::getName() const
+    std::string GAMouseDevice::getName() const
     {
         return "mouse";
     }
@@ -122,7 +124,7 @@ namespace nau
         return 3;
     }
 
-    eastl::string GAMouseDevice::getKeyName(unsigned keyId) const
+    std::string GAMouseDevice::getKeyName(unsigned keyId) const
     {
         auto* device = m_inputManager.GetDevice(m_id);
         char buffer[64];
@@ -130,18 +132,18 @@ namespace nau
         return buffer;
     }
 
-    eastl::string GAMouseDevice::getAxisName(unsigned axisId) const
+    std::string GAMouseDevice::getAxisName(unsigned axisId) const
     {
         return "";
     }
 
-    unsigned GAMouseDevice::getKeyByName(const eastl::string_view keyName) const
+    unsigned GAMouseDevice::getKeyByName(const std::string_view keyName) const
     {
         auto* device = m_inputManager.GetDevice(m_id);
         return device->GetButtonByName(keyName.data());
     }
 
-    unsigned GAMouseDevice::getAxisByName(const eastl::string_view axisName) const
+    unsigned GAMouseDevice::getAxisByName(const std::string_view axisName) const
     {
         return UINT_MAX;
     }

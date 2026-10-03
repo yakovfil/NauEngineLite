@@ -2,8 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <vector>
+
 #include "dabfg/backend/resourceScheduling/packer.h"
-#include <eastl/vector.h>
 
 namespace dabfg
 {
@@ -18,7 +19,7 @@ public:
     for (uint32_t i = 0; i < input.resources.size(); ++i)
     {
       const auto resSize = input.resources[i].sizeWithPadding(offset);
-      if (EASTL_LIKELY(resSize <= input.maxHeapSize && offset <= input.maxHeapSize - resSize))
+      if (NAU_LIKELY(resSize <= input.maxHeapSize && offset <= input.maxHeapSize - resSize))
       {
         offsets[i] = input.resources[i].doAlign(offset);
         offset += resSize;
@@ -35,7 +36,7 @@ public:
   }
 
 private:
-  eastl::vector<uint64_t> offsets; // std::vector
+    std::vector<uint64_t> offsets;  // std::vector
 };
 
 Packer make_baseline_packer() { return BaselinePacker(); }

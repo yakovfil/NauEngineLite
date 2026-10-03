@@ -2,16 +2,19 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "dabfg/backend/resourceScheduling/packer.h"
-#include "nau/utils/dag_stlqsort.h"
-#include <EASTL/fixed_vector.h>
-#include <EASTL/numeric_limits.h>
-#include <EASTL/optional.h>
-#include <EASTL/numeric.h>
-#include <EASTL/sort.h>
-#include <EASTL/set.h>
-#include "nau/memory/eastl_aliases.h"
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <numeric>
+#include <optional>
+#include <set>
+#include <span>
+#include <utility>
+#include <vector>
 
+#include "dabfg/backend/resourceScheduling/packer.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dag_stlqsort.h"
 
 namespace dabfg
 {
@@ -31,7 +34,7 @@ struct Allocation
   TimePoint availableUntil;
   TimePoint availableSince;
 
-  static constexpr TimePoint ALWAYS_AVAILABLE = eastl::numeric_limits<TimePoint>::max();
+  static constexpr TimePoint ALWAYS_AVAILABLE = std::numeric_limits<TimePoint>::max();
 };
 
 static bool allocs_mergeable(const Allocation &a, const Allocation &b)
@@ -44,26 +47,35 @@ struct GreedyAllocator
   GreedyAllocator(MemorySize maxHeapSize) : maxHeapSize(maxHeapSize) {}
   // Result guaranteed to fit resource with proper alignment
   // if heap has enough space.
-  EA_NODISCARD Allocation allocate(const PackerInput::Resource &resource, TimePoint splitTime);
+  [[nodiscard]] Allocation allocate(const PackerInput::Resource& resource, TimePoint splitTime);
   void deallocate(Allocation alloc);
-  EA_NODISCARD MemorySize heapSize() const { return totalHeapSize; }
+  [[nodiscard]] MemorySize heapSize() const
+  {
+      return totalHeapSize;
+  }
 
   bool isEmpty() const { return currentHeapSize == 0; }
 
 private:
   struct AllocSizeCmp
   {
-    bool operator()(const Allocation &a, const Allocation &b) { return a.size < b.size; }
+      bool operator()(const Allocation& a, const Allocation& b) const
+      {
+          return a.size < b.size;
+      }
   };
 
-  using FreeList = eastl::multiset<Allocation, AllocSizeCmp, nau::EastlFrameAllocator>;
+  using FreeList = std::multiset<Allocation, AllocSizeCmp, nau::FrameStdAllocator<Allocation>>;
   FreeList freeList;
 
   struct AllocOffsetCmp
   {
-    bool operator()(const FreeList::iterator &a, const FreeList::iterator &b) { return a->offset < b->offset; }
+      bool operator()(const FreeList::iterator& a, const FreeList::iterator& b) const
+      {
+          return a->offset < b->offset;
+      }
   };
-  eastl::set<FreeList::iterator, AllocOffsetCmp, nau::EastlFrameAllocator> freeListByOffset;
+  std::set<FreeList::iterator, AllocOffsetCmp, nau::FrameStdAllocator<FreeList::iterator>> freeListByOffset;
 
   MemorySize currentHeapSize = 0;
   MemorySize totalHeapSize = 0;
@@ -102,7 +114,7 @@ static bool is_wrapping(Segment s) { return s.start >= s.end; }
 static bool segments_disjoint(Segment a, Segment b)
 {
   if (is_wrapping(b))
-    eastl::swap(a, b);
+      std::swap(a, b);
 
   if (is_wrapping(b))
     return false;
@@ -123,22 +135,19 @@ static TimePoint shift_by_offset(TimePoint time, TimePoint offset, TimePoint tim
 
 struct GreedyScanlinePacker
 {
-  template <class T>
-  using OverflowAlloc = eastl::fixed_vector_allocator<sizeof(T), 32, alignof(T), 0, true, nau::EastlFrameAllocator>;
+    template <class T>
+    using FixedFramememVector = std::vector<T, nau::FrameStdAllocator<T>>;  // TODO: fix it -> , OverflowAlloc<T>
 
-  template <class T>
-  using FixedFramememVector = eastl::vector<T, nau::EastlFrameAllocator>; // TODO: fix it -> , OverflowAlloc<T>
+    template <class T>
+    using FramememVector = std::vector<T, nau::FrameStdAllocator<T>>;
 
-  template <class T>
-  using FramememVector = eastl::vector<T, nau::EastlFrameAllocator>;
-
-  struct TimeMoment
-  {
-    // NOTE: memory from resources that ended can be reused on the same
-    // time moment!
-    FixedFramememVector<uint32_t> endingResources;
-    FixedFramememVector<uint32_t> startingResources;
-  };
+    struct TimeMoment
+    {
+        // NOTE: memory from resources that ended can be reused on the same
+        // time moment!
+        FixedFramememVector<uint32_t> endingResources;
+        FixedFramememVector<uint32_t> startingResources;
+    };
 
   using Timeline = FramememVector<TimeMoment>;
 
@@ -174,12 +183,11 @@ struct GreedyScanlinePacker
     return scanlinePack(timeline, splitTime, wrappingRes, pinnedRes, input);
   }
 
-  PackerOutput scanlinePack(const Timeline &timeline, TimePoint startTime, eastl::span<uint32_t> wrappingResources,
-    eastl::span<uint32_t> pinnedRes, const PackerInput &input)
+  PackerOutput scanlinePack(const Timeline& timeline, TimePoint startTime, std::span<uint32_t> wrappingResources, std::span<uint32_t> pinnedRes, const PackerInput& input)
   {
     GreedyAllocator allocator(input.maxHeapSize);
 
-    FramememVector<eastl::optional<Allocation>> resourceAllocations(input.resources.size());
+    FramememVector<std::optional<Allocation>> resourceAllocations(input.resources.size());
 
     // Firstly pinned resources are allocated to ensure
     // that their offset hints are not taken by other resources.
@@ -220,17 +228,17 @@ struct GreedyScanlinePacker
       {
         const auto &res = input.resources[endingIndex];
 
-        auto allocation = eastl::move(resourceAllocations[endingIndex]);
+        auto allocation = std::move(resourceAllocations[endingIndex]);
         NAU_ASSERT_CONTINUE(allocation.has_value());
 
         // When the allocator fails to allocate space for a resource due to
         // max heap size constraint, it returns a zero size/offset allocation.
         // Hence we simply set the resulting offset to NOT_SCHEDULED here.
-        if (EASTL_LIKELY(allocation->size != 0 || allocation->offset != 0))
+        if (NAU_LIKELY(allocation->size != 0 || allocation->offset != 0))
         {
           // If allocation respects hint, assign it as output offset.
           if (is_hinted(res) &&
-              EASTL_LIKELY(res.sizeWithHint(allocation->offset) <= allocation->size && res.offsetHint >= allocation->offset))
+              NAU_LIKELY(res.sizeWithHint(allocation->offset) <= allocation->size && res.offsetHint >= allocation->offset))
           {
             calculatedOffsets[endingIndex] = res.offsetHint;
           }
@@ -256,8 +264,8 @@ struct GreedyScanlinePacker
         // allocation might place them in a different location, or even
         // new memory, therefore increasing totalHeapSize without it
         // actually being used for anything.
-        if (EA_LIKELY(!is_wrapping(res, startTime) && !is_hinted(res)))
-          resourceAllocations[startingIndex] = allocator.allocate(res, startTime);
+        if (NAU_LIKELY(!is_wrapping(res, startTime) && !is_hinted(res)))
+            resourceAllocations[startingIndex] = allocator.allocate(res, startTime);
       }
     }
 
@@ -268,7 +276,7 @@ struct GreedyScanlinePacker
   }
 
   // Finds all resources that are wrapping w.r.t. offset `-time`
-  FixedFramememVector<uint32_t> findWrapping(eastl::span<const PackerInput::Resource> resources, uint32_t time)
+  FixedFramememVector<uint32_t> findWrapping(std::span<const PackerInput::Resource> resources, uint32_t time)
   {
     FixedFramememVector<uint32_t> result;
     for (uint32_t i = 0; i < resources.size(); ++i)
@@ -286,7 +294,7 @@ struct GreedyScanlinePacker
       --timelineBalance[res.end];
     }
 
-    eastl::partial_sum(timelineBalance.begin(), timelineBalance.end(), timelineBalance.begin());
+    std::partial_sum(timelineBalance.begin(), timelineBalance.end(), timelineBalance.begin());
 
     // If this line was here, `timelineBalance[t]` would be precisely
     // the amount of resources alive at time `t`, but it would not
@@ -298,12 +306,12 @@ struct GreedyScanlinePacker
 
     // Start from the end ensure that the result is 0 for cases with no
     // wraparound textures. The off by 1 is intentional here.
-    const TimePoint minIndex = eastl::min_element(timelineBalance.rbegin(), timelineBalance.rend()).base() - timelineBalance.begin();
+    const TimePoint minIndex = std::min_element(timelineBalance.rbegin(), timelineBalance.rend()).base() - timelineBalance.begin();
 
     return minIndex != input.timelineSize ? minIndex : 0;
   }
 
-  FixedFramememVector<uint32_t> findPinned(eastl::span<const PackerInput::Resource> resources)
+  FixedFramememVector<uint32_t> findPinned(std::span<const PackerInput::Resource> resources)
   {
     FixedFramememVector<uint32_t> result;
     for (uint32_t i = 0; i < resources.size(); ++i)
@@ -332,7 +340,7 @@ private:
   // NOTE: this intentionally does not use framemem allocator,
   // we wouldn't be able to wipe memory after packing is done
   // otherwise.
-  eastl::vector<MemoryOffset> calculatedOffsets;
+    std::vector<MemoryOffset> calculatedOffsets;
 };
 
 Allocation GreedyAllocator::allocate(const PackerInput::Resource &res, TimePoint splitTime)
@@ -443,7 +451,7 @@ Allocation GreedyAllocator::allocate(const PackerInput::Resource &res, TimePoint
   }
   const MemorySize allocSize = res.sizeWithHint(currentHeapSize);
 
-  if (EASTL_UNLIKELY(allocSize > maxHeapSize || currentHeapSize > maxHeapSize - allocSize))
+  if (NAU_UNLIKELY(allocSize > maxHeapSize || currentHeapSize > maxHeapSize - allocSize))
   {
     NAU_ASSERT(
       res.sizeWithPadding(currentHeapSize) > maxHeapSize || currentHeapSize > maxHeapSize - res.sizeWithPadding(currentHeapSize),
@@ -463,7 +471,7 @@ Allocation GreedyAllocator::allocate(const PackerInput::Resource &res, TimePoint
   if (is_hinted(res))
     cutAllocationLeft(res, result, res.offsetHint, Allocation::ALWAYS_AVAILABLE, Allocation::ALWAYS_AVAILABLE);
 
-  totalHeapSize = eastl::max(currentHeapSize, totalHeapSize);
+  totalHeapSize = std::max(currentHeapSize, totalHeapSize);
   return result;
 }
 
@@ -477,7 +485,7 @@ void GreedyAllocator::deallocate(Allocation alloc)
   const auto lb = freeListByOffset.lower_bound(it);
   freeList.erase(it);
 
-  auto runStart = eastl::make_reverse_iterator(lb);
+  auto runStart = std::make_reverse_iterator(lb);
   while (runStart != freeListByOffset.rend() && allocs_mergeable(**runStart, alloc))
   {
     alloc.offset = (*runStart)->offset;

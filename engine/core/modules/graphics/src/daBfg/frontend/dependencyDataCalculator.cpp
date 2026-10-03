@@ -4,20 +4,19 @@
 
 #include "dependencyDataCalculator.h"
 
+#include <algorithm>
+
 #include "dabfg/frontend/dumpInternalRegistry.h"
 
-
-
 #define NAU_ASSERT_DO_AND_LOG(expression, action, ...) \
-  do                                                 \
-  {                                                  \
-    if (EASTL_UNLIKELY(!(expression)))               \
-    {                                                \
-      action;                                        \
-      NAU_LOG_ERROR(__VA_ARGS__);                    \
-    }                                                \
-  } while (0)
-
+    do                                                 \
+    {                                                  \
+        if (NAU_UNLIKELY(!(expression)))               \
+        {                                              \
+            action;                                    \
+            NAU_LOG_ERROR(__VA_ARGS__);                \
+        }                                              \
+    } while (0)
 
 namespace dabfg
 {
@@ -42,7 +41,7 @@ void DependencyDataCalculator::recalculateResourceLifetimes()
 
       lifetime.introducedBy = nodeId;
       // See comment about nodes that both introduce and modify below.
-      eastl::erase(lifetime.modificationChain, nodeId);
+      lifetime.modificationChain.erase(std::remove(lifetime.modificationChain.begin(), lifetime.modificationChain.end(), nodeId), lifetime.modificationChain.end());
     };
 
     for (const auto &resId : nodeData.createdResources)
@@ -80,7 +79,7 @@ void DependencyDataCalculator::recalculateResourceLifetimes()
 
       consumedLifetime.consumedBy = nodeId;
       // See comment about nodes that both introduce/consume and modify above.
-      eastl::erase(consumedLifetime.modificationChain, nodeId);
+      consumedLifetime.modificationChain.erase(std::remove(consumedLifetime.modificationChain.begin(), consumedLifetime.modificationChain.end(), nodeId), consumedLifetime.modificationChain.end());
     }
   }
 }

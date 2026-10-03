@@ -1,12 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/core/updateStage.h>
 #include <daECS/core/entityManager.h>
 #include <daECS/core/entitySystem.h>
-#include "entityManagerEvent.h"
-#include "ecsPerformQueryInline.h"
+#include <daECS/core/updateStage.h>
 
+#include <algorithm>
+
+#include "ecsPerformQueryInline.h"
+#include "entityManagerEvent.h"
 
 #if defined(__cplusplus) && !defined(__GNUC__)
 template <typename T, size_t N>
@@ -52,7 +54,7 @@ void EntityManager::update(const ecs::UpdateStageInfo &info)
     //   if (esd && esd->stageMask & info.stage)
     //     performQuery(*esd, [esd, &info](const QueryView &ec) mutable{esd->ops.onUpdate(info, ec);}, 0);
 #if TIME_PROFILER_ENABLED
-  DA_PROFILE_EVENT_DESC(dap_stage_tokens[eastl::min(info.stage, (int)US_COUNT)]);
+  DA_PROFILE_EVENT_DESC(dap_stage_tokens[std::min(info.stage, (int)US_COUNT)]);
 #endif
   createQueuedEntities(); // if entities were scheduled for creation outside ES
   for (auto esIndex : esUpdates[info.stage])

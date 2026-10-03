@@ -4,8 +4,11 @@
 
 #pragma once
 
-#include "render_pipeline/render_manager.h"
+#include <functional>
+#include <memory>
+#include <vector>
 
+#include "render_pipeline/render_manager.h"
 
 namespace nau
 {
@@ -30,19 +33,19 @@ namespace nau
         BillboardsManager(nau::Ptr<nau::MaterialAssetView> material);
         ~BillboardsManager();
 
-        nau::async::Task<eastl::shared_ptr<nau::BillboardHandle>> addBillboard(ReloadableAssetView::Ptr texture, nau::math::Vector3 position, nau::Uid uid, float screenPercentageSize = 0.1f);
+        nau::async::Task<std::shared_ptr<nau::BillboardHandle>> addBillboard(ReloadableAssetView::Ptr texture, nau::math::Vector3 position, nau::Uid uid, float screenPercentageSize = 0.1f);
 
         void render(nau::math::Matrix4 viewProj); // temporal, for testing only
 
         // Inherited via IRenderManager
         RenderList::Ptr getRenderList(const nau::math::Vector3& viewerPosition,
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
+                                      std::function<bool(const InstanceInfo&)>& filterFunc,
+                                      std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
 
         void update() override;
 
     protected:
-        eastl::vector<eastl::weak_ptr<BillboardInfo>> m_billboards;
+        std::vector<std::weak_ptr<BillboardInfo>> m_billboards;
 
         nau::Ptr<nau::MaterialAssetView> m_billboardMaterial;
         bool m_isBillboardsDirty = false;
@@ -53,7 +56,7 @@ namespace nau
     class BillboardHandle
     {
     public:
-        using Ptr = eastl::shared_ptr<BillboardHandle>;
+        using Ptr = std::shared_ptr<BillboardHandle>;
 
         BillboardHandle();
 
@@ -78,7 +81,7 @@ namespace nau
         ~BillboardHandle();
 
     private:
-        eastl::shared_ptr<BillboardsManager::BillboardInfo> m_billboard;
+        std::shared_ptr<BillboardsManager::BillboardInfo> m_billboard;
 
         BillboardsManager::Ptr m_manager;
 

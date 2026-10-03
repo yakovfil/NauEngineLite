@@ -1,16 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#pragma once 
+#pragma once
 
-#include "audio_common.hpp"
-
+#include <chrono>
 #include <functional>
 #include <memory>
-#include <chrono>
+#include <vector>
 
-#include <EASTL/vector.h>
-
+#include "audio_common.hpp"
 
 NAU_AUDIO_BEGIN
 
@@ -109,6 +107,6 @@ public:
 };
 
 using AudioSourcePtr = std::shared_ptr<IAudioSource>;
-using AudioSourceList = eastl::vector<AudioSourcePtr>;
+using AudioSourceList = std::vector<AudioSourcePtr>;
 
 NAU_AUDIO_END

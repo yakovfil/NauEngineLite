@@ -2,6 +2,10 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/core/internal/dataComponentManager.h>
+
+#include <algorithm>
+#include <utility>
+
 #include "dataComponentManagerInt.h"
 #include "nau/math/dag_adjpow2.h"
 
@@ -68,25 +72,25 @@ bool DataComponentManager::shrinkToFitChunks(const uint16_t *__restrict componen
     auto &chunk = chunks[ci];
     if (chunk.getCapacityBits() > initialBits && chunk.getCapacity() >= chunk.getUsed() * 2)
     {
-      const uint32_t capacityBits = eastl::clamp(nau::math::get_bigger_log2(chunk.getUsed()), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
-      if (capacityBits == chunk.getCapacityBits())
-        continue;
-      TIME_PROFILE(ecs_gc_shrink_to_fit);
-      currentCapacityBits = eastl::clamp(nau::math::get_bigger_log2(totalEntitiesUsed), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
-      Chunk newChunk(getAllocateSize(capacityBits, entity_size), capacityBits);
-      newChunk.entitiesUsed = chunk.entitiesUsed;
-      const uint32_t srcEntitiesCnt = chunk.getUsed();
-      for (uint32_t ci = 0; ci < components_cnt; ++ci, component_sz++, component_ofs++)
-      {
-        const uint32_t csz = *component_sz;
-        const uint32_t ofs = *component_ofs;
-        memcpy(newChunk.getCompDataUnsafe(ofs), chunk.getCompDataUnsafe(ofs), csz * srcEntitiesCnt);
+        const uint32_t capacityBits = std::clamp(nau::math::get_bigger_log2(chunk.getUsed()), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
+        if (capacityBits == chunk.getCapacityBits())
+            continue;
+        TIME_PROFILE(ecs_gc_shrink_to_fit);
+        currentCapacityBits = std::clamp(nau::math::get_bigger_log2(totalEntitiesUsed), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
+        Chunk newChunk(getAllocateSize(capacityBits, entity_size), capacityBits);
+        newChunk.entitiesUsed = chunk.entitiesUsed;
+        const uint32_t srcEntitiesCnt = chunk.getUsed();
+        for (uint32_t ci = 0; ci < components_cnt; ++ci, component_sz++, component_ofs++)
+        {
+            const uint32_t csz = *component_sz;
+            const uint32_t ofs = *component_ofs;
+            memcpy(newChunk.getCompDataUnsafe(ofs), chunk.getCompDataUnsafe(ofs), csz * srcEntitiesCnt);
 #if NAU_DEBUG
         memset(chunk.getCompDataUnsafe(ofs), 0xFF, csz * srcEntitiesCnt);
 #endif
       }
       totalEntitiesCapacity -= chunk.getCapacity() - newChunk.getCapacity();
-      chunk.swap(eastl::move(newChunk));
+      chunk.swap(std::move(newChunk));
       if (--defragmentedChunks == 0)
         break; // defragment no more than x chunks
     }
@@ -123,7 +127,7 @@ DataComponentManager::DefragResult DataComponentManager::defragment(const uint16
     else
       break;
   currentCapacityBits =
-    eastl::clamp(nau::math::get_log2i(getChunksConst().back().getCapacity()), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
+      std::clamp(nau::math::get_log2i(getChunksConst().back().getCapacity()), (uint32_t)initialBits, (uint32_t)MAX_CAPACITY_BITS);
   verifyCachedData();
   workingChunk = 0;
 

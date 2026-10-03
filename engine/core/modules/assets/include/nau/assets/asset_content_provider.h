@@ -3,8 +3,10 @@
 
 #pragma once
 
-#include <EASTL/tuple.h>
-#include <EASTL/vector.h>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <vector>
 
 #include "nau/assets/asset_path.h"
 #include "nau/io/fs_path.h"
@@ -18,7 +20,7 @@ namespace nau
      */
     struct AssetContentInfo
     {
-        eastl::string kind;                /** < Asset kind. It has to be a kind supported by the corresponding asset view container*/
+        std::string kind;                  /** < Asset kind. It has to be a kind supported by the corresponding asset view container*/
         io::FsPath path;                   /** < Path to the asset file. */
         RuntimeObject::Ptr importSettings; /** < Settings to apply on load. */
 
@@ -34,13 +36,13 @@ namespace nau
     {
         NAU_TYPEID(nau::IAssetContentProvider)
 
-        using AssetContent = eastl::tuple<Ptr<>, AssetContentInfo>;
+        using AssetContent = std::tuple<Ptr<>, AssetContentInfo>;
 
         virtual ~IAssetContentProvider() = default;
 
         virtual Result<AssetContent> openStreamOrContainer(const AssetPath& assetPath) = 0;
 
-        virtual eastl::vector<eastl::string_view> getSupportedSchemes() const = 0;
+        virtual std::vector<std::string_view> getSupportedSchemes() const = 0;
     };
 
 }  // namespace nau

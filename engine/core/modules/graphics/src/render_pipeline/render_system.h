@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <vector>
+
 #include "nau/app/main_loop/game_system.h"
 #include "nau/async/work_queue.h"
 #include "nau/graphics/core_graphics.h"
@@ -40,20 +47,20 @@ namespace nau
         RenderSystem();
         ~RenderSystem() override;
 
-        RenderScene::Ptr createScene(const eastl::string& sceneName);
+        RenderScene::Ptr createScene(const std::string& sceneName);
 
-        // eastl::shared_ptr<FrameGraph> createGraph();
+        // std::shared_ptr<FrameGraph> createGraph();
 
 #pragma region ServicePart
         async::Task<bool> renderFrame() override;
 
-        async::Task<> activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, async::Task<> barrier) override;
+        async::Task<> activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, async::Task<> barrier) override;
 
         async::Task<bool> update(std::chrono::milliseconds dt) override;
 
-        eastl::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override
+        std::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override
         {
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         void syncSceneState() override;
@@ -77,15 +84,15 @@ namespace nau
         shaders::DriverRenderStateId m_drvRendStateId;
 #pragma endregion RenderPart
 
-        eastl::vector<dabfg::NodeHandle> m_nodeHandles;  // TODO: replace it to vector<FrameGraph> graphs when we make support for different frame-graphs
-        eastl::map<eastl::string, RenderScene::Ptr> m_scenes;
+        std::vector<dabfg::NodeHandle> m_nodeHandles;  // TODO: replace it to vector<FrameGraph> graphs when we make support for different frame-graphs
+        std::map<std::string, RenderScene::Ptr> m_scenes;
 
 #pragma region ServicePart
         nau::FrameAllocator m_frameAllocator;
 
         WorkQueue::Ptr m_preRenderWorkQueue = WorkQueue::create();
         std::mutex m_preRenderJobsMutex;
-        eastl::vector<AsyncAction> m_preRenderJobs;
+        std::vector<AsyncAction> m_preRenderJobs;
 
         std::atomic<bool> m_isDisposed{false};
         async::TaskSource<> m_renderStopedSignal;

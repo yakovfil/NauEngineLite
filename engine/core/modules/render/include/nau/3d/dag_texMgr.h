@@ -3,9 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <vector>
+
 #include "nau/3d/dag_resMgr.h"
-#include <EASTL/span.h>
-#include <EASTL/vector.h>
 
 //#include <generic/dag_tabFwd.h>
 
@@ -34,7 +35,10 @@ public:
   //! schedules loading of specified texture (if applicable); thread-safe; return true when loading scheduled
   virtual bool scheduleTexLoading(TEXTUREID /*id*/, TexQL /*req_ql*/) { return false; }
   //! loads and returns contents of texture as DDSx data
-  virtual bool getTextureDDSx(TEXTUREID /*id*/, eastl::vector<char> & /*out_ddsx*/) { return false; }
+  virtual bool getTextureDDSx(TEXTUREID /*id*/, std::vector<char>& /*out_ddsx*/)
+  {
+      return false;
+  }
   //! notification of texture unregister from manager
   virtual void onUnregisterTexture(TEXTUREID /*id*/) {}
   //! returns true when 'nm' points to persistent storage and may be referenced without duplicating string
@@ -53,12 +57,11 @@ NAU_RENDER_EXPORT TEXTUREID add_managed_texture(const char *name, TextureFactory
 // Adds or updates entry for managed array texture name, stores creation properties and returns TEXTUREID for it;
 // Array texture will be composed of texture names 'tex_slice_nm';
 // Textures in slices must have the same format and size and have some restrictions of DDSx flags.
-TEXTUREID add_managed_array_texture(const char *name, eastl::span<const char *> tex_slice_nm);
+TEXTUREID add_managed_array_texture(const char* name, std::span<const char*> tex_slice_nm);
 
 // Updates entry for managed array texture name, requires same number of slices.
 // it just calls add_managed_texture, additional function is just for readability.
-TEXTUREID update_managed_array_texture(const char *name, eastl::span<const char *> tex_slice_nm);
-
+TEXTUREID update_managed_array_texture(const char* name, std::span<const char*> tex_slice_nm);
 
 // removes specified texId and entry when refCount=0 (or schedule later removal) and sets id to BAD_TEXTUREID
 // can be used to remove entries created with register_managed_tex(), add_managed_texture(), add_managed_array_texture()
@@ -68,7 +71,7 @@ bool evict_managed_tex_id(TEXTUREID &id);
 // Checks whether contents of managed texture was loaded
 bool check_managed_texture_loaded(TEXTUREID id, bool fq_loaded = false);
 // Checks whether contents of all managed textures in list was loaded (skips checks for textures with refcount=0 by default)
-bool check_all_managed_textures_loaded(eastl::span<const TEXTUREID> id, bool fq_loaded = false, bool ignore_unref_tex = true);
+bool check_all_managed_textures_loaded(std::span<const TEXTUREID> id, bool fq_loaded = false, bool ignore_unref_tex = true);
 
 // change texture by id - return true, if all is OK & false if error
 bool change_managed_texture(TEXTUREID id, BaseTexture *new_texture, TextureFactory *factory = NULL);
@@ -86,13 +89,13 @@ inline void mark_managed_tex_lfu(TEXTUREID id, unsigned req_lev = 15) { D3dResMa
 NAU_RENDER_EXPORT bool prefetch_managed_texture(TEXTUREID id);
 
 // request content load for list of textures (returns true when all textures already loaded)
-bool prefetch_managed_textures(eastl::span<const TEXTUREID> id);
+bool prefetch_managed_textures(std::span<const TEXTUREID> id);
 
 // request content load for list of textures by TEXTAG (returns true when all textures already loaded)
 bool prefetch_managed_textures_by_textag(int textag);
 
 // marks list of textures as important (to force loading content upto requested quality level)
-void mark_managed_textures_important(eastl::span<const TEXTUREID> id, unsigned add_importance = 1);
+void mark_managed_textures_important(std::span<const TEXTUREID> id, unsigned add_importance = 1);
 
 // resets streaming state of textures so that they can be reloaded respecting the global tex quality settings changes
 void reset_managed_textures_streaming_state();
@@ -132,8 +135,8 @@ inline bool prefetch_and_check_managed_texture_loaded(TEXTUREID id, bool fq_load
   return (loaded && fq_loaded) ? check_managed_texture_loaded(id, fq_loaded) : loaded;
 }
 
-bool prefetch_and_check_managed_textures_loaded(eastl::span<const TEXTUREID> tex_list, bool fq_loaded = false);
-void prefetch_and_wait_managed_textures_loaded(eastl::span<const TEXTUREID> tex_list, bool fq_loaded = false);
+bool prefetch_and_check_managed_textures_loaded(std::span<const TEXTUREID> tex_list, bool fq_loaded = false);
+void prefetch_and_wait_managed_textures_loaded(std::span<const TEXTUREID> tex_list, bool fq_loaded = false);
 
 //! iterates managed d3dres; returns ID of next res after 'after_rid' that has refCount>=min_ref_count;
 //! returns BAD_TEXTUREID when iterate is done

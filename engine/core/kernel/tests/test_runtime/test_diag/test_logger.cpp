@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_asserts.cpp
 
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/diag/logging.h"
 #include "test_diag.h"
@@ -12,7 +15,7 @@ namespace nau::test
     {
         class TestLogSubscriber final : public diag::ILogSubscriber
         {
-            eastl::vector<uint8_t> messages;
+            std::vector<uint8_t> messages;
 
         public:
             TestLogSubscriber(size_t messages) :
@@ -21,7 +24,7 @@ namespace nau::test
             }
             void processMessage(const nau::diag::LoggerMessage& message) override
             {
-                if(message.index < messages.size())
+                if (message.index < messages.size())
                 {
                     messages[message.index]++;
                 }
@@ -30,10 +33,10 @@ namespace nau::test
             bool checkMessages()
             {
                 bool result = true;
-                for(auto& counter : messages)
+                for (auto& counter : messages)
                 {
                     result &= (counter == 1);
-                    if(counter != 1)
+                    if (counter != 1)
                         break;
                 }
                 return result;
@@ -76,7 +79,7 @@ namespace nau::test
         public:
             LoggerState()
             {
-                //diag::Logger::setDefaultInstance();
+                // diag::Logger::setDefaultInstance();
                 diag::setLogger(diag::createLogger());
             }
 
@@ -88,10 +91,10 @@ namespace nau::test
 
         public:
             template <typename TSubscriber, typename TFilter>
-            auto keepSubscription(eastl::shared_ptr<TSubscriber> subscriber, eastl::shared_ptr<TFilter> filter = nullptr)
+            auto keepSubscription(std::shared_ptr<TSubscriber> subscriber, std::shared_ptr<TFilter> filter = nullptr)
             {
                 std::tuple res{subscriber.get(), filter.get()};
-                m_subscriptionHandles.emplace_back(diag::getLogger().subscribe(subscriber,filter));
+                m_subscriptionHandles.emplace_back(diag::getLogger().subscribe(subscriber, filter));
                 return res;
             }
 
@@ -101,7 +104,7 @@ namespace nau::test
             }
 
         private:
-            eastl::vector<diag::Logger::SubscriptionHandle> m_subscriptionHandles;
+            std::vector<diag::Logger::SubscriptionHandle> m_subscriptionHandles;
         };
 
     }  // namespace
@@ -141,103 +144,99 @@ namespace nau::test
     TEST_P(Test_LoggerBasic, Base)
     {
         const auto& data = GetParam();
-        auto [subscriber, filter] = keepSubscription(eastl::make_shared<TestLogSubscriber>(data.messageCount), eastl::make_shared<TestLogMessageFilter>());
+        auto [subscriber, filter] = keepSubscription(std::make_shared<TestLogSubscriber>(data.messageCount), std::make_shared<TestLogMessageFilter>());
         filter->setLevel(data.level);
-   
-        for(int i = 0; i < data.messageCount; ++i)
+
+        for (int i = 0; i < data.messageCount; ++i)
         {
             NAU_LOG_MESSAGE(data.level)(u8"{}: {}", u8"Data", i);
         }
-   
+
         ASSERT_TRUE(subscriber->checkMessages());
         ASSERT_EQ(filter->getTotalMessages(), data.messageCount);
     }
-   
+
     class Test_LoggerFunctor : public ::testing::Test,
                                public LoggerState
     {
     };
-   
+
     TEST_F(Test_LoggerFunctor, OnlySubscriber)
     {
         using namespace ::nau::diag;
         using namespace ::testing;
-   
-        const eastl::string ExpectedText = "test";
-   
-        eastl::string text;
-   
+
+        const std::string ExpectedText = "test";
+
+        std::string text;
+
         keepSubscription(getLogger().subscribe([&](const LoggerMessage& message)
-                                                      {
-                                                          text = message.data;
-                                                      }));
-   
+        {
+            text = message.data;
+        }));
+
         NAU_LOG_INFO(ExpectedText);
-   
+
         ASSERT_THAT(text, Eq(ExpectedText));
     }
-   
+
     TEST_F(Test_LoggerFunctor, SubscriberAndFilter)
     {
         using namespace ::nau::diag;
         using namespace ::testing;
-   
-        const eastl::string ExpectedText = "test";
-   
-        eastl::string text;
+
+        const std::string ExpectedText = "test";
+
+        std::string text;
         size_t acceptedMessageCount = 0;
         size_t processedMessageCount = 0;
-   
+
         keepSubscription(getLogger().subscribe([&](const LoggerMessage& message)
-                                                      {
-                                                          text = message.data;
-                                                          ++acceptedMessageCount;
-                                                      },
-                                                      [&](const LoggerMessage& message) -> bool
-                                                      {
-                                                          ++processedMessageCount;
-                                                          return message.level == LogLevel::Info;
-                                                      }));
-   
+        {
+            text = message.data;
+            ++acceptedMessageCount;
+        }, [&](const LoggerMessage& message) -> bool
+        {
+            ++processedMessageCount;
+            return message.level == LogLevel::Info;
+        }));
+
         NAU_LOG_INFO(ExpectedText);
         NAU_LOG_DEBUG(u8"Debug");
-   
-        ASSERT_EQ(text, ExpectedText);
-        ASSERT_EQ(processedMessageCount, 2);
-        ASSERT_EQ(acceptedMessageCount, 1);
-    }
-   
-   
-    TEST_F(Test_LoggerFunctor, SubscriberAndFilterObject)
-    {
-        using namespace ::nau::diag;
-        using namespace ::testing;
-   
-        const eastl::string ExpectedText = "test";
-   
-        eastl::string text;
-        size_t acceptedMessageCount = 0;
-        size_t processedMessageCount = 0;
-   
-        keepSubscription(getLogger().subscribe([&](const LoggerMessage& message)
-                                                      {
-                                                          text = message.data;
-                                                          ++acceptedMessageCount;
-                                                      },
-                                                      [&](const LoggerMessage& message) -> bool
-                                                      {
-                                                          ++processedMessageCount;
-                                                          return message.level == LogLevel::Info;
-                                                      }));
-   
-        NAU_LOG_INFO(ExpectedText);
-        NAU_LOG_DEBUG(u8"Debug");
-   
+
         ASSERT_EQ(text, ExpectedText);
         ASSERT_EQ(processedMessageCount, 2);
         ASSERT_EQ(acceptedMessageCount, 1);
     }
 
+    TEST_F(Test_LoggerFunctor, SubscriberAndFilterObject)
+    {
+        using namespace ::nau::diag;
+        using namespace ::testing;
+
+        const std::string ExpectedText = "test";
+
+        std::string text;
+        size_t acceptedMessageCount = 0;
+        size_t processedMessageCount = 0;
+
+        keepSubscription(getLogger().subscribe([&](const LoggerMessage& message)
+        {
+            text = message.data;
+            ++acceptedMessageCount;
+        }, [&](const LoggerMessage& message) -> bool
+        {
+            ++processedMessageCount;
+            return message.level == LogLevel::Info;
+        }));
+
+        NAU_LOG_INFO(ExpectedText);
+        NAU_LOG_DEBUG(u8"Debug");
+
+        ASSERT_EQ(text, ExpectedText);
+        ASSERT_EQ(processedMessageCount, 2);
+        ASSERT_EQ(acceptedMessageCount, 1);
+    }
 
     // class Test_LoggerFunctor : public ::testing::TestWithParam<typename T>,
     //                            public LoggerState

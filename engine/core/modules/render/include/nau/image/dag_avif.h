@@ -10,5 +10,6 @@ class IGenLoad;
 
 
 // load AVIF file (RGBX/RGBA)
-TexImage32 *load_avif32(const char *fn, eastl::allocator *mem, bool *out_used_alpha = nullptr);
-TexImage32 *load_avif32(IGenLoad &crd, eastl::allocator *mem, bool *out_used_alpha = nullptr);
+TexImage32* load_avif32(const char* fn, nau::HeapByteAllocator* mem, bool* out_used_alpha = nullptr);
+TexImage32* load_avif32(IGenLoad& crd, nau::HeapByteAllocator* mem, bool* out_used_alpha = nullptr);
+#include "nau/memory/heap_byte_allocator.h"

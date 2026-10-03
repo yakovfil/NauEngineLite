@@ -3,12 +3,15 @@
 
 #include "nau/test/helpers/app_guard.h"
 
+#include <string>
+#include <string_view>
+
 #include "nau/module/module_manager.h"
 #include "nau/service/service_provider.h"
 
 namespace nau::test
 {
-    AppGuard::AppGuard(eastl::string modulesList) :
+    AppGuard::AppGuard(std::string modulesList) :
         m_modulesList(std::move(modulesList))
     {
     }
@@ -85,7 +88,7 @@ namespace nau::test
         }
 
         auto wcsProjectDir = projectRootDir.wstring();
-        auto utf8ProjectDir = strings::wstringToUtf8(eastl::wstring_view{wcsProjectDir.data(), wcsProjectDir.size()});
+        auto utf8ProjectDir = strings::wstringToUtf8(std::wstring_view{wcsProjectDir.data(), wcsProjectDir.size()});
 
         GlobalProperties& globalProperties = getServiceProvider().get<GlobalProperties>();
 

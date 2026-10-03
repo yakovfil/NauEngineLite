@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "button_state_animation.h"
+
+#include <string>
 
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/controller/animation_controller.h"
@@ -80,7 +81,7 @@ namespace nau::ui
         }
     }
 
-    const eastl::string& ButtonStateAnimation::getName() const
+    const std::string& ButtonStateAnimation::getName() const
     {
         return m_name;
     }

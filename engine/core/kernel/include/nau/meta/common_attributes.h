@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/string.h>
-
+#include <string>
 #include <type_traits>
 
 #include "nau/meta/attribute.h"
@@ -18,19 +17,19 @@ namespace nau::meta
     /**
      */
     template <typename T>
-    eastl::string getClassName()
+    std::string getClassName()
     {
         if constexpr (AttributeDefined<T, ClassNameAttribute>)
         {
-            static_assert(std::is_constructible_v<eastl::string, AttributeValueType<T, ClassNameAttribute>>);
+            static_assert(std::is_constructible_v<std::string, AttributeValueType<T, ClassNameAttribute>>);
             return meta::getAttributeValue<T, ClassNameAttribute>();
         }
         else
         {
-            return eastl::string{};
+            return std::string{};
         }
     }
 
 }  // namespace nau::meta
 
-#define CLASS_NAME_ATTRIBUTE(ClassName) CLASS_ATTRIBUTE(nau::meta::ClassNameAttribute, eastl::string{ClassName})
+#define CLASS_NAME_ATTRIBUTE(ClassName) CLASS_ATTRIBUTE(nau::meta::ClassNameAttribute, std::string{ClassName})

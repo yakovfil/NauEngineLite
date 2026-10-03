@@ -3,22 +3,23 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/initializer_list.h>
+#include <initializer_list>
+#include <span>
 
 #include "nau/3d/dag_d3dResource.h"
-#include "nau/3d/dag_drvDecl.h"
 #include "nau/3d/dag_drv3dConsts.h"
-#include "nau/3d/dag_tex3d.h"
-#include "nau/3d/dag_sampler.h"
-#include "nau/utils/dag_globDef.h"
-#include "nau/math/math.h"
-#include "nau/3d/dag_renderStates.h"
-#include "nau/3d/dag_renderStateId.h"
-#include "nau/utils/span.h"
+#include "nau/3d/dag_drvDecl.h"
 #include "nau/3d/dag_hangHandler.h"
-#include "nau/util/common.h"
+#include "nau/3d/dag_renderStateId.h"
+#include "nau/3d/dag_renderStates.h"
+#include "nau/3d/dag_sampler.h"
+#include "nau/3d/dag_tex3d.h"
 #include "nau/3d/shader_header.h"
-
+#include "nau/math/math.h"
+#include "nau/util/common.h"
+#include "nau/utils/dag_globDef.h"
+#include "nau/utils/enum_utils.h"
+#include "nau/utils/span.h"
 
 // forward declarations for external classes
 struct TexImage32;
@@ -568,25 +569,25 @@ struct ResourceDescription
     {
       case RES3D_SBUF: return hashPack(hashValue, asBufferRes.elementCount, asBufferRes.elementSizeInBytes, asBufferRes.viewFormat);
       case RES3D_TEX:
-        return hashPack(hashValue, eastl::to_underlying(asTexRes.activation), asTexRes.cFlags, asTexRes.mipLevels, asTexRes.height,
-          asTexRes.width, asTexRes.clearValue.asUint[0], asTexRes.clearValue.asUint[1], asTexRes.clearValue.asUint[2],
-          asTexRes.clearValue.asUint[3]);
+          return hashPack(hashValue, nau::to_underlying(asTexRes.activation), asTexRes.cFlags, asTexRes.mipLevels, asTexRes.height,
+                          asTexRes.width, asTexRes.clearValue.asUint[0], asTexRes.clearValue.asUint[1], asTexRes.clearValue.asUint[2],
+                          asTexRes.clearValue.asUint[3]);
       case RES3D_VOLTEX:
-        return hashPack(hashValue, eastl::to_underlying(asVolTexRes.activation), asVolTexRes.cFlags, asVolTexRes.mipLevels,
-          asVolTexRes.height, asVolTexRes.width, asVolTexRes.depth, asVolTexRes.clearValue.asUint[0], asVolTexRes.clearValue.asUint[1],
-          asVolTexRes.clearValue.asUint[2], asVolTexRes.clearValue.asUint[3]);
+          return hashPack(hashValue, nau::to_underlying(asVolTexRes.activation), asVolTexRes.cFlags, asVolTexRes.mipLevels,
+                          asVolTexRes.height, asVolTexRes.width, asVolTexRes.depth, asVolTexRes.clearValue.asUint[0], asVolTexRes.clearValue.asUint[1],
+                          asVolTexRes.clearValue.asUint[2], asVolTexRes.clearValue.asUint[3]);
       case RES3D_ARRTEX:
-        return hashPack(hashValue, eastl::to_underlying(asArrayTexRes.activation), asArrayTexRes.arrayLayers, asArrayTexRes.cFlags,
-          asArrayTexRes.height, asArrayTexRes.mipLevels, asArrayTexRes.height, asArrayTexRes.width, asArrayTexRes.clearValue.asUint[0],
-          asArrayTexRes.clearValue.asUint[1], asArrayTexRes.clearValue.asUint[2], asArrayTexRes.clearValue.asUint[3]);
+          return hashPack(hashValue, nau::to_underlying(asArrayTexRes.activation), asArrayTexRes.arrayLayers, asArrayTexRes.cFlags,
+                          asArrayTexRes.height, asArrayTexRes.mipLevels, asArrayTexRes.height, asArrayTexRes.width, asArrayTexRes.clearValue.asUint[0],
+                          asArrayTexRes.clearValue.asUint[1], asArrayTexRes.clearValue.asUint[2], asArrayTexRes.clearValue.asUint[3]);
       case RES3D_CUBETEX:
-        return hashPack(hashValue, eastl::to_underlying(asCubeTexRes.activation), asCubeTexRes.cFlags, asCubeTexRes.extent,
-          asCubeTexRes.mipLevels, asCubeTexRes.clearValue.asUint[0], asCubeTexRes.clearValue.asUint[1],
-          asCubeTexRes.clearValue.asUint[2], asCubeTexRes.clearValue.asUint[3]);
+          return hashPack(hashValue, nau::to_underlying(asCubeTexRes.activation), asCubeTexRes.cFlags, asCubeTexRes.extent,
+                          asCubeTexRes.mipLevels, asCubeTexRes.clearValue.asUint[0], asCubeTexRes.clearValue.asUint[1],
+                          asCubeTexRes.clearValue.asUint[2], asCubeTexRes.clearValue.asUint[3]);
       case RES3D_CUBEARRTEX:
-        return hashPack(hashValue, eastl::to_underlying(asArrayCubeTexRes.activation), asArrayCubeTexRes.cFlags,
-          asArrayCubeTexRes.mipLevels, asArrayCubeTexRes.cubes, asArrayCubeTexRes.extent, asArrayCubeTexRes.clearValue.asUint[0],
-          asArrayCubeTexRes.clearValue.asUint[1], asArrayCubeTexRes.clearValue.asUint[2], asArrayCubeTexRes.clearValue.asUint[3]);
+          return hashPack(hashValue, nau::to_underlying(asArrayCubeTexRes.activation), asArrayCubeTexRes.cFlags,
+                          asArrayCubeTexRes.mipLevels, asArrayCubeTexRes.cubes, asArrayCubeTexRes.extent, asArrayCubeTexRes.clearValue.asUint[0],
+                          asArrayCubeTexRes.clearValue.asUint[1], asArrayCubeTexRes.clearValue.asUint[2], asArrayCubeTexRes.clearValue.asUint[3]);
     }
     return hashValue;
   }
@@ -602,7 +603,7 @@ private:
   }
 };
 
-namespace eastl
+namespace std
 {
 template <>
 class hash<ResourceDescription>
@@ -610,7 +611,7 @@ class hash<ResourceDescription>
 public:
   size_t operator()(const ResourceDescription &desc) const { return desc.hash(); }
 };
-} // namespace eastl
+}  // namespace std
 
 struct ResourceHeapGroup;
 
@@ -825,10 +826,10 @@ namespace d3d
         dxil::ShaderResourceUsageTable hsTable;
         dxil::ShaderResourceUsageTable dsTable;
         dxil::ShaderResourceUsageTable gsTable;
-        eastl::span<const uint8_t> vs_byte_code;
-        eastl::span<const uint8_t> hs_byte_code;
-        eastl::span<const uint8_t> ds_byte_code;
-        eastl::span<const uint8_t> gs_byte_code;
+        std::span<const uint8_t> vs_byte_code;
+        std::span<const uint8_t> hs_byte_code;
+        std::span<const uint8_t> ds_byte_code;
+        std::span<const uint8_t> gs_byte_code;
         VDECL inputLayout;
         int primitiveType;
     };
@@ -1146,7 +1147,7 @@ NAU_RENDER_EXPORT PROGRAM create_program(const uint32_t *vpr_native, const uint3
   unsigned streams = 0);
 // if strides & streams are unset, will get them from VDECL
 NAU_RENDER_EXPORT PROGRAM create_program_cs(const uint32_t *cs_native, CSPreloaded preloaded);
-NAU_RENDER_EXPORT PROGRAM create_raw_program_cs(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, CSPreloaded preloaded);
+NAU_RENDER_EXPORT PROGRAM create_raw_program_cs(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, CSPreloaded preloaded);
 
 NAU_RENDER_EXPORT bool set_program(PROGRAM);    // sets both pixel and vertex shader and vertex declaration
 NAU_RENDER_EXPORT void delete_program(PROGRAM); // deletes vprog and fshader. VDECL should be deleted independently
@@ -1155,8 +1156,8 @@ NAU_RENDER_EXPORT void delete_program(PROGRAM); // deletes vprog and fshader. VD
 
 NAU_RENDER_EXPORT VPROG create_vertex_shader(const uint32_t *native_code);
 
-NAU_RENDER_EXPORT VPROG create_raw_vertex_shader(eastl::span<const uint8_t> byte_code, VDECL inputLayout);
-NAU_RENDER_EXPORT VPROG create_raw_vertex_shader(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, VDECL inputLayout);
+NAU_RENDER_EXPORT VPROG create_raw_vertex_shader(std::span<const uint8_t> byte_code, VDECL inputLayout);
+NAU_RENDER_EXPORT VPROG create_raw_vertex_shader(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable, VDECL inputLayout);
 
 NAU_RENDER_EXPORT VPROG create_raw_vs_hs_ds_gs(VertexHullDomainGeometryShadersCreationDesc desc);
 
@@ -1200,7 +1201,7 @@ NAU_RENDER_EXPORT bool set_immediate_const(unsigned stage, const uint32_t* data,
 
 NAU_RENDER_EXPORT FSHADER create_pixel_shader(const uint32_t *native_code);
 
-NAU_RENDER_EXPORT FSHADER create_raw_pixel_shader(eastl::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable);
+NAU_RENDER_EXPORT FSHADER create_raw_pixel_shader(std::span<const uint8_t> byte_code, const dxil::ShaderResourceUsageTable& usageTable);
 
 NAU_RENDER_EXPORT void delete_pixel_shader(FSHADER ps);
 
@@ -1277,7 +1278,7 @@ NAU_RENDER_EXPORT bool set_render_target(int rt_index, BaseTexture *, int level)
 inline bool set_render_target(BaseTexture *t, int level) { return set_render_target() && set_render_target(0, t, level); }
 inline bool set_render_target(BaseTexture *t, int fc, int level) { return set_render_target() && set_render_target(0, t, fc, level); }
 
-inline void set_render_target(RenderTarget depth, DepthAccess depth_access, eastl::span<const RenderTarget> colors) // change dag::ConstSpan to eastl::span
+inline void set_render_target(RenderTarget depth, DepthAccess depth_access, std::span<const RenderTarget> colors)  // change dag::ConstSpan to std::span
 {
   for (int i = 0; i < Driver3dRenderTarget::MAX_SIMRT; ++i)
   {
@@ -1290,7 +1291,7 @@ inline void set_render_target(RenderTarget depth, DepthAccess depth_access, east
 }
 inline void set_render_target(RenderTarget depth, DepthAccess depth_access, const std::initializer_list<RenderTarget> colors)
 {
-  set_render_target(depth, depth_access, eastl::span<const RenderTarget>(colors.begin(), colors.end() - colors.begin()));
+    set_render_target(depth, depth_access, std::span<const RenderTarget>(colors.begin(), colors.end() - colors.begin()));
 }
 
 NAU_RENDER_EXPORT void get_render_target(Driver3dRenderTarget &out_rt);
@@ -1379,10 +1380,10 @@ void calcglobtm(const nau::math::Matrix4 &view_tm, const nau::math::Matrix4 &pro
 void calcglobtm(const nau::math::Matrix4 &view_tm, const Driver3dPerspective &persp, nau::math::Matrix4 &result);
 
 NAU_RENDER_EXPORT bool setscissor(int x, int y, int w, int h);
-NAU_RENDER_EXPORT bool setscissors(eastl::span<const ScissorRect> scissorRects);
+NAU_RENDER_EXPORT bool setscissors(std::span<const ScissorRect> scissorRects);
 
 NAU_RENDER_EXPORT bool setview(int x, int y, int w, int h, float minz, float maxz);
-NAU_RENDER_EXPORT bool setviews(eastl::span<const Viewport> viewports);
+NAU_RENDER_EXPORT bool setviews(std::span<const Viewport> viewports);
 NAU_RENDER_EXPORT bool getview(int &x, int &y, int &w, int &h, float &minz, float &maxz);
 
 /// clear all view

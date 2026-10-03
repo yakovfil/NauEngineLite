@@ -22,6 +22,7 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  ****************************************************************************/
+#include <string>
 #include "AssetsManagerEx.h"
 #include "CCEventListenerAssetsManagerEx.h"
 #include "base/ccUTF8.h"
@@ -60,7 +61,7 @@ AssetsManagerEx::AssetsManagerEx(const std::string& manifestUrl, const std::stri
 {
     // Init variables
     _eventDispatcher = Director::getInstance()->getEventDispatcher();
-    std::string pointer = eastl::string(eastl::string::CtorSprintf{}, "%p", this);
+    std::string pointer = cocos2d::StringUtils::format("%p", this);
     _eventName = EventListenerAssetsManagerEx::LISTENER_ID + pointer;
     _fileUtils = FileUtils::getInstance();
 
@@ -669,7 +670,7 @@ void AssetsManagerEx::startUpdate()
         _totalWaitToDownload = _totalToDownload = (int)_downloadUnits.size();
         this->batchDownload();
         
-        std::string msg = eastl::string(eastl::string::CtorSprintf{}, "Resuming from previous unfinished update, %d files remains to be finished.", _totalToDownload);
+        std::string msg = cocos2d::StringUtils::format("Resuming from previous unfinished update, %d files remains to be finished.", _totalToDownload);
         dispatchUpdateEvent(EventAssetsManagerEx::EventCode::UPDATE_PROGRESSION, "", msg);
     }
     else
@@ -720,7 +721,7 @@ void AssetsManagerEx::startUpdate()
             _totalWaitToDownload = _totalToDownload = (int)_downloadUnits.size();
             this->batchDownload();
             
-            eastl::string msg = eastl::string(eastl::string::CtorSprintf{}, "Start to update %d files from remote package.", _totalToDownload);
+            std::string msg = cocos2d::StringUtils::format("Start to update %d files from remote package.", _totalToDownload);
             dispatchUpdateEvent(EventAssetsManagerEx::EventCode::UPDATE_PROGRESSION, "", msg);
         }
     }

@@ -27,6 +27,7 @@ THE SOFTWARE.
 #ifndef __CC_APPLICATION_PROTOCOL_H__
 #define __CC_APPLICATION_PROTOCOL_H__
 
+#include <string>
 #include "platform/CCPlatformMacros.h"
 #include "base/CCAutoreleasePool.h"
 #include "base/ccTypes.h"
@@ -139,7 +140,7 @@ public:
      * @js NA
      * @lua NA
      */
-    virtual eastl::string getVersion() = 0;
+    virtual std::string getVersion() = 0;
     
     /**
      @brief Open url in default browser.
@@ -148,7 +149,7 @@ public:
      * @js NA
      * @lua NA
      */
-    virtual bool openURL(const eastl::string &url) = 0;
+    virtual bool openURL(const std::string &url) = 0;
 };
 
 // end of platform group

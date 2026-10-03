@@ -1,14 +1,17 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "material_creator.h"
+
+#include <optional>
+#include <string_view>
+#include <vector>
 
 #include "nau/serialization/runtime_value_builder.h"
 
 namespace nau
 {
-    Result<> MaterialCreator::createMaterial(eastl::string_view name)
+    Result<> MaterialCreator::createMaterial(std::string_view name)
     {
         if (m_material.has_value())
         {
@@ -17,14 +20,13 @@ namespace nau
 
         m_material = Material{
             .name = name.data(),
-            .master = eastl::nullopt,
-            .pipelines = {}
-        };
+            .master = std::nullopt,
+            .pipelines = {}};
 
         return ResultSuccess;
     }
 
-    Result<> MaterialCreator::addPipeline(eastl::string_view name, eastl::string_view shaderCacheFilename, const eastl::vector<Shader>& shaders)
+    Result<> MaterialCreator::addPipeline(std::string_view name, std::string_view shaderCacheFilename, const std::vector<Shader>& shaders)
     {
         if (!m_material.has_value())
         {

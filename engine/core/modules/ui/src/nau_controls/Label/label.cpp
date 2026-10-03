@@ -3,13 +3,17 @@
 
 #include "nau/ui/label.h"
 
-#include "texture_2d_handler.h"
-#include "../src/nau_controls/rich_text/rich_text_lexer.h"
-#include "../src/nau_controls/rich_text/rich_text_helper.h"
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "base/ccUTF8.h"
+#include "../src/nau_controls/rich_text/rich_text_helper.h"
+#include "../src/nau_controls/rich_text/rich_text_lexer.h"
 #include "2d/CCFontAtlasCache.h"
 #include "2d/CCLabel.h"
+#include "base/ccUTF8.h"
+#include "texture_2d_handler.h"
 
 namespace nau::ui
 {
@@ -45,7 +49,7 @@ void NauLabel::removeFont(const std::string& fontFilePath)
     m_symbolFactory->unRegisterProvider(fontFilePath);
 }
 
-void NauLabel::setText(const eastl::string& text)
+void NauLabel::setText(const std::string& text)
 {
     if (text == m_utf8Text)
     {
@@ -62,7 +66,7 @@ void NauLabel::setText(const eastl::string& text)
     updateLabel();
 }
 
-eastl::string_view NauLabel::getText() const
+std::string_view NauLabel::getText() const
 {
     return m_utf8Text;
 }
@@ -100,7 +104,7 @@ void NauLabel::enableRichText(bool enable)
     m_isRichText = enable;
 }
 
-TextDefinition NauLabel::calculateTextDefinition(const eastl::u32string& text)
+TextDefinition NauLabel::calculateTextDefinition(const std::u32string& text)
 {
     std::vector<TextLineDefinition> lineDefinitions{ TextLineDefinition() };
     int lineDefinitionIndex = 0;
@@ -557,7 +561,7 @@ bool NauLabel::isCharacterEndOfWord(char32_t character)
     return false;
 }
 
-float NauLabel::getNextWordLenght(const eastl::u32string& utf32Text, size_t startIndex, const std::u32string& font)
+float NauLabel::getNextWordLenght(const std::u32string& utf32Text, size_t startIndex, const std::u32string& font)
 {
     float lenght = 0.0f;
 
@@ -613,7 +617,7 @@ NauLabel* NauLabel::create()
     return Node::create<NauLabel>();
 }
 
-NauLabel* NauLabel::create(const eastl::string& text, const std::string& fontPath)
+NauLabel* NauLabel::create(const std::string& text, const std::string& fontPath)
 {
     NauLabel* label = create();
 
@@ -623,21 +627,21 @@ NauLabel* NauLabel::create(const eastl::string& text, const std::string& fontPat
         return nullptr;
     }
 
-    auto factory = eastl::make_unique<SymbolFactory>();
+    auto factory = std::make_unique<SymbolFactory>();
     factory->registerProvider(fontPath);
 
-    label->setSymbolFactory(eastl::move(factory));
+    label->setSymbolFactory(std::move(factory));
     label->setText(text);
 
     return label;
 }
 
 NauLabel* NauLabel::create(
-    const eastl::string& text, 
-    const std::string& fontPath, 
-    HorizontalAlignment horizontalAlignment, 
-    VerticalAlignment verticalAlignment, 
-    Overflow overflow, 
+    const std::string& text,
+    const std::string& fontPath,
+    HorizontalAlignment horizontalAlignment,
+    VerticalAlignment verticalAlignment,
+    Overflow overflow,
     Wrapping wrapping)
 {
     NauLabel* label = create();
@@ -648,10 +652,10 @@ NauLabel* NauLabel::create(
         return nullptr;
     }
 
-    auto factory = eastl::make_unique<SymbolFactory>();
+    auto factory = std::make_unique<SymbolFactory>();
     factory->registerProvider(fontPath);
 
-    label->setSymbolFactory(eastl::move(factory));
+    label->setSymbolFactory(std::move(factory));
     label->setHorizontalAlignment(horizontalAlignment);
     label->setVerticalAlignment(verticalAlignment);
     label->setOverflowType(overflow);
@@ -661,7 +665,7 @@ NauLabel* NauLabel::create(
     return label;
 }
 
-NauLabel* NauLabel::create(eastl::unique_ptr<SymbolFactory> symbolFactory)
+NauLabel* NauLabel::create(std::unique_ptr<SymbolFactory> symbolFactory)
 {
     NauLabel* label = Node::create<NauLabel>();
 
@@ -671,12 +675,12 @@ NauLabel* NauLabel::create(eastl::unique_ptr<SymbolFactory> symbolFactory)
         return nullptr;
     }
 
-    label->setSymbolFactory(eastl::move(symbolFactory));
+    label->setSymbolFactory(std::move(symbolFactory));
 
     return label;
 }
 
-void NauLabel::setSymbolFactory(eastl::unique_ptr<SymbolFactory>&& symbolFactory)
+void NauLabel::setSymbolFactory(std::unique_ptr<SymbolFactory>&& symbolFactory)
 {
     m_symbolFactory = std::move(symbolFactory);
 }

@@ -4,12 +4,10 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
-#include "nau/rtti/type_info.h"
 #include "nau/diag/assertion.h"
-
-#include <EASTL/shared_ptr.h>
-
+#include "nau/rtti/type_info.h"
 
 namespace nau
 {
@@ -46,7 +44,7 @@ namespace nau
      */
     struct NAU_ABSTRACT_TYPE IMemAllocator
     {
-        using Ptr = eastl::shared_ptr<IMemAllocator>;
+        using Ptr = std::shared_ptr<IMemAllocator>;
 
         /**
          * @brief Allocates a block of memory.
@@ -144,7 +142,6 @@ namespace nau
          * @param name The pointer to the char* name string.
          */
         virtual void setName(const char* name) = 0;
-
     };
 
     /**

@@ -2,7 +2,17 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <nau/rtti/rtti_impl.h>
+
+#include <algorithm>
 #include <chrono>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "daECS/core/componentTypes.h"
 #include "daECS/core/coreEvents.h"
 #include "daECS/core/dataComponent.h"
@@ -12,11 +22,11 @@
 #include "daECS/core/sharedComponent.h"
 #include "daECS/core/updateStage.h"
 #include "dag_perfTimer.h"
+#include "nau/app/application_services.h"
 #include "nau/async/task.h"
 #include "nau/async/thread_pool_executor.h"
 #include "nau/async/work_queue.h"
 #include "nau/utils/cancellation.h"
-#include "nau/app/application_services.h"
 
 enum : uint32_t
 {
@@ -57,7 +67,7 @@ namespace ecs
     struct LoadGameResJob
     {
         ecs::gameres_list_t resnm;
-        eastl::vector<EntityId> entities;
+        std::vector<EntityId> entities;
         ::nau::async::Task<> doJob()
         {
             co_await nau::async::Executor::getDefault();
@@ -87,17 +97,17 @@ namespace ecs
             list.clear();
             return 0;
         }
-        eastl::vector<eastl::unique_ptr<LoadGameResJob>> jobs;
-        eastl::vector<nau::async::Task<>> jobTasks;
-        void async_load_gameres_list(eastl::vector<ecs::EntityId>&& eids, ecs::gameres_list_t&& nms) override
+        std::vector<std::unique_ptr<LoadGameResJob>> jobs;
+        std::vector<nau::async::Task<>> jobTasks;
+        void async_load_gameres_list(std::vector<ecs::EntityId>&& eids, ecs::gameres_list_t&& nms) override
         {
             NAU_UNUSED(nms);
             for(auto& n : nms)
                 NAU_CORE_DEBUG_LF("place_gameres_request <{}>", n.first.c_str());
             // g_entity_mgr->onEntitiesLoaded(eids);
-            auto& job = jobs.emplace_back(eastl::make_unique<LoadGameResJob>());
-            job->entities = eastl::move(eids);
-            job->resnm = eastl::move(nms);
+            auto& job = jobs.emplace_back(std::make_unique<LoadGameResJob>());
+            job->entities = std::move(eids);
+            job->resnm = std::move(nms);
             // int jobMgr = get_common_loading_job_mgr();
             //  if (jobMgr >= 0
             // G_VERIFY(cpujobs::add_job(jobMgr, job));
@@ -209,7 +219,7 @@ volatile int cache0 = 0;
 
 void prune_cache()
 {
-    static eastl::vector<int> memory;
+    static std::vector<int> memory;
     if(!memory.size())
         memory.resize(4 << 20, 1);
     for(auto i : memory)
@@ -225,7 +235,7 @@ void testAllocator()
         NAU_UNUSED(mem);
         for(int i = 0; i < cnt; ++i)
         {
-            eastl::vector<uint8_t*> blocks(blocks_cnt);
+            std::vector<uint8_t*> blocks(blocks_cnt);
             for(auto& b : blocks)
                 b = allocator.allocate(size);
             NAU_ASSERT(!allocator.chunks.empty());
@@ -322,12 +332,12 @@ static void kinematics_es_event_all(const ecs::Event&, const ecs::QueryView& com
     }
 }
 
-static ecs::EntitySystemDesc kinematics_es_desc("kinematics_es", ecs::EntitySystemOps(kinematics_es_all, nullptr), eastl::span(kinematics_comps + 0, 1), eastl::span(kinematics_comps + 1, 1), eastl::span(kinematics_comps + 2, 1), eastl::span(kinematics_comps + 3, 1),
+static ecs::EntitySystemDesc kinematics_es_desc("kinematics_es", ecs::EntitySystemOps(kinematics_es_all, nullptr), std::span(kinematics_comps + 0, 1), std::span(kinematics_comps + 1, 1), std::span(kinematics_comps + 2, 1), std::span(kinematics_comps + 3, 1),
                                                 ecs::EventSetBuilder<>::build(),  // ecs::EventComponentChanged
                                                 (1 << ecs::UpdateStageInfoAct::STAGE));
 
 static ecs::EntitySystemDesc kinematics_events_es_desc("kinematics_events_es", ecs::EntitySystemOps(nullptr, kinematics_es_event_all), nau::ConstSpan<ecs::ComponentDesc>(),
-                                                       // eastl::span(kinematics_events_comps_rw),
+                                                       // std::span(kinematics_events_comps_rw),
                                                        make_span(kinematics_events_comps),
                                                        nau::ConstSpan<ecs::ComponentDesc>(),
                                                        nau::ConstSpan<ecs::ComponentDesc>(),
@@ -349,7 +359,7 @@ static void object_es_event_all(const ecs::Event&, const ecs::QueryView& compone
     // NAU_CORE_DEBUG_LF("changed = {}", evt.cast<ecs::EventComponentChanged>()->get<0>());
 }
 
-static ecs::EntitySystemDesc object_events_es_desc("object_events_es", ecs::EntitySystemOps(nullptr, object_es_event_all), nau::ConstSpan<ecs::ComponentDesc>(), eastl::span(object_events_comps), nau::ConstSpan<ecs::ComponentDesc>(), nau::ConstSpan<ecs::ComponentDesc>(),
+static ecs::EntitySystemDesc object_events_es_desc("object_events_es", ecs::EntitySystemOps(nullptr, object_es_event_all), nau::ConstSpan<ecs::ComponentDesc>(), std::span(object_events_comps), nau::ConstSpan<ecs::ComponentDesc>(), nau::ConstSpan<ecs::ComponentDesc>(),
                                                    ecs::EventSetBuilder<ecs::EventComponentChanged>::build(),  //
                                                    0);
 
@@ -404,9 +414,9 @@ static void compare_gets()
     ecs::NamedQueryDesc desc{
         "q_compare_gets",
         empty_span(),
-        eastl::span(comps + 0, 1),
-        eastl::span(comps + 1, 2),
-        eastl::span(comps + 3, 1),
+        std::span(comps + 0, 1),
+        std::span(comps + 1, 2),
+        std::span(comps + 3, 1),
     };
     static ecs::QueryId persistentQuery = g_entity_mgr->createQuery(desc);
 
@@ -418,7 +428,7 @@ static void compare_gets()
     ecs::NamedQueryDesc descCalc{
         "q1C",
         empty_span(),
-        eastl::span(calc_comps),
+        std::span(calc_comps),
         empty_span(),
         empty_span(),
     };
@@ -426,7 +436,7 @@ static void compare_gets()
 
     int int_component_calc = 0;
     int64_t reft;
-    eastl::vector<ecs::EntityId> eids;
+    std::vector<ecs::EntityId> eids;
     ecs::perform_query(g_entity_mgr, persistentQuery, [&](const ecs::QueryView& qv)
                        {
                            for(auto it = qv.begin(), endIt = qv.end(); it != endIt; ++it)
@@ -506,13 +516,13 @@ static void contrained_mt_mode_example()
     ecs::NamedQueryDesc descRead{
         "thread1",
         empty_span(),
-        eastl::span(comps),
+        std::span(comps),
         empty_span(),
         empty_span(),
     };
     ecs::NamedQueryDesc descWrite{
         "thread1",
-        eastl::span(comps),
+        std::span(comps),
         empty_span(),
         empty_span(),
         empty_span(),
@@ -526,16 +536,16 @@ static void contrained_mt_mode_example()
         map[ECS_HASH("int_variable")] = 10;
         ecs::Template::component_set tracked;
         tracked.insert(ECS_HASH("int_variable").hash);
-        ecs::Template templD("tsanTemplate1", eastl::move(map), eastl::move(tracked), ecs::Template::component_set(),
+        ecs::Template templD("tsanTemplate1", std::move(map), std::move(tracked), ecs::Template::component_set(),
                              ecs::Template::component_set(), false);
-        g_entity_mgr->addTemplate(eastl::move(templD));
+        g_entity_mgr->addTemplate(std::move(templD));
     }
     {
         ecs::ComponentsMap map;
         map[ECS_HASH("int_variable")] = 100;
-        ecs::Template templD("tsanTemplate2", eastl::move(map), ecs::Template::component_set(), ecs::Template::component_set(),
+        ecs::Template templD("tsanTemplate2", std::move(map), ecs::Template::component_set(), ecs::Template::component_set(),
                              ecs::Template::component_set(), false);
-        g_entity_mgr->addTemplate(eastl::move(templD));
+        g_entity_mgr->addTemplate(std::move(templD));
     }
 
     {
@@ -544,12 +554,12 @@ static void contrained_mt_mode_example()
         map[ECS_HASH("int_variable2")] = 100;
         ecs::Template templD("tsanTemplate3", ecs::ComponentsMap(map), ecs::Template::component_set(), ecs::Template::component_set(),
                              ecs::Template::component_set(), false);
-        g_entity_mgr->addTemplate(eastl::move(templD));
+        g_entity_mgr->addTemplate(std::move(templD));
 
         map[ECS_HASH("int_variable3")] = 100;
-        ecs::Template templD2("tsanTemplate4", eastl::move(map), ecs::Template::component_set(), ecs::Template::component_set(),
+        ecs::Template templD2("tsanTemplate4", std::move(map), ecs::Template::component_set(), ecs::Template::component_set(),
                               ecs::Template::component_set(), false);
-        g_entity_mgr->addTemplate(eastl::move(templD2));
+        g_entity_mgr->addTemplate(std::move(templD2));
     }
 
     ecs::EntityId eid1 = g_entity_mgr->createEntitySync("tsanTemplate1");
@@ -610,13 +620,13 @@ static void contrained_mt_mode_example()
     g_entity_mgr->tick();
 }
 
-ecs::template_t create_template(ecs::ComponentsMap&& map, ecs::Template::component_set&& tracked = ecs::Template::component_set(), eastl::string* name = nullptr)
+ecs::template_t create_template(ecs::ComponentsMap&& map, ecs::Template::component_set&& tracked = ecs::Template::component_set(), std::string* name = nullptr)
 {
     static int tn = 0;
     char buf[64];
     sprintf(buf, "_t%d", tn++);
     g_entity_mgr->addTemplate(
-        ecs::Template(buf, eastl::move(map), eastl::move(tracked), ecs::Template::component_set(), ecs::Template::component_set(), false));
+        ecs::Template(buf, std::move(map), std::move(tracked), ecs::Template::component_set(), ecs::Template::component_set(), false));
     if(name)
         *name = buf;
     return g_entity_mgr->instantiateTemplate(g_entity_mgr->buildTemplateIdByName(buf));
@@ -626,13 +636,13 @@ ecs::template_t create_template(ecs::ComponentsMap&& map, const char* track)
     ecs::Template::component_set tracked;
     NAU_ASSERT(strchr(track, '^') == 0);
     tracked.insert(ECS_HASH_SLOW(track).hash);
-    return create_template(eastl::move(map), eastl::move(tracked));
+    return create_template(std::move(map), std::move(tracked));
 }
 
 void testRecreate()
 {
     ecs::template_t templ, templ2;
-    eastl::string templ2Name;
+    std::string templ2Name;
     {
         ecs::ComponentsMap map;
         for(int i = 0; i < 128; ++i)
@@ -658,17 +668,17 @@ void testRecreate()
         {
             ecs::ComponentsMap map2 = map;
             map2["sample_component2"];
-            templ = create_template(eastl::move(map2));
+            templ = create_template(std::move(map2));
         }
         map[ECS_HASH("tag_sample")] = ecs::Tag();
-        templ2 = create_template(eastl::move(map), ecs::Template::component_set(), &templ2Name);
+        templ2 = create_template(std::move(map), ecs::Template::component_set(), &templ2Name);
     }
     enum
     {
         TESTS = 100,
         RUNS = 200
     };
-    eastl::vector<ecs::EntityId> eid(TESTS);
+    std::vector<ecs::EntityId> eid(TESTS);
     uint64_t bestCreate = ~uint64_t(0), bestRecreate = ~uint64_t(0);
     int64_t reft;
     for(int r = 0; r < RUNS; ++r)
@@ -702,13 +712,13 @@ void testSampleComponent()
     // map[ECS_HASH("sample_component")];//ecs::ChildComponent();
     map[ECS_HASH("sample_component")] = SampleComponent();
     map[ECS_HASH("int_variable")] = 13;
-    eastl::string templ2Name;
-    ecs::template_t templ2 = create_template(eastl::move(map), ecs::Template::component_set(), &templ2Name);
+    std::string templ2Name;
+    ecs::template_t templ2 = create_template(std::move(map), ecs::Template::component_set(), &templ2Name);
     ecs::ComponentsInitializer init;
     init[ECS_HASH("int_variable")] = 27;
     ecs::ComponentsMap map2;
     map2[ECS_HASH("int_variable")] = 17;
-    auto eid2 = g_entity_mgr->createEntitySync(templ2, eastl::move(init), eastl::move(map2));
+    auto eid2 = g_entity_mgr->createEntitySync(templ2, std::move(init), std::move(map2));
     NAU_CORE_DEBUG_LF("getOr {}", g_entity_mgr->getOr(eid2, ECS_HASH("int_variable"), -1));
     while(g_entity_mgr->getNumComponents(eid2) < 0)
     {
@@ -733,7 +743,7 @@ void testSampleComponent()
     };
     ecs::NamedQueryDesc desc{
         "q2",
-        eastl::span(comps),
+        std::span(comps),
         nau::ConstSpan<ecs::ComponentDesc>(),
         nau::ConstSpan<ecs::ComponentDesc>(),
         nau::ConstSpan<ecs::ComponentDesc>(),
@@ -767,7 +777,7 @@ void testSharedComponent()
     // map[ECS_HASH("sample_component")] = ecs::ChildComponent();
 
     map[ECS_HASH("shared_str")] = ecs::SharedComponent<ecs::string>(ecs::string("test_string"));
-    auto templ = create_template(eastl::move(map));
+    auto templ = create_template(std::move(map));
     auto eid = g_entity_mgr->createEntitySync(templ);
     auto eid2 = g_entity_mgr->createEntitySync(templ);
     // const ecs::string &shared_str = g_entity_mgr->get<SharedComponent<ecs::string>>(eid, ECS_HASH("shared_str"));
@@ -793,7 +803,7 @@ static void profileQuery(ecs::QueryId q)
                            });
         const uint64_t c = profile_ref_ticks() - reft;
         avgQ += c;
-        bestQ = eastl::min(bestQ, c);
+        bestQ = std::min(bestQ, c);
     }
     NAU_CORE_DEBUG_LF("zero cost query cost best {}ticks {}us, avg = {} ({}us)", bestQ, profile_usec_from_ticks_delta(bestQ), double(avgQ / qRuns),
                       double(profile_usec_from_ticks_delta(avgQ)) / qRuns);
@@ -818,13 +828,13 @@ void testCreateObjectOfArray()
     map[ECS_HASH("object")].getRW<ecs::Object>().insert(ECS_HASH("array_data")).getRW<ecs::Array>().push_back(2.0f);
     map[ECS_HASH("int_variable")] = 13;
     map[ECS_HASH("str_test")] = ecs::string("def_temp");
-    ecs::template_t templ = create_template(eastl::move(map), "object");
+    ecs::template_t templ = create_template(std::move(map), "object");
     ecs::ComponentsInitializer init;
     init[ECS_HASH("int_variable")] = 27;
     ecs::ComponentsMap map2;
     map2[ECS_HASH("int_variable")] = 17;
     init[ECS_HASH("str_test")] = ecs::string("test");
-    auto eid2 = g_entity_mgr->createEntitySync(templ, eastl::move(init), eastl::move(map2));
+    auto eid2 = g_entity_mgr->createEntitySync(templ, std::move(init), std::move(map2));
     debug_cp();
     NAU_CORE_DEBUG_LF("string {}", g_entity_mgr->getOr(eid2, ECS_HASH("no"), "def"));
     NAU_CORE_DEBUG_LF("string {}", g_entity_mgr->get<ecs::string>(eid2, ECS_HASH("str_test")).c_str());
@@ -848,22 +858,22 @@ namespace nau::test
     TEST(DagorECS, Base)
     {
         // static const char *filter[] = {"int_variable"};
-        // g_entity_mgr->setFilterTags(eastl::span(filter));
+        // g_entity_mgr->setFilterTags(std::span(filter));
         auto app = createApplication();
         app->startupOnCurrentThread();
         ASSERT_TRUE(getApplication().isMainThread());
         testAllocator();
         g_entity_mgr.demandInit();
-        ecs::setECSResourceManager(eastl::make_unique<ecs::TestResourceManagerImpl>());
+        ecs::setECSResourceManager(std::make_unique<ecs::TestResourceManagerImpl>());
         // testRecreate();//return 0;
         contrained_mt_mode_example();
         {
-#define DEBUG_TYPE_INFO(type)                                                                                                          \
-    NAU_CORE_DEBUG_LF("eastl::is_copy_assignable<" #type ">::value = {}", eastl::is_copy_assignable<type>::value);                     \
-    NAU_CORE_DEBUG_LF("eastl::is_copy_constructible<" #type ">::value = {}", eastl::is_copy_constructible<type>::value);               \
-    NAU_CORE_DEBUG_LF("eastl::is_move_assignable<" #type ">::value = {}", eastl::is_move_assignable<type>::value);                     \
-    NAU_CORE_DEBUG_LF("eastl::is_trivially_move_assignable<" #type ">::value = {}", eastl::is_trivially_move_assignable<type>::value); \
-    NAU_CORE_DEBUG_LF("eastl::is_move_constructible<" #type ">::value = {}", eastl::is_move_constructible<type>::value);
+#define DEBUG_TYPE_INFO(type)                                                                                                      \
+    NAU_CORE_DEBUG_LF("std::is_copy_assignable<" #type ">::value = {}", std::is_copy_assignable<type>::value);                     \
+    NAU_CORE_DEBUG_LF("std::is_copy_constructible<" #type ">::value = {}", std::is_copy_constructible<type>::value);               \
+    NAU_CORE_DEBUG_LF("std::is_move_assignable<" #type ">::value = {}", std::is_move_assignable<type>::value);                     \
+    NAU_CORE_DEBUG_LF("std::is_trivially_move_assignable<" #type ">::value = {}", std::is_trivially_move_assignable<type>::value); \
+    NAU_CORE_DEBUG_LF("std::is_move_constructible<" #type ">::value = {}", std::is_move_constructible<type>::value);
 
             DEBUG_TYPE_INFO(ecs::Object);
             DEBUG_TYPE_INFO(ecs::Array);
@@ -904,9 +914,9 @@ namespace nau::test
             ecs::Template::component_set tracked;
             tracked.insert(ECS_HASH("int_component2").hash);
             tracked.insert(ECS_HASH("int_variable").hash);
-            ecs::Template templD("theTemplate1", eastl::move(templMap), eastl::move(tracked), ecs::Template::component_set(),
+            ecs::Template templD("theTemplate1", std::move(templMap), std::move(tracked), ecs::Template::component_set(),
                                  ecs::Template::component_set(), false);
-            g_entity_mgr->addTemplate(eastl::move(templD));
+            g_entity_mgr->addTemplate(std::move(templD));
             auto eid = g_entity_mgr->createEntitySync("theTemplate1");
             t1 = g_entity_mgr->getEntityTemplateId(eid);
             g_entity_mgr->destroyEntityAsync(eid);
@@ -915,7 +925,7 @@ namespace nau::test
         }
         ecs::template_t templ = t1;
         NAU_ASSERT(templ != ecs::INVALID_TEMPLATE_INDEX);
-        eastl::vector<ecs::EntityId> eid(TESTS);
+        std::vector<ecs::EntityId> eid(TESTS);
         int64_t reft = profile_ref_ticks();
         uint64_t bestCreate = ~uint64_t(0);
         for(int j = 0; j < CREATE_RUNS; ++j)
@@ -929,9 +939,9 @@ namespace nau::test
                 // init[ECS_HASH("int_variable")] = i;
                 // if (i%2 == 0)
                 //   init[ECS_HASH("vel")] = Point3(0,0,0);
-                eid.data()[i] = g_entity_mgr->createEntitySync("theTemplate1", eastl::move(init));  //"theTemplate1",templ
-                                                                                                    // eid.data()[i] = g_entity_mgr->createEntitySync(templ);
-                                                                                                    // eid = g_entity_mgr->createEntitySync(templ, ecs::ComponentsMap());
+                eid.data()[i] = g_entity_mgr->createEntitySync("theTemplate1", std::move(init));  //"theTemplate1",templ
+                                                                                                  // eid.data()[i] = g_entity_mgr->createEntitySync(templ);
+                                                                                                  // eid = g_entity_mgr->createEntitySync(templ, ecs::ComponentsMap());
             }
             bestCreate = min(bestCreate, uint64_t(profile_ref_ticks() - reft));
             if(j != CREATE_RUNS - 1)
@@ -946,20 +956,24 @@ namespace nau::test
         //   g_entity_mgr->tick();
         {
             int64_t reft = profile_ref_ticks();
-            eastl::vector<TestEntity> tests(TESTS);
+            std::vector<TestEntity> tests(TESTS);
             for(int i = 0; i < TESTS; ++i)
                 tests[i].iv = tests[i].ivCopy = i;
             NAU_CORE_DEBUG_LF("best possible (single alloc, init iv) create time = {} us", profile_time_usec(reft));
             {
                 int64_t reft = profile_ref_ticks();
-                eastl::vector<TestEntity> tests;
+                std::vector<TestEntity> tests;
                 for(int i = 0; i < TESTS; ++i)
                     tests.emplace_back(TestEntity(i));
                 NAU_CORE_DEBUG_LF("best possible grow create time = {} us", profile_time_usec(reft));
             }
             reft = profile_ref_ticks();
             for(int i = 0; i < TESTS; ++i)
-                tests.erase_unsorted(tests.begin());
+            {
+                if (tests.size() > 1)
+                    tests.front() = std::move(tests.back());
+                tests.pop_back();
+            }
             NAU_CORE_DEBUG_LF("best (erase_unsorted) possible reverse destroy time = {} us", profile_time_usec(reft));
         }
         // exit(0);
@@ -973,13 +987,13 @@ namespace nau::test
             // map[ECS_HASH("sample_component")];//ecs::ChildComponent();
             map[ECS_HASH("sample_component")] = SampleComponent();
             map[ECS_HASH("int_variable")] = 13;
-            eastl::string templ2Name;
-            ecs::template_t templ2 = create_template(eastl::move(map), ecs::Template::component_set(), &templ2Name);
+            std::string templ2Name;
+            ecs::template_t templ2 = create_template(std::move(map), ecs::Template::component_set(), &templ2Name);
             ecs::ComponentsInitializer init;
             init[ECS_HASH("int_variable")] = 27;
             ecs::ComponentsMap map2;
             map2[ECS_HASH("int_variable")] = 17;
-            auto eid2 = g_entity_mgr->createEntitySync(templ2, eastl::move(init), eastl::move(map2));
+            auto eid2 = g_entity_mgr->createEntitySync(templ2, std::move(init), std::move(map2));
             NAU_CORE_DEBUG_LF("getOr {}", g_entity_mgr->getOr(eid2, ECS_HASH("int_variable"), -1));
             while(g_entity_mgr->getNumComponents(eid2) < 0)
             {
@@ -1006,7 +1020,7 @@ namespace nau::test
             };
             ecs::NamedQueryDesc desc{
                 "q2",
-                eastl::span(comps),
+                std::span(comps),
                 nau::ConstSpan<ecs::ComponentDesc>(),
                 nau::ConstSpan<ecs::ComponentDesc>(),
                 nau::ConstSpan<ecs::ComponentDesc>(),
@@ -1057,11 +1071,11 @@ namespace nau::test
             map[ECS_HASH("tag_sample")] = ecs::Tag();
             map[ECS_HASH("transform")] = TMatrix::identity();
             // map[ECS_HASH("int_component2")] = 10;
-            templ = create_template(eastl::move(map));
+            templ = create_template(std::move(map));
             ecs::ComponentsInitializer map2;
             map2[ECS_HASH("transform")] = TMatrix::identity();
             // debug_cp();
-            g_entity_mgr->createEntitySync(templ, eastl::move(map2));
+            g_entity_mgr->createEntitySync(templ, std::move(map2));
         }
         {
             ecs::ComponentsMap map;
@@ -1085,10 +1099,10 @@ namespace nau::test
         };
         ecs::NamedQueryDesc desc{
             "q1",
-            eastl::span(comps + 0, 1),
-            eastl::span(comps + 1, 1),
-            eastl::span(comps + 2, 2),
-            eastl::span(comps + 4, 1),
+            std::span(comps + 0, 1),
+            std::span(comps + 1, 1),
+            std::span(comps + 2, 2),
+            std::span(comps + 4, 1),
         };
 
         float dt = 0.1;
@@ -1195,8 +1209,8 @@ namespace nau::test
             };
             ecs::NamedQueryDesc desc{
                 "vecq",
-                eastl::span(comps, 1),
-                eastl::span(comps + 1, 2),
+                std::span(comps, 1),
+                std::span(comps + 1, 2),
                 nau::ConstSpan<ecs::ComponentDesc>(),
                 nau::ConstSpan<ecs::ComponentDesc>(),
             };
@@ -1274,8 +1288,8 @@ namespace nau::test
         g_entity_mgr->tick();
         NAU_CORE_DEBUG_LF("tick in {}us ", profile_time_usec(reft));
 
-        eastl::vector<Point3> posOld, pos8;
-        eastl::vector<Vector3> vel8;
+        std::vector<Point3> posOld, pos8;
+        std::vector<Vector3> vel8;
         posOld.resize(TESTS, Point3(0, 0, 0));
         pos8.resize(TESTS, Point3(1, 0, 0));
         vel8.resize(TESTS, Vector3(0, 1, 0));
@@ -1316,7 +1330,7 @@ namespace nau::test
                               double(bestTime));
         }
         {
-            eastl::vector<TestEntity> tests(TESTS);
+            std::vector<TestEntity> tests(TESTS);
             prune_cache();
             auto testQ = [&tests, dt]()
             {
@@ -1340,7 +1354,7 @@ namespace nau::test
             NAU_CORE_DEBUG_LF("(cached) speed limit with entity avg {}us", double(profile_ref_ticks() - reft) / uint32_t(Q_CNT));
         }
         {
-            eastl::vector<eastl::unique_ptr<TestEntity>> tests;
+            std::vector<std::unique_ptr<TestEntity>> tests;
             reft = profile_ref_ticks();
             tests.resize(TESTS);
             for(auto& t : tests)
@@ -1352,7 +1366,7 @@ namespace nau::test
             for(int i = 0; i < TESTS; ++i)
                 tests.emplace_back(new TestEntity(i));
             ::nau::diag_detail::InplaceLogData{
-                ::nau::diag::LogLevel::Info, ::nau::diag::SourceInfo{::eastl::string_view{__FUNCTION__}, ::eastl::string_view{"D:\\NauPrototype\\engine\\core\\modules\\dagorECS\\tests\\test_ecs\\test_base.cpp"}, static_cast<unsigned>(1356)}
+                ::nau::diag::LogLevel::Info, ::nau::diag::SourceInfo{::std::string_view{__FUNCTION__}, ::std::string_view{"D:\\NauPrototype\\engine\\core\\modules\\dagorECS\\tests\\test_ecs\\test_base.cpp"}, static_cast<unsigned>(1356)}
             }({"ecs"}, "best possible (grow ptrs) create time = {} us", profile_time_usec(reft));
             // we shouldn't assume all of them were allocated simultaneously, so allocator returns ordered. that's optimistic scenario
             // to simulate real environment, shuffle data
@@ -1364,7 +1378,8 @@ namespace nau::test
                 }
             };
             Rand r;
-            eastl::random_shuffle(tests.begin(), tests.end(), r);
+            for (size_t i = 1; i < tests.size(); ++i)
+                std::swap(tests[i], tests[r(i + 1)]);
             prune_cache();
             auto testQ = [&tests, dt]()
             {

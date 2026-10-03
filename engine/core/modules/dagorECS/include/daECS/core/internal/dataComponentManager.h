@@ -4,13 +4,16 @@
 
 #pragma once
 
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
 #include <nau/utils/span.h>
 
-#include "daECS/utility/ecs_asserts.h"
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "daECS/core/internal/typesAndLimits.h"
 #include "daECS/utility/dag_vector.h"
+#include "daECS/utility/ecs_asserts.h"
 
 // #include <math/dag_mathUtils.h>
 
@@ -203,18 +206,18 @@ namespace ecs
             Chunk(const Chunk&) = delete;  // non_copyable
             void swap(Chunk&& a)
             {
-                eastl::swap(data, a.data);
-                eastl::swap(entitiesUsed, a.entitiesUsed);
-                eastl::swap(entitiesCapacityBits, a.entitiesCapacityBits);
+                std::swap(data, a.data);
+                std::swap(entitiesUsed, a.entitiesUsed);
+                std::swap(entitiesCapacityBits, a.entitiesCapacityBits);
             }
             Chunk(Chunk&& a)
             {
-                swap(eastl::move(a));
+                swap(std::move(a));
             }
             Chunk() = default;
             Chunk& operator=(Chunk&& a)
             {
-                swap(eastl::move(a));
+                swap(std::move(a));
                 return *this;
             }
             void reset()
@@ -269,12 +272,12 @@ namespace ecs
             auto chunks = getChunksConst();
             for(auto i = chunks.begin(), e = chunks.end(); i != e; ++i)
                 if(i->getUsed() < i->getCapacity())
-                    return eastl::distance(chunks.begin(), i);
+                    return std::distance(chunks.begin(), i);
             NAU_ASSERT(0);
             return -1;
         }
         void addToChunk(Chunk& chunk, uint32_t id, uint32_t entity_size, const uint8_t* __restrict data, const uint16_t* __restrict component_sz, const uint16_t* __restrict component_ofs);
-        typedef dag::Vector<Chunk, EASTLAllocatorType, false, uint16_t> ChunksArray;
+        typedef dag::Vector<Chunk, nau::HeapByteAllocator, false, uint16_t> ChunksArray;
         struct AliasedChunk
         {
             bool isArray() const
@@ -283,10 +286,10 @@ namespace ecs
             }
             ChunksArray& getArray()
             {
-                if(EASTL_LIKELY(!isArray()))
+                if (NAU_LIKELY(!isArray()))
                 {
                     ChunksArray array;
-                    array.emplace_back(eastl::move(*(Chunk*)container));
+                    array.emplace_back(std::move(*(Chunk*)container));
                     makeArray();
                     ((ChunksArray*)container)->swap(array);
                 }
@@ -300,7 +303,7 @@ namespace ecs
             }
             __forceinline const Chunk* getChunksConstPtr() const
             {
-                if(EASTL_UNLIKELY(isArray()))
+                if (NAU_UNLIKELY(isArray()))
                     return ((ChunksArray*)container)->data();
                 return (Chunk*)container;
             }
@@ -310,19 +313,19 @@ namespace ecs
             }
             __forceinline nau::Span<Chunk> getChunks()
             {
-                if(EASTL_UNLIKELY(isArray()))
+                if (NAU_UNLIKELY(isArray()))
                     return nau::Span<Chunk>(((ChunksArray*)container)->begin(), ((ChunksArray*)container)->size());
                 return nau::Span<Chunk>((Chunk*)container, 1);
             }
             __forceinline nau::ConstSpan<Chunk> getChunksConst() const
             {
-                if(EASTL_UNLIKELY(isArray()))
+                if (NAU_UNLIKELY(isArray()))
                     return nau::ConstSpan<Chunk>(((ChunksArray*)container)->begin(), ((ChunksArray*)container)->size());
                 return nau::ConstSpan<Chunk>((const Chunk*)container, 1);
             }
             __forceinline uint32_t getChunksCount() const
             {
-                if(EASTL_UNLIKELY(isArray()))
+                if (NAU_UNLIKELY(isArray()))
                     return ((ChunksArray*)container)->size();
                 return 1;
             }
@@ -333,10 +336,10 @@ namespace ecs
                 chunksArray.erase(chunksArray.begin() + c);
                 if(chunksArray.size() == 1)
                 {
-                    Chunk chunk = eastl::move(chunksArray[0]);
+                    Chunk chunk = std::move(chunksArray[0]);
                     ((ChunksArray*)container)->~ChunksArray();
                     makeSingleChunk();
-                    ((Chunk*)container)->swap(eastl::move(chunk));
+                    ((Chunk*)container)->swap(std::move(chunk));
                 }
             }
             ~AliasedChunk()
@@ -368,7 +371,7 @@ namespace ecs
             AliasedChunk& operator=(const AliasedChunk&) = delete;
 
         protected:
-            uint8_t container[eastl::max(sizeof(ChunksArray), sizeof(Chunk))] = {0};  // last byte is unused in both ChunksArray, and Chunk
+            uint8_t container[std::max(sizeof(ChunksArray), sizeof(Chunk))] = {0};  // last byte is unused in both ChunksArray, and Chunk
             void setIsArray()
             {
                 container[sizeof(container) - 1] = 1;

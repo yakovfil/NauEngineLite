@@ -3,11 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/iterator.h>
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <iterator>
 
 #include "constants.h"
-
 
 namespace drv3d_dx12
 {
@@ -18,7 +17,7 @@ struct ConstRegisterType
 };
 inline bool operator==(const ConstRegisterType &l, const ConstRegisterType &r)
 {
-  return eastl::equal(eastl::begin(l.components), eastl::end(l.components), eastl::begin(r.components));
+    return std::equal(std::begin(l.components), std::end(l.components), std::begin(r.components));
 }
 
 } // namespace drv3d_dx12

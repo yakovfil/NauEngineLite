@@ -38,7 +38,7 @@ for configuration in ('debug', 'release'):
     (build / 'sample-audit-configure.log').write_text(configured.stdout + configured.stderr)
     graph = targets(build)
     assert {'MinimalAppSample', 'NauKernel', 'NauFrameworkMinimal', 'PlatformApp'} <= graph.keys()
-    allowed = {'EABase', 'EASTL', 'tiny-utf8', 'fmt', 'utfcpp', 'ModifiedSonyMath', 'jsoncpp', 'wyhash', 'fast_float'}
+    allowed = {'tiny-utf8', 'fmt', 'utfcpp', 'ModifiedSonyMath', 'jsoncpp', 'wyhash', 'fast_float'}
     for target in graph.values():
         path = target['paths']['source']
         if path.startswith('engine/3rdparty_libs/'):

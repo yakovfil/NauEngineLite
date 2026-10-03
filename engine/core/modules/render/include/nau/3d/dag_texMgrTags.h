@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <vector>
+
 #include "nau/3d/dag_resId.h"
-#include <EASTL/vector.h>
 //#include <generic/dag_tabFwd.h>
 
 enum
@@ -37,4 +38,4 @@ void textag_clear_tag(int textag);
 const TexTagInfo &textag_get_info(int textag);
 
 //! returns list of textures that are marked with tag
-void textag_get_list(int textag, eastl::vector<TEXTUREID> &out_list, bool skip_unused = true);
+void textag_get_list(int textag, std::vector<TEXTUREID>& out_list, bool skip_unused = true);

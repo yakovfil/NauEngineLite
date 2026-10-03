@@ -98,7 +98,6 @@ add_subdirectory(${COCOS2DX_ROOT_PATH}/external ${ENGINE_BINARY_PATH}/external)
 target_link_libraries(cocos2d
     PUBLIC
         external
-        EASTL
         NauKernel
         Render
 )

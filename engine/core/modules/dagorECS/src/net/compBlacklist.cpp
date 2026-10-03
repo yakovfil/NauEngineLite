@@ -1,9 +1,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/compBlacklist.h>
 #include <daECS/core/entityManager.h>
+#include <daECS/net/compBlacklist.h>
+
+#include <algorithm>
 #include <ska_hash_map/flat_hash_map2.hpp>
-#include <EASTL/vector_map.h>
-#include <EASTL/algorithm.h>
+
+#include "nau/utils/sorted_vector.h"
 
 #if ECS_NET_COMP_BLACKLIST_ENABLED
 
@@ -18,7 +20,7 @@ struct BlacklistedComponentInfo
 
 using CompHashSet = ska::flat_hash_set<ecs::component_t, ska::power_of_two_std_hash<ecs::component_index_t>>;
 static CompHashSet replicated_component_client_modify_blacklist;
-static eastl::vector_map<uint64_t, BlacklistedComponentInfo> blacklisted_components;
+static nau::SortedVectorMap<uint64_t, BlacklistedComponentInfo> blacklisted_components;
 static inline uint64_t make_bl_info_key(ecs::EntityId eid, ecs::component_index_t cidx)
 {
   return (uint64_t(ecs::entity_id_t(eid)) << 32) | cidx;
@@ -73,7 +75,7 @@ void replicated_component_on_client_destroy(ecs::EntityId eid)
   auto ite = it + 1;
   for (; ite != end && (ite->first >> 32) == (ecs::entity_id_t)eid; ++ite)
     ;
-  NAU_FAST_ASSERT(blacklisted_components.validate_iterator(ite) & eastl::isf_valid);
+  NAU_FAST_ASSERT(ite >= it && ite <= end);
   blacklisted_components.erase(it, ite);
 }
 

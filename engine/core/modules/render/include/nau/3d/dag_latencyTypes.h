@@ -3,9 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <util/dag_globDef.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/numeric_limits.h>
+// #include <util/dag_globDef.h>
+#include <algorithm>
+#include <limits>
 
 namespace lowlatency
 {
@@ -25,15 +25,15 @@ enum class LatencyMarkerType
 
 struct Statistics
 {
-  float min = eastl::numeric_limits<float>::infinity();
-  float max = -eastl::numeric_limits<float>::infinity();
-  float avg = 0;
-  void apply(float value)
-  {
-    min = eastl::min(min, value);
-    max = eastl::max(max, value);
-    avg += value;
-  }
+    float min = std::numeric_limits<float>::infinity();
+    float max = -std::numeric_limits<float>::infinity();
+    float avg = 0;
+    void apply(float value)
+    {
+        min = std::min(min, value);
+        max = std::max(max, value);
+        avg += value;
+    }
   void finalize(uint32_t count) // count is not stored inside the struct
   {
     if (count > 0)

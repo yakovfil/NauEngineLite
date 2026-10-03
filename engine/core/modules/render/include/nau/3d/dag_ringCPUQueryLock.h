@@ -3,9 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <generic/dag_staticTab.h>
-#include <EASTL/string.h>
-#include <EASTL/array.h>
+// #include <generic/dag_staticTab.h>
+#include <array>
+#include <string>
+
 #include "dag_resId.h"
 
 class D3dResource;
@@ -55,7 +56,7 @@ protected:
     D3DRESID id = BAD_D3DRESID;
     D3dEventQuery *event = 0;
   };
-  eastl::array<FencedGPUResource, 6> buffers; //StaticTab
+  std::array<FencedGPUResource, 6> buffers;  // StaticTab
 
   void unlockData(int buffer);
   bool lockData(int buffer, int &stride, uint8_t **pdata, bool wait);
@@ -66,5 +67,5 @@ protected:
     LOCKED,
     NEWTARGET
   } state = NORMAL;
-  eastl::string resourceName = "Not inited buffer";
+  std::string resourceName = "Not inited buffer";
 };

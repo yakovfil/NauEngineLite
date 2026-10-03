@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/optional.h>
 
 #include <chrono>
+#include <optional>
 
 #include "nau/async/task_base.h"
 #include "nau/meta/attribute.h"
@@ -69,7 +69,7 @@ namespace nau
 
         /**
          */
-        virtual eastl::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() = 0;
+        virtual std::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() = 0;
 
         /**
          */

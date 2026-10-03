@@ -3,11 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "render/daBfg/virtualResourceSemiRequest.h"
+#include <optional>
 
 #include "nau/3d/dag_drv3dConsts.h"
-#include <EASTL/optional.h>
-
+#include "render/daBfg/virtualResourceSemiRequest.h"
 
 namespace dabfg
 {
@@ -27,9 +26,9 @@ struct VrsRequirements
   uint32_t rateY = 1; ///< vertical rate
   /**
    * FG-managed rate texture, as in `registry.read("your_rate_tex_name")`.
-   * \note eastl::nullopt means "no VRS, please"
+   * \note std::nullopt means "no VRS, please"
    */
-  eastl::optional<VrsRateTextureRequest> rateTexture;
+  std::optional<VrsRateTextureRequest> rateTexture;
   /// Vertex combiner. See VariableRateShadingCombiner for details.
   VariableRateShadingCombiner vertexCombiner = VariableRateShadingCombiner::VRS_PASSTHROUGH;
   /// Pixel combiner. See VariableRateShadingCombiner for details.

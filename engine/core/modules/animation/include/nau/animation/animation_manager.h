@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <vector>
+
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/scene_component.h"
-
-#include <EASTL/map.h>
-#include <EASTL/vector.h>
 
 namespace nau::animation
 {
@@ -35,8 +36,8 @@ namespace nau::animation
         void unregisterAnimationComponent(AnimationComponent* animComponent);
 
     private:
-        eastl::vector<scene::ObjectWeakRef<AnimationComponent>> m_animComponentsCache;
-        eastl::unique_ptr<AnimationManagerImguiController> m_uiController;
+        std::vector<scene::ObjectWeakRef<AnimationComponent>> m_animComponentsCache;
+        std::unique_ptr<AnimationManagerImguiController> m_uiController;
     };
 
 }  // namespace nau::animation

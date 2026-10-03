@@ -4,15 +4,6 @@
 
 #pragma once
 
-#include <EASTL/list.h>
-#include <EASTL/map.h>
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/unordered_map.h>
-#include <EASTL/variant.h>
-#include <EASTL/vector.h>
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -33,6 +24,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 #include "nau/diag/assertion.h"

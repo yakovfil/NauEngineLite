@@ -3,9 +3,10 @@
 
 #include "shader_cache_builder.h"
 
-#include <fstream>
-
 #include <windows.h>
+
+#include <fstream>
+#include <string>
 
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/io/file_system.h"
@@ -58,7 +59,7 @@ namespace nau
 
         struct ShaderBytecodeEntry
         {
-            eastl::string shaderName;
+            std::string shaderName;
             size_t blobOffset;
             size_t blobSize;
 

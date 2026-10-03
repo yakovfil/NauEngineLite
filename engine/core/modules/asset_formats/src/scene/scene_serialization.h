@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "nau/assets/scene_asset.h"
 
 namespace nau
@@ -41,12 +45,12 @@ namespace nau
     struct SceneHeader
     {
         SceneAssetKind assetKind = SceneAssetKind::Undefined;
-        eastl::string name;
-        eastl::string version;
-        eastl::string objectsContentFormat = "application/json";
-        eastl::vector<ObjectsBlockInfo> objects;
-        eastl::vector<unsigned> topLevelObjectIds;
-        eastl::optional<Vector<ReferenceField>> referencesInfo;
+        std::string name;
+        std::string version;
+        std::string objectsContentFormat = "application/json";
+        std::vector<ObjectsBlockInfo> objects;
+        std::vector<unsigned> topLevelObjectIds;
+        std::optional<Vector<ReferenceField>> referencesInfo;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(assetKind),

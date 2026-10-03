@@ -42,9 +42,20 @@ target_sources(NauCorePortabilityTests PRIVATE "${moduleRegistration}")
 target_compile_definitions(NauCorePortabilityTests PRIVATE NAU_MODULE_NAME=CoreTest)
 target_include_directories(NauCorePortabilityTests PRIVATE "${engine}/engine/core/app_framework/src")
 target_sources(NauCorePortabilityTests PRIVATE
+  "${engine}/engine/core/kernel/tests/test_runtime/test_cancellation_timeout.cpp"
   "${engine}/engine/core/kernel/tests/test_wasm_core/test_transform_portability.cpp"
   "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_math_serialization.cpp")
-target_precompile_headers(NauCorePortabilityTests PRIVATE <gtest/gtest.h> <gmock/gmock.h>)
+target_sources(NauCorePortabilityTests PRIVATE
+  "${engine}/engine/core/kernel/tests/test_wasm_core/test_std_migration.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_json.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_json_mutability.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_runtime_value.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_serialization/test_runtime_value_events.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_enum_reflection.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_type_info.cpp"
+  "${engine}/engine/core/kernel/tests/test_runtime/test_uid.cpp")
+target_precompile_headers(NauCorePortabilityTests PRIVATE
+  "${engine}/engine/core/kernel/tests/test_runtime/pch.h")
 target_link_libraries(NauCorePortabilityTests PRIVATE NauKernel NauFrameworkMinimal gtest_main gmock)
 nau_add_compile_options(NauCorePortabilityTests)
 if(EMSCRIPTEN)
@@ -59,3 +70,43 @@ else()
   add_test(NAME CorePortability COMMAND NauCorePortabilityTests)
 endif()
 set_tests_properties(CorePortability PROPERTIES TIMEOUT 60)
+
+# Exercise native kernel ownership and worker lifetimes without desktop module dependencies.
+if(NOT EMSCRIPTEN)
+  set(runtimeTests "${engine}/engine/core/kernel/tests/test_runtime")
+  set(commonTests "${engine}/engine/core/kernel/tests/test_common")
+  add_executable(NauKernelMigrationTests
+    "${runtimeTests}/helpers/runtime_guard.cpp"
+    "${commonTests}/stopwatch.cpp"
+    "${commonTests}/assert_catcher_guard.cpp"
+    "${runtimeTests}/test_cancellation.cpp"
+    "${runtimeTests}/test_standard_allocator.cpp"
+    "${runtimeTests}/test_allocators.cpp"
+    "${runtimeTests}/test_diag/test_asserts.cpp"
+    "${runtimeTests}/test_async/test_async_executor.cpp"
+    "${runtimeTests}/test_async/test_async_functions.cpp"
+    "${runtimeTests}/test_async/test_multi_task_source.cpp"
+    "${runtimeTests}/test_async/test_task.cpp"
+    "${runtimeTests}/test_async/test_task_collection.cpp"
+    "${runtimeTests}/test_async/test_thread_local_value.cpp"
+    "${engine}/engine/core/kernel/tests/test_kernel/test_service.cpp"
+    "${engine}/engine/core/kernel/tests/test_kernel/test_io/test_fs_path.cpp")
+  target_include_directories(NauKernelMigrationTests PRIVATE "${runtimeTests}" "${commonTests}/include")
+  target_precompile_headers(NauKernelMigrationTests PRIVATE "${runtimeTests}/pch.h")
+  target_link_libraries(NauKernelMigrationTests PRIVATE NauKernel gtest_main gmock)
+  nau_add_compile_options(NauKernelMigrationTests)
+  include(GoogleTest)
+  gtest_discover_tests(NauKernelMigrationTests TEST_PREFIX KernelMigration.
+    DISCOVERY_TIMEOUT 30 PROPERTIES TIMEOUT 30)
+endif()
+
+# Header-level renderer contracts, independent of a GPU or desktop driver.
+add_executable(NauRendererContainerTests "${engine}/engine/core/modules/render/tests/test_render/test_std_containers.cpp")
+target_include_directories(NauRendererContainerTests PRIVATE "${engine}/engine/core/modules/render/include")
+target_link_libraries(NauRendererContainerTests PRIVATE NauKernel gtest_main)
+nau_add_compile_options(NauRendererContainerTests)
+if(EMSCRIPTEN)
+  target_link_options(NauRendererContainerTests PRIVATE -sEXIT_RUNTIME=1)
+endif()
+add_test(NAME RendererContainers COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:NauRendererContainerTests>)
+set_tests_properties(RendererContainers PROPERTIES TIMEOUT 30)

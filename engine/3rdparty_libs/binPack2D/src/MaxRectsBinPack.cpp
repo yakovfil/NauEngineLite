@@ -5,7 +5,9 @@
 
 	This work is released to Public Domain, do whatever you want with it.
 */
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <limits>
+#include <utility>
 
 #include <binPack2d/MaxRectsBinPack.h>
 
@@ -43,8 +45,8 @@ Rect MaxRectsBinPack::Insert(int width, int height, FreeRectChoiceHeuristic meth
 {
 	Rect newNode;
 	// Unused in this function. We don't need to know the score after finding the position.
-	int score1 = eastl::numeric_limits<int>::max();
-	int score2 = eastl::numeric_limits<int>::max();
+	int score1 = std::numeric_limits<int>::max();
+	int score2 = std::numeric_limits<int>::max();
 	switch(method)
 	{
 		case RectBestShortSideFit: newNode = FindPositionForNewNodeBestShortSideFit(width, height, score1, score2, allowFlip); break;
@@ -72,14 +74,14 @@ Rect MaxRectsBinPack::Insert(int width, int height, FreeRectChoiceHeuristic meth
 	return newNode;
 }
 
-void MaxRectsBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &dst, FreeRectChoiceHeuristic method, bool allowFlip)
+void MaxRectsBinPack::Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &dst, FreeRectChoiceHeuristic method, bool allowFlip)
 {
 	dst.clear();
 
 	while(rects.size() > 0)
 	{
-		int bestScore1 = eastl::numeric_limits<int>::max();
-		int bestScore2 = eastl::numeric_limits<int>::max();
+		int bestScore1 = std::numeric_limits<int>::max();
+		int bestScore2 = std::numeric_limits<int>::max();
 		int bestRectIndex = -1;
 		Rect bestNode;
 
@@ -128,8 +130,8 @@ void MaxRectsBinPack::PlaceRect(const Rect &node)
 Rect MaxRectsBinPack::ScoreRect(int width, int height, FreeRectChoiceHeuristic method, int &score1, int &score2, bool allowFlip) const
 {
 	Rect newNode;
-	score1 = eastl::numeric_limits<int>::max();
-	score2 = eastl::numeric_limits<int>::max();
+	score1 = std::numeric_limits<int>::max();
+	score2 = std::numeric_limits<int>::max();
 	switch(method)
 	{
 	case RectBestShortSideFit: newNode = FindPositionForNewNodeBestShortSideFit(width, height, score1, score2, allowFlip); break;
@@ -141,8 +143,8 @@ Rect MaxRectsBinPack::ScoreRect(int width, int height, FreeRectChoiceHeuristic m
 	// Cannot fit the current rectangle.
 	if (newNode.height == 0)
 	{
-		score1 = eastl::numeric_limits<int>::max();
-		score2 = eastl::numeric_limits<int>::max();
+		score1 = std::numeric_limits<int>::max();
+		score2 = std::numeric_limits<int>::max();
 	}
 
 	return newNode;
@@ -159,8 +161,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBottomLeft(int width, int height, in
 	Rect bestNode;
 	memset(&bestNode, 0, sizeof(Rect));
 
-	bestY = eastl::numeric_limits<int>::max();
-	bestX = eastl::numeric_limits<int>::max();
+	bestY = std::numeric_limits<int>::max();
+	bestX = std::numeric_limits<int>::max();
 
 	for(unsigned i = 0; i < freeRectangles.size(); ++i)
 	{
@@ -203,8 +205,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int heig
 	Rect bestNode;
 	memset(&bestNode, 0, sizeof(Rect));
 
-	bestShortSideFit = eastl::numeric_limits<int>::max();
-	bestLongSideFit = eastl::numeric_limits<int>::max();
+	bestShortSideFit = std::numeric_limits<int>::max();
+	bestLongSideFit = std::numeric_limits<int>::max();
 
 	for(unsigned i = 0; i < freeRectangles.size(); ++i)
 	{
@@ -213,8 +215,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int heig
 		{
 			int leftoverHoriz = abs(freeRectangles[i].width - width);
 			int leftoverVert = abs(freeRectangles[i].height - height);
-			int shortSideFit = eastl::min(leftoverHoriz, leftoverVert);
-			int longSideFit = eastl::max(leftoverHoriz, leftoverVert);
+			int shortSideFit = std::min(leftoverHoriz, leftoverVert);
+			int longSideFit = std::max(leftoverHoriz, leftoverVert);
 
 			if (shortSideFit < bestShortSideFit || (shortSideFit == bestShortSideFit && longSideFit < bestLongSideFit))
 			{
@@ -232,8 +234,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int heig
 		{
 			int flippedLeftoverHoriz = abs(freeRectangles[i].width - height);
 			int flippedLeftoverVert = abs(freeRectangles[i].height - width);
-			int flippedShortSideFit = eastl::min(flippedLeftoverHoriz, flippedLeftoverVert);
-			int flippedLongSideFit = eastl::max(flippedLeftoverHoriz, flippedLeftoverVert);
+			int flippedShortSideFit = std::min(flippedLeftoverHoriz, flippedLeftoverVert);
+			int flippedLongSideFit = std::max(flippedLeftoverHoriz, flippedLeftoverVert);
 
 			if (flippedShortSideFit < bestShortSideFit || (flippedShortSideFit == bestShortSideFit && flippedLongSideFit < bestLongSideFit))
 			{
@@ -256,8 +258,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int heigh
 	Rect bestNode;
 	memset(&bestNode, 0, sizeof(Rect));
 
-	bestShortSideFit = eastl::numeric_limits<int>::max();
-	bestLongSideFit = eastl::numeric_limits<int>::max();
+	bestShortSideFit = std::numeric_limits<int>::max();
+	bestLongSideFit = std::numeric_limits<int>::max();
 
 	for(unsigned i = 0; i < freeRectangles.size(); ++i)
 	{
@@ -266,8 +268,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int heigh
 		{
 			int leftoverHoriz = abs(freeRectangles[i].width - width);
 			int leftoverVert = abs(freeRectangles[i].height - height);
-			int shortSideFit = eastl::min(leftoverHoriz, leftoverVert);
-			int longSideFit = eastl::max(leftoverHoriz, leftoverVert);
+			int shortSideFit = std::min(leftoverHoriz, leftoverVert);
+			int longSideFit = std::max(leftoverHoriz, leftoverVert);
 
 			if (longSideFit < bestLongSideFit || (longSideFit == bestLongSideFit && shortSideFit < bestShortSideFit))
 			{
@@ -285,8 +287,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int heigh
 		{
 			int leftoverHoriz = abs(freeRectangles[i].width - height);
 			int leftoverVert = abs(freeRectangles[i].height - width);
-			int shortSideFit = eastl::min(leftoverHoriz, leftoverVert);
-			int longSideFit = eastl::max(leftoverHoriz, leftoverVert);
+			int shortSideFit = std::min(leftoverHoriz, leftoverVert);
+			int longSideFit = std::max(leftoverHoriz, leftoverVert);
 
 			if (longSideFit < bestLongSideFit || (longSideFit == bestLongSideFit && shortSideFit < bestShortSideFit))
 			{
@@ -309,8 +311,8 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height,
 	Rect bestNode;
 	memset(&bestNode, 0, sizeof(Rect));
 
-	bestAreaFit = eastl::numeric_limits<int>::max();
-	bestShortSideFit = eastl::numeric_limits<int>::max();
+	bestAreaFit = std::numeric_limits<int>::max();
+	bestShortSideFit = std::numeric_limits<int>::max();
 
 	for(unsigned i = 0; i < freeRectangles.size(); ++i)
 	{
@@ -321,7 +323,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height,
 		{
 			int leftoverHoriz = abs(freeRectangles[i].width - width);
 			int leftoverVert = abs(freeRectangles[i].height - height);
-			int shortSideFit = eastl::min(leftoverHoriz, leftoverVert);
+			int shortSideFit = std::min(leftoverHoriz, leftoverVert);
 
 			if (areaFit < bestAreaFit || (areaFit == bestAreaFit && shortSideFit < bestShortSideFit))
 			{
@@ -339,7 +341,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height,
 		{
 			int leftoverHoriz = abs(freeRectangles[i].width - height);
 			int leftoverVert = abs(freeRectangles[i].height - width);
-			int shortSideFit = eastl::min(leftoverHoriz, leftoverVert);
+			int shortSideFit = std::min(leftoverHoriz, leftoverVert);
 
 			if (areaFit < bestAreaFit || (areaFit == bestAreaFit && shortSideFit < bestShortSideFit))
 			{
@@ -361,7 +363,7 @@ static inline int CommonIntervalLength(int i1start, int i1end, int i2start, int 
 {
 	if (i1end < i2start || i2end < i1start)
 		return 0;
-	return eastl::min(i1end, i2end) - eastl::max(i1start, i2start);
+	return std::min(i1end, i2end) - std::max(i1start, i2start);
 }
 
 bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)

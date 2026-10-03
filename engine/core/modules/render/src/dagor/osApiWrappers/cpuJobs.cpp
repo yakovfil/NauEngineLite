@@ -2,13 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "nau/osApiWrappers/dag_cpuJobs.h"
-#include "nau/threading/critical_section.h"
-#include "nau/threading/dag_atomic.h"
-#include "nau/osApiWrappers/dag_miscApi.h"
-#include "nau/osApiWrappers/dag_threads.h"
+#include <algorithm>
 
 #include "nau/diag/assertion.h"
+#include "nau/osApiWrappers/dag_cpuJobs.h"
+#include "nau/osApiWrappers/dag_miscApi.h"
+#include "nau/osApiWrappers/dag_threads.h"
+#include "nau/threading/critical_section.h"
+#include "nau/threading/dag_atomic.h"
 
 //#include <util/dag_globDef.h>
 #include <stdlib.h>
@@ -18,7 +19,7 @@
 //#include <debug/dag_debug.h>
 #include "nau/supp/dag_cpuControl.h"
 //#include <perfMon/dag_statDrv.h>
-#include <EASTL/bitset.h>
+#include <bitset>
 #if _TARGET_APPLE
 #include <mach/thread_act.h>
 #include <sys/sysctl.h>
@@ -639,14 +640,14 @@ void cpujobs::init(int force_core_count, bool reserve_jobmgr_cores)
         {
           int cli = inf.Cache.Level - 1;
           NAU_ASSERT(cli >= 0 && cli < countof(maxCoresPerCacheL));
-          maxCoresPerCacheL[cli] = eastl::max(maxCoresPerCacheL[cli], eastl::bitset<64>(inf.ProcessorMask).count());
+          maxCoresPerCacheL[cli] = std::max(maxCoresPerCacheL[cli], std::bitset<64>(inf.ProcessorMask).count());
         }
         break;
 
         case RelationProcessorCore:
         {
           numCores++;
-          numProcs += eastl::bitset<64>(inf.ProcessorMask).count();
+          numProcs += std::bitset<64>(inf.ProcessorMask).count();
         }
         break;
 

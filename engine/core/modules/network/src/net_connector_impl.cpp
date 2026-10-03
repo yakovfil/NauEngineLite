@@ -4,6 +4,11 @@
 
 #include "net_connector_impl.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "nau/network/napi/networking_factory.h"
 #include "nau/service/service_provider.h"
 
@@ -29,12 +34,12 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::init(eastl::unique_ptr<INetworking>& net)
+    void NetConnectorImpl::init(std::unique_ptr<INetworking>& net)
     {
-        m_networking = eastl::move(net);
+        m_networking = std::move(net);
     }
 
-    void NetConnectorImpl::listen(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& url)
+    void NetConnectorImpl::listen(const std::string& localPeerId, const std::string& remotePeerId, const std::string& url)
     {
         auto listener = m_networking->createListener();
         m_listeners.push_back({
@@ -43,9 +48,9 @@ namespace nau
         });
         listener->listen(
             url,
-            [this, localPeerId, remotePeerId](eastl::shared_ptr<nau::INetworkingTransport> incomingTransport) -> void
+            [this, localPeerId, remotePeerId](std::shared_ptr<nau::INetworkingTransport> incomingTransport) -> void
         {
-            auto connection = eastl::make_shared<Connection>(localPeerId, remotePeerId);
+            auto connection = std::make_shared<Connection>(localPeerId, remotePeerId);
             connection->m_transport = incomingTransport;
             connection->m_state = Connection::State::accepted;
             m_connections.push_back(connection);
@@ -55,7 +60,7 @@ namespace nau
         });
     }
 
-    void NetConnectorImpl::getListeners(eastl::vector<ConnectionData>& listeners)
+    void NetConnectorImpl::getListeners(std::vector<ConnectionData>& listeners)
     {
         listeners.clear();
         listeners.reserve(m_listeners.size());
@@ -65,7 +70,7 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::connect(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& url)
+    void NetConnectorImpl::connect(const std::string& localPeerId, const std::string& remotePeerId, const std::string& url)
     {
         auto connector = m_networking->createConnector();
         m_connectors.push_back({
@@ -74,9 +79,9 @@ namespace nau
         });
         connector->connect(
             url,
-            [this, localPeerId, remotePeerId, url](eastl::shared_ptr<nau::INetworkingTransport> outgoingTransport) -> void
+            [this, localPeerId, remotePeerId, url](std::shared_ptr<nau::INetworkingTransport> outgoingTransport) -> void
         {
-            auto connection = eastl::make_shared<Connection>(localPeerId, url);
+            auto connection = std::make_shared<Connection>(localPeerId, url);
             connection->m_remotePeerId = remotePeerId;
             connection->m_transport = outgoingTransport;
             connection->m_state = Connection::State::connected;
@@ -87,7 +92,7 @@ namespace nau
         });
     }
 
-    void NetConnectorImpl::getConnectors(eastl::vector<ConnectionData>& connectors)
+    void NetConnectorImpl::getConnectors(std::vector<ConnectionData>& connectors)
     {
         connectors.clear();
         connectors.reserve(m_connectors.size());
@@ -97,7 +102,7 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::getConnections(const eastl::string& peerId, eastl::vector<eastl::string>& peers)
+    void NetConnectorImpl::getConnections(const std::string& peerId, std::vector<std::string>& peers)
     {
         peers.clear();
         for (auto& connection : m_connections)
@@ -112,7 +117,7 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::getConnections(eastl::vector<eastl::weak_ptr<IConnection>>& connections)
+    void NetConnectorImpl::getConnections(std::vector<std::weak_ptr<IConnection>>& connections)
     {
         connections.clear();
         for (auto& connection : m_connections)
@@ -121,7 +126,7 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::writeFrame(const eastl::string& peerId, const eastl::string& frame)
+    void NetConnectorImpl::writeFrame(const std::string& peerId, const std::string& frame)
     {
         for (auto& connection : m_connections)
         {
@@ -132,7 +137,7 @@ namespace nau
         }
     }
 
-    bool NetConnectorImpl::readFrame(const eastl::string& peerId, const eastl::string& fromPeerId, eastl::string& frame)
+    bool NetConnectorImpl::readFrame(const std::string& peerId, const std::string& fromPeerId, std::string& frame)
     {
         frame.clear();
         for (auto& connection : m_connections)
@@ -167,7 +172,7 @@ namespace nau
         {
             if (m_transport->isConnected())
             {
-                eastl::vector<NetworkingMessage> messages;
+                std::vector<NetworkingMessage> messages;
                 m_transport->read(messages);
                 // TODO - move message handling to ASIO transport implementation
                 for (auto& message : messages)
@@ -188,22 +193,22 @@ namespace nau
         while (true)
         {
             size_t start = m_recBuffer.find('\n');
-            if (start == eastl::string::npos)
+            if (start == std::string::npos)
             {
                 return;
             }
             size_t end = m_recBuffer.find('\r', start);
-            if (end == eastl::string::npos)
+            if (end == std::string::npos)
             {
                 return;
             }
-            eastl::string message = m_recBuffer.substr(start, end - start + 1);
+            std::string message = m_recBuffer.substr(start, end - start + 1);
             m_recBuffer.erase(start, end - start + 1);
             processMessage(message);
         }
     }
 
-    void NetConnectorImpl::Connection::processMessage(const eastl::string& message)
+    void NetConnectorImpl::Connection::processMessage(const std::string& message)
     {
         if (message == "\n|req_id\r")
         {
@@ -221,7 +226,7 @@ namespace nau
         }
     }
 
-    void NetConnectorImpl::Connection::writeFrame(const eastl::string& frame)
+    void NetConnectorImpl::Connection::writeFrame(const std::string& frame)
     {
         NetworkingMessage message("\n" + frame + "\r");
         m_transport->write(message);

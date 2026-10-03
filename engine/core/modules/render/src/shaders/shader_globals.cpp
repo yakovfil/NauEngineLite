@@ -4,58 +4,61 @@
 
 #include "nau/shaders/shader_globals.h"
 
-#include <EASTL/unordered_map.h>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace nau::shader_globals
 {
     namespace detail
     {
-        eastl::unordered_map<eastl::string, eastl::vector<std::byte>> g_shaderDataTable;
+        std::unordered_map<std::string, std::vector<std::byte>> g_shaderDataTable;
 
         std::shared_mutex g_mutex;
     } // namespace detail
 
     using namespace detail;
 
-    bool containsName(eastl::string_view name)
+    bool containsName(std::string_view name)
     {
         shared_lock_(g_mutex);
-        return detail::g_shaderDataTable.contains(name);
+        return detail::g_shaderDataTable.contains(std::string(name));
     }
 
-    void addVariable(eastl::string_view name, size_t size, const void* defaultValue /* = nullptr */)
+    void addVariable(std::string_view name, size_t size, const void* defaultValue /* = nullptr */)
     {
         NAU_ASSERT(size);
 
         lock_(g_mutex);
 
-        g_shaderDataTable[name.data()] = {};
-        g_shaderDataTable[name.data()].resize(size);
+        g_shaderDataTable[std::string(name)] = {};
+        g_shaderDataTable[std::string(name)].resize(size);
 
         if (defaultValue != nullptr)
         {
-            memcpy(g_shaderDataTable[name.data()].data(), defaultValue, size);
+            memcpy(g_shaderDataTable[std::string(name)].data(), defaultValue, size);
         }
     }
 
-    void setVariable(eastl::string_view name, const void* value)
+    void setVariable(std::string_view name, const void* value)
     {
-        NAU_FATAL(g_shaderDataTable.contains(name), "Global shader variable not found: {}", name.data());
+        NAU_FATAL(g_shaderDataTable.contains(std::string(name)), "Global shader variable not found: {}", name.data());
 
         NAU_ASSERT(value);
 
-        auto& buf = g_shaderDataTable[name.data()];
+        auto& buf = g_shaderDataTable[std::string(name)];
         memcpy(buf.data(), value, buf.size());
     }
 
-    void getVariable(eastl::string_view name, size_t* size, void** value)
+    void getVariable(std::string_view name, size_t* size, void** value)
     {
-        NAU_FATAL(g_shaderDataTable.contains(name), "Global shader variable not found: {}", name.data());
+        NAU_FATAL(g_shaderDataTable.contains(std::string(name)), "Global shader variable not found: {}", name.data());
 
         NAU_ASSERT(size);
         NAU_ASSERT(value);
 
-        auto& buf = g_shaderDataTable[name.data()];
+        auto& buf = g_shaderDataTable[std::string(name)];
         *size = buf.size();
         *value = buf.data();
     }

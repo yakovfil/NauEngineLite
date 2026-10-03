@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <map>
+#include <string>
 
-#include "EASTL/map.h"
 #include "nau/components/net_component_api.h"
 #include "nau/diag/logging.h"
 #include "nau/io/stream_utils.h"
@@ -29,7 +30,7 @@ namespace nau
 
         auto operator<=>(const NetworkComponentData&) const = default;
 
-        bool write(eastl::u8string& buffer)
+        bool write(std::u8string& buffer)
         {
             io::InplaceStringWriter<char8_t> writer{buffer};
             serialization::JsonSettings settings;
@@ -37,7 +38,7 @@ namespace nau
             return res.isSuccess();
         }
 
-        bool read(const eastl::u8string& buffer)
+        bool read(const std::u8string& buffer)
         {
             Result<RuntimeValue::Ptr> parseResult = serialization::jsonParseString(buffer, getDefaultAllocator());
             auto root = serialization::jsonParseToValue(buffer);
@@ -79,11 +80,11 @@ namespace nau
         {
         }
 
-        virtual void netWrite(eastl::string& buffer)
+        virtual void netWrite(std::string& buffer)
         {
         }
 
-        virtual void netRead(const eastl::string& buffer)
+        virtual void netRead(const std::string& buffer)
         {
         }
     };
@@ -126,7 +127,7 @@ namespace nau
 
         struct ComponentData
         {
-            eastl::string m_data;
+            std::string m_data;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(m_data))
@@ -134,7 +135,7 @@ namespace nau
 
         struct SceneSnapshot
         {
-            eastl::map<eastl::string, ComponentData> m_components;
+            std::map<std::string, ComponentData> m_components;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(m_components))
@@ -142,7 +143,7 @@ namespace nau
 
         struct FrameSnapshot
         {
-            eastl::map<eastl::string, SceneSnapshot> m_scenes;
+            std::map<std::string, SceneSnapshot> m_scenes;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(m_scenes))
@@ -172,7 +173,7 @@ namespace nau::test
     {
         NetworkComponentData componentTestSrc;
         NetworkComponentData componentTestDst;
-        eastl::u8string buffer;
+        std::u8string buffer;
 
         componentTestSrc.vec = math::vec3(1, 2, 3);
         componentTestSrc.rot = math::quat(10, 20, 30);

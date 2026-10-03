@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include "ttf_provider.h"
-#include "nau/ui/label.h"
 
 #include <2d/CCFontAtlasCache.h>
 #include <2d/CCLabel.h>
+
+#include <string>
+
 #include "2d/CCFontAtlas.h"
 #include "2d/CCFontFNT.h"
 #include "2d/CCFontFreeType.h"
-
+#include "nau/ui/label.h"
 
 const float TTFProvider::TTFONT_DEFAULT_SIZE = 12.0f;
 
@@ -26,7 +28,7 @@ TTFProvider::~TTFProvider()
     CC_SAFE_RELEASE(m_fontAtlas);
 }
 
-int* TTFProvider::getHorizontalKerning(const eastl::u32string& text, int& outNumLetters) const
+int* TTFProvider::getHorizontalKerning(const std::u32string& text, int& outNumLetters) const
 {
     const cocos2d::FontFNT* bmFont = (cocos2d::FontFNT*)m_fontAtlas->getFont();
     if (!bmFont)
@@ -92,7 +94,7 @@ bool TTFProvider::hasSymbol(char32_t utf32Code) const
     return false;
 }
 
-bool TTFProvider::warmUpSymbosCache(const eastl::u32string& text) const
+bool TTFProvider::warmUpSymbosCache(const std::u32string& text) const
 {
     if (m_fontAtlas->prepareLetterDefinitions(text))
     {

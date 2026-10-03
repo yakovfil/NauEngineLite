@@ -18,7 +18,7 @@ Use the generated Visual Studio solution to select and launch a sample. The opti
 
 ## Coding Style & Naming Conventions
 
-Follow `doc/coding_style_guide.md` and `.clang-format`: four spaces, no tabs, Allman braces, and no fixed line-length limit. Format changed C++ files with `clang-format -i <file>`. Use `snake_case` filenames and namespaces, `PascalCase` classes, `camelCase` functions, and `NAU_`-prefixed uppercase macros. Prefer EASTL where available; avoid exceptions and native C++ RTTI. Follow the documented copyright-header convention for new headers.
+Follow `doc/coding_style_guide.md` and `.clang-format`: four spaces, no tabs, Allman braces, and no fixed line-length limit. Format changed C++ files with `clang-format -i <file>`. Use `snake_case` filenames and namespaces, `PascalCase` classes, `camelCase` functions, and `NAU_`-prefixed uppercase macros. Prefer the toolchain C++20 standard library; preserve explicit allocation and storage contracts through the Nau adapters documented in the coding guide. Avoid exceptions and native C++ RTTI. Follow the documented copyright-header convention for new headers.
 
 ## Testing Guidelines
 

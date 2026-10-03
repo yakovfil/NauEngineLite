@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "base/CCVector.h"
 #include "2d/CCSpriteFrame.h"
 
-#include <EASTL/string.h>
+#include <string>
 
 NS_CC_BEGIN
 

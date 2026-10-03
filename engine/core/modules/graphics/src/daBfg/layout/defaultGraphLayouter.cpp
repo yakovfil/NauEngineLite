@@ -3,10 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "defaultGraphLayouter.h"
-#include <EASTL/sort.h>
 
+#include <algorithm>
+#include <memory>
+#include <span>
+#include <utility>
+#include <vector>
 
-void DefaultGraphLayouter::rankNodes(const AdjacencyLists &graph, eastl::span<const NodeIdx> topsort)
+void DefaultGraphLayouter::rankNodes(const AdjacencyLists& graph, std::span<const NodeIdx> topsort)
 {
   // rank[i] = max{rank[j] | edge i->j exists} + 1
 
@@ -17,15 +21,15 @@ void DefaultGraphLayouter::rankNodes(const AdjacencyLists &graph, eastl::span<co
     NodeIdx node = *it;
     for (NodeIdx next : graph[node])
     {
-      nodeRanks[next] = eastl::max(nodeRanks[next], nodeRanks[node] + 1);
+        nodeRanks[next] = std::max(nodeRanks[next], nodeRanks[node] + 1);
     }
   }
 }
 
-void DefaultGraphLayouter::generateInitialLayout(eastl::span<const NodeIdx> topsort)
+void DefaultGraphLayouter::generateInitialLayout(std::span<const NodeIdx> topsort)
 {
   nodeTable.clear();
-  nodeTable.resize(1 + (!nodeRanks.empty() ? *eastl::max_element(nodeRanks.begin(), nodeRanks.end()) : 0));
+  nodeTable.resize(1 + (!nodeRanks.empty() ? *std::max_element(nodeRanks.begin(), nodeRanks.end()) : 0));
 
   for (NodeIdx node = 0; node < nodeRanks.size(); ++node)
   {
@@ -40,20 +44,21 @@ void DefaultGraphLayouter::generateInitialLayout(eastl::span<const NodeIdx> tops
   // Initial subrank sort for stability
   for (auto &column : nodeTable)
   {
-    eastl::sort(column.begin(), column.end(), [&topsort](NodeIdx first, NodeIdx second) {
-      // Due to culling shceduler, topsort might not contain all nodes.
-      // Consider culled nodes to be greater than all other nodes.
-      if (first >= topsort.size())
-        return false;
-      if (second >= topsort.size())
-        return true;
-      return topsort[first] < topsort[second];
-    });
+      std::sort(column.begin(), column.end(), [&topsort](NodeIdx first, NodeIdx second)
+      {
+          // Due to culling shceduler, topsort might not contain all nodes.
+          // Consider culled nodes to be greater than all other nodes.
+          if (first >= topsort.size())
+              return false;
+          if (second >= topsort.size())
+              return true;
+          return topsort[first] < topsort[second];
+      });
 
-    for (rank_t i = 0; i < column.size(); ++i)
-    {
-      nodeSubranks[column[i]] = i;
-    }
+      for (rank_t i = 0; i < column.size(); ++i)
+      {
+          nodeSubranks[column[i]] = i;
+      }
   }
 }
 
@@ -171,16 +176,16 @@ void DefaultGraphLayouter::transposeNodes(rank_t rank, rank_t firstSubrank, rank
   NodeIdx &firstIdx = nodeTable[rank][firstSubrank];
   NodeIdx &secondIdx = nodeTable[rank][secondSubrank];
 
-  eastl::swap(firstIdx, secondIdx);
-  eastl::swap(nodeSubranks[firstIdx], nodeSubranks[secondIdx]);
+  std::swap(firstIdx, secondIdx);
+  std::swap(nodeSubranks[firstIdx], nodeSubranks[secondIdx]);
 }
 
-eastl::vector<eastl::pair<float, NodeIdx>> DefaultGraphLayouter::calculateWavgHeuristic(NodeIdx rank, bool forward)
+std::vector<std::pair<float, NodeIdx>> DefaultGraphLayouter::calculateWavgHeuristic(NodeIdx rank, bool forward)
 {
   auto &column = nodeTable[rank];
   auto &adjColumn = nodeTable[forward ? rank + 1 : rank - 1];
 
-  eastl::vector<eastl::pair<float, NodeIdx>> result(column.size());
+  std::vector<std::pair<float, NodeIdx>> result(column.size());
 
   for (rank_t j = 0; j < column.size(); ++j)
   {
@@ -208,8 +213,11 @@ void DefaultGraphLayouter::optimizeHeuristicSort(bool ascend)
     auto &column = nodeTable[rank];
     auto subrankAvgAndIdx = calculateWavgHeuristic(rank, !ascend);
 
-    eastl::sort(subrankAvgAndIdx.begin(), subrankAvgAndIdx.end(),
-      [](const auto &pair1, const auto &pair2) { return pair1.first < pair2.first; });
+    std::sort(subrankAvgAndIdx.begin(), subrankAvgAndIdx.end(),
+              [](const auto& pair1, const auto& pair2)
+    {
+        return pair1.first < pair2.first;
+    });
     for (rank_t j = 0; j < column.size(); ++j)
     {
       column[j] = subrankAvgAndIdx[j].second;
@@ -266,10 +274,10 @@ void DefaultGraphLayouter::optimizeLayout(size_t iterations)
     }
   }
 
-  nodeTable = eastl::move(bestNodeTable);
+  nodeTable = std::move(bestNodeTable);
 }
 
-GraphLayout DefaultGraphLayouter::layout(const AdjacencyLists &graph, eastl::span<const NodeIdx> topsort, bool merge_fake_nodes)
+GraphLayout DefaultGraphLayouter::layout(const AdjacencyLists& graph, std::span<const NodeIdx> topsort, bool merge_fake_nodes)
 {
   rankNodes(graph, topsort);
   generateInitialLayout(topsort);
@@ -279,7 +287,10 @@ GraphLayout DefaultGraphLayouter::layout(const AdjacencyLists &graph, eastl::spa
   // If visualized graphs look bad, increase this number.
   // (see header comments for the paper name)
   optimizeLayout(12);
-  return GraphLayout{eastl::move(updatedGraph), eastl::move(nodeTable), eastl::move(edgeMapping)};
+  return GraphLayout{std::move(updatedGraph), std::move(nodeTable), std::move(edgeMapping)};
 }
 
-eastl::unique_ptr<IGraphLayouter> make_default_layouter() { return eastl::make_unique<DefaultGraphLayouter>(); }
+std::unique_ptr<IGraphLayouter> make_default_layouter()
+{
+    return std::make_unique<DefaultGraphLayouter>();
+}

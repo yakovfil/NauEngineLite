@@ -5,8 +5,11 @@
 #include <nau/dag_ioSys/dag_genIo.h>
 #include <nau/dag_ioSys/dag_zstdIo.h>
 #include <nau/utils/dag_globDef.h>
+
+#include <span>
+#include <vector>
 // #include <memory/dag_physMem.h>
-#include "EASTL/vector.h"
+
 #include "nau/debug/dag_except.h"
 #include "nau/diag/logging.h"
 #include "nau/math/math.h"
@@ -19,7 +22,7 @@
 namespace nau::iosys
 {
 #define CHECK_ERROR(enc_size) \
-    if(ZSTD_isError(enc_sz))  \
+    if (ZSTD_isError(enc_sz)) \
         NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} err={:#x} {} srcSz={}"), nau::string(__FUNCTION__), enc_sz, nau::string(ZSTD_getErrorName(enc_sz)), srcSize));
 
 // Both compression & decompression on higher clevels require huge amount of memory
@@ -71,13 +74,13 @@ namespace nau::iosys
 
     int64_t zstd_compress_data_solid(IGenSave& dest, IGenLoad& src, const size_t sz, int compressionLevel)
     {
-        // eastl::vector<uint8_t, TmpmemAlloc> srcBuf, dstBuf;
-        eastl::vector<uint8_t> srcBuf, dstBuf;
+        // std::vector<uint8_t, TmpmemAlloc> srcBuf, dstBuf;
+        std::vector<uint8_t> srcBuf, dstBuf;
         srcBuf.resize(sz);
         dstBuf.resize(ZSTD_compressBound(sz));
         src.readVectorData(srcBuf);
         size_t enc_sz = zstd_compress(dstBuf.data(), dstBuf.size() * sizeof(decltype(dstBuf)::value_type), srcBuf.data(), srcBuf.size() * sizeof(decltype(srcBuf)::value_type), compressionLevel);
-        if(ZSTD_isError(enc_sz))
+        if (ZSTD_isError(enc_sz))
             return (int)enc_sz;
         dest.write(dstBuf.data(), enc_sz);
         return enc_sz;
@@ -91,8 +94,8 @@ namespace nau::iosys
 
         ZSTD_initCStream_srcSize(strm, compressionLevel, sz >= 0 ? sz : ZSTD_CONTENTSIZE_UNKNOWN);
         const size_t outBufStoreSz = ZSTD_CStreamOutSize(), inBufStoreSz = nau::math::min(sz >= 0 ? (size_t)sz : outBufStoreSz, outBufStoreSz);
-        // eastl::vector<uint8_t, TmpmemAlloc> tempBuf;
-        eastl::vector<uint8_t> tempBuf;
+        // std::vector<uint8_t, TmpmemAlloc> tempBuf;
+        std::vector<uint8_t> tempBuf;
         tempBuf.resize(inBufStoreSz + outBufStoreSz);
         uint8_t *inBufStore = tempBuf.data(), *outBufStore = tempBuf.data() + inBufStoreSz;
         NAU_ASSERT(ZSTD_CCtx_refCDict(strm, dict) == 0);
@@ -107,52 +110,52 @@ namespace nau::iosys
         const size_t tryReadSz = (sz >= 0 && sz < inBufStoreSz) ? sz : inBufStoreSz;
         inBuf.size = src.tryRead(inBufStore, tryReadSz);
         size_t sizeLeft = sz >= 0 ? sz : 1;
-        if(sz >= 0)
+        if (sz >= 0)
             sizeLeft -= inBuf.size;
-        if(inBuf.size < tryReadSz)
+        if (inBuf.size < tryReadSz)
             sizeLeft = 0;
         size_t enc_sz = 0;
-        while(sizeLeft + inBuf.size > inBuf.pos)
+        while (sizeLeft + inBuf.size > inBuf.pos)
         {
             size_t ret = ZSTD_compressStream(strm, &outBuf, &inBuf);
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 ZSTD_freeCStream(strm);
                 return (int)ret;
             }
-            if(inBuf.pos == inBuf.size && sizeLeft > 0)
+            if (inBuf.pos == inBuf.size && sizeLeft > 0)
             {
                 const size_t tryReadSz = (sz >= 0 && sizeLeft < inBufStoreSz) ? sizeLeft : inBufStoreSz;
                 inBuf.size = src.tryRead(inBufStore, tryReadSz);
-                if(sz >= 0)
+                if (sz >= 0)
                     sizeLeft -= inBuf.size;
-                if(inBuf.size < tryReadSz)
+                if (inBuf.size < tryReadSz)
                     sizeLeft = 0;
                 inBuf.pos = 0;
             }
-            if(outBuf.pos == outBuf.size || (!sizeLeft && outBuf.pos))
+            if (outBuf.pos == outBuf.size || (!sizeLeft && outBuf.pos))
             {
                 enc_sz += outBuf.pos;
                 dest.write(outBuf.dst, outBuf.pos);
                 outBuf.pos = 0;
             }
         }
-        for(;;)
+        for (;;)
         {
             const size_t ret = ZSTD_endStream(strm, &outBuf);
-            if(outBuf.pos)
+            if (outBuf.pos)
             {
                 enc_sz += outBuf.pos;
                 dest.write(outBuf.dst, outBuf.pos);
                 outBuf.pos = 0;
             }
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 NAU_LOG_ERROR(nau::string::format(nau::string(u8"err={:#x} "), ret, nau::string(ZSTD_getErrorName(ret))));
                 ZSTD_freeCStream(strm);
                 return -1;
             }
-            if(ret == 0)
+            if (ret == 0)
                 break;
         }
         ZSTD_freeCStream(strm);
@@ -175,8 +178,8 @@ namespace nau::iosys
         ZSTD_inBuffer inBuf;
         ZSTD_outBuffer outBuf;
         const size_t outBufStoreSz = ZSTD_DStreamOutSize(), inBufStoreSz = nau::math::min(compr_sz != 0 ? compr_sz : 65536, (size_t)65536);
-        // eastl::vector<uint8_t, TmpmemAlloc> tempBuf;
-        eastl::vector<uint8_t> tempBuf;
+        // std::vector<uint8_t, TmpmemAlloc> tempBuf;
+        std::vector<uint8_t> tempBuf;
         tempBuf.resize(inBufStoreSz + outBufStoreSz);
         uint8_t *inBufStore = tempBuf.data(), *outBufStore = tempBuf.data() + inBufStoreSz;
         ZSTD_initDStream(dstrm);
@@ -192,39 +195,39 @@ namespace nau::iosys
         const size_t tryReadSz = (compr_sz > 0 && compr_sz < inBufStoreSz) ? compr_sz : inBufStoreSz;
         inBuf.size = src.tryRead(inBufStore, tryReadSz);
         size_t sizeLeft = compr_sz != 0 ? compr_sz : 1;
-        if(compr_sz != 0)
+        if (compr_sz != 0)
             sizeLeft -= inBuf.size;
-        if(inBuf.size < tryReadSz)
+        if (inBuf.size < tryReadSz)
             sizeLeft = 0;
         size_t dec_sz = 0;
-        while(size_t ret = ZSTD_decompressStream(dstrm, &outBuf, &inBuf))
+        while (size_t ret = ZSTD_decompressStream(dstrm, &outBuf, &inBuf))
         {
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 NAU_LOG_ERROR(nau::string::format(nau::string(u8"err={:#x} "), ret, nau::string(ZSTD_getErrorName(ret))));
                 ZSTD_freeDStream(dstrm);
                 return -1;
             }
-            if(outBuf.pos == outBuf.size)
+            if (outBuf.pos == outBuf.size)
             {
                 dec_sz += outBuf.pos;
                 dest.write(outBuf.dst, outBuf.pos);
                 outBuf.pos = 0;
             }
-            if(inBuf.pos == inBuf.size)
+            if (inBuf.pos == inBuf.size)
             {
                 const size_t tryReadSz = (compr_sz != 0 && sizeLeft < inBufStoreSz) ? sizeLeft : inBufStoreSz;
                 inBuf.size = tryReadSz > 0 ? src.tryRead(inBufStore, tryReadSz) : 0;
-                if(compr_sz != 0)
+                if (compr_sz != 0)
                     sizeLeft -= inBuf.size;
-                if(inBuf.size < tryReadSz)
+                if (inBuf.size < tryReadSz)
                     sizeLeft = 0;
                 inBuf.pos = 0;
             }
         }
-        if(inBuf.pos < inBuf.size)
+        if (inBuf.pos < inBuf.size)
             src.seekrel(-int(inBuf.size - inBuf.pos));
-        if(outBuf.pos)
+        if (outBuf.pos)
         {
             dec_sz += outBuf.pos;
             dest.write(outBuf.dst, outBuf.pos);
@@ -235,7 +238,7 @@ namespace nau::iosys
 
     int64_t zstd_stream_decompress_data(IGenSave& dest, IGenLoad& src, const size_t compr_sz)
     {
-        if(compr_sz == 0)
+        if (compr_sz == 0)
         {
             NAU_LOG_ERROR(nau::string(u8"compressed size can not be zero, that's an error"));
             return -1;
@@ -248,7 +251,7 @@ namespace nau::iosys
         return zstd_stream_decompress_data_base(dest, src, 0);
     }
 
-    size_t zstd_train_dict_buffer(eastl::span<char> dict_buf, int compressionLevel, eastl::span<const char> sample_buf, eastl::span<const size_t> sample_sizes)
+    size_t zstd_train_dict_buffer(std::span<char> dict_buf, int compressionLevel, std::span<const char> sample_buf, std::span<const size_t> sample_sizes)
     {
         ZDICT_fastCover_params_t params;
         memset(&params, 0, sizeof(params));
@@ -258,13 +261,13 @@ namespace nau::iosys
         params.zParams.compressionLevel = compressionLevel;
         size_t sz = ZDICT_optimizeTrainFromBuffer_fastCover(dict_buf.data(), dict_buf.size(), sample_buf.data(), sample_sizes.data(),
                                                             sample_sizes.size(), &params);
-        if(ZDICT_isError(sz))
+        if (ZDICT_isError(sz))
             return 0;
         return sz;
     }
-    ZSTD_CDict_s* zstd_create_cdict(eastl::span<const char> dict_buf, int compressionLevel, bool use_buf_ref)
+    ZSTD_CDict_s* zstd_create_cdict(std::span<const char> dict_buf, int compressionLevel, bool use_buf_ref)
     {
-        if(!dict_buf.size())
+        if (!dict_buf.size())
             return nullptr;
         return use_buf_ref ? ZSTD_createCDict_byReference(dict_buf.data(), dict_buf.size(), compressionLevel)
                            : ZSTD_createCDict(dict_buf.data(), dict_buf.size(), compressionLevel);
@@ -273,9 +276,9 @@ namespace nau::iosys
     {
         ZSTD_freeCDict(cdict);
     }
-    ZSTD_DDict_s* zstd_create_ddict(eastl::span<const char> dict_buf, bool use_buf_ref)
+    ZSTD_DDict_s* zstd_create_ddict(std::span<const char> dict_buf, bool use_buf_ref)
     {
-        if(!dict_buf.size())
+        if (!dict_buf.size())
             return nullptr;
         return use_buf_ref ? ZSTD_createDDict_byReference(dict_buf.data(), dict_buf.size())
                            : ZSTD_createDDict(dict_buf.data(), dict_buf.size());
@@ -312,33 +315,33 @@ namespace nau::iosys
         return zstd_stream_decompress_data_base(dest, src, compr_sz, dict);
     }
 
-    bool ZstdLoadFromMemCB::initDecoder(eastl::span<const char> enc_data, const ZSTD_DDict_s* dict, bool tmp)
+    bool ZstdLoadFromMemCB::initDecoder(std::span<const char> enc_data, const ZSTD_DDict_s* dict, bool tmp)
     {
         encDataBuf = {reinterpret_cast<const unsigned char*>(enc_data.data()), enc_data.size()};
         encDataPos = 0;
 
         ZSTD_DStream* strm = ZSTD_createDStream_advanced(tmp ? ZSTD_framememCMem : ZSTD_nauCMem);
         NAU_ASSERT(ZSTD_initDStream(strm) != 0);
-        if(dict)
+        if (dict)
             ZSTD_DCtx_refDDict(strm, dict);
         dstrm = strm;
         return true;
     }
     void ZstdLoadFromMemCB::termDecoder()
     {
-        if(dstrm)
+        if (dstrm)
             ZSTD_freeDStream(dstrm);
         dstrm = nullptr;
     }
 
     inline int ZstdLoadFromMemCB::tryReadImpl(void* ptr, int size)
     {
-        if(!size)
+        if (!size)
             return 0;
 
         NAU_ASSERT(dstrm);
-        if(encDataPos >= encDataBuf.size())
-            if(!supplyMoreData())
+        if (encDataPos >= encDataBuf.size())
+            if (!supplyMoreData())
                 return 0;
 
         ZSTD_inBuffer inBuf;
@@ -351,18 +354,18 @@ namespace nau::iosys
         outBuf.size = size;
         outBuf.pos = 0;
 
-        while(size_t ret = ZSTD_decompressStream(dstrm, &outBuf, &inBuf))
+        while (size_t ret = ZSTD_decompressStream(dstrm, &outBuf, &inBuf))
         {
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 NAU_FAILURE("zstd error {} ({}) in {}\nsource: '{}'\n", ret, ZSTD_getErrorName(ret), "ZSTD_decompressStream", getTargetName());
                 return 0;
             }
-            if(outBuf.pos == outBuf.size)
+            if (outBuf.pos == outBuf.size)
                 break;
-            if(inBuf.pos == inBuf.size)
+            if (inBuf.pos == inBuf.size)
             {
-                if(supplyMoreData())
+                if (supplyMoreData())
                 {
                     inBuf.src = encDataBuf.data();
                     inBuf.size = encDataBuf.size();
@@ -384,14 +387,14 @@ namespace nau::iosys
     void ZstdLoadFromMemCB::read(void* ptr, int size)
     {
         int rd_sz = ZstdLoadFromMemCB::tryReadImpl(ptr, size);
-        while(rd_sz && rd_sz < size)
+        while (rd_sz && rd_sz < size)
         {
             ptr = (char*)ptr + rd_sz;
             size -= rd_sz;
             rd_sz = ZstdLoadFromMemCB::tryReadImpl(ptr, size);
         }
 
-        if(rd_sz != size)
+        if (rd_sz != size)
         {
             NAU_LOG_ERROR(nau::string::format(nau::string(u8"Zstd read error: rd_sz={} != size={}, encDataBuf={},{} encDataPos={}"), rd_sz, size, reinterpret_cast<intptr_t>(encDataBuf.data()), encDataBuf.size(),
                                               encDataPos));
@@ -401,10 +404,10 @@ namespace nau::iosys
     }
     void ZstdLoadFromMemCB::seekrel(int ofs)
     {
-        if(ofs < 0)
+        if (ofs < 0)
             issueFatal();
         else
-            while(ofs > 0)
+            while (ofs > 0)
             {
                 char buf[4096];
                 int sz = ofs > sizeof(buf) ? sizeof(buf) : ofs;
@@ -419,11 +422,11 @@ namespace nau::iosys
         NAU_ASSERT(in_size > 0);
         loadCb = &in_crd;
         inBufLeft = in_size;
-        initDecoder(eastl::span<char>(rdBuf, eastl::span<char>::index_type(0)), dict, tmp);
+        initDecoder(std::span<char>(rdBuf, std::span<char>::size_type(0)), dict, tmp);
     }
     void ZstdLoadCB::close()
     {
-        if(dstrm && !inBufLeft && encDataPos >= encDataBuf.size())
+        if (dstrm && !inBufLeft && encDataPos >= encDataBuf.size())
             ceaseReading();
 
         NAU_ASSERT(!dstrm);
@@ -432,18 +435,18 @@ namespace nau::iosys
     }
     bool ZstdLoadCB::supplyMoreData()
     {
-        if(loadCb && inBufLeft > 0)
+        if (loadCb && inBufLeft > 0)
         {
             encDataPos = 0;
             loadCb->tryRead(rdBuf, int(inBufLeft > RD_BUFFER_SIZE ? RD_BUFFER_SIZE : inBufLeft));
-            encDataBuf = {encDataBuf.data(), static_cast<decltype(encDataBuf)::index_type>(loadCb->tryRead(rdBuf, inBufLeft > RD_BUFFER_SIZE ? RD_BUFFER_SIZE : static_cast<int>(inBufLeft)))};
+            encDataBuf = {encDataBuf.data(), static_cast<decltype(encDataBuf)::size_type>(loadCb->tryRead(rdBuf, inBufLeft > RD_BUFFER_SIZE ? RD_BUFFER_SIZE : static_cast<int>(inBufLeft)))};
             inBufLeft -= encDataBuf.size();
         }
         return encDataPos < encDataBuf.size();
     }
     bool ZstdLoadCB::ceaseReading()
     {
-        if(!dstrm)
+        if (!dstrm)
             return true;
 
         loadCb->seekrel(int(inBufLeft > 0x70000000 ? encDataPos - encDataBuf.size() : inBufLeft));
@@ -473,14 +476,14 @@ namespace nau::iosys
 
     void ZstdSaveCB::write(const void* ptr, int size)
     {
-        if(wrBufUsed + size <= BUFFER_SIZE)
+        if (wrBufUsed + size <= BUFFER_SIZE)
         {
             memcpy(wrBuf + wrBufUsed, ptr, size);
             wrBufUsed += size;
-            if(wrBufUsed == BUFFER_SIZE)
+            if (wrBufUsed == BUFFER_SIZE)
                 compressBuffer();
         }
-        else if(size <= BUFFER_SIZE)
+        else if (size <= BUFFER_SIZE)
         {
             uint32_t rest = BUFFER_SIZE - wrBufUsed;
             memcpy(wrBuf + wrBufUsed, ptr, rest);
@@ -491,12 +494,12 @@ namespace nau::iosys
 
             memcpy(wrBuf + wrBufUsed, ptr, size);
             wrBufUsed += size;
-            if(wrBufUsed == BUFFER_SIZE)
+            if (wrBufUsed == BUFFER_SIZE)
                 compressBuffer();
         }
         else
         {
-            if(wrBufUsed)
+            if (wrBufUsed)
                 compressBuffer();
             compress(ptr, size);
         }
@@ -513,16 +516,16 @@ namespace nau::iosys
         outBuf.size = zstdBufSize;
         outBuf.pos = zstdBufUsed;
 
-        while(inBuf.pos < inBuf.size)
+        while (inBuf.pos < inBuf.size)
         {
             size_t ret = ZSTD_compressStream(zstdStream, &outBuf, &inBuf);
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} {} err={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__), ret, nau::string(ZSTD_getErrorName(ret))));
                 NAU_THROW(SaveException("ZSTD_compressStream error", (int)ret));
                 return;
             }
-            if(inBuf.pos < inBuf.size)
+            if (inBuf.pos < inBuf.size)
             {
                 cwrDest->write(outBuf.dst, outBuf.pos);
                 outBuf.pos = 0;
@@ -532,7 +535,7 @@ namespace nau::iosys
     }
     void ZstdSaveCB::finish()
     {
-        if(wrBufUsed)
+        if (wrBufUsed)
             compressBuffer();
 
         ZSTD_outBuffer outBuf;
@@ -540,21 +543,21 @@ namespace nau::iosys
         outBuf.size = zstdBufSize;
         outBuf.pos = zstdBufUsed;
 
-        for(;;)
+        for (;;)
         {
             const size_t ret = ZSTD_endStream(zstdStream, &outBuf);
-            if(outBuf.pos)
+            if (outBuf.pos)
             {
                 cwrDest->write(outBuf.dst, outBuf.pos);
                 outBuf.pos = 0;
             }
-            if(ZSTD_isError(ret))
+            if (ZSTD_isError(ret))
             {
                 NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} {} err={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__), ret, nau::string(ZSTD_getErrorName(ret))));
                 NAU_THROW(SaveException("ZSTD_endStream error", (int)ret));
                 return;
             }
-            if(ret == 0)
+            if (ret == 0)
                 break;
         }
         zstdBufUsed = 0;

@@ -5,10 +5,6 @@
 
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
-
 #include <algorithm>
 #include <array>
 #include <atomic>

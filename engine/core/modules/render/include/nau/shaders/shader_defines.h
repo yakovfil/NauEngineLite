@@ -33,6 +33,7 @@
 #define SYSTEM_BUFFER_PREFIX SB_
 
 #ifdef __cplusplus
+    #include <string_view>
 
 // C++ only block.
 
@@ -41,15 +42,15 @@
 
 namespace nau::shader_defines
 {
-    constexpr eastl::string_view GlobalBufferPrefix = STRINGIFY(GLOBAL_BUFFER_PREFIX);
-    constexpr eastl::string_view SystemBufferPrefix = STRINGIFY(SYSTEM_BUFFER_PREFIX);
+    constexpr std::string_view GlobalBufferPrefix = STRINGIFY(GLOBAL_BUFFER_PREFIX);
+    constexpr std::string_view SystemBufferPrefix = STRINGIFY(SYSTEM_BUFFER_PREFIX);
 
-    inline bool isGlobalBuffer(eastl::string_view bufferName)
+    inline bool isGlobalBuffer(std::string_view bufferName)
     {
         return bufferName.starts_with(GlobalBufferPrefix);
     }
 
-    inline bool isSystemBuffer(eastl::string_view bufferName)
+    inline bool isSystemBuffer(std::string_view bufferName)
     {
         return bufferName.starts_with(SystemBufferPrefix);
     }

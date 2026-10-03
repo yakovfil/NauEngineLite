@@ -4,8 +4,11 @@
 #include <gtest/gtest.h>
 
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <set>
+#include <string>
+#include <string_view>
 #include <thread>
 
 #include "app/global_properties_impl.h"
@@ -84,8 +87,8 @@ TEST(CorePortability, StringUidJsonRoundTrips)
     const auto decodedUid = JsonUtils::parse<nau::Uid>(uidJson);
     ASSERT_TRUE(decodedUid);
     EXPECT_EQ(*decodedUid, *uid);
-    const eastl::string value = "A\xd0\x96\xf0\x9f\x9a\x80";
-    const auto decoded = JsonUtils::parse<eastl::string>(JsonUtils::stringify(value));
+    const std::string value = "A\xd0\x96\xf0\x9f\x9a\x80";
+    const auto decoded = JsonUtils::parse<std::string>(JsonUtils::stringify(value));
     ASSERT_TRUE(decoded);
     EXPECT_EQ(*decoded, value);
     EXPECT_FALSE(JsonUtils::parse<nau::Uid>(std::string_view{"\"invalid\""}));
@@ -115,7 +118,7 @@ namespace
         nau::diag::FailureActionFlag handleFailure(const nau::diag::FailureData& data) override
         {
             EXPECT_EQ(data.kind, nau::diag::AssertionKind::Default);
-            EXPECT_NE(data.message.find("Invalid UTF"), eastl::string_view::npos);
+            EXPECT_NE(data.message.find("Invalid"), std::string_view::npos);
             ++count;
             return {};
         }
@@ -124,7 +127,7 @@ namespace
 
 TEST(CorePortability, InvalidUtfIsEmptyAndDiagnostic)
 {
-    auto device = eastl::make_unique<UtfDiagnostic>();
+    auto device = std::make_unique<UtfDiagnostic>();
     auto* observed = device.get();
     nau::diag::IDeviceError::Ptr previous;
     nau::diag::setDeviceError(std::move(device), &previous);
@@ -138,21 +141,23 @@ TEST(CorePortability, InvalidUtfIsEmptyAndDiagnostic)
         EXPECT_TRUE(nau::string(input).empty());
     }
     EXPECT_TRUE(nau::string(std::wstring{L'A', 0x110000}).empty());
-    EXPECT_TRUE(nau::strings::wstringToUtf8(eastl::wstring{L'A', 0xd800}).empty());
-    EXPECT_TRUE(nau::strings::utf8ToWString(eastl::u8string_view{u8"A\xc0\xaf"}).empty());
-    EXPECT_EQ(observed->count, 6u);
+    EXPECT_TRUE(nau::strings::wstringToUtf8(std::wstring{L'A', 0xd800}).empty());
+    EXPECT_TRUE(nau::strings::utf8ToWString(std::u8string_view{u8"A\xc0\xaf"}).empty());
+    EXPECT_TRUE(nau::string(std::u8string_view{u8"A\xc0\xaf"}).empty());
+    EXPECT_TRUE(nau::string(std::string_view{"A\xc0\xaf"}).empty());
+    EXPECT_EQ(observed->count, 8u);
     nau::diag::setDeviceError(std::move(previous));
 }
 #endif
 
 TEST(CorePortability, ValidUtfRoundTrip)
 {
-    const eastl::u16string input = u"A\u0416\U0001f680";
+    const std::u16string input = u"A\u0416\U0001f680";
     const nau::string value(input);
     EXPECT_EQ(value.tou16string(), input);
     const auto wide = nau::strings::utf8ToWString(u8"A\u0416\U0001f680");
     EXPECT_EQ(nau::strings::wstringToUtf8(wide), u8"A\u0416\U0001f680");
-    EXPECT_TRUE(nau::string(eastl::u16string{}).empty());
+    EXPECT_TRUE(nau::string(std::u16string{}).empty());
 }
 
 TEST(CorePortability, EventReset)

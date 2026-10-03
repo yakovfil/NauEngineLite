@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "nau/math/transform.h"
 #include "nau/scene/camera/camera.h"
 #include "nau/scene/nau_object.h"
@@ -26,7 +29,7 @@ namespace nau::scene
 
         Uid getCameraUid() const final;
         Uid getWorldUid() const final;
-        eastl::string_view getCameraName() const final;
+        std::string_view getCameraName() const final;
 
         float getFov() const final;
         float getClipNearPlane() const final;
@@ -42,7 +45,7 @@ namespace nau::scene
     protected:
         Uid m_uid;
         Uid m_worldUid;
-        eastl::string m_name;
+        std::string m_name;
         math::Transform m_transform = math::Transform::identity();
     };
 

@@ -11,11 +11,10 @@
 #include <pthread.h>
 #include <osApiWrappers/dag_spinlock.h>
 #endif
-#include "nau/osApiWrappers/dag_events.h"
-#include <EASTL/utility.h>
+#include <utility>
+
 #include "nau/osApiWrappers/dag_cpuJobs.h"
-
-
+#include "nau/osApiWrappers/dag_events.h"
 
 #if _TARGET_XBOX | _TARGET_C3
 #define MAIN_THREAD_AFFINITY         1
@@ -157,9 +156,12 @@ inline void execute_in_new_thread(F &&f, const char *thread_name = nullptr, int 
   class BgThread final : public DaThread
   {
   public:
-    BgThread(F &&f, const char *thread_name, int stk_sz, int prio, unsigned aff) :
-      DaThread(thread_name, stk_sz, prio), function(eastl::move(f)), affinity(aff)
-    {}
+      BgThread(F&& f, const char* thread_name, int stk_sz, int prio, unsigned aff) :
+          DaThread(thread_name, stk_sz, prio),
+          function(std::move(f)),
+          affinity(aff)
+      {
+      }
 
     void execute() override
     {
@@ -173,8 +175,8 @@ inline void execute_in_new_thread(F &&f, const char *thread_name = nullptr, int 
     F function;
     unsigned affinity;
   };
-  //G_VERIFY((new BgThread(eastl::move(f), thread_name, stk_sz, prio, affinity))->start());
-  BgThread* bgThread = new BgThread(eastl::move(f), thread_name, stk_sz, prio, affinity);
+  // G_VERIFY((new BgThread(std::move(f), thread_name, stk_sz, prio, affinity))->start());
+  BgThread* bgThread = new BgThread(std::move(f), thread_name, stk_sz, prio, affinity);
   bgThread->start();
 }
 

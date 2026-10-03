@@ -5,17 +5,18 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+#include <string>
+#include <unordered_map>
 #include <vector>
-#include "EASTL/vector.h"
+
 #include "cocos/2d/CCNode.h"
 #include "nau/math/dag_e3dColor.h"
 #include "nau/math/math.h"
-#include "nau/utils/uid.h"
-
 #include "nau/rtti/ptr.h"
 #include "nau/scene/nau_object.h"
 #include "nau/scene/scene_object.h"
-
+#include "nau/utils/uid.h"
 
 #ifndef UI_ELEMENT_DEBUG
 #define UI_ELEMENT_DEBUG 0
@@ -124,14 +125,14 @@ public:
     virtual void setRotationSkewY(float rotationY) override;
     using cocos2d::Node::getRotationSkewY;
     virtual void addChild(Node* child);
-    virtual void addChild(Node* child, const eastl::string& name);
-    Node* getNestedNodeByName(const eastl::string& name);
+    virtual void addChild(Node* child, const std::string& name);
+    Node* getNestedNodeByName(const std::string& name);
     Node* getNestedNodeByUid(nau::Uid uid);
     virtual Node * getChildByTag(int tag) const override;
     using cocos2d::Node::getChildByName;
-    virtual Node* getChildByName(const eastl::string& name) const;
+    virtual Node* getChildByName(const std::string& name) const;
     using cocos2d::Node::getChildren;
-    virtual void getChildren(eastl::vector<Node*>& children) const;
+    virtual void getChildren(std::vector<Node*>& children) const;
     using cocos2d::Node::getChildrenCount;
     using cocos2d::Node::setParent;
     virtual Node* getParent();
@@ -146,7 +147,7 @@ public:
     using cocos2d::Node::getTag;
     virtual void setTag(int tag) override;
     using cocos2d::Node::getName;
-    void nau_setName(const eastl::string& name);
+    void nau_setName(const std::string& name);
     using cocos2d::Node::onEnter;
     using cocos2d::Node::onExit;
     using cocos2d::Node::update;
@@ -165,7 +166,7 @@ public:
     virtual void setOpacityModifyRGB(bool value) override;
     using cocos2d::Node::isOpacityModifyRGB;
 
-    void callRecursivly(eastl::function<void(Node*)> fn);
+    void callRecursivly(std::function<void(Node*)> fn);
 
     void enableDebugDraw(
         bool isEnable, 
@@ -206,8 +207,8 @@ protected:
 
 private:
     nau::Uid m_uid;
-    eastl::unordered_map<uint64_t, nau::ui::Node*> m_childNodesByName;
-    eastl::unordered_map<nau::Uid, nau::ui::Node*> m_childNodesByUid;
+    std::unordered_map<uint64_t, nau::ui::Node*> m_childNodesByName;
+    std::unordered_map<nau::Uid, nau::ui::Node*> m_childNodesByUid;
 
     Ptr<UiNodeAnimator> m_animatorCached;
     scene::ObjectWeakRef<scene::SceneObject> m_sceneObject;

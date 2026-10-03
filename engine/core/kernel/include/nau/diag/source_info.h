@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/diag/source_info.h
 
-
 #pragma once
 
-#include <EASTL/string_view.h>
-
 #include <optional>
+#include <string_view>
 
 #include "nau/kernel/kernel_config.h"
 #include "nau/utils/preprocessor.h"
@@ -19,15 +17,15 @@ namespace nau::diag
      */
     struct NAU_KERNEL_EXPORT SourceInfo
     {
-        eastl::string_view moduleName;
-        eastl::string_view functionName;
-        eastl::string_view filePath;
+        std::string_view moduleName;
+        std::string_view functionName;
+        std::string_view filePath;
         std::optional<unsigned> line;
 
         SourceInfo() = default;
         SourceInfo(const SourceInfo&) = default;
 
-        SourceInfo(eastl::string_view module, eastl::string_view func, eastl::string_view file, std::optional<unsigned> ln = std::nullopt) :
+        SourceInfo(std::string_view module, std::string_view func, std::string_view file, std::optional<unsigned> ln = std::nullopt) :
             moduleName(module),
             functionName(func),
             filePath(file),
@@ -35,7 +33,7 @@ namespace nau::diag
         {
         }
 
-        SourceInfo(eastl::string_view func, eastl::string_view file, std::optional<unsigned> ln = std::nullopt) :
+        SourceInfo(std::string_view func, std::string_view file, std::optional<unsigned> ln = std::nullopt) :
             SourceInfo{{}, func, file, ln}
         {
         }
@@ -50,8 +48,8 @@ namespace nau::diag
 
 }  // namespace nau::diag
 
-#define NAU_INLINED_SOURCE_INFO                                                                             \
-    ::nau::diag::SourceInfo                                                                                 \
-    {                                                                                                       \
-        ::eastl::string_view{__FUNCTION__}, ::eastl::string_view{__FILE__}, static_cast<unsigned>(__LINE__) \
+#define NAU_INLINED_SOURCE_INFO                                                                         \
+    ::nau::diag::SourceInfo                                                                             \
+    {                                                                                                   \
+        ::std::string_view{__FUNCTION__}, ::std::string_view{__FILE__}, static_cast<unsigned>(__LINE__) \
     }

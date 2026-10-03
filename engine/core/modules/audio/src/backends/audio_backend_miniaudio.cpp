@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "audio_backend_miniaudio.hpp"
+
+#include <string>
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
@@ -154,21 +155,21 @@ class SoundAssetMiniaudio : public IAudioAsset
     friend class AudioEngineMiniaudio;
 
 public:
-    SoundAssetMiniaudio(const eastl::string& name, ma_engine& engine);
+    SoundAssetMiniaudio(const std::string& name, ma_engine& engine);
 
     AudioSourcePtr instantiate() override;
-    eastl::string name() const override;
+    std::string name() const override;
 
 private:
-    const eastl::string  m_name;
+    const std::string m_name;
     ma_engine&           m_engine;
     ma_sound             m_sound;
 };
 
-SoundAssetMiniaudio::SoundAssetMiniaudio(const eastl::string& name, ma_engine& engine)
-    : m_name(name)
-    , m_engine(engine)
-    , m_sound()
+SoundAssetMiniaudio::SoundAssetMiniaudio(const std::string& name, ma_engine& engine) :
+    m_name(name),
+    m_engine(engine),
+    m_sound()
 {
 }
 
@@ -179,7 +180,7 @@ AudioSourcePtr SoundAssetMiniaudio::instantiate()
     return sound;
 }
 
-eastl::string SoundAssetMiniaudio::name() const
+std::string SoundAssetMiniaudio::name() const
 {
     return m_name;
 }
@@ -195,7 +196,7 @@ public:
     void initialize();
     void deinitialize();
 
-    AudioAssetPtr loadSound(const eastl::string& path, bool stream);
+    AudioAssetPtr loadSound(const std::string& path, bool stream);
 
     inline AudioAssetList audioAssets() { return assets; }
 
@@ -221,7 +222,7 @@ void AudioEngineMiniaudio::Impl::deinitialize()
     NAU_LOG_DEBUG("Audio engine successfully deinitialized");
 }
 
-AudioAssetPtr AudioEngineMiniaudio::Impl::loadSound(const eastl::string& path, bool stream)
+AudioAssetPtr AudioEngineMiniaudio::Impl::loadSound(const std::string& path, bool stream)
 {
     auto asset = std::make_shared<SoundAssetMiniaudio>(path, engine);
     const int flags = stream ? MA_SOUND_FLAG_STREAM : 0;
@@ -260,12 +261,12 @@ void AudioEngineMiniaudio::update()
 {
 }
 
-AudioAssetPtr AudioEngineMiniaudio::loadSound(const eastl::string& path)
+AudioAssetPtr AudioEngineMiniaudio::loadSound(const std::string& path)
 {
     return m_pimpl->loadSound(path, false);
 }
 
-AudioAssetPtr AudioEngineMiniaudio::loadStream(const eastl::string& path)
+AudioAssetPtr AudioEngineMiniaudio::loadStream(const std::string& path)
 {
     return m_pimpl->loadSound(path, true);
 }

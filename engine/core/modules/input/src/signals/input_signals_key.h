@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "input_signals_impl.h"
 
 namespace nau
@@ -9,7 +11,7 @@ namespace nau
     class InputSignalKey : public InputSignalImpl
     {
     protected:
-        InputSignalKey(const eastl::string& type);
+        InputSignalKey(const std::string& type);
 
         virtual void keyToSignal(IInputDevice::KeyState state) = 0;
 

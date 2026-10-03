@@ -6,7 +6,9 @@
 
 #pragma once
 
-#include "EASTL/unique_ptr.h"
+#include <memory>
+#include <string_view>
+
 #include "nau/diag/assertion.h"
 #include "nau/kernel/kernel_config.h"
 #include "nau/rtti/rtti_object.h"
@@ -27,10 +29,10 @@ namespace nau::diag
         const uint32_t error;
         const AssertionKind kind = AssertionKind::Default;
         const SourceInfo source;
-        const eastl::string_view condition;
-        const eastl::string_view message;
+        const std::string_view condition;
+        const std::string_view message;
 
-        FailureData(uint32_t inError, AssertionKind inKind, SourceInfo inSource, eastl::string_view inCondition, eastl::string_view inMessage) :
+        FailureData(uint32_t inError, AssertionKind inKind, SourceInfo inSource, std::string_view inCondition, std::string_view inMessage) :
             error(inError),
             kind(inKind),
             source(inSource),
@@ -44,11 +46,10 @@ namespace nau::diag
     {
         NAU_INTERFACE(nau::diag::IDeviceError, IRttiObject)
 
-        using Ptr = eastl::unique_ptr<IDeviceError>;
+        using Ptr = std::unique_ptr<IDeviceError>;
 
         virtual FailureActionFlag handleFailure(const FailureData&) = 0;
     };
-    
 
     NAU_KERNEL_EXPORT void setDeviceError(IDeviceError::Ptr newDeviceError, IDeviceError::Ptr* prevDeviceError = nullptr);
 

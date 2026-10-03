@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "camera/internal_camera_properties.h"
+
+#include <string_view>
 
 namespace nau::scene
 {
@@ -16,7 +17,7 @@ namespace nau::scene
         return m_worldUid;
     }
 
-    eastl::string_view InternalCameraProperties::getCameraName() const
+    std::string_view InternalCameraProperties::getCameraName() const
     {
         return m_name;
     }

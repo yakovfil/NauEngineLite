@@ -2,11 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "device.h"
-#include "EASTL/functional.h"
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <memory>
+#include <span>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "render_target_mask_util.h"
+#include "device.h"
 #include "nau/dag_ioSys/dag_memIo.h"
+#include "render_target_mask_util.h"
 
 using namespace drv3d_dx12;
 
@@ -174,8 +181,8 @@ bool PipelineVariant::create(ID3D12Device2 *device, backend::ShaderModuleManager
   auto name = name_generator.generateGraphicsPipelineName(base.vsModule, base.psModule, static_state);
 
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
-  eastl::string profilerMsg;
-  profilerMsg.sprintf("PipelineVariant (%s)::create: took %%dus", name.c_str());
+  std::string profilerMsg;
+  profilerMsg = nau::utils::format("PipelineVariant ({})::create: took %dus", name);
   AutoFuncProf funcProfiler(profilerMsg.c_str());
 #endif
   //TIME_PROFILE_DEV(PipelineVariant_create);
@@ -423,7 +430,7 @@ bool PipelineVariant::create(ID3D12Device2 *device, backend::ShaderModuleManager
   if (pipeline && give_name && !name.empty())
   {
     shorten_name_for_pix(name);
-    eastl::vector<wchar_t> nameBuf;
+    std::vector<wchar_t> nameBuf;
     nameBuf.resize(name.length() + 1);
     DX12_SET_DEBUG_OBJ_NAME(pipeline, lazyToWchar(name.data(), nameBuf.data(), nameBuf.size()));
   }
@@ -443,8 +450,8 @@ bool PipelineVariant::createMesh(ID3D12Device2 *device, backend::ShaderModuleMan
   auto name = name_generator.generateGraphicsPipelineName(base.vsModule, base.psModule, static_state);
 
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
-  eastl::string profilerMsg;
-  profilerMsg.sprintf("PipelineVariant (%s)::createMesh: took %%dus", name.c_str());
+  std::string profilerMsg;
+  profilerMsg = nau::utils::format("PipelineVariant ({})::createMesh: took %dus", name);
   AutoFuncProf funcProfiler(profilerMsg.c_str());
 #endif
   //TIME_PROFILE_DEV(PipelineVariant_create);
@@ -565,7 +572,7 @@ bool PipelineVariant::createMesh(ID3D12Device2 *device, backend::ShaderModuleMan
   if (pipeline && give_name && !name.empty())
   {
     shorten_name_for_pix(name);
-    eastl::vector<wchar_t> nameBuf;
+    std::vector<wchar_t> nameBuf;
     nameBuf.resize(name.length() + 1);
     DX12_SET_DEBUG_OBJ_NAME(pipeline, lazyToWchar(name.data(), nameBuf.data(), nameBuf.size()));
   }
@@ -654,7 +661,7 @@ void PipelineVariant::errorPrintBlkString(const BasePipeline &base, const InputL
     variantInfo.topology = top;
     variantInfo.inputLayoutIndex = 0;
     pipeline::DataBlockEncodeVisitor<pipeline::GraphicsPipelineEncoder> visitor{*graphicsPipelinesOutBlock, nullptr, 0u};
-    visitor.encode(baseInfo, eastl::span<const GraphicsPipelineVariantState>{&variantInfo, 1});
+    visitor.encode(baseInfo, std::span<const GraphicsPipelineVariantState>{&variantInfo, 1});
   }
 
   if (auto feeaturesOutBlock = cacheOutBlock.addNewBlock("features"))
@@ -697,7 +704,7 @@ void PipelineVariant::errorPrintMeshBlkString(const BasePipeline &base, bool is_
     variantInfo.staticRenderStateIndex = 0;
     variantInfo.isWireFrame = is_wire_frame;
     pipeline::DataBlockEncodeVisitor<pipeline::MeshPipelineEncoder> visitor{*meshPipelinesOutBlock, nullptr, 0u};
-    visitor.encode(baseInfo, eastl::span<const MeshPipelineVariantState>{&variantInfo, 1});
+    visitor.encode(baseInfo, std::span<const MeshPipelineVariantState>{&variantInfo, 1});
   }
 
   if (auto feeaturesOutBlock = cacheOutBlock.addNewBlock("features"))
@@ -725,35 +732,36 @@ void PipelineManager::init(const SetupParameters &params)
 
   params.pipelineCache->enumerateInputLayouts([this](auto &layout) { addInternalLayout(layout); });
 
-  params.pipelineCache->enumerateGraphicsSignatures([this, device = params.device](const GraphicsPipelineSignature::Definition &def,
-                                                      const eastl::vector<uint8_t> &blob) //
-    {
-      auto newSig = eastl::make_unique<GraphicsPipelineSignature>();
+  params.pipelineCache->enumerateGraphicsSignatures([this, device = params.device](const GraphicsPipelineSignature::Definition& def,
+                                                                                   const std::vector<uint8_t>& blob)  //
+  {
+      auto newSig = std::make_unique<GraphicsPipelineSignature>();
       newSig->def = def;
       newSig->deriveComboMasks();
       DX12_CHECK_OK(device->CreateRootSignature(0, blob.data(), blob.size(), COM_ARGS(&newSig->signature)));
-      graphicsSignatures.push_back(eastl::move(newSig));
-    });
+      graphicsSignatures.push_back(std::move(newSig));
+  });
 
 #if !_TARGET_XBOXONE
   params.pipelineCache->enumerateGraphicsMeshSignatures(
-    [this, device = params.device](const GraphicsPipelineSignature::Definition &def, const eastl::vector<uint8_t> &blob) {
-      auto newSig = eastl::make_unique<GraphicsPipelineSignature>();
+      [this, device = params.device](const GraphicsPipelineSignature::Definition& def, const std::vector<uint8_t>& blob)
+  {
+      auto newSig = std::make_unique<GraphicsPipelineSignature>();
       newSig->def = def;
       newSig->deriveComboMasks();
       DX12_CHECK_OK(device->CreateRootSignature(0, blob.data(), blob.size(), COM_ARGS(&newSig->signature)));
-      graphicsMeshSignatures.push_back(eastl::move(newSig));
-    });
+      graphicsMeshSignatures.push_back(std::move(newSig));
+  });
 #endif
 
-  params.pipelineCache->enumrateComputeSignatures([this, device = params.device](const ComputePipelineSignature::Definition &def,
-                                                    const eastl::vector<uint8_t> &blob) //
-    {
-      auto newSig = eastl::make_unique<ComputePipelineSignature>();
+  params.pipelineCache->enumrateComputeSignatures([this, device = params.device](const ComputePipelineSignature::Definition& def,
+                                                                                 const std::vector<uint8_t>& blob)  //
+  {
+      auto newSig = std::make_unique<ComputePipelineSignature>();
       newSig->def = def;
       DX12_CHECK_OK(device->CreateRootSignature(0, blob.data(), blob.size(), COM_ARGS(&newSig->signature)));
-      computeSignatures.push_back(eastl::move(newSig));
-    });
+      computeSignatures.push_back(std::move(newSig));
+  });
 }
 
 void PipelineManager::createBlitSignature(ID3D12Device *device)
@@ -816,9 +824,9 @@ void PipelineManager::createBlitSignature(ID3D12Device *device)
 ID3D12PipelineState *PipelineManager::createBlitPipeline(ID3D12Device2 *device, DXGI_FORMAT out_fmt, bool give_name)
 {
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
-  eastl::string profilerMsg;
-  profilerMsg.sprintf("PipelineManager::createBlitPipeline(out fmt: %s): took %%dus", dxgi_format_name(out_fmt));
-  AutoFuncProf funcProfiler(profilerMsg.c_str());
+    std::string profilerMsg;
+    profilerMsg = nau::utils::format("PipelineManager::createBlitPipeline(out fmt: {}): took %dus", dxgi_format_name(out_fmt));
+    AutoFuncProf funcProfiler(profilerMsg.c_str());
 #endif
 #if _TARGET_PC_WIN
   if (!blitSignature)
@@ -935,7 +943,7 @@ ID3D12PipelineState *PipelineManager::createBlitPipeline(ID3D12Device2 *device, 
   {
     DX12_SET_DEBUG_OBJ_NAME(newBlitPipe.pipeline, L"BlitPipline");
   }
-  return blitPipelines.emplace_back(eastl::move(newBlitPipe)).pipeline.Get();
+  return blitPipelines.emplace_back(std::move(newBlitPipe)).pipeline.Get();
 }
 
 namespace
@@ -1024,7 +1032,7 @@ struct BasicGraphicsRootSignatureGenerator
 
       rangePosition += rangeSize;
       rangeSize = 0;
-      NAU_ASSERT(rangePosition <= eastl::end(ranges));
+      NAU_ASSERT(rangePosition <= std::end(ranges));
 
       signatureCost += 1; // offset into active descriptor heap
     }
@@ -1048,7 +1056,7 @@ struct BasicGraphicsRootSignatureGenerator
     else
     {
       auto &target = rangePosition[rangeSize++];
-      NAU_ASSERT(&target < eastl::end(ranges));
+      NAU_ASSERT(&target < std::end(ranges));
       target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
       target.NumDescriptors = 1;
       target.BaseShaderRegister = slot;
@@ -1073,14 +1081,14 @@ struct BasicGraphicsRootSignatureGenerator
     target.DescriptorTable.pDescriptorRanges = rangePosition;
 
     rangePosition += rangeSize;
-    NAU_ASSERT(rangePosition <= eastl::end(ranges));
+    NAU_ASSERT(rangePosition <= std::end(ranges));
 
     signatureCost += 1; // offset into active descriptor heap
   }
   void sampler(uint32_t space, uint32_t slot, uint32_t linear_index)
   {
     auto &target = rangePosition[rangeSize++];
-    NAU_ASSERT(&target < eastl::end(ranges));
+    NAU_ASSERT(&target < std::end(ranges));
     target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
     target.NumDescriptors = 1;
     target.BaseShaderRegister = slot;
@@ -1122,7 +1130,7 @@ struct BasicGraphicsRootSignatureGenerator
     }
 
     auto &smpRange = rangePosition[0];
-    NAU_ASSERT(&smpRange < eastl::end(ranges));
+    NAU_ASSERT(&smpRange < std::end(ranges));
     smpRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
     smpRange.NumDescriptors = UINT_MAX; // UINT_MAX means unbounded
     smpRange.BaseShaderRegister = slot;
@@ -1131,7 +1139,7 @@ struct BasicGraphicsRootSignatureGenerator
 
     unboundedSamplersRootParam->DescriptorTable.NumDescriptorRanges++;
     rangePosition++;
-    NAU_ASSERT(rangePosition <= eastl::end(ranges));
+    NAU_ASSERT(rangePosition <= std::end(ranges));
   }
   void beginShaderResourceViews()
   {
@@ -1150,14 +1158,14 @@ struct BasicGraphicsRootSignatureGenerator
     target.DescriptorTable.pDescriptorRanges = rangePosition;
 
     rangePosition += rangeSize;
-    NAU_ASSERT(rangePosition <= eastl::end(ranges));
+    NAU_ASSERT(rangePosition <= std::end(ranges));
 
     signatureCost += 1; // offset into active descriptor heap
   }
   void shaderResourceView(uint32_t space, uint32_t slot, uint32_t descriptor_count, uint32_t linear_index)
   {
     auto &target = rangePosition[rangeSize++];
-    NAU_ASSERT(&target < eastl::end(ranges));
+    NAU_ASSERT(&target < std::end(ranges));
     target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     target.NumDescriptors = descriptor_count;
     target.BaseShaderRegister = slot;
@@ -1197,7 +1205,7 @@ struct BasicGraphicsRootSignatureGenerator
     }
 
     auto &registerRange = rangePosition[0];
-    NAU_ASSERT(&registerRange < eastl::end(ranges));
+    NAU_ASSERT(&registerRange < std::end(ranges));
     registerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     registerRange.NumDescriptors = UINT_MAX; // UINT_MAX means unbounded
     registerRange.BaseShaderRegister = slot;
@@ -1206,7 +1214,7 @@ struct BasicGraphicsRootSignatureGenerator
 
     bindlessSRVRootParam->DescriptorTable.NumDescriptorRanges++;
     rangePosition++;
-    NAU_ASSERT(rangePosition <= eastl::end(ranges));
+    NAU_ASSERT(rangePosition <= std::end(ranges));
   }
   void beginUnorderedAccessViews()
   {
@@ -1225,14 +1233,14 @@ struct BasicGraphicsRootSignatureGenerator
     target.DescriptorTable.pDescriptorRanges = rangePosition;
 
     rangePosition += rangeSize;
-    NAU_ASSERT(rangePosition <= eastl::end(ranges));
+    NAU_ASSERT(rangePosition <= std::end(ranges));
 
     signatureCost += 1; // offset into active descriptor heap
   }
   void unorderedAccessView(uint32_t space, uint32_t slot, uint32_t descriptor_count, uint32_t linear_index)
   {
     auto &target = rangePosition[rangeSize++];
-    NAU_ASSERT(&target < eastl::end(ranges));
+    NAU_ASSERT(&target < std::end(ranges));
     target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     target.NumDescriptors = descriptor_count;
     target.BaseShaderRegister = slot;
@@ -1338,9 +1346,9 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsPipelineSignature(ID3D12D
   if (!ds_header)
     ds_header = &defaultHeader;
 
-  auto ref = eastl::find_if(begin(graphicsSignatures), end(graphicsSignatures),
-    [=, &vs_header, &ps_header](const eastl::unique_ptr<GraphicsPipelineSignature> &gps) //
-    {
+  auto ref = std::find_if(begin(graphicsSignatures), end(graphicsSignatures),
+                          [=, &vs_header, &ps_header](const std::unique_ptr<GraphicsPipelineSignature>& gps)  //
+  {
       return (gps->def.vertexShaderRegisters == vs_header) && (gps->def.pixelShaderRegisters == ps_header) &&
              (gps->def.geometryShaderRegisters == *gs_header) && (gps->def.hullShaderRegisters == *hs_header) &&
              (gps->def.domainShaderRegisters == *ds_header) && (gps->def.hasVertexInputs == has_vertex_input)
@@ -1348,14 +1356,14 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsPipelineSignature(ID3D12D
              && (gps->def.hasAccelerationStructure == has_acceleration_structure)
 #endif
         ;
-    });
+  });
 
   if (ref == end(graphicsSignatures) || (*ref)->signature.Get() == nullptr)
   {
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
     AutoFuncProf funcProfiler("PipelineManager::getGraphicsPipelineSignature->compile: took %dus");
 #endif
-    auto newSign = eastl::make_unique<GraphicsPipelineSignature>();
+    auto newSign = std::make_unique<GraphicsPipelineSignature>();
     newSign->def.hasVertexInputs = has_vertex_input;
 #if _TARGET_SCARLETT
     newSign->def.hasAccelerationStructure = has_acceleration_structure;
@@ -1395,7 +1403,7 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsPipelineSignature(ID3D12D
     }
     cache.addGraphicsSignature(newSign->def, rootSignBlob.Get());
     if (ref == end(graphicsSignatures))
-      ref = graphicsSignatures.insert(ref, eastl::move(newSign));
+        ref = graphicsSignatures.insert(ref, std::move(newSign));
     else
       (*ref)->signature.Swap(newSign->signature);
   }
@@ -1411,23 +1419,23 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsMeshPipelineSignature(ID3
   dxil::ShaderResourceUsageTable defaultHeader = {};
   auto &safeAsHeader = as_header ? *as_header : defaultHeader;
 
-  auto ref = eastl::find_if(begin(graphicsMeshSignatures), end(graphicsMeshSignatures),
-    [=, &safeAsHeader, &ms_header, &ps_header](const eastl::unique_ptr<GraphicsPipelineSignature> &gps) //
-    {
+  auto ref = std::find_if(begin(graphicsMeshSignatures), end(graphicsMeshSignatures),
+                          [=, &safeAsHeader, &ms_header, &ps_header](const std::unique_ptr<GraphicsPipelineSignature>& gps)  //
+  {
       return (gps->def.vertexShaderRegisters == ms_header) && (gps->def.pixelShaderRegisters == ps_header) &&
              (gps->def.geometryShaderRegisters == safeAsHeader)
-#if _TARGET_SCARLETT
+    #if _TARGET_SCARLETT
              && (gps->def.hasAccelerationStructure == has_acceleration_structure)
-#endif
+    #endif
         ;
-    });
+  });
 
   if (ref == end(graphicsMeshSignatures) || (*ref)->signature.Get() == nullptr)
   {
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
     AutoFuncProf funcProfiler("PipelineManager::getGraphicsMeshPipelineSignature->compile: took %dus");
 #endif
-    auto newSign = eastl::make_unique<GraphicsPipelineSignature>();
+    auto newSign = std::make_unique<GraphicsPipelineSignature>();
     newSign->def.hasVertexInputs = false;
 #if _TARGET_SCARLETT
     newSign->def.hasAccelerationStructure = has_acceleration_structure;
@@ -1464,7 +1472,7 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsMeshPipelineSignature(ID3
     }
     cache.addGraphicsMeshSignature(newSign->def, rootSignBlob.Get());
     if (ref == end(graphicsMeshSignatures))
-      ref = graphicsMeshSignatures.insert(ref, eastl::move(newSign));
+        ref = graphicsMeshSignatures.insert(ref, std::move(newSign));
     else
       (*ref)->signature.Swap(newSign->signature);
   }
@@ -1477,16 +1485,18 @@ GraphicsPipelineSignature *PipelineManager::getGraphicsMeshPipelineSignature(ID3
 ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Device *device, PipelineCache &cache,
   bool has_acceleration_structure, const dxil::ShaderResourceUsageTable &cs_header)
 {
-  auto ref = eastl::find_if(begin(computeSignatures), end(computeSignatures),
-    [&cs_header](const eastl::unique_ptr<ComputePipelineSignature> &cps) //
-    { return cps->def.registers == cs_header; });
+    auto ref = std::find_if(begin(computeSignatures), end(computeSignatures),
+                            [&cs_header](const std::unique_ptr<ComputePipelineSignature>& cps)  //
+    {
+        return cps->def.registers == cs_header;
+    });
 
-  if (ref == end(computeSignatures) || (*ref)->signature.Get() == nullptr)
-  {
+    if (ref == end(computeSignatures) || (*ref)->signature.Get() == nullptr)
+    {
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
     AutoFuncProf funcProfiler("PipelineManager::getComputePipelineSignature->compile: took %dus");
 #endif
-    auto newSign = eastl::make_unique<ComputePipelineSignature>();
+    auto newSign = std::make_unique<ComputePipelineSignature>();
     newSign->def.registers = cs_header;
     struct GeneratorCallback
     {
@@ -1555,7 +1565,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
           rangePosition += rangeSize;
           rangeSize = 0;
-          NAU_ASSERT(rangePosition <= eastl::end(ranges));
+          NAU_ASSERT(rangePosition <= std::end(ranges));
 
           signatureCost += 1; // offset into active descriptor heap
         }
@@ -1578,7 +1588,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
         else
         {
           auto &target = rangePosition[rangeSize++];
-          NAU_ASSERT(&target < eastl::end(ranges));
+          NAU_ASSERT(&target < std::end(ranges));
           target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
           target.NumDescriptors = 1;
           target.BaseShaderRegister = slot;
@@ -1600,7 +1610,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
         rangePosition += rangeSize;
         rangeSize = 0;
-        NAU_ASSERT(rangePosition <= eastl::end(ranges));
+        NAU_ASSERT(rangePosition <= std::end(ranges));
 
         signatureCost += 1; // offset into active descriptor heap
       }
@@ -1608,7 +1618,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
       {
         G_UNUSED(linear_index); // rangeSize will be the same as linear_index
         auto &target = rangePosition[rangeSize];
-        NAU_ASSERT(&target < eastl::end(ranges));
+        NAU_ASSERT(&target < std::end(ranges));
         target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         target.NumDescriptors = 1;
         target.BaseShaderRegister = slot;
@@ -1633,7 +1643,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
         NAU_ASSERT(space < dxil::MAX_UNBOUNDED_REGISTER_SPACES);
 
         auto &smpRange = rangePosition[0];
-        NAU_ASSERT(&smpRange < eastl::end(ranges));
+        NAU_ASSERT(&smpRange < std::end(ranges));
         smpRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         smpRange.NumDescriptors = UINT_MAX; // UINT_MAX means unbounded
         smpRange.BaseShaderRegister = slot;
@@ -1642,7 +1652,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
         unboundedSamplersRootParam->DescriptorTable.NumDescriptorRanges++;
         rangePosition++;
-        NAU_ASSERT(rangePosition <= eastl::end(ranges));
+        NAU_ASSERT(rangePosition <= std::end(ranges));
       }
       void beginShaderResourceViews() { signature->def.csLayout.shaderResourceViewParamIndex = desc.NumParameters; }
       void endShaderResourceViews()
@@ -1658,14 +1668,14 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
         rangePosition += rangeSize;
         rangeSize = 0;
-        NAU_ASSERT(rangePosition <= eastl::end(ranges));
+        NAU_ASSERT(rangePosition <= std::end(ranges));
 
         signatureCost += 1; // offset into active descriptor heap
       }
       void shaderResourceView(uint32_t space, uint32_t slot, uint32_t descriptor_count, uint32_t linear_index)
       {
         auto &target = rangePosition[rangeSize++];
-        NAU_ASSERT(&target < eastl::end(ranges));
+        NAU_ASSERT(&target < std::end(ranges));
         target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         target.NumDescriptors = descriptor_count;
         target.BaseShaderRegister = slot;
@@ -1688,7 +1698,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
         NAU_ASSERT(space < dxil::MAX_UNBOUNDED_REGISTER_SPACES);
 
         auto &registerRange = rangePosition[0];
-        NAU_ASSERT(&registerRange < eastl::end(ranges));
+        NAU_ASSERT(&registerRange < std::end(ranges));
         registerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         registerRange.NumDescriptors = UINT_MAX; // UINT_MAX means unbounded
         registerRange.BaseShaderRegister = slot;
@@ -1697,7 +1707,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
         bindlessSRVRootParam->DescriptorTable.NumDescriptorRanges++;
         rangePosition++;
-        NAU_ASSERT(rangePosition <= eastl::end(ranges));
+        NAU_ASSERT(rangePosition <= std::end(ranges));
       }
       void beginUnorderedAccessViews() { signature->def.csLayout.unorderedAccessViewParamIndex = desc.NumParameters; }
       void endUnorderedAccessViews()
@@ -1713,14 +1723,14 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
 
         rangePosition += rangeSize;
         rangeSize = 0;
-        NAU_ASSERT(rangePosition <= eastl::end(ranges));
+        NAU_ASSERT(rangePosition <= std::end(ranges));
 
         signatureCost += 1; // offset into active descriptor heap
       }
       void unorderedAccessView(uint32_t space, uint32_t slot, uint32_t descriptor_count, uint32_t linear_index)
       {
         auto &target = rangePosition[rangeSize++];
-        NAU_ASSERT(&target < eastl::end(ranges));
+        NAU_ASSERT(&target < std::end(ranges));
         target.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         target.NumDescriptors = descriptor_count;
         target.BaseShaderRegister = slot;
@@ -1758,7 +1768,7 @@ ComputePipelineSignature *PipelineManager::getComputePipelineSignature(ID3D12Dev
     cache.addComputeSignature(newSign->def, rootSignBlob.Get());
 
     if (ref == end(computeSignatures))
-      ref = computeSignatures.insert(ref, eastl::move(newSign));
+        ref = computeSignatures.insert(ref, std::move(newSign));
     else
       (*ref)->signature.Swap(newSign->signature);
   }
@@ -1829,7 +1839,7 @@ void PipelineManager::addCompute(ID3D12Device2 *device, PipelineCache &cache, Pr
       NAU_LOG_ERROR("{}", buffer);
     }
     pipelineGroup[index] =
-      eastl::make_unique<ComputePipeline>(*signature, eastl::move(shader), device, cache, on_error, give_name, *this);
+        std::make_unique<ComputePipeline>(*signature, std::move(shader), device, cache, on_error, give_name, *this);
   }
 }
 
@@ -1848,14 +1858,17 @@ void PipelineManager::addGraphics(ID3D12Device2 *device, PipelineCache &cache, F
     return;
   }
 
-  auto preloadedPipelineIt = eastl::find_if(preloadedGraphicsPipelines.begin(), preloadedGraphicsPipelines.end(),
-    [&vs, &ps](const auto &pp) { return (pp.vsID == vs) && (pp.psID == ps); });
+  auto preloadedPipelineIt = std::find_if(preloadedGraphicsPipelines.begin(), preloadedGraphicsPipelines.end(),
+                                          [&vs, &ps](const auto& pp)
+  {
+      return (pp.vsID == vs) && (pp.psID == ps);
+  });
 
   if (preloadedPipelineIt != preloadedGraphicsPipelines.end())
   {
-    target = eastl::move(preloadedPipelineIt->pipeline);
-    *preloadedPipelineIt = eastl::move(preloadedGraphicsPipelines.back());
-    preloadedGraphicsPipelines.pop_back();
+      target = std::move(preloadedPipelineIt->pipeline);
+      *preloadedPipelineIt = std::move(preloadedGraphicsPipelines.back());
+      preloadedGraphicsPipelines.pop_back();
   }
   else
   {
@@ -1876,9 +1889,7 @@ void PipelineManager::addGraphics(ID3D12Device2 *device, PipelineCache &cache, F
   }
 }
 
-eastl::unique_ptr<BasePipeline> PipelineManager::createGraphics(ID3D12Device2 *device, PipelineCache &cache,
-  FramebufferLayoutManager &fbs, backend::VertexShaderModuleRefStore vertexShader, backend::PixelShaderModuleRefStore pixelShader,
-  RecoverablePipelineCompileBehavior on_error, bool give_name)
+std::unique_ptr<BasePipeline> PipelineManager::createGraphics(ID3D12Device2* device, PipelineCache& cache, FramebufferLayoutManager& fbs, backend::VertexShaderModuleRefStore vertexShader, backend::PixelShaderModuleRefStore pixelShader, RecoverablePipelineCompileBehavior on_error, bool give_name)
 {
 #if _TARGET_SCARLETT
   bool hasAccelerationStructure = has_acceleration_structure(vertexShader);
@@ -1923,9 +1934,9 @@ eastl::unique_ptr<BasePipeline> PipelineManager::createGraphics(ID3D12Device2 *d
   {
     return nullptr;
   }
-  return eastl::make_unique<BasePipeline>(device, *signature, cache, static_cast<backend::ShaderModuleManager &>(*this),
-    static_cast<backend::InputLayoutManager &>(*this), static_cast<backend::StaticRenderStateManager &>(*this), fbs, vertexShader,
-    pixelShader, on_error, give_name, static_cast<backend::PipelineNameGenerator &>(*this));
+  return std::make_unique<BasePipeline>(device, *signature, cache, static_cast<backend::ShaderModuleManager&>(*this),
+                                        static_cast<backend::InputLayoutManager&>(*this), static_cast<backend::StaticRenderStateManager&>(*this), fbs, vertexShader,
+                                        pixelShader, on_error, give_name, static_cast<backend::PipelineNameGenerator&>(*this));
 }
 
 void PipelineManager::unloadAll()
@@ -1959,10 +1970,13 @@ void PipelineManager::unloadAll()
 
 void PipelineManager::removeProgram(ProgramID program)
 {
-  auto ref = eastl::find_if(begin(prepedForDeletion), end(prepedForDeletion),
-    [=](const PrepedForDelete &pfd) { return pfd.program == program; });
-  if (program.isCompute())
-    ; // no-op
+    auto ref = std::find_if(begin(prepedForDeletion), end(prepedForDeletion),
+                            [=](const PrepedForDelete& pfd)
+    {
+        return pfd.program == program;
+    });
+    if (program.isCompute())
+        ;  // no-op
 #if D3D_HAS_RAY_TRACING
   else if (program.isRaytrace())
     ; // no-op
@@ -1971,19 +1985,22 @@ void PipelineManager::removeProgram(ProgramID program)
   {
     NAU_ASSERT(false, "Invalid program type");
   }
-  *ref = eastl::move(prepedForDeletion.back());
+  *ref = std::move(prepedForDeletion.back());
   prepedForDeletion.pop_back();
 }
 
 void PipelineManager::removeProgram(GraphicsProgramID program)
 {
-  auto ref = eastl::find_if(begin(prepedForDeletion), end(prepedForDeletion),
-    [=](const PrepedForDelete &pfd) { return pfd.graphicsProgram == program; });
-  NAU_ASSERT(ref != end(prepedForDeletion));
-  if (ref->graphics.get())
-    ref->graphics->unloadAll();
-  *ref = eastl::move(prepedForDeletion.back());
-  prepedForDeletion.pop_back();
+    auto ref = std::find_if(begin(prepedForDeletion), end(prepedForDeletion),
+                            [=](const PrepedForDelete& pfd)
+    {
+        return pfd.graphicsProgram == program;
+    });
+    NAU_ASSERT(ref != end(prepedForDeletion));
+    if (ref->graphics.get())
+        ref->graphics->unloadAll();
+    *ref = std::move(prepedForDeletion.back());
+    prepedForDeletion.pop_back();
 }
 
 void PipelineManager::prepareForRemove(ProgramID program)
@@ -1996,19 +2013,19 @@ void PipelineManager::prepareForRemove(ProgramID program)
   auto group = program.getGroup();
   if (program.isCompute())
   {
-    info.compute = eastl::move(computePipelines[group][index]);
+      info.compute = std::move(computePipelines[group][index]);
   }
 #if D3D_HAS_RAY_TRACING
   else if (program.isRaytrace())
   {
-    info.raytrace = eastl::move(raytracePipelines[index]);
+      info.raytrace = std::move(raytracePipelines[index]);
   }
 #endif
   else
   {
     NAU_ASSERT(false, "Invalid program type");
   }
-  prepedForDeletion.push_back(eastl::move(info));
+  prepedForDeletion.push_back(std::move(info));
 }
 
 void PipelineManager::prepareForRemove(GraphicsProgramID program)
@@ -2016,8 +2033,8 @@ void PipelineManager::prepareForRemove(GraphicsProgramID program)
   PrepedForDelete info;
   info.program = ProgramID::Null();
   info.graphicsProgram = program;
-  info.graphics = eastl::move(graphicsPipelines[program.getGroup()][program.getIndex()]);
-  prepedForDeletion.push_back(eastl::move(info));
+  info.graphics = std::move(graphicsPipelines[program.getGroup()][program.getIndex()]);
+  prepedForDeletion.push_back(std::move(info));
 }
 
 #if D3D_HAS_RAY_TRACING

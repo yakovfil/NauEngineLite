@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "nau/diag/error.h"
 #include "nau/kernel/kernel_config.h"
-
 
 namespace nau::diag
 {
@@ -25,11 +26,11 @@ namespace nau::diag
     class NAU_KERNEL_EXPORT WinCodeError : public nau::DefaultError<>
     {
         NAU_ERROR(nau::diag::WinCodeError, nau::DefaultError<>)
-    
+
     public:
         WinCodeError(const diag::SourceInfo& sourceInfo, unsigned errorCode = diag::getAndResetLastErrorCode());
 
-        WinCodeError(const diag::SourceInfo& sourceInfo, eastl::string message, unsigned errorCode = diag::getAndResetLastErrorCode());
+        WinCodeError(const diag::SourceInfo& sourceInfo, std::string message, unsigned errorCode = diag::getAndResetLastErrorCode());
 
         unsigned getErrorCode() const;
 
@@ -38,4 +39,3 @@ namespace nau::diag
     };
 
 }  // namespace nau::diag
-

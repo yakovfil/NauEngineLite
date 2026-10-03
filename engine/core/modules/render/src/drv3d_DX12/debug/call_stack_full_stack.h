@@ -3,12 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <array>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "nau/osApiWrappers/dag_stackHlp.h"
 #include "nau/threading/critical_section.h"
-#include <EASTL/hash_set.h>
-#include <EASTL/hash_map.h>
-#include <EASTL/array.h>
-#include <EASTL/string.h>
 //#include <util/dag_string.h>
 
 
@@ -22,7 +23,7 @@ namespace call_stack
 namespace full_stack
 {
 inline constexpr uint32_t max_call_stack_depth = 32;
-using CallStack = eastl::array<void *, max_call_stack_depth>;
+using CallStack = std::array<void*, max_call_stack_depth>;
 
 struct CallStackHasher
 {
@@ -62,9 +63,9 @@ public:
 class Generator
 {
   dag::CriticalSection mutex;
-  eastl::hash_set<CallStack, CallStackHasher> callstacks;
+  std::unordered_set<CallStack, CallStackHasher> callstacks;
 
-public:
+  public:
   void configure(const nau::DataBlock *) {}
   const CallStack *captureCallStack(uint32_t offset)
   {
@@ -82,19 +83,19 @@ public:
 
 class Reporter
 {
-  eastl::hash_map<const CallStack *, nau::string> callStackCache;
-  const nau::string &doResolve(const CommandData &data)
-  {
-    auto ref = callStackCache.find(data.callStack);
-    if (end(callStackCache) == ref)
+    std::unordered_map<const CallStack*, nau::string> callStackCache;
+    const nau::string& doResolve(const CommandData& data)
     {
-      char strBuf[4096];
-      auto name = stackhlp_get_call_stack(strBuf, sizeof(strBuf) - 1, data.callStack->data(), data.callStack->size());
-      strBuf[sizeof(strBuf) - 1] = '\0';
-      ref = callStackCache.emplace(data.callStack, name).first;
+        auto ref = callStackCache.find(data.callStack);
+        if (end(callStackCache) == ref)
+        {
+            char strBuf[4096];
+            auto name = stackhlp_get_call_stack(strBuf, sizeof(strBuf) - 1, data.callStack->data(), data.callStack->size());
+            strBuf[sizeof(strBuf) - 1] = '\0';
+            ref = callStackCache.emplace(data.callStack, name).first;
+        }
+        return ref->second;
     }
-    return ref->second;
-  }
 
 public:
   void report(const CommandData &data)

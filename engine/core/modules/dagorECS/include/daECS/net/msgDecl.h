@@ -1,10 +1,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <daECS/net/message.h>
 #include <daECS/net/connid.h>
+#include <daECS/net/message.h>
 #include <daNet/bitStream.h>
-#include <EASTL/tuple.h>
+
+#include <tuple>
+#include <utility>
+#include <variant>
 
 namespace net
 {
@@ -46,7 +49,7 @@ struct Serialize
   void operator()(const T &t, danet::BitStream &bs)
   {
     Serialize<T, I - 1>()(t, bs);
-    write_value(bs, eastl::get<I - 1>(t));
+    write_value(bs, std::get<I - 1>(t));
   }
 };
 template <typename T>
@@ -60,7 +63,7 @@ struct DeSerialize
 {
   bool operator()(T &t, const danet::BitStream &bs, const IConnection &conn)
   {
-    return DeSerialize<T, I - 1>()(t, bs, conn) && read_value(bs, eastl::get<I - 1>(t), conn);
+      return DeSerialize<T, I - 1>()(t, bs, conn) && read_value(bs, std::get<I - 1>(t), conn);
   }
 };
 template <typename T>
@@ -72,42 +75,48 @@ struct DeSerialize<T, 0>
 
 } // namespace net
 
-#define ECS_NET_DECL_MSG_EX(Klass, BaseKlass, TU)                                                                       \
-  struct Klass final : public BaseKlass, TU                                                                             \
-  {                                                                                                                     \
-    typedef TU Tuple;                                                                                                   \
-    ECS_NET_DECL_MSG_CLASS_BASE(Klass, BaseKlass)                                                                       \
-    {}                                                                                                                  \
-    template <typename... Args>                                                                                         \
-    Klass(Args &&...args) : Tuple(eastl::forward<Args>(args)...)                                                        \
-    {}                                                                                                                  \
-    Klass(Tuple &&tup) : Tuple(eastl::move(tup))                                                                        \
-    {}                                                                                                                  \
-    Klass(Klass &&) = default;                                                                                          \
-    virtual void pack(danet::BitStream &bs) const override                                                              \
-    {                                                                                                                   \
-      net::detail::Serialize<Tuple, eastl::tuple_size<Tuple>::value>()(static_cast<const Tuple &>(*this), bs);          \
-    }                                                                                                                   \
-    virtual bool unpack(const danet::BitStream &bs, const net::IConnection &conn) override                              \
-    {                                                                                                                   \
-      return net::detail::DeSerialize<Tuple, eastl::tuple_size<Tuple>::value>()(static_cast<Tuple &>(*this), bs, conn); \
-    }                                                                                                                   \
-    template <size_t I>                                                                                                 \
-    const typename eastl::tuple_element<I, Tuple>::type &get() const                                                    \
-    {                                                                                                                   \
-      return eastl::get<I>(static_cast<const Tuple &>(*this));                                                          \
-    }                                                                                                                   \
-    template <size_t I>                                                                                                 \
-    typename eastl::tuple_element<I, Tuple>::type &get()                                                                \
-    {                                                                                                                   \
-      return eastl::get<I>(static_cast<Tuple &>(*this));                                                                \
-    }                                                                                                                   \
-    net::IMessage *moveHeap() && override                                                                               \
-    {                                                                                                                   \
-      return new Klass(eastl::move(*this));                                                                             \
-    }                                                                                                                   \
-  }
+#define ECS_NET_DECL_MSG_EX(Klass, BaseKlass, TU)                                                                          \
+    struct Klass final : public BaseKlass,                                                                                 \
+                         TU                                                                                                \
+    {                                                                                                                      \
+        typedef TU Tuple;                                                                                                  \
+        ECS_NET_DECL_MSG_CLASS_BASE(Klass, BaseKlass)                                                                      \
+        {                                                                                                                  \
+        }                                                                                                                  \
+        template <typename... Args>                                                                                        \
+        Klass(Args&&... args) :                                                                                            \
+            Tuple(std::forward<Args>(args)...)                                                                             \
+        {                                                                                                                  \
+        }                                                                                                                  \
+        Klass(Tuple&& tup) :                                                                                               \
+            Tuple(std::move(tup))                                                                                          \
+        {                                                                                                                  \
+        }                                                                                                                  \
+        Klass(Klass&&) = default;                                                                                          \
+        virtual void pack(danet::BitStream& bs) const override                                                             \
+        {                                                                                                                  \
+            net::detail::Serialize<Tuple, std::tuple_size<Tuple>::value>()(static_cast<const Tuple&>(*this), bs);          \
+        }                                                                                                                  \
+        virtual bool unpack(const danet::BitStream& bs, const net::IConnection& conn) override                             \
+        {                                                                                                                  \
+            return net::detail::DeSerialize<Tuple, std::tuple_size<Tuple>::value>()(static_cast<Tuple&>(*this), bs, conn); \
+        }                                                                                                                  \
+        template <size_t I>                                                                                                \
+        const typename std::tuple_element<I, Tuple>::type& get() const                                                     \
+        {                                                                                                                  \
+            return std::get<I>(static_cast<const Tuple&>(*this));                                                          \
+        }                                                                                                                  \
+        template <size_t I>                                                                                                \
+        typename std::tuple_element<I, Tuple>::type& get()                                                                 \
+        {                                                                                                                  \
+            return std::get<I>(static_cast<Tuple&>(*this));                                                                \
+        }                                                                                                                  \
+        net::IMessage* moveHeap() && override                                                                              \
+        {                                                                                                                  \
+            return new Klass(std::move(*this));                                                                            \
+        }                                                                                                                  \
+    }
 
-#define ECS_BUILD_TUPLE(...)               eastl::tuple<__VA_ARGS__>
+#define ECS_BUILD_TUPLE(...) std::tuple<__VA_ARGS__>
 #define ECS_NET_DECL_MSG(Klass, ...)       ECS_NET_DECL_MSG_EX(Klass, net::IMessage, ECS_BUILD_TUPLE(__VA_ARGS__))
 #define ECS_NET_DECL_TIMED_MSG(Klass, ...) ECS_NET_DECL_MSG_EX(Klass, net::IMessageTimed, ECS_BUILD_TUPLE(__VA_ARGS__))

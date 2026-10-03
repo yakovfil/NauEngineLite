@@ -1,14 +1,19 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "graphics_assets/shader_asset.h"
+
+#include <array>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/3d/dag_3dConst_base.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/assets/asset_manager.h"
-#include "nau/shaders/shader_globals.h"
 #include "nau/shaders/shader_defines.h"
+#include "nau/shaders/shader_globals.h"
 
 #define LOAD_SHADER_ASYNC 0
 
@@ -31,70 +36,69 @@ namespace nau
             int vsdt;
         };
 
-        constexpr eastl::array semanticTable =
-        {
-            SemanticValue{"POSITION",  0,    VSDR_POS},
-            SemanticValue{"POSITION",  1,   VSDR_POS2},
+        constexpr std::array semanticTable =
+            {
+                SemanticValue{    "POSITION", 0,      VSDR_POS},
+                SemanticValue{    "POSITION", 1,     VSDR_POS2},
 
-            SemanticValue{  "NORMAL",  0,   VSDR_NORM},
-            SemanticValue{  "NORMAL",  1,  VSDR_NORM2},
+                SemanticValue{      "NORMAL", 0,     VSDR_NORM},
+                SemanticValue{      "NORMAL", 1,    VSDR_NORM2},
 
-            SemanticValue{   "COLOR",  0,   VSDR_DIFF},
-            SemanticValue{   "COLOR",  1,   VSDR_SPEC},
+                SemanticValue{       "COLOR", 0,     VSDR_DIFF},
+                SemanticValue{       "COLOR", 1,     VSDR_SPEC},
 
-            SemanticValue{"BLENDWEIGHT",  0,  VSDR_BLENDW},
-            SemanticValue{"BLENDINDICES",  0,  VSDR_BLENDIND},
+                SemanticValue{ "BLENDWEIGHT", 0,   VSDR_BLENDW},
+                SemanticValue{"BLENDINDICES", 0, VSDR_BLENDIND},
 
-            SemanticValue{"TEXCOORD",  0,  VSDR_TEXC0},
-            SemanticValue{"TEXCOORD",  1,  VSDR_TEXC1},
-            SemanticValue{"TEXCOORD",  2,  VSDR_TEXC2},
-            SemanticValue{"TEXCOORD",  3,  VSDR_TEXC3},
-            SemanticValue{"TEXCOORD",  4,  VSDR_TEXC4},
-            SemanticValue{"TEXCOORD",  5,  VSDR_TEXC5},
-            SemanticValue{"TEXCOORD",  6,  VSDR_TEXC6},
-            SemanticValue{"TEXCOORD",  7,  VSDR_TEXC7},
-            SemanticValue{"TEXCOORD",  8,  VSDR_TEXC8},
-            SemanticValue{"TANGENT", 0, VSDR_TANGENT}
+                SemanticValue{    "TEXCOORD", 0,    VSDR_TEXC0},
+                SemanticValue{    "TEXCOORD", 1,    VSDR_TEXC1},
+                SemanticValue{    "TEXCOORD", 2,    VSDR_TEXC2},
+                SemanticValue{    "TEXCOORD", 3,    VSDR_TEXC3},
+                SemanticValue{    "TEXCOORD", 4,    VSDR_TEXC4},
+                SemanticValue{    "TEXCOORD", 5,    VSDR_TEXC5},
+                SemanticValue{    "TEXCOORD", 6,    VSDR_TEXC6},
+                SemanticValue{    "TEXCOORD", 7,    VSDR_TEXC7},
+                SemanticValue{    "TEXCOORD", 8,    VSDR_TEXC8},
+                SemanticValue{     "TANGENT", 0,  VSDR_TANGENT}
         };
 
-        constexpr eastl::array locationTable =
-        {
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT1),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT2),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT3),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT4),
+        constexpr std::array locationTable =
+            {
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT1),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT2),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT3),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_FLOAT4),
 
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT1),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT2),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT3),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT4),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT1),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT2),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT3),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_INT4),
 
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT1),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT2),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT3),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT4),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT1),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT2),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT3),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UINT4),
 
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_HALF2),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT2N),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT2),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_USHORT2N),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_HALF2),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT2N),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT2),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_USHORT2N),
 
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_HALF4),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT4N),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT4),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_USHORT4N),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_HALF4),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT4N),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_SHORT4),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_USHORT4N),
 
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UDEC3),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_DEC3N),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_E3DCOLOR),
-            MAKE_LOCATION_TABLE_ELEMENT(VSDT_UBYTE4)
-        };
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UDEC3),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_DEC3N),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_E3DCOLOR),
+                MAKE_LOCATION_TABLE_ELEMENT(VSDT_UBYTE4)};
 
-        const SemanticValue* lookupSemantic(eastl::string_view semanticName)
+        const SemanticValue* lookupSemantic(std::string_view semanticName)
         {
             for (const auto& val : semanticTable)
             {
-                if (semanticName == val.name + eastl::to_string(val.index) || (val.index == 0 && semanticName == val.name))
+                if (semanticName == val.name + std::to_string(val.index) || (val.index == 0 && semanticName == val.name))
                 {
                     return &val;
                 }
@@ -103,7 +107,7 @@ namespace nau
             return nullptr;
         }
 
-        const LocationValue* lookupLocation(eastl::string_view loacationName)
+        const LocationValue* lookupLocation(std::string_view loacationName)
         {
             for (const auto& val : locationTable)
             {
@@ -247,7 +251,7 @@ namespace nau
             }
         }
 
-        VSDTYPE makeStream(eastl::string_view stream, int number)
+        VSDTYPE makeStream(std::string_view stream, int number)
         {
             if (stream == "VSD_STREAM")
             {
@@ -287,7 +291,7 @@ namespace nau
 
         if (shader.target == ShaderTarget::Vertex)
         {
-            eastl::vector<VSDTYPE> ilDefVec;
+            std::vector<VSDTYPE> ilDefVec;
 
             if (shader.vsd.empty())
             {
@@ -350,7 +354,7 @@ namespace nau
         co_return shaderAssetView;
     }
 
-    PROGRAM ShaderAssetView::makeShaderProgram(eastl::span<ShaderAssetView::Ptr> shaderAssets, VDECL overrideVDecl)
+    PROGRAM ShaderAssetView::makeShaderProgram(std::span<ShaderAssetView::Ptr> shaderAssets, VDECL overrideVDecl)
     {
         NAU_ASSERT(!shaderAssets.empty());
 

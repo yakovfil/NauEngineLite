@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_window_impl.h"
+
+#include <memory>
+#include <string_view>
 
 #include "nau/graphics/core_graphics.h"
 #include "nau/input.h"
@@ -62,12 +64,12 @@ namespace nau::render
         height = m_height;
     }
 
-    eastl::string_view RenderWindowImpl::getName() const
+    std::string_view RenderWindowImpl::getName() const
     {
         return m_name;
     }
 
-    void RenderWindowImpl::setName(eastl::string_view name)
+    void RenderWindowImpl::setName(std::string_view name)
     {
         m_name = name;
         m_displayName = nau::utils::format("{}_view", name);
@@ -154,7 +156,7 @@ namespace nau::render
         }
     }
 
-    void RenderWindowImpl::setRenderScene(eastl::shared_ptr<GraphicsScene> gScene)
+    void RenderWindowImpl::setRenderScene(std::shared_ptr<GraphicsScene> gScene)
     {
         m_graphicsScene = gScene;
     }
@@ -238,7 +240,7 @@ namespace nau::render
         return m_windowHandle;
     }
 
-    void RenderWindowImpl::initialize(eastl::string_view name, SWAPID swapchain, void* hwnd)
+    void RenderWindowImpl::initialize(std::string_view name, SWAPID swapchain, void* hwnd)
     {
         setName(name);
         m_swapchain = swapchain;
@@ -295,7 +297,7 @@ namespace nau::render
         }
     }
 
-    eastl::shared_ptr<nau::csm::CascadeShadows> RenderWindowImpl::getCSM()
+    std::shared_ptr<nau::csm::CascadeShadows> RenderWindowImpl::getCSM()
     {
         return m_csm;
     }

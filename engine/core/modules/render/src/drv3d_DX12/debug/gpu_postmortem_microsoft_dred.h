@@ -3,10 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+
 #include "command_list_storage.h"
 #include "command_list_trace.h"
 #include "command_list_trace_recorder.h"
-
 
 namespace drv3d_dx12
 {
@@ -155,9 +156,9 @@ public:
   void configure();
   void beginCommandBuffer(ID3D12Device *device, ID3D12GraphicsCommandList *cmd);
   void endCommandBuffer(ID3D12GraphicsCommandList *);
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>, eastl::span<const char>);
-  void endEvent(ID3D12GraphicsCommandList *, eastl::span<const char>);
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>);
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>, std::span<const char>);
+  void endEvent(ID3D12GraphicsCommandList*, std::span<const char>);
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>);
   void draw(const call_stack::CommandData &debug_info, D3DGraphicsCommandList *cmd, const PipelineStageStateBase &vs,
     const PipelineStageStateBase &ps, BasePipeline &pipeline_base, PipelineVariant &pipeline, uint32_t count, uint32_t instance_count,
     uint32_t start, uint32_t first_instance, D3D12_PRIMITIVE_TOPOLOGY topology);

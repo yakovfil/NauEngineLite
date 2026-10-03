@@ -1,12 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <string>
 #include <unordered_map>
 
-#include "EASTL/unordered_map.h"
-#include "EASTL/vector.h"
 #include "nau/string/hash_string.h"
 
 using namespace nau::string_literals;  // Necessary for operator "s"
@@ -39,28 +36,28 @@ namespace nau::test
 
         EXPECT_EQ(hashed_string1, hashed_string1c);
 
-        switch(nau::hash_string(u8"TEST: русские, 🤝  и ツ♫你好 symb0ls."))
+        switch (nau::hash_string(u8"TEST: русские, 🤝  и ツ♫你好 symb0ls."))
         {
             case u8"TEST: русские, 🤝  и ツ♫你好 symbols"_sh:
-                {
-                    ASSERT_TRUE(false);
-                    break;
-                }
+            {
+                ASSERT_TRUE(false);
+                break;
+            }
             case u8"TEST: русские, 🤝  и ツ♫你好 symbols."_sh:
-                {
-                    ASSERT_TRUE(false);
-                    break;
-                }
+            {
+                ASSERT_TRUE(false);
+                break;
+            }
             case u8"TEST: русские, 🤝  и ツ♫你好 symb0ls."_sh:
-                {
-                    ASSERT_TRUE(true);
-                    break;
-                }
+            {
+                ASSERT_TRUE(true);
+                break;
+            }
             default:
-                {
-                    ASSERT_TRUE(false);
-                    break;
-                }
+            {
+                ASSERT_TRUE(false);
+                break;
+            }
         }
     }
 
@@ -68,17 +65,17 @@ namespace nau::test
     {
         std::unordered_map<nau::hash_string, int> stlMap =
             {
-                {             u8"T"_ns, 1},
+                {      u8"T"_ns, 1},
                 {u8"русские"_ns, 2},
-                {          u8"🤝"_ns, 3},
-                {        u8"你好"_ns, 4},
+                {     u8"🤝"_ns, 3},
+                {   u8"你好"_ns, 4},
         };
-        eastl::unordered_map<nau::hash_string, int> eastlMap =
+        std::unordered_map<nau::hash_string, int> eastlMap =
             {
-                {             u8"T"_ns, 1},
+                {      u8"T"_ns, 1},
                 {u8"русские"_ns, 2},
-                {          u8"🤝"_ns, 3},
-                {        u8"你好"_ns, 4},
+                {     u8"🤝"_ns, 3},
+                {   u8"你好"_ns, 4},
         };
 
         stlMap.insert({u8"TEST: русские, 🤝  и ツ♫你好 symbols"_ns, 5});

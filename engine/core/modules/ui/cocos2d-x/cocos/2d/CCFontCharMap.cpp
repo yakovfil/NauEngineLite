@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "2d/CCFontCharMap.h"
 #include "2d/CCFontAtlas.h"
 #include "platform/CCFileUtils.h"
@@ -99,7 +100,7 @@ FontCharMap::~FontCharMap()
 
 }
 
-int* FontCharMap::getHorizontalKerningForTextUTF32(const eastl::u32string& /*text*/, int & /*outNumLetters*/) const
+int* FontCharMap::getHorizontalKerningForTextUTF32(const std::u32string& /*text*/, int & /*outNumLetters*/) const
 {
     return nullptr;
 }

@@ -1,15 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_view.h"
+
+#include <functional>
+#include <string_view>
+#include <vector>
 
 #include "nau/shaders/shader_globals.h"
 
-#include <EASTL/functional.h>
-
-
-nau::RenderView::RenderView(eastl::string_view viewName) :
+nau::RenderView::RenderView(std::string_view viewName) :
     m_viewName(viewName)
 {
     if (!nau::shader_globals::containsName("mvp"))
@@ -34,16 +34,16 @@ nau::RenderView::RenderView(eastl::string_view viewName) :
         nau::shader_globals::addVariable("uid", sizeof(math::IVector4), &uid);
     }
 
-    m_instanceFilter = eastl::function<bool(const InstanceInfo&)>([this](const InstanceInfo& info) 
-        {
-            return m_frustum.testSphere(info.worldSphere) != 0;
-        });
+    m_instanceFilter = std::function<bool(const InstanceInfo&)>([this](const InstanceInfo& info)
+    {
+        return m_frustum.testSphere(info.worldSphere) != 0;
+    });
 
-    m_materialFilter = eastl::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr material) 
-        {
-            nau::BlendMode mode = material->getBlendMode("default");
-            return mode == nau::BlendMode::Opaque || mode == nau::BlendMode::Masked;
-        });
+    m_materialFilter = std::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr material)
+    {
+        nau::BlendMode mode = material->getBlendMode("default");
+        return mode == nau::BlendMode::Opaque || mode == nau::BlendMode::Masked;
+    });
 }
 
 nau::RenderView::~RenderView()
@@ -187,7 +187,7 @@ void nau::RenderView::prepareInstanceData()
         return;
     }
 
-    eastl::vector<nau::RenderEntity::InstanceData> instDataVec;
+    std::vector<nau::RenderEntity::InstanceData> instDataVec;
     instDataVec.reserve(instsCount);
 
     for (auto& list : m_lists)
@@ -241,22 +241,22 @@ void* nau::RenderView::getUserData()
     return m_userData;
 }
 
-eastl::function<bool(const nau::InstanceInfo&)>& nau::RenderView::getInstanceFilter()
+std::function<bool(const nau::InstanceInfo&)>& nau::RenderView::getInstanceFilter()
 {
     return m_instanceFilter;
 }
 
-void nau::RenderView::setInstanceFilter(eastl::function<bool(const InstanceInfo&)>& filter)
+void nau::RenderView::setInstanceFilter(std::function<bool(const InstanceInfo&)>& filter)
 {
     m_instanceFilter = filter;
 }
 
-eastl::function<bool(const nau::MaterialAssetView::Ptr)>& nau::RenderView::getMaterialFilter()
+std::function<bool(const nau::MaterialAssetView::Ptr)>& nau::RenderView::getMaterialFilter()
 {
     return m_materialFilter;
 }
 
-void nau::RenderView::setMaterialFilter(eastl::function<bool(const MaterialAssetView::Ptr)>& filter)
+void nau::RenderView::setMaterialFilter(std::function<bool(const MaterialAssetView::Ptr)>& filter)
 {
     m_materialFilter = filter;
 }

@@ -3,12 +3,12 @@
 
 
 #pragma once
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
+#include <optional>
+#include <string>
 
 #include "nau/assets/asset_view.h"
 #include "nau/math/transform.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/meta/class_info.h"
 #include "nau/rtti/type_info.h"
 #include "nau/scene/scene_query.h"
@@ -30,7 +30,7 @@ namespace nau
     struct ReferenceField
     {
         Uid componentUid;
-        eastl::string fieldPath;
+        std::string fieldPath;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(componentUid),
@@ -44,7 +44,7 @@ namespace nau
     struct SceneAssetInfo
     {
         SceneAssetKind assetKind;
-        eastl::string name;
+        std::string name;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(assetKind),
@@ -69,7 +69,7 @@ namespace nau
         /**
          * @brief Component transform within the active scene.
          */
-        eastl::optional<math::Transform> transform;
+        std::optional<math::Transform> transform;
 
         /**
          * @brief Properties of the component.
@@ -114,7 +114,7 @@ namespace nau
         /**
          * @brief Name of the object.
          */
-        eastl::string name;
+        std::string name;
 
         /**
          * @brief Number of object's children.
@@ -180,7 +180,7 @@ namespace nau
 
         virtual SceneAssetInfo getSceneInfo() const = 0;
 
-        virtual eastl::optional<Vector<ReferenceField>> getReferencesInfo() const = 0;
+        virtual std::optional<Vector<ReferenceField>> getReferencesInfo() const = 0;
 
         /**
          * @brief Visits each scene object and their components recursively.

@@ -1,17 +1,23 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "graphics_assets/material_asset.h"
 
-#include <EASTL/hash_set.h>
-#include <EASTL/unordered_map.h>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "nau/assets/asset_ref.h"
 #include "nau/assets/material_asset_accessor.h"
 #include "nau/shaders/dag_renderStateId.h"
 #include "nau/shaders/shader_defines.h"
 #include "nau/shaders/shader_globals.h"
+#include "nau/string/string_hash.h"
 
 #define LOAD_MATERIAL_ASYNC 0
 #define PROGRAM_NULL -1
@@ -82,19 +88,19 @@ namespace nau
         Ptr asset;
         if (mat.master.has_value())
         {
-            asset = co_await MaterialInstanceAssetView::createFromMaterial(eastl::move(mat));
+            asset = co_await MaterialInstanceAssetView::createFromMaterial(std::move(mat));
         }
         else
         {
-            asset = co_await MasterMaterialAssetView::createFromMaterial(eastl::move(mat));
+            asset = co_await MasterMaterialAssetView::createFromMaterial(std::move(mat));
         }
 
         co_return asset;
     }
 
-    eastl::unordered_set<eastl::string> MaterialAssetView::getPipelineNames() const
+    std::unordered_set<std::string> MaterialAssetView::getPipelineNames() const
     {
-        eastl::unordered_set<eastl::string> names;
+        std::unordered_set<std::string> names;
         names.reserve(m_pipelines.size());
 
         for (const auto& [name, pipeline] : m_pipelines)
@@ -105,16 +111,16 @@ namespace nau
         return names;
     }
 
-    void MaterialAssetView::setCullMode(eastl::string_view pipelineName, CullMode cullMode)
+    void MaterialAssetView::setCullMode(std::string_view pipelineName, CullMode cullMode)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
         auto& ppipeline = m_pipelines[pipelineName.data()];
-        ppipeline.cullMode = eastl::make_optional(cullMode);
+        ppipeline.cullMode = std::make_optional(cullMode);
         ppipeline.isRenderStateDirty = true;
     }
 
-    CullMode MaterialAssetView::getCullMode(eastl::string_view pipelineName) const
+    CullMode MaterialAssetView::getCullMode(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -124,16 +130,16 @@ namespace nau
                    : CullMode::CounterClockwise;
     }
 
-    void MaterialAssetView::setDepthMode(eastl::string_view pipelineName, DepthMode depthMode)
+    void MaterialAssetView::setDepthMode(std::string_view pipelineName, DepthMode depthMode)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
         auto& ppipeline = m_pipelines[pipelineName.data()];
-        ppipeline.depthMode = eastl::make_optional(depthMode);
+        ppipeline.depthMode = std::make_optional(depthMode);
         ppipeline.isRenderStateDirty = true;
     }
 
-    DepthMode MaterialAssetView::getDepthMode(eastl::string_view pipelineName) const
+    DepthMode MaterialAssetView::getDepthMode(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -143,16 +149,16 @@ namespace nau
                    : DepthMode::Default;
     }
 
-    void MaterialAssetView::setBlendMode(eastl::string_view pipelineName, BlendMode blendMode)
+    void MaterialAssetView::setBlendMode(std::string_view pipelineName, BlendMode blendMode)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
         auto& ppipeline = m_pipelines[pipelineName.data()];
-        ppipeline.blendMode = eastl::make_optional(blendMode);
+        ppipeline.blendMode = std::make_optional(blendMode);
         ppipeline.isRenderStateDirty = true;
     }
 
-    BlendMode MaterialAssetView::getBlendMode(eastl::string_view pipelineName) const
+    BlendMode MaterialAssetView::getBlendMode(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -162,16 +168,16 @@ namespace nau
                    : BlendMode::Opaque;
     }
 
-    void MaterialAssetView::setScissorsEnabled(eastl::string_view pipelineName, bool isEnabled)
+    void MaterialAssetView::setScissorsEnabled(std::string_view pipelineName, bool isEnabled)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
         auto& ppipeline = m_pipelines[pipelineName.data()];
-        ppipeline.isScissorsEnabled = eastl::make_optional(isEnabled);
+        ppipeline.isScissorsEnabled = std::make_optional(isEnabled);
         ppipeline.isRenderStateDirty = true;
     }
 
-    bool MaterialAssetView::isScissorsEnabled(eastl::string_view pipelineName) const
+    bool MaterialAssetView::isScissorsEnabled(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -181,7 +187,7 @@ namespace nau
                    : false;
     }
 
-    void MaterialAssetView::setCBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* cbuffer)
+    void MaterialAssetView::setCBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* cbuffer)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -190,7 +196,7 @@ namespace nau
         pipeline.systemCBuffers[bufferName.data()].buffer = cbuffer;
     }
 
-    Sbuffer* MaterialAssetView::getCBuffer(eastl::string_view pipelineName, eastl::string_view bufferName)
+    Sbuffer* MaterialAssetView::getCBuffer(std::string_view pipelineName, std::string_view bufferName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -199,7 +205,7 @@ namespace nau
         return pipeline.systemCBuffers[bufferName.data()].buffer;
     }
 
-    void MaterialAssetView::setTexture(eastl::string_view pipelineName, eastl::string_view propertyName, BaseTexture* texture)
+    void MaterialAssetView::setTexture(std::string_view pipelineName, std::string_view propertyName, BaseTexture* texture)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -221,11 +227,11 @@ namespace nau
         property.parentTexture->textureView = nullptr;
         property.parentTexture->texture = texture;
         property.parentTexture->isOwned = false;
-        property.currentValue = makeValueCopy(eastl::string{"Internal BaseTexture"});
+        property.currentValue = makeValueCopy(std::string{"Internal BaseTexture"});
         property.timestamp = std::chrono::steady_clock::now();
     }
 
-    void MaterialAssetView::setSolidColorTexture(eastl::string_view pipelineName, eastl::string_view propertyName, math::E3DCOLOR color)
+    void MaterialAssetView::setSolidColorTexture(std::string_view pipelineName, std::string_view propertyName, math::E3DCOLOR color)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -260,7 +266,7 @@ namespace nau
         property.timestamp = std::chrono::steady_clock::now();
     }
 
-    async::Task<> MaterialAssetView::setTextureFromAsset(eastl::string_view pipelineName, eastl::string_view propertyName, eastl::string_view textureView)
+    async::Task<> MaterialAssetView::setTextureFromAsset(std::string_view pipelineName, std::string_view propertyName, std::string_view textureView)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -284,11 +290,11 @@ namespace nau
 
         property.parentTexture->textureView = texAsset;
         property.parentTexture->isOwned = false;
-        property.currentValue = makeValueCopy(eastl::string{textureView});
+        property.currentValue = makeValueCopy(std::string{textureView});
         property.timestamp = std::chrono::steady_clock::now();
     }
 
-    void MaterialAssetView::createRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const BufferDesc& desc)
+    void MaterialAssetView::createRwBuffer(std::string_view pipelineName, std::string_view bufferName, const BufferDesc& desc)
     {
         // We ALWAYS use explicit specification of the element (or structure) size
         // and the element count instead of providing the total size.
@@ -364,7 +370,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::writeRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size)
+    void MaterialAssetView::writeRwBuffer(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -404,7 +410,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::readRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, void* data, size_t size)
+    void MaterialAssetView::readRwBuffer(std::string_view pipelineName, std::string_view bufferName, void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -444,7 +450,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::setRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* rwBuffer)
+    void MaterialAssetView::setRwBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* rwBuffer)
     {
         NAU_ASSERT(rwBuffer);
         NAU_ASSERT(m_pipelines.contains(pipelineName));
@@ -522,7 +528,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    Sbuffer* MaterialAssetView::getRwBuffer(eastl::string_view pipelineName, eastl::string_view bufferName)
+    Sbuffer* MaterialAssetView::getRwBuffer(std::string_view pipelineName, std::string_view bufferName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -548,7 +554,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::createRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const BufferDesc& desc)
+    void MaterialAssetView::createRoBuffer(std::string_view pipelineName, std::string_view bufferName, const BufferDesc& desc)
     {
         // We ALWAYS use explicit specification of the element (or structure) size
         // and the element count instead of providing the total size.
@@ -615,7 +621,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::writeRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size)
+    void MaterialAssetView::writeRoBuffer(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -655,7 +661,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::setRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName, Sbuffer* roBuffer)
+    void MaterialAssetView::setRoBuffer(std::string_view pipelineName, std::string_view bufferName, Sbuffer* roBuffer)
     {
         NAU_ASSERT(roBuffer);
         NAU_ASSERT(m_pipelines.contains(pipelineName));
@@ -726,7 +732,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    Sbuffer* MaterialAssetView::getRoBuffer(eastl::string_view pipelineName, eastl::string_view bufferName)
+    Sbuffer* MaterialAssetView::getRoBuffer(std::string_view pipelineName, std::string_view bufferName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -752,7 +758,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Buffer '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::createRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const TextureDesc& desc)
+    void MaterialAssetView::createRwTexture(std::string_view pipelineName, std::string_view bufferName, const TextureDesc& desc)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -821,7 +827,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::writeRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size)
+    void MaterialAssetView::writeRwTexture(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -894,7 +900,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::readRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, void* data, size_t size)
+    void MaterialAssetView::readRwTexture(std::string_view pipelineName, std::string_view bufferName, void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -967,7 +973,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::setRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName, BaseTexture* rwTexture)
+    void MaterialAssetView::setRwTexture(std::string_view pipelineName, std::string_view bufferName, BaseTexture* rwTexture)
     {
         NAU_ASSERT(rwTexture);
         NAU_ASSERT(m_pipelines.contains(pipelineName));
@@ -1043,7 +1049,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    BaseTexture* MaterialAssetView::getRwTexture(eastl::string_view pipelineName, eastl::string_view bufferName)
+    BaseTexture* MaterialAssetView::getRwTexture(std::string_view pipelineName, std::string_view bufferName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -1069,7 +1075,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::createRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const TextureDesc& desc)
+    void MaterialAssetView::createRoTexture(std::string_view pipelineName, std::string_view bufferName, const TextureDesc& desc)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -1138,7 +1144,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::writeRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, const void* data, size_t size)
+    void MaterialAssetView::writeRoTexture(std::string_view pipelineName, std::string_view bufferName, const void* data, size_t size)
     {
         NAU_ASSERT(data);
         NAU_ASSERT(size);
@@ -1211,7 +1217,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    void MaterialAssetView::setRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName, BaseTexture* roTexture)
+    void MaterialAssetView::setRoTexture(std::string_view pipelineName, std::string_view bufferName, BaseTexture* roTexture)
     {
         NAU_ASSERT(roTexture);
         NAU_ASSERT(m_pipelines.contains(pipelineName));
@@ -1248,7 +1254,7 @@ namespace nau
         NAU_FAILURE_ALWAYS("Texture '{}' not found in pipeline '{}'", bufferName.data(), pipelineName.data());
     }
 
-    BaseTexture* MaterialAssetView::getRoTexture(eastl::string_view pipelineName, eastl::string_view bufferName)
+    BaseTexture* MaterialAssetView::getRoTexture(std::string_view pipelineName, std::string_view bufferName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -1283,24 +1289,24 @@ namespace nau
         d3d::dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
 
-    async::Task<MaterialAssetView::Pipeline> MaterialAssetView::makeMasterPipeline(eastl::string_view pipelineName, const MaterialPipeline& materialPipeline, eastl::span<ShaderAssetView::Ptr> shaders)
+    async::Task<MaterialAssetView::Pipeline> MaterialAssetView::makeMasterPipeline(std::string_view pipelineName, const MaterialPipeline& materialPipeline, std::span<ShaderAssetView::Ptr> shaders)
     {
         struct TextureLoadingResult
         {
-            eastl::string bindName;
+            std::string bindName;
             TextureCache texture;
             ShaderAssetView* shader;
         };
 
-        eastl::unordered_map<eastl::string, ConstantBufferVariable> properties;
-        eastl::unordered_map<eastl::string, SampledTextureProperty> texProperties;
-        eastl::unordered_map<eastl::string, BufferCache> constantBuffers;
-        eastl::unordered_map<eastl::string, BufferCache> systemCBuffers;
-        eastl::unordered_map<eastl::string, TextureCache> textures;
-        eastl::unordered_map<eastl::string, SamplerCache> samplers;
-        eastl::vector<async::Task<TextureLoadingResult>> textureLoaders;
+        std::unordered_map<std::string, ConstantBufferVariable, nau::StringHash, std::equal_to<>> properties;
+        std::unordered_map<std::string, SampledTextureProperty, nau::StringHash, std::equal_to<>> texProperties;
+        std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> constantBuffers;
+        std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> systemCBuffers;
+        std::unordered_map<std::string, TextureCache, nau::StringHash, std::equal_to<>> textures;
+        std::unordered_map<std::string, SamplerCache, nau::StringHash, std::equal_to<>> samplers;
+        std::vector<async::Task<TextureLoadingResult>> textureLoaders;
 
-        const auto addTexture = [&materialPipeline, &texProperties, &textures](const ShaderAssetView& shader, eastl::string inBindName, TextureCache&& inTexCache)
+        const auto addTexture = [&materialPipeline, &texProperties, &textures](const ShaderAssetView& shader, std::string inBindName, TextureCache&& inTexCache)
         {
             [[maybe_unused]] auto [iter, emplaceOk] = textures.emplace(std::move(inBindName), std::move(inTexCache));
             NAU_ASSERT(emplaceOk);
@@ -1311,7 +1317,7 @@ namespace nau
 
             texProperties[bindName] = {
                 .parentTexture = &texCache,
-                .currentValue = eastl::move(materialPipeline.properties.at(bindName)),
+                .currentValue = std::move(materialPipeline.properties.at(bindName)),
                 .masterValue = nullptr,
                 .isMasterValue = false};
         };
@@ -1362,7 +1368,7 @@ namespace nau
                                 properties[var.name] = {
                                     .reflection = &var,
                                     .parentBuffer = &constantBuffers[bind.name],
-                                    .currentValue = eastl::move(materialPipeline.properties.at(var.name)),
+                                    .currentValue = std::move(materialPipeline.properties.at(var.name)),
                                     .masterValue = nullptr,
                                     .isMasterValue = false};
                             }
@@ -1395,7 +1401,7 @@ namespace nau
                             auto property = materialPipeline.properties.at(bind.name);
                             if (property->is<RuntimeStringValue>())
                             {
-                                textureLoaders.emplace_back([](eastl::string bindName, uint32_t bindPoint, eastl::string texName, ShaderAssetView* shader) -> async::Task<TextureLoadingResult>
+                                textureLoaders.emplace_back([](std::string bindName, uint32_t bindPoint, std::string texName, ShaderAssetView* shader) -> async::Task<TextureLoadingResult>
                                 {
                                     MaterialAssetRef texAssetRef = AssetPath{texName};
                                     auto texAsset = co_await texAssetRef.getReloadableAssetViewTyped<TextureAssetView>();
@@ -1410,7 +1416,7 @@ namespace nau
                                                                 .isOwned = false},
                                         .shader = shader
                                     };
-                                }(bind.name, bind.bindPoint, *runtimeValueCast<eastl::string>(property), shaderAsset.get()));
+                                }(bind.name, bind.bindPoint, *runtimeValueCast<std::string>(property), shaderAsset.get()));
 
                                 // continue;
                             }
@@ -1456,14 +1462,14 @@ namespace nau
         }
 
         co_return Pipeline{
-            .properties = eastl::move(properties),
-            .texProperties = eastl::move(texProperties),
-            .constantBuffers = eastl::move(constantBuffers),
-            .systemCBuffers = eastl::move(systemCBuffers),
-            .samplerTextures = eastl::move(textures),
-            .samplers = eastl::move(samplers),
+            .properties = std::move(properties),
+            .texProperties = std::move(texProperties),
+            .constantBuffers = std::move(constantBuffers),
+            .systemCBuffers = std::move(systemCBuffers),
+            .samplerTextures = std::move(textures),
+            .samplers = std::move(samplers),
             .programID = PROGRAM_NULL,
-            .renderStateId = eastl::nullopt,
+            .renderStateId = std::nullopt,
             .cullMode = materialPipeline.cullMode,
             .depthMode = materialPipeline.depthMode,
             .blendMode = materialPipeline.blendMode,
@@ -1473,21 +1479,21 @@ namespace nau
             .isRenderStateDirty = true};
     }
 
-    async::Task<MaterialAssetView::Pipeline> MaterialAssetView::makeInstancePipeline(eastl::string_view pipelineName, const MaterialPipeline& materialPipeline, Pipeline& masterPipeline)
+    async::Task<MaterialAssetView::Pipeline> MaterialAssetView::makeInstancePipeline(std::string_view pipelineName, const MaterialPipeline& materialPipeline, Pipeline& masterPipeline)
     {
-        eastl::unordered_map<eastl::string, ConstantBufferVariable> properties;
+        std::unordered_map<std::string, ConstantBufferVariable, nau::StringHash, std::equal_to<>> properties;
         properties.reserve(masterPipeline.properties.size());
 
-        eastl::unordered_map<eastl::string, SampledTextureProperty> texProperties;
+        std::unordered_map<std::string, SampledTextureProperty, nau::StringHash, std::equal_to<>> texProperties;
         texProperties.reserve(masterPipeline.texProperties.size());
 
-        eastl::unordered_map<eastl::string, BufferCache> constantBuffers;
+        std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> constantBuffers;
         constantBuffers.reserve(masterPipeline.constantBuffers.size());
 
-        eastl::unordered_map<eastl::string, BufferCache> systemCBuffers;
+        std::unordered_map<std::string, BufferCache, nau::StringHash, std::equal_to<>> systemCBuffers;
         systemCBuffers.reserve(masterPipeline.systemCBuffers.size());
 
-        eastl::unordered_map<eastl::string, TextureCache> textures;
+        std::unordered_map<std::string, TextureCache, nau::StringHash, std::equal_to<>> textures;
         textures.reserve(masterPipeline.samplerTextures.size());
 
         for (auto& [name, property] : masterPipeline.properties)
@@ -1497,7 +1503,7 @@ namespace nau
                 properties[name] = {
                     .reflection = property.reflection,
                     .parentBuffer = nullptr,
-                    .currentValue = eastl::move(materialPipeline.properties.at(name)),
+                    .currentValue = std::move(materialPipeline.properties.at(name)),
                     .masterValue = nullptr,
                     .isMasterValue = false};
             }
@@ -1518,7 +1524,7 @@ namespace nau
             {
                 texProperties[name] = {
                     .parentTexture = nullptr,
-                    .currentValue = eastl::move(materialPipeline.properties.at(name)),
+                    .currentValue = std::move(materialPipeline.properties.at(name)),
                     .masterValue = nullptr,
                     .isMasterValue = false};
             }
@@ -1560,7 +1566,7 @@ namespace nau
                 auto property = materialPipeline.properties.at(name);
                 if (property->is<RuntimeStringValue>())
                 {
-                    auto texName = *runtimeValueCast<eastl::string>(property);
+                    auto texName = *runtimeValueCast<std::string>(property);
                     TextureAssetRef texAssetRef = AssetPath{texName};
                     auto texAsset = co_await texAssetRef.getReloadableAssetViewTyped<TextureAssetView>();
                     textures[name] = {
@@ -1596,12 +1602,12 @@ namespace nau
         }
 
         co_return Pipeline{
-            .properties = eastl::move(properties),
-            .constantBuffers = eastl::move(constantBuffers),
-            .samplerTextures = eastl::move(textures),
+            .properties = std::move(properties),
+            .constantBuffers = std::move(constantBuffers),
+            .samplerTextures = std::move(textures),
             .samplers = masterPipeline.samplers,
             .programID = PROGRAM_NULL,
-            .renderStateId = eastl::nullopt,
+            .renderStateId = std::nullopt,
             .cullMode = materialPipeline.cullMode.has_value() ? materialPipeline.cullMode : masterPipeline.cullMode,
             .depthMode = materialPipeline.depthMode.has_value() ? materialPipeline.depthMode : masterPipeline.depthMode,
             .blendMode = materialPipeline.blendMode.has_value() ? materialPipeline.blendMode : masterPipeline.blendMode,
@@ -1737,7 +1743,7 @@ namespace nau
         }
     }
 
-    void MaterialAssetView::updateBuffers(eastl::string_view pipelineName)
+    void MaterialAssetView::updateBuffers(std::string_view pipelineName)
     {
         auto& pipeline = m_pipelines[pipelineName.data()];
 
@@ -1928,7 +1934,7 @@ namespace nau
         pipeline.isDirty = false;
     }
 
-    void MaterialAssetView::updateRenderState(eastl::string_view pipelineName)
+    void MaterialAssetView::updateRenderState(std::string_view pipelineName)
     {
         auto& pipeline = m_pipelines[pipelineName.data()];
 
@@ -1963,7 +1969,7 @@ namespace nau
 
         if (needNewRenderState)
         {
-            pipeline.renderStateId = eastl::make_optional(shaders::render_states::create(renderState));
+            pipeline.renderStateId = std::make_optional(shaders::render_states::create(renderState));
         }
 
         pipeline.isRenderStateDirty = false;
@@ -2035,16 +2041,16 @@ namespace nau
         struct CreatePipelineResult
         {
             Pipeline pipeline;
-            eastl::vector<ShaderAssetView::Ptr> shaders;
-            eastl::string name;
+            std::vector<ShaderAssetView::Ptr> shaders;
+            std::string name;
         };
 
-        const auto createMasterPipelineAsync = [](eastl::string name, const MaterialPipeline& pipeline) -> Task<CreatePipelineResult>
+        const auto createMasterPipelineAsync = [](std::string name, const MaterialPipeline& pipeline) -> Task<CreatePipelineResult>
         {
             CreatePipelineResult result;
             result.shaders.reserve(pipeline.shaders.size());
 
-            for (const eastl::string& shaderAssetPath : pipeline.shaders)
+            for (const std::string& shaderAssetPath : pipeline.shaders)
             {
                 ShaderAssetRef shaderAssetRef{shaderAssetPath};
                 result.shaders.push_back(co_await shaderAssetRef.getAssetViewTyped<ShaderAssetView>());
@@ -2056,7 +2062,7 @@ namespace nau
             co_return result;
         };
 
-        eastl::vector<Task<CreatePipelineResult>> pipelineTasks;
+        std::vector<Task<CreatePipelineResult>> pipelineTasks;
         pipelineTasks.reserve(material.pipelines.size());
 
         for (const auto& [name, pipeline] : material.pipelines)
@@ -2075,14 +2081,14 @@ namespace nau
 
             materialAssetView->m_pipelines.emplace(result.name, std::move(result.pipeline));
             materialAssetView->m_pipelines[result.name].programID = ShaderAssetView::makeShaderProgram(result.shaders);
-            materialAssetView->m_pipelines[result.name].shaders = eastl::move(result.shaders);
+            materialAssetView->m_pipelines[result.name].shaders = std::move(result.shaders);
 
             materialAssetView->updateBuffers(result.name);
             materialAssetView->updateRenderState(result.name);
         }
 
         materialAssetView->m_defaultProgram = materialAssetView->m_pipelines.begin()->first;
-        materialAssetView->m_name = eastl::move(material.name);
+        materialAssetView->m_name = std::move(material.name);
         materialAssetView->m_nameHash = nau::strings::constHash(materialAssetView->m_name.data());
 
         co_return materialAssetView;
@@ -2093,7 +2099,7 @@ namespace nau
         bindPipeline(m_defaultProgram);
     }
 
-    void MasterMaterialAssetView::bindPipeline(eastl::string_view pipelineName)
+    void MasterMaterialAssetView::bindPipeline(std::string_view pipelineName)
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
 
@@ -2189,13 +2195,13 @@ namespace nau
         }
     }
 
-    PROGRAM MasterMaterialAssetView::getPipelineProgram(eastl::string_view pipelineName) const
+    PROGRAM MasterMaterialAssetView::getPipelineProgram(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_pipelines.contains(pipelineName));
         return m_pipelines.at(pipelineName.data()).programID;
     }
 
-    void MasterMaterialAssetView::setGlobals(eastl::string_view pipelineName)
+    void MasterMaterialAssetView::setGlobals(std::string_view pipelineName)
     {
         static constexpr auto alignment = 16;
         auto& pipeline = m_pipelines[pipelineName.data()];
@@ -2210,7 +2216,7 @@ namespace nau
                     continue;
                 }
 
-                eastl::vector<std::byte> buffer;
+                std::vector<std::byte> buffer;
                 buffer.resize(bind.bufferDesc.size);
 
                 for (const auto& var : bind.bufferDesc.variables)
@@ -2415,7 +2421,7 @@ namespace nau
             materialAssetView->updateRenderState(name);
         }
 
-        materialAssetView->m_name = eastl::move(material.name);
+        materialAssetView->m_name = std::move(material.name);
         materialAssetView->m_nameHash = nau::strings::constHash(materialAssetView->m_name.data());
 
         co_return materialAssetView;
@@ -2426,7 +2432,7 @@ namespace nau
         bindPipeline(m_masterMaterial->m_defaultProgram);
     }
 
-    void MaterialInstanceAssetView::bindPipeline(eastl::string_view pipelineName)
+    void MaterialInstanceAssetView::bindPipeline(std::string_view pipelineName)
     {
         NAU_ASSERT(m_masterMaterial->m_pipelines.contains(pipelineName));
         NAU_ASSERT(m_pipelines.contains(pipelineName));
@@ -2553,7 +2559,7 @@ namespace nau
         }
     }
 
-    PROGRAM MaterialInstanceAssetView::getPipelineProgram(eastl::string_view pipelineName) const
+    PROGRAM MaterialInstanceAssetView::getPipelineProgram(std::string_view pipelineName) const
     {
         NAU_ASSERT(m_masterMaterial);
         return m_masterMaterial->getPipelineProgram(pipelineName);

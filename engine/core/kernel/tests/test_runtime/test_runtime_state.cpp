@@ -1,7 +1,10 @@
+#include <algorithm>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <vector>
 
+#include "nau/async/async_timer.h"
 #include "nau/async/task.h"
 #include "nau/runtime/internal/runtime_state.h"
 #include "nau/threading/event.h"
@@ -24,7 +27,7 @@ namespace nau::test
         {
             using namespace std::chrono_literals;
 
-            if(!m_runtimeState)
+            if (!m_runtimeState)
             {
                 return 0;
             }
@@ -33,11 +36,11 @@ namespace nau::test
 
             auto runtimeState = std::move(m_runtimeState);
             auto shutdown = runtimeState->shutdown();
-            if(callback)
+            if (callback)
             {
                 callback();
             }
-            while(shutdown())
+            while (shutdown())
             {
                 std::this_thread::sleep_for(50ms);
                 ++stepsCount;
@@ -80,6 +83,27 @@ namespace nau::test
         ASSERT_FALSE(coroCompleted);
     }
 
+    TEST_F(TestRuntimeState, TimerMembershipCancelAndExpiry)
+    {
+        using namespace std::chrono_literals;
+        auto& timers = async::ITimerManager::getInstance();
+        std::atomic<unsigned> cancelledCalls = 0;
+        const auto cancelled = timers.invokeAfter(1h, [](void* data) noexcept
+        {
+            ++*static_cast<std::atomic<unsigned>*>(data);
+        }, &cancelledCalls);
+        timers.cancelInvokeAfter(cancelled);
+        threading::Event expired(threading::Event::ResetMode::Manual);
+        timers.invokeAfter(1ms, [](void* data) noexcept
+        {
+            static_cast<threading::Event*>(data)->set();
+        }, &expired);
+        EXPECT_TRUE(expired.wait(5s));
+        // Drain timer states before the callback storage leaves this scope.
+        shutdownAndWait();
+        EXPECT_EQ(cancelledCalls.load(), 0);
+    }
+
     TEST_F(TestRuntimeState, CompleteAsyncTasksWhileShutdown)
     {
         using namespace nau::async;
@@ -97,7 +121,7 @@ namespace nau::test
 
             signal.wait();
 
-            for(size_t i = 0; i < IterationsPerTask; ++i)
+            for (size_t i = 0; i < IterationsPerTask; ++i)
             {
                 if (++counter % 3 == 0)
                 {
@@ -106,26 +130,26 @@ namespace nau::test
             }
         };
 
-        eastl::vector<Task<>> tasks;
+        std::vector<Task<>> tasks;
 
-        for(size_t i = 0; i < TasksCount; ++i)
+        for (size_t i = 0; i < TasksCount; ++i)
         {
             tasks.push_back(taskFactory(signal, std::ref(counter)));
         }
 
         [[maybe_unused]]
         const size_t shutdownCounter = shutdownAndWait([&signal]
-                        {
-                            signal.set();
-                        });
+        {
+            signal.set();
+        });
 
-        const bool allTaskCompleted = eastl::all_of(tasks.begin(), tasks.end(), [](const Task<>& t)
-                                                    {
-                                                        return t.isReady();
-                                                    });
+        const bool allTaskCompleted = std::all_of(tasks.begin(), tasks.end(), [](const Task<>& t)
+        {
+            return t.isReady();
+        });
 
         ASSERT_TRUE(allTaskCompleted);
-        //ASSERT_GT(shutdownCounter , 0);
+        // ASSERT_GT(shutdownCounter , 0);
         ASSERT_EQ(counter, IterationsPerTask * TasksCount);
     }
 

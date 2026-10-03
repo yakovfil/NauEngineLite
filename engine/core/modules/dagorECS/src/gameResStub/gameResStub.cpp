@@ -4,6 +4,9 @@
 #include <daECS/core/ecsGameRes.h>
 #include <nau/rtti/rtti_impl.h>
 
+#include <memory>
+#include <vector>
+
 namespace ecs
 {
 
@@ -20,7 +23,7 @@ namespace ecs
             list.clear();
             return 0;
         }
-        void async_load_gameres_list(eastl::vector<ecs::EntityId>&&, gameres_list_t&&) override
+        void async_load_gameres_list(std::vector<ecs::EntityId>&&, gameres_list_t&&) override
         {
         }
         virtual ~IECSResourceManagerImpl(){}
@@ -38,7 +41,7 @@ namespace ecs
 
     IECSResourceManager::Ptr createDefaultECSResourceManager()
     {
-        return eastl::make_unique<IECSResourceManagerImpl>();
+        return std::make_unique<IECSResourceManagerImpl>();
     }
 
 }  // namespace ecs

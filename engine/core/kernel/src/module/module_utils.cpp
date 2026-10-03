@@ -1,6 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/app/global_properties.h"
 #include "nau/core_defines.h"
 #include "nau/diag/logging.h"
@@ -20,8 +25,8 @@ namespace nau
     {
         struct EngineModulesConfig
         {
-            eastl::vector<eastl::string> searchPaths;
-            eastl::vector<eastl::string> optionalModules;
+            std::vector<std::string> searchPaths;
+            std::vector<std::string> optionalModules;
             bool searchEnvPath = true;
 
             NAU_CLASS_FIELDS(
@@ -31,7 +36,7 @@ namespace nau
         };
     }  // namespace
 
-    Result<> loadModulesList([[maybe_unused]] eastl::string_view modulesList)
+    Result<> loadModulesList([[maybe_unused]] std::string_view modulesList)
     {
         namespace fs = std::filesystem;
         using namespace nau::strings;
@@ -58,7 +63,7 @@ namespace nau
 
         const fs::path binPath = io::getKnownFolderPath(io::KnownFolder::ExecutableLocation);
 
-        auto getAdditionalSearchPaths = [&modulesConfig, searchPaths = eastl::vector<fs::path>{}]() mutable -> const eastl::vector<fs::path>&
+        auto getAdditionalSearchPaths = [&modulesConfig, searchPaths = std::vector<fs::path>{}]() mutable -> const std::vector<fs::path>&
         {
             if (!searchPaths.empty())
             {
@@ -68,7 +73,7 @@ namespace nau
             if (modulesConfig.searchEnvPath)
             {
                 const DWORD len = ::GetEnvironmentVariableW(L"PATH", nullptr, 0);
-                eastl::vector<wchar_t> buffer(static_cast<size_t>(len));
+                std::vector<wchar_t> buffer(static_cast<size_t>(len));
                 ::GetEnvironmentVariableW(L"PATH", buffer.data(), len);
 
                 for (std::wstring_view path : strings::split(std::wstring_view{buffer.data(), buffer.size()}, std::wstring_view{L";"}))
@@ -89,7 +94,7 @@ namespace nau
 
             for (const auto& searchPath : modulesConfig.searchPaths)
             {
-                const eastl::wstring wcsPath = utf8ToWString(searchPath);
+                const std::wstring wcsPath = utf8ToWString(searchPath);
 
                 [[maybe_unused]] std::error_code ec;
                 fs::path dirPath{std::wstring_view{wcsPath.c_str()}};
@@ -104,9 +109,9 @@ namespace nau
             return (searchPaths);
         };
 
-        const auto isOptionalModule = [&modulesConfig](const eastl::string_view moduleName)
+        const auto isOptionalModule = [&modulesConfig](const std::string_view moduleName)
         {
-            return eastl::any_of(modulesConfig.optionalModules.begin(), modulesConfig.optionalModules.end(), [&moduleName](const eastl::string_view name)
+            return std::any_of(modulesConfig.optionalModules.begin(), modulesConfig.optionalModules.end(), [&moduleName](const std::string_view name)
             {
                 return icaseEqual(moduleName, name);
             });
@@ -118,9 +123,9 @@ namespace nau
             return fs::exists(modulePath) && fs::is_regular_file(modulePath, ec);
         };
 
-        for (const eastl::string_view moduleName : strings::split(modulesList, eastl::string_view{","}))
+        for (const std::string_view moduleName : strings::split(modulesList, std::string_view{","}))
         {
-            eastl::wstring moduleWName = utf8ToWString(toU8StringView(strings::trim(moduleName)));
+            std::wstring moduleWName = utf8ToWString(toU8StringView(strings::trim(moduleName)));
             if (moduleWName.empty())
             {
                 continue;
@@ -133,7 +138,7 @@ namespace nau
             bool modulePathExists = checkFileExists(moduleFullPath);
             if (!modulePathExists)
             {
-                NAU_LOG_WARNING(u8"Module ({}) not found at ({}), attempt to search at alternative locations", eastl::string{moduleName}, wstringToUtf8(toStringView(binPath.wstring())));
+                NAU_LOG_WARNING(u8"Module ({}) not found at ({}), attempt to search at alternative locations", std::string{moduleName}, wstringToUtf8(toStringView(binPath.wstring())));
                 for (const fs::path& additionalPath : getAdditionalSearchPaths())
                 {
                     moduleFullPath = additionalPath / moduleDllName;
@@ -148,12 +153,12 @@ namespace nau
             {
                 if (!isOptionalModule(moduleName))
                 {
-                    NAU_FAILURE_ALWAYS("Module's ({}) location not found", eastl::string{moduleName});
-                    return NauMakeError("Module's ({}) location found", eastl::string{moduleName});
+                    NAU_FAILURE_ALWAYS("Module's ({}) location not found", std::string{moduleName});
+                    return NauMakeError("Module's ({}) location found", std::string{moduleName});
                 }
                 else
                 {
-                    NAU_LOG_INFO(u8"Optional Module ({}) not found", eastl::string{moduleName});
+                    NAU_LOG_INFO(u8"Optional Module ({}) not found", std::string{moduleName});
                     continue;
                 }
             }
@@ -164,17 +169,17 @@ namespace nau
             {
                 if (!isOptionalModule(moduleName))
                 {
-                    NAU_FAILURE_ALWAYS("Required module  ({}) is not loaded:({})", eastl::string{moduleName}, loadResult.getError()->getMessage());
+                    NAU_FAILURE_ALWAYS("Required module  ({}) is not loaded:({})", std::string{moduleName}, loadResult.getError()->getMessage());
                     return loadResult.getError();
                 }
                 else
                 {
-                    NAU_LOG_ERROR("Optional module ({}) is not loaded:({})", eastl::string{moduleName}, loadResult.getError()->getMessage());
+                    NAU_LOG_ERROR("Optional module ({}) is not loaded:({})", std::string{moduleName}, loadResult.getError()->getMessage());
                     continue;
                 }
             }
 
-            NAU_LOG(u8"Loading module ({}) at ({})", eastl::string{moduleName}, wstringToUtf8(toStringView(wcsFullPath)));
+            NAU_LOG(u8"Loading module ({}) at ({})", std::string{moduleName}, wstringToUtf8(toStringView(wcsFullPath)));
         }
 #endif
 

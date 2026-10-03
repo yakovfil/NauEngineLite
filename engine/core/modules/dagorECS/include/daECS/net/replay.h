@@ -1,11 +1,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <generic/dag_span.h>
 #include <daECS/net/connid.h>
 #include <daECS/net/scope_query_cb.h>
+#include <generic/dag_span.h>
 #include <generic/dag_tab.h>
 #include <util/dag_baseDef.h>
+
+#include <functional>
 
 namespace danet
 {
@@ -46,8 +48,7 @@ Connection *create_replay_connection(ConnectionId id, char *write_fname, uint16_
 INetDriver *create_replay_client_net_driver(INetDriver *drv, const char *write_fname, uint16_t version,
   get_replay_footer_data_cb_t get_footer_cb = nullptr);
 
-bool load_replay_footer_data(const char *path, uint16_t version,
-  eastl::function<void(Tab<uint8_t> const &, const uint32_t)> footer_data_cb);
+bool load_replay_footer_data(const char* path, uint16_t version, std::function<void(Tab<uint8_t> const&, const uint32_t)> footer_data_cb);
 bool replay_rewind(INetDriver *drv, int rewind_time);
 void replay_save_keyframe(IConnection *conn, int cur_time);
 uint32_t get_replay_proto_version(uint16_t net_proto_version);

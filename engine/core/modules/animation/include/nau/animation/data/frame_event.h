@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
 
 namespace nau::animation
 {
@@ -62,7 +62,7 @@ namespace nau::animation
          * 
          * @return Identifier of the event.
          */
-        const eastl::string& getId() const
+        const std::string& getId() const
         {
             return m_id;
         }
@@ -125,7 +125,7 @@ namespace nau::animation
          * @note    Both event of type FrameEventType::Stop and a pinned event (FrameEventType::Start) it deactivates have to
          *          have equal identifiers
          */
-        eastl::string m_id;
+        std::string m_id;
         FrameEventType m_eventType = FrameEventType::OneTime;
         FrameEventActivationDirection m_activationDirection = FrameEventActivationDirection::Forward;
 

@@ -1,15 +1,16 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <nau/assets/asset_manager.h>
+
+#include <memory>
+#include <string_view>
 
 #include "graphics_impl.h"
 #include "nau/gui/dag_imgui.h"
 #include "nau/gui/imguiInput.h"
 #include "nau/ui.h"
 #include "render_window_impl.h"
-
 
 namespace nau::render
 {
@@ -21,13 +22,13 @@ namespace nau::render
             destination = co_await ref.getAssetViewTyped<MaterialAssetView>();
             co_return;
         };
-        const auto openTextureAsset = [](eastl::string_view path, ReloadableAssetView::Ptr& destination) -> async::Task<>
+        const auto openTextureAsset = [](std::string_view path, ReloadableAssetView::Ptr& destination) -> async::Task<>
         {
             IAssetDescriptor::Ptr asset = getServiceProvider().get<IAssetManager>().openAsset(path);
             destination = co_await asset->getReloadableAssetView(rtti::getTypeInfo<TextureAssetView>());
             co_return;
         };
-        const auto openShaderAsset = [](eastl::string_view path, ShaderAssetView::Ptr& destination) -> async::Task<>
+        const auto openShaderAsset = [](std::string_view path, ShaderAssetView::Ptr& destination) -> async::Task<>
         {
             IAssetDescriptor::Ptr asset = getServiceProvider().get<IAssetManager>().openAsset(path);
             destination = co_await asset->getAssetView(rtti::getTypeInfo<ShaderAssetView>());
@@ -66,12 +67,12 @@ namespace nau::render
         matPPResolve->enableAutoSetTextures(false);
         matPPTonemap->enableAutoSetTextures(false);
 
-        m_environmentRenderer = eastl::make_unique<render::EnvironmentRenderer>(
+        m_environmentRenderer = std::make_unique<render::EnvironmentRenderer>(
             matSkybox, panoramaToCubemapComputeShader, genIrradianceMapComputeShader, genReflectionMapComputeShader);
         m_environmentRenderer->setPanoramaTexture(hdrPanorama);
 
-        eastl::unique_ptr<render::PostFxRenderer> resolveShadingPass = eastl::make_unique<render::PostFxRenderer>(matPPResolve);
-        eastl::unique_ptr<render::ShadingResolver> shadingResolver = eastl::make_unique<render::ShadingResolver>(std::move(resolveShadingPass));
+        std::unique_ptr<render::PostFxRenderer> resolveShadingPass = std::make_unique<render::PostFxRenderer>(matPPResolve);
+        std::unique_ptr<render::ShadingResolver> shadingResolver = std::make_unique<render::ShadingResolver>(std::move(resolveShadingPass));
 
         BufferDesc buffDesc;
         buffDesc.name = u8"pixel_data_extraction_result_buffer";
@@ -93,7 +94,7 @@ namespace nau::render
         width = backInfo.w;
         height = backInfo.h;
 
-        m_gBuffer = eastl::make_unique<render::DeferredRenderTarget>(std::move(shadingResolver), nau::utils::format("{}_{}", "main", m_swapchain).c_str(), width, height, render::DeferredRT::StereoMode::MonoOrMultipass, TEXFMT_DEPTH32);
+        m_gBuffer = std::make_unique<render::DeferredRenderTarget>(std::move(shadingResolver), nau::utils::format("{}_{}", "main", m_swapchain).c_str(), width, height, render::DeferredRT::StereoMode::MonoOrMultipass, TEXFMT_DEPTH32);
 
         {
             lock_(m_resizeMutex);
@@ -102,8 +103,8 @@ namespace nau::render
             resizeResolutions();
         }
 
-        m_postFXRenderer = eastl::make_unique<render::PostFxRenderer>(matPPTonemap);
-        m_outlineRenderer = eastl::make_unique<render::PostFxRenderer>(outlineTonemap);
+        m_postFXRenderer = std::make_unique<render::PostFxRenderer>(matPPTonemap);
+        m_outlineRenderer = std::make_unique<render::PostFxRenderer>(outlineTonemap);
 
         createGBufferNodes();
 

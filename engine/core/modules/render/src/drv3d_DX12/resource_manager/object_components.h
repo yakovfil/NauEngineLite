@@ -3,6 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <span>
+#include <utility>
+#include <vector>
 //#include <dag/dag_vector.h>
 #include "nau/supp/dag_comPtr.h"
 #include "nau/threading/spin_lock.h"
@@ -176,7 +180,7 @@ public:
     }
     // The constructor may kick off additional buffer allocations or frees so it can not be done
     // under the locked bufferPoolGuard
-    auto buffer = ::new (memory) GenericBufferInterface(eastl::forward<Args>(args)...);
+    auto buffer = ::new(memory) GenericBufferInterface(std::forward<Args>(args)...);
     if (!buffer->getDeviceBuffer() && !buffer->isStreamBuffer())
     {
       buffer->destroy();
@@ -226,7 +230,7 @@ class TextureObjectProvider : public BufferObjectProvider
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<TextureInterfaceBase *> freedTextureObjects;
+      std::vector<TextureInterfaceBase*> freedTextureObjects;
   };
 
   ContainerMutexWrapper<ObjectPool<TextureInterfaceBase>, nau::threading::SpinLock> texturePool;
@@ -249,9 +253,9 @@ protected:
   {
     if (!data.freedTextureObjects.empty())
     {
-      eastl::sort(begin(data.freedTextureObjects), end(data.freedTextureObjects));
-      texturePool.access()->free(begin(data.freedTextureObjects), end(data.freedTextureObjects));
-      data.freedTextureObjects.clear();
+        std::sort(begin(data.freedTextureObjects), end(data.freedTextureObjects));
+        texturePool.access()->free(begin(data.freedTextureObjects), end(data.freedTextureObjects));
+        data.freedTextureObjects.clear();
     }
     BaseType::completeFrameExecution(info, data);
   }
@@ -260,7 +264,7 @@ public:
   template <typename... Args>
   TextureInterfaceBase *newTextureObject(Args &&...args)
   {
-    return texturePool.access()->allocate(eastl::forward<Args>(args)...);
+      return texturePool.access()->allocate(std::forward<Args>(args)...);
   }
 
   template <typename T>
@@ -311,12 +315,12 @@ protected:
   template <typename... Args>
   Image *newImageObject(Args &&...args)
   {
-    return imageObjectPool.access()->allocate(eastl::forward<Args>(args)...);
+      return imageObjectPool.access()->allocate(std::forward<Args>(args)...);
   }
 
   void deleteImageObject(Image *image) { imageObjectPool.access()->free(image); }
 
-  void deleteImageObjects(eastl::span<Image *> images)
+  void deleteImageObjects(std::span<Image*> images)
   {
     auto imageObjectPoolAccess = imageObjectPool.access();
     for (auto image : images)
@@ -329,7 +333,7 @@ public:
   template <typename T>
   void visitImageObjects(T &&clb)
   {
-    imageObjectPool.access()->iterateAllocated(eastl::forward<T>(clb));
+      imageObjectPool.access()->iterateAllocated(std::forward<T>(clb));
   }
 
   bool isImageAlive(Image *img) { return imageObjectPool.access()->isAllocated(img); }

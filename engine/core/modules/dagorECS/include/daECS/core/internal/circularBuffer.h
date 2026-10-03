@@ -3,10 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #pragma once
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
 #include <daECS/core/event.h>
 #include <daECS/utility/ecs_asserts.h>
+
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
 #ifndef RESTRICT_FUN
 #ifdef _MSC_VER
 #define RESTRICT_FUN __declspec(restrict)
@@ -27,7 +30,7 @@ struct EventCircularBuffer
   static constexpr unsigned header_size = sizeof(EntityId);
 
   uint32_t readAt = 0, writeAt = 0;
-  eastl::unique_ptr<uint8_t[]> data = eastl::make_unique<uint8_t[]>(capacity + sizeof(Event) + sizeof(uint32_t)); // place for header
+  std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(capacity + sizeof(Event) + sizeof(uint32_t));  // place for header
   uint32_t *alreadyRead = (uint32_t *)(data.get() + capacity + sizeof(Event));
   EventCircularBuffer() { *alreadyRead = 0; }
 
@@ -46,8 +49,8 @@ struct EventCircularBuffer
     constexpr unsigned alignment = alignment_ == 0 ? unsigned(1) : alignment_; // this is to avoid potential mod by zero
     uint32_t alignDiff = (alignment_ != 0) ? ((alignment - (writeAt + header_size) % alignment) % alignment) : 0;
     sz += alignDiff + header_size;
-    if (EASTL_LIKELY(eastl::max(writeIndex(), size()) + sz <= capacity))
-      return true;
+    if (NAU_LIKELY(std::max(writeIndex(), size()) + sz <= capacity))
+        return true;
     return fillEndAndCanWrite(sz);
   }
   RESTRICT_FUN uint8_t *__restrict push(EntityId eid, uint32_t sz)
@@ -114,10 +117,13 @@ struct DeferredEventsStorage
   typedef EventCircularBuffer<pow_of_two_capacity_shift> EventsBuffer;
   EventsBuffer active;
   static_assert(sizeof(EventsBuffer) == sizeof(void *) * 2 + sizeof(uint32_t) * 2);
-  eastl::vector<EventsBuffer> buffers;
+  std::vector<EventsBuffer> buffers;
   bool canProcess() const { return buffers.empty(); }
 
-  NAU_NOINLINE /* should be out of line, since it is rare */ void pushNewBuffer() { eastl::swap(buffers.emplace_back(), active); }
+  NAU_NOINLINE /* should be out of line, since it is rare */ void pushNewBuffer()
+  {
+      std::swap(buffers.emplace_back(), active);
+  }
 
   template <class T> // todo: make emplace with variadic template?
   void emplaceEvent(EntityId eid, T &&event)
@@ -125,8 +131,8 @@ struct DeferredEventsStorage
     static_assert(Event::max_event_size + sizeof(EntityId) <= EventsBuffer::capacity);
     static_assert(sizeof(T) + sizeof(EntityId) <= EventsBuffer::capacity);
     constexpr uint32_t eventSize = sizeof(T);
-    if (EASTL_UNLIKELY(!(active.template alignTo<(align_event_on_emplace ? alignof(T) : 0)>(eventSize)))) //-V562,547
-      pushNewBuffer();
+    if (NAU_UNLIKELY(!(active.template alignTo<(align_event_on_emplace ? alignof(T) : 0)>(eventSize))))  //-V562,547
+        pushNewBuffer();
     static_assert(!align_event_on_emplace || alignof(T) == EVENT_ALIGNMENT);
     static_assert(eventSize % sizeof(EntityId) == 0); // all events should be at least 4 bytes aligned, regardless
     DAECS_EXT_ASSERT(eventSize == event.getLength());   //
@@ -135,15 +141,15 @@ struct DeferredEventsStorage
     if constexpr ((T::staticFlags() & EVFLG_DESTROY) == 0)
       memcpy(at, &event, eventSize);
     else
-      new (at/*, _NEW_INPLACE*/) T(eastl::move(event));
+        new(at /*, _NEW_INPLACE*/) T(std::move(event));
   }
 
   RESTRICT_FUN void *__restrict allocateUntypedEvent(EntityId eid, uint32_t eventSize) // untyped event
   {
     // we can't send untyped events that require non-trivial move (not relocatable)
     // currently just assume it is same as non-trivial destruction.
-    if (EASTL_UNLIKELY(!(active.template alignTo<(align_event_on_emplace ? EVENT_ALIGNMENT : 0)>(eventSize)))) //-V562,547
-      pushNewBuffer();
+    if (NAU_UNLIKELY(!(active.template alignTo<(align_event_on_emplace ? EVENT_ALIGNMENT : 0)>(eventSize))))  //-V562,547
+        pushNewBuffer();
     DAECS_EXT_FAST_ASSERT(eventSize <= EventsBuffer::capacity);
     DAECS_EXT_ASSERT(!align_event_on_emplace || (active.writeIndex() % EVENT_ALIGNMENT == 0));
     DAECS_EXT_ASSERT(!align_event_on_emplace || (eventSize % EVENT_ALIGNMENT == 0));

@@ -3,18 +3,20 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-#include <EASTL/vector.h>
-
+#include <type_traits>
+#include <vector>
 
 template <typename T>
 class DerivedSpan
 {
-  using BytePointerType = typename eastl::conditional<eastl::is_const<T>::value, const uint8_t *, uint8_t *>::type;
-  BytePointerType uBase = nullptr;
-  size_t uSize = 0;
-  size_t uCount = 0;
-  BytePointerType atIndex(size_t i) const { return &uBase[i * uSize]; }
+    using BytePointerType = typename std::conditional<std::is_const<T>::value, const uint8_t*, uint8_t*>::type;
+    BytePointerType uBase = nullptr;
+    size_t uSize = 0;
+    size_t uCount = 0;
+    BytePointerType atIndex(size_t i) const
+    {
+        return &uBase[i * uSize];
+    }
 
 public:
   DerivedSpan() = default;
@@ -22,10 +24,11 @@ public:
   template <typename U>
   DerivedSpan(U *u_base, size_t u_count) : uBase{reinterpret_cast<BytePointerType>(u_base)}, uSize{sizeof(U)}, uCount{u_count}
   {
-    static_assert(eastl::is_base_of<T, U>::value, "U is invalid type");
+      static_assert(std::is_base_of<T, U>::value, "U is invalid type");
   }
   template <typename U>
-  DerivedSpan(const eastl::vector<U> &u_base) : DerivedSpan{u_base.data(), u_base.size()}
+  DerivedSpan(const std::vector<U>& u_base) :
+      DerivedSpan{u_base.data(), u_base.size()}
   {}
   class Iterator
   {

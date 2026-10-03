@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_scene.h"
 
-#include "nau/utils/performance_profiling.h"
+#include <memory>
+#include <vector>
 
 #include "nau/render/cascadeShadows.h"
+#include "nau/utils/performance_profiling.h"
 
 namespace nau
 {
@@ -32,17 +33,17 @@ namespace nau
         co_return;
     }
 
-    eastl::shared_ptr<RenderList> RenderScene::collectRenderLists()
+    std::shared_ptr<RenderList> RenderScene::collectRenderLists()
     {
-        return eastl::shared_ptr<RenderList>();
+        return std::shared_ptr<RenderList>();
     }
 
-    eastl::vector<eastl::shared_ptr<RenderView>>& RenderScene::getViews()
+    std::vector<std::shared_ptr<RenderView>>& RenderScene::getViews()
     {
         return m_views;
     }
 
-    void RenderScene::addView(eastl::shared_ptr<RenderView> view)
+    void RenderScene::addView(std::shared_ptr<RenderView> view)
     {
         NAU_ASSERT(view);
         m_views.push_back(view);

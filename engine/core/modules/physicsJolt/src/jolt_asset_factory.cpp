@@ -3,13 +3,14 @@
 
 #include "jolt_asset_factory.h"
 
+#include <vector>
+
 #include "nau/assets/mesh_asset_accessor.h"
 #include "nau/physics/jolt/jolt_physics_assets.h"
 
-
 namespace nau::physics::jolt
 {
-    eastl::vector<const rtti::TypeInfo*> JoltAssetFactory::getAssetViewTypes() const
+    std::vector<const rtti::TypeInfo*> JoltAssetFactory::getAssetViewTypes() const
     {
         return {
             &rtti::getTypeInfo<physics::ConvexHullAssetView>(),

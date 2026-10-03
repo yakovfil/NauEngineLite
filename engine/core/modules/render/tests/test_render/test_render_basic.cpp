@@ -1,30 +1,29 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <d3d12.h>
+#include <dxil/dxcapi.h>
+#include <wrl/client.h>
 
+#include <fstream>
+#include <string>
+
+#include "../../../platform_app/src/platform/windows/windows_window_impl.h"
+#include "nau/3d/dag_drv3d.h"
+#include "nau/3d/dag_texMgr.h"
 #include "nau/app/core_window_manager.h"
 #include "nau/app/platform_window.h"
+#include "nau/diag/logging.h"
+#include "nau/image/dag_texPixel.h"
+#include "nau/io/file_system.h"
+#include "nau/memory/heap_byte_allocator.h"
 #include "nau/module/module_manager.h"
+#include "nau/osApiWrappers/dag_cpuJobs.h"
 #include "nau/runtime/disposable.h"
 #include "nau/service/service_provider.h"
 #include "nau/threading/event.h"
 #include "nau/threading/set_thread_name.h"
-#include "nau/io/file_system.h"
-#include "nau/diag/logging.h"
-
-#include "nau/3d/dag_drv3d.h"
-#include "nau/3d/dag_texMgr.h"
-#include "nau/image/dag_texPixel.h"
-#include "../../../platform_app/src/platform/windows/windows_window_impl.h"
-#include "nau/osApiWrappers/dag_cpuJobs.h"
-
-#include <fstream>
-
-#include <d3d12.h>
-#include <dxil/dxcapi.h>
-#include <wrl/client.h>
 #include "nau/utils/span.h"
-
 
 template<class T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
@@ -387,7 +386,7 @@ namespace nau::test
 
         auto manager = createModuleManager();
         {
-            const eastl::string modulesList{ NAU_MODULES_LIST };
+            const std::string modulesList{NAU_MODULES_LIST};
             nau::loadModulesList(modulesList).ignore();
         }
 
@@ -478,7 +477,7 @@ namespace nau::test
                                FSHADER ps = d3d::create_raw_pixel_shader(make_span(reinterpret_cast<const uint8_t*>(psBin->GetBufferPointer()), psBin->GetBufferSize()), psUsageTable1);
                                PROGRAM pr = d3d::create_program(vs, ps, shDecl);
 
-                               eastl::allocator texAlloc;
+                               nau::HeapByteAllocator texAlloc;
                                TexImage32* genImg = TexImage32::create(800, 800, &texAlloc);
 
                                auto pixPtr = genImg->getPixels();

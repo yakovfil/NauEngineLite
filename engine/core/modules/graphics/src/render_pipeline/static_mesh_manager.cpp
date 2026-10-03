@@ -1,15 +1,21 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_pipeline/static_mesh_manager.h"
-#include "nau/math/dag_lsbVisitor.h"
+
 #include <graphics_impl.h>
-#include <EASTL/algorithm.h>
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "nau/math/dag_lsbVisitor.h"
 
 namespace nau
 {
-    async::Task<eastl::shared_ptr<StaticMeshInstanceGroup>> StaticMeshManager::findOrCreateGroup(StaticMeshAssetRef ref)
+    async::Task<std::shared_ptr<StaticMeshInstanceGroup>> StaticMeshManager::findOrCreateGroup(StaticMeshAssetRef ref)
     {
         auto& graphics = getServiceProvider().get<nau::GraphicsImpl>();
         ASYNC_SWITCH_EXECUTOR(graphics.getPreRenderExecutor());
@@ -21,18 +27,18 @@ namespace nau
 
         auto meshAsset = co_await ref.getReloadableAssetViewTyped<StaticMeshAssetView>();
 
-        eastl::shared_ptr<nau::StaticMeshInstanceGroup> group = nullptr;
-        if (eastl::find_if(m_assetRefToGroup.begin(), m_assetRefToGroup.end(), findByRef) == m_assetRefToGroup.end())
+        std::shared_ptr<nau::StaticMeshInstanceGroup> group = nullptr;
+        if (std::find_if(m_assetRefToGroup.begin(), m_assetRefToGroup.end(), findByRef) == m_assetRefToGroup.end())
         {
             NAU_ASSERT(meshAsset);
-            group = eastl::make_shared<nau::StaticMeshInstanceGroup>(meshAsset);
+            group = std::make_shared<nau::StaticMeshInstanceGroup>(meshAsset);
             m_meshGroups.push_back(group);
             m_assetRefToGroup.emplace_back(ref, group);
         }
 
         if(group == nullptr)
         {
-            eastl::weak_ptr<StaticMeshInstanceGroup> weakGroup = eastl::find_if(m_assetRefToGroup.begin(), m_assetRefToGroup.end(), findByRef)->second;
+            std::weak_ptr<StaticMeshInstanceGroup> weakGroup = std::find_if(m_assetRefToGroup.begin(), m_assetRefToGroup.end(), findByRef)->second;
             group = weakGroup.lock();
             NAU_ASSERT(group);
         }
@@ -40,24 +46,23 @@ namespace nau
         co_return group;
     }
 
-
-    async::Task<eastl::unique_ptr<nau::MeshHandle>> StaticMeshManager::addStaticMesh(StaticMeshAssetRef ref, const nau::math::Matrix4& matrix)
+    async::Task<std::unique_ptr<nau::MeshHandle>> StaticMeshManager::addStaticMesh(StaticMeshAssetRef ref, const nau::math::Matrix4& matrix)
     {
-        eastl::shared_ptr<StaticMeshInstanceGroup> group = co_await findOrCreateGroup(ref);
+        std::shared_ptr<StaticMeshInstanceGroup> group = co_await findOrCreateGroup(ref);
 
         auto& graphics = getServiceProvider().get<nau::GraphicsImpl>();
         ASYNC_SWITCH_EXECUTOR(graphics.getPreRenderExecutor());
 
         auto instance = group->addInstance(matrix);
 
-        eastl::unique_ptr<nau::MeshHandle> ret = eastl::make_unique<nau::MeshHandle>();
+        std::unique_ptr<nau::MeshHandle> ret = std::make_unique<nau::MeshHandle>();
         ret->m_group      = group;
         ret->m_instInfo   = instance;
         ret->m_generation = 0;
         ret->m_manager    = this;
         ret->m_scene      = m_sceneOwner;
 
-        co_return eastl::move(ret);
+        co_return std::move(ret);
     }
 
 
@@ -67,8 +72,14 @@ namespace nau
         {
             if (const auto& group = weakGroup.lock())
             {
-                auto dummy = eastl::function<bool(const InstanceInfo&)>([](const InstanceInfo&) -> bool { return true; });
-                auto dummyForMaterials = eastl::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr) -> bool { return true; });
+                auto dummy = std::function<bool(const InstanceInfo&)>([](const InstanceInfo&) -> bool
+                {
+                    return true;
+                });
+                auto dummyForMaterials = std::function<bool(const MaterialAssetView::Ptr)>([](const MaterialAssetView::Ptr) -> bool
+                {
+                    return true;
+                });
                 auto list = group->createRenderList({}, dummy, dummyForMaterials);
 
                 for (auto& ent : list->getEntities())
@@ -83,12 +94,11 @@ namespace nau
         }
     }
 
-
     RenderList::Ptr nau::StaticMeshManager::getRenderList(const nau::math::Vector3& viewerPosition,
-        eastl::function<bool(const InstanceInfo&)>& filterFunc,
-        eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
+                                                          std::function<bool(const InstanceInfo&)>& filterFunc,
+                                                          std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter)
     {
-        eastl::vector<RenderList::Ptr> lists;
+        std::vector<RenderList::Ptr> lists;
         lists.reserve(m_meshGroups.size());
         for (auto& weakGroup : m_meshGroups)
         {
@@ -102,7 +112,7 @@ namespace nau
             }
         }
 
-        return eastl::make_shared<RenderList>(std::move(lists));
+        return std::make_shared<RenderList>(std::move(lists));
     }
 
 
@@ -122,15 +132,15 @@ namespace nau
 
         if (m_isGroupsDirty)
         {
-            eastl::erase_if(m_assetRefToGroup, [](const auto& refToGroup)
-                {
-                    return refToGroup.second.expired();
-                });
+            std::erase_if(m_assetRefToGroup, [](const auto& refToGroup)
+            {
+                return refToGroup.second.expired();
+            });
 
-            eastl::erase_if(m_meshGroups, [](const auto& group)
-                {
-                    return group.expired();
-                });
+            std::erase_if(m_meshGroups, [](const auto& group)
+            {
+                return group.expired();
+            });
             m_isGroupsDirty = false;
         }
     }

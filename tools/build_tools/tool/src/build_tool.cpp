@@ -3,6 +3,8 @@
 
 #include "nau/build_tool/build_tool.h"
 
+#include <vector>
+
 #include "nau/build_tool/build_config.h"
 #if defined(_WIN32) || defined(_WIN64)
     #include "nau/shared/platform/win/process.h"
@@ -438,7 +440,7 @@ namespace nau
 
         LOG_INFO("Creating package... {}", m_buildConfig->targetDestination);
 
-        eastl::vector<PackInputFileData> packData;
+        std::vector<PackInputFileData> packData;
 
         std::filesystem::path assetDbPath = std::filesystem::path(m_buildConfig->projectPath) / getAssetsDBfolderName();
         std::filesystem::path assetsPackPath = std::filesystem::path(m_buildConfig->targetDestination) / getAssetsSubfolderDefaultName();

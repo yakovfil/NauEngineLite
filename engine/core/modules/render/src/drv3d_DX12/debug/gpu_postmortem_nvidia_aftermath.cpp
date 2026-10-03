@@ -4,7 +4,12 @@
 
 #if defined(HAS_GF_AFTERMATH)
 
-#include "drv3d_DX12/device.h"
+    #include <optional>
+    #include <span>
+    #include <string_view>
+    #include <vector>
+
+    #include "drv3d_DX12/device.h"
 
 //#include <debug/dag_logSys.h>
 //#include <json/json.h>
@@ -215,7 +220,7 @@ public:
 
   explicit operator bool() const { return nullptr != context; }
 
-  eastl::optional<GFSDK_Aftermath_GpuCrashDump_BaseInfo> getBaseInfo() const
+  std::optional<GFSDK_Aftermath_GpuCrashDump_BaseInfo> getBaseInfo() const
   {
     GFSDK_Aftermath_GpuCrashDump_BaseInfo info{};
     if (AFTHERMATH_CALL(p.getBaseInfo(context, &info)))
@@ -228,7 +233,7 @@ public:
     }
   }
 
-  eastl::optional<GFSDK_Aftermath_GpuCrashDump_DeviceInfo> getDeviceInfo() const
+  std::optional<GFSDK_Aftermath_GpuCrashDump_DeviceInfo> getDeviceInfo() const
   {
     GFSDK_Aftermath_GpuCrashDump_DeviceInfo info{};
     if (AFTHERMATH_CALL(p.getDeviceInfo(context, &info)))
@@ -241,7 +246,7 @@ public:
     }
   }
 
-  eastl::optional<GFSDK_Aftermath_GpuCrashDump_SystemInfo> getSystemInfo() const
+  std::optional<GFSDK_Aftermath_GpuCrashDump_SystemInfo> getSystemInfo() const
   {
     GFSDK_Aftermath_GpuCrashDump_SystemInfo info{};
     if (AFTHERMATH_CALL(p.getSystemInfo(context, &info)))
@@ -262,7 +267,7 @@ public:
     {
       return 0;
     }
-    eastl::vector<GFSDK_Aftermath_GpuCrashDump_GpuInfo> data;
+    std::vector<GFSDK_Aftermath_GpuCrashDump_GpuInfo> data;
     data.resize(count);
     if (!AFTHERMATH_CALL(p.getGPUInfo(context, count, data.data())))
     {
@@ -275,7 +280,7 @@ public:
     return count;
   }
 
-  eastl::optional<GFSDK_Aftermath_GpuCrashDump_PageFaultInfo> getPageFaultInfo() const
+  std::optional<GFSDK_Aftermath_GpuCrashDump_PageFaultInfo> getPageFaultInfo() const
   {
     GFSDK_Aftermath_GpuCrashDump_PageFaultInfo info{};
     if (AFTHERMATH_CALL(p.getPageFaultInfo(context, &info)))
@@ -296,7 +301,7 @@ public:
     {
       return 0;
     }
-    eastl::vector<GFSDK_Aftermath_GpuCrashDump_EventMarkerInfo> data;
+    std::vector<GFSDK_Aftermath_GpuCrashDump_EventMarkerInfo> data;
     data.resize(count);
     if (!AFTHERMATH_CALL(p.getEventMarkersInfo(context, count, data.data())))
     {
@@ -317,7 +322,7 @@ public:
     {
       return 0;
     }
-    eastl::vector<GFSDK_Aftermath_GpuCrashDump_ShaderInfo> data;
+    std::vector<GFSDK_Aftermath_GpuCrashDump_ShaderInfo> data;
     data.resize(count);
     if (!AFTHERMATH_CALL(p.getActiveShadersInfo(context, count, data.data())))
     {
@@ -494,7 +499,7 @@ void send_dump_context(T *ctx_ptr, const void *dump, const char *ext, size_t siz
 
       NAU_LOG_DEBUG("DX12: Event marker {} context id {}", index, info.contextId);
       NAU_LOG_DEBUG("DX12: Event marker {} context status {}", index, to_string(info.contextStatus));
-      NAU_LOG_DEBUG("DX12: Event marker {} '{}'", index, eastl::string_view(cp, info.markerDataSize));
+      NAU_LOG_DEBUG("DX12: Event marker {} '{}'", index, std::string_view(cp, info.markerDataSize));
     });
     meta["event-marker-count"] = eventMarkerCount;
   }
@@ -699,20 +704,19 @@ void debug::gpu_postmortem::nvidia::Aftermath::beginCommandBuffer(ID3D12Device *
 
 void debug::gpu_postmortem::nvidia::Aftermath::endCommandBuffer(ID3D12GraphicsCommandList *cmd) { commandListTable.endList(cmd); }
 
-void debug::gpu_postmortem::nvidia::Aftermath::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char>,
-  eastl::span<const char> full_path)
+void debug::gpu_postmortem::nvidia::Aftermath::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char>, std::span<const char> full_path)
 {
   auto &context = commandListTable.getList(cmd);
   api.setEventMarker(context.get(), full_path.data(), full_path.size());
 }
 
-void debug::gpu_postmortem::nvidia::Aftermath::endEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> full_path)
+void debug::gpu_postmortem::nvidia::Aftermath::endEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> full_path)
 {
   auto &context = commandListTable.getList(cmd);
   api.setEventMarker(context.get(), full_path.data(), full_path.size());
 }
 
-void debug::gpu_postmortem::nvidia::Aftermath::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_postmortem::nvidia::Aftermath::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   auto &context = commandListTable.getList(cmd);
   api.setEventMarker(context.get(), text.data(), text.size());

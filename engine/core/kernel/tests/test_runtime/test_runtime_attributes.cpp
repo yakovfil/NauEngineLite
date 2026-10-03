@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <vector>
+
 #include "nau/meta/runtime_attribute.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/type_info.h"
@@ -28,7 +31,7 @@ namespace nau::test
         struct SerializableStruct
         {
             int field1 = 1;
-            eastl::string field2 = "test";
+            std::string field2 = "test";
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(field1),
@@ -44,12 +47,12 @@ namespace nau::test
         {
         public:
             NAU_CLASS_ATTRIBUTES(
-                CLASS_ATTRIBUTE(Attrib0, eastl::string{"One"}),
+                CLASS_ATTRIBUTE(Attrib0, std::string{"One"}),
                 CLASS_ATTRIBUTE(Attrib1, 11),
                 CLASS_ATTRIBUTE(Attrib_Unnamed, 22),
                 CLASS_ATTRIBUTE(Attrib_NotRuntime, NotSerializableStruct{}),
                 CLASS_ATTRIBUTE(Attrib2, SerializableStruct{}),
-                CLASS_ATTRIBUTE(AttribTag, eastl::string{"tag_0"}))
+                CLASS_ATTRIBUTE(AttribTag, std::string{"tag_0"}))
         };
 
         class MyClass2 : public MyClass
@@ -57,7 +60,7 @@ namespace nau::test
             NAU_CLASS_BASE(MyClass)
 
             NAU_CLASS_ATTRIBUTES(
-                CLASS_ATTRIBUTE(AttribTag, eastl::string{"tag_1"}))
+                CLASS_ATTRIBUTE(AttribTag, std::string{"tag_1"}))
         };
     }  // namespace
 
@@ -113,9 +116,9 @@ namespace nau::test
         ASSERT_TRUE(container.getValue("attrib_2")->is<RuntimeObject>());
         ASSERT_TRUE(container.getValue("attrib_tag")->is<RuntimeStringValue>());
 
-        ASSERT_EQ(*runtimeValueCast<eastl::string>(container.getValue("attrib_0")), "One");
+        ASSERT_EQ(*runtimeValueCast<std::string>(container.getValue("attrib_0")), "One");
         ASSERT_EQ(*runtimeValueCast<int>(container.getValue("attrib_1")), 11);
-        ASSERT_EQ(*runtimeValueCast<eastl::string>(container.getValue("attrib_tag")), "tag_0");
+        ASSERT_EQ(*runtimeValueCast<std::string>(container.getValue("attrib_tag")), "tag_0");
         ASSERT_EQ(*runtimeValueCast<SerializableStruct>(container.getValue("attrib_2")), SerializableStruct{});
     }
 
@@ -123,11 +126,11 @@ namespace nau::test
     {
         meta::RuntimeAttributeContainer container = meta::makeRuntimeAttributeContainer<MyClass>();
 
-        const auto value_0 = container.get<Attrib0, eastl::string>().value_or("");
+        const auto value_0 = container.get<Attrib0, std::string>().value_or("");
         const auto value_1 = container.get<Attrib1, int>().value_or(0);
         const auto value_2 = container.get<Attrib2, SerializableStruct>();
-        const auto value_tag = container.get<AttribTag, eastl::string>().value_or("");
-        
+        const auto value_tag = container.get<AttribTag, std::string>().value_or("");
+
         ASSERT_TRUE(value_2);
 
         ASSERT_EQ(value_0, "One");
@@ -163,9 +166,9 @@ namespace nau::test
         auto tagValues = container.getAll<AttribTag>();
         ASSERT_EQ(tagValues.size(), 2);
 
-        eastl::vector<eastl::string> tags = {
-            *runtimeValueCast<eastl::string>(tagValues[0]),
-            *runtimeValueCast<eastl::string>(tagValues[1])};
+        std::vector<std::string> tags = {
+            *runtimeValueCast<std::string>(tagValues[0]),
+            *runtimeValueCast<std::string>(tagValues[1])};
         std::sort(tags.begin(), tags.end());
 
         ASSERT_EQ(tags[0], "tag_0");

@@ -3,7 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/utility.h>
+#include <utility>
+
+#include "nau/utils/enum_utils.h"
 
 /**
  * \brief Multiplexing allows a single run_nodes call to result in
@@ -74,6 +76,9 @@ enum class Mode : uint32_t
 };
 
 /// \brief Bitwise OR operator for combining several modes.
-inline Mode operator|(Mode a, Mode b) { return static_cast<Mode>(eastl::to_underlying(a) | eastl::to_underlying(b)); }
+inline Mode operator|(Mode a, Mode b)
+{
+    return static_cast<Mode>(nau::to_underlying(a) | nau::to_underlying(b));
+}
 
 } // namespace dabfg::multiplexing

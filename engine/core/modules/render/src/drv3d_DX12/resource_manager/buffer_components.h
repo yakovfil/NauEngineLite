@@ -3,7 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
+#include <algorithm>
+#include <tuple>
+#include <utility>
+#include <vector>
 //#include <debug/dag_log.h>
 
 #include "device_memory_class.h"
@@ -42,7 +45,7 @@ protected:
   };
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<BufferFreeWithReason> deletedBuffers;
+      std::vector<BufferFreeWithReason> deletedBuffers;
   };
   struct CompletedFrameExecutionInfo : BaseType::CompletedFrameExecutionInfo
   {
@@ -58,7 +61,7 @@ protected:
     // TODO can be derived from this pointer and properties
     BufferGlobalId resId;
     D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
-    eastl::vector<ValueRange<uint64_t>> freeRanges;
+    std::vector<ValueRange<uint64_t>> freeRanges;
 
     bool free(ValueRange<uint64_t> range)
     {
@@ -77,9 +80,10 @@ protected:
       {
         return {};
       }
-      auto ref = eastl::find_if(begin(freeRanges), end(freeRanges),
-        [size, alignment](auto range) //
-        { return (0 == (range.start % alignment)) && (range.size() >= size); });
+      auto ref = std::find_if(begin(freeRanges), end(freeRanges),
+                              [size, alignment](auto range)  //
+      { return (0 == (range.start % alignment)) && (range.size() >= size);
+      });
       if (ref == end(freeRanges))
       {
         return {};
@@ -104,96 +108,95 @@ protected:
   };
   struct BufferHeapState
   {
-    eastl::vector<Heap> bufferHeaps;
-    eastl::vector<StandbyInfo> bufferHeapDiscardStandbyList;
-    // list of buffers can be big, up to 2k, so saving the free slots should be more efficient than searching on each allocate
-    eastl::vector<uint32_t> freeBufferSlots;
+      std::vector<Heap> bufferHeaps;
+      std::vector<StandbyInfo> bufferHeapDiscardStandbyList;
+      // list of buffers can be big, up to 2k, so saving the free slots should be more efficient than searching on each allocate
+      std::vector<uint32_t> freeBufferSlots;
 
-    eastl::pair<Heap *, ValueRange<uint64_t>> tryAllocateFromReadyList(ResourceHeapProperties properties, uint64_t size,
-      D3D12_RESOURCE_FLAGS flags, uint64_t offset_alignment, bool allow_offset)
-    {
-      Heap *selectedHeap = nullptr;
-      ValueRange<uint64_t> allocationRange;
-      // Do backward search so we always use the most recently added and we have a chance to free
-      // older stuff. Also erase is a bit more efficient.
-      auto ref = eastl::find_if(rbegin(bufferHeapDiscardStandbyList), rend(bufferHeapDiscardStandbyList),
-        [this, size, flags, properties, offset_alignment, allow_offset](auto info) {
-          auto &heap = bufferHeaps[info.index];
-          if (flags != heap.flags)
-          {
-            return false;
-          }
-          auto memoryHeapID = heap.bufferMemory.getHeapID();
-          ResourceHeapProperties memoryProperties;
-          memoryProperties.raw = memoryHeapID.group;
-          if (properties != memoryProperties)
-          {
-            return false;
-          }
-          if (!allow_offset && 0 != info.range.start)
-          {
-            return false;
-          }
-          if (size != info.range.size())
-          {
-            return false;
-          }
-          if (0 != (info.range.start % offset_alignment))
-          {
-            return false;
-          }
-          return true;
-        });
-      if (rend(bufferHeapDiscardStandbyList) != ref)
+      std::pair<Heap*, ValueRange<uint64_t>> tryAllocateFromReadyList(ResourceHeapProperties properties, uint64_t size, D3D12_RESOURCE_FLAGS flags, uint64_t offset_alignment, bool allow_offset)
       {
-        selectedHeap = &bufferHeaps[ref->index];
-        allocationRange = ref->range;
-        bufferHeapDiscardStandbyList.erase(ref);
+          Heap* selectedHeap = nullptr;
+          ValueRange<uint64_t> allocationRange;
+          // Do backward search so we always use the most recently added and we have a chance to free
+          // older stuff. Also erase is a bit more efficient.
+          auto ref = std::find_if(rbegin(bufferHeapDiscardStandbyList), rend(bufferHeapDiscardStandbyList),
+                                  [this, size, flags, properties, offset_alignment, allow_offset](auto info)
+          {
+              auto& heap = bufferHeaps[info.index];
+              if (flags != heap.flags)
+              {
+                  return false;
+              }
+              auto memoryHeapID = heap.bufferMemory.getHeapID();
+              ResourceHeapProperties memoryProperties;
+              memoryProperties.raw = memoryHeapID.group;
+              if (properties != memoryProperties)
+              {
+                  return false;
+              }
+              if (!allow_offset && 0 != info.range.start)
+              {
+                  return false;
+              }
+              if (size != info.range.size())
+              {
+                  return false;
+              }
+              if (0 != (info.range.start % offset_alignment))
+              {
+                  return false;
+              }
+              return true;
+          });
+          if (rend(bufferHeapDiscardStandbyList) != ref)
+          {
+              selectedHeap = &bufferHeaps[ref->index];
+              allocationRange = ref->range;
+              bufferHeapDiscardStandbyList.erase(std::next(ref).base());
+          }
+          return {selectedHeap, allocationRange};
       }
-      return {selectedHeap, allocationRange};
-    }
 
-    eastl::pair<Heap *, ValueRange<uint64_t>> trySuballocateFromExistingHeaps(ResourceHeapProperties properties, uint64_t size,
-      D3D12_RESOURCE_FLAGS flags, uint32_t offset_alignment)
-    {
-      Heap *selectedHeap = nullptr;
-      ValueRange<uint64_t> allocationRange;
-      for (auto &heap : bufferHeaps)
+      std::pair<Heap*, ValueRange<uint64_t>> trySuballocateFromExistingHeaps(ResourceHeapProperties properties, uint64_t size, D3D12_RESOURCE_FLAGS flags, uint32_t offset_alignment)
       {
-        if (!heap)
-        {
-          continue;
-        }
-        if (!heap.canSubAllocateFrom())
-        {
-          continue;
-        }
-        if (heap.flags != flags)
-        {
-          continue;
-        }
-        auto memoryHeapID = heap.bufferMemory.getHeapID();
-        if (memoryHeapID.isAlias)
-        {
-          continue;
-        }
-        ResourceHeapProperties memoryProperties;
-        memoryProperties.raw = memoryHeapID.group;
-        if (memoryProperties != properties)
-        {
-          continue;
-        }
-        auto range = heap.allocate(size, offset_alignment);
-        if (range.empty())
-        {
-          continue;
-        }
-        selectedHeap = &heap;
-        allocationRange = range;
-        break;
+          Heap* selectedHeap = nullptr;
+          ValueRange<uint64_t> allocationRange;
+          for (auto& heap : bufferHeaps)
+          {
+              if (!heap)
+              {
+                  continue;
+              }
+              if (!heap.canSubAllocateFrom())
+              {
+                  continue;
+              }
+              if (heap.flags != flags)
+              {
+                  continue;
+              }
+              auto memoryHeapID = heap.bufferMemory.getHeapID();
+              if (memoryHeapID.isAlias)
+              {
+                  continue;
+              }
+              ResourceHeapProperties memoryProperties;
+              memoryProperties.raw = memoryHeapID.group;
+              if (memoryProperties != properties)
+              {
+                  continue;
+              }
+              auto range = heap.allocate(size, offset_alignment);
+              if (range.empty())
+              {
+                  continue;
+              }
+              selectedHeap = &heap;
+              allocationRange = range;
+              break;
+          }
+          return {selectedHeap, allocationRange};
       }
-      return {selectedHeap, allocationRange};
-    }
 
     BufferGlobalId adoptBufferHeap(Heap &&heap)
     {
@@ -202,14 +205,14 @@ protected:
       {
         heap.resId = BufferGlobalId{static_cast<uint32_t>(bufferHeaps.size())};
         result = heap.resId;
-        bufferHeaps.push_back(eastl::move(heap));
+        bufferHeaps.push_back(std::move(heap));
       }
       else
       {
         heap.resId = BufferGlobalId{freeBufferSlots.back()};
         freeBufferSlots.pop_back();
         result = heap.resId;
-        bufferHeaps[result.index()] = eastl::move(heap);
+        bufferHeaps[result.index()] = std::move(heap);
       }
       return result;
     }
@@ -273,7 +276,7 @@ protected:
       newHeap.freeRanges.push_back(make_value_range<uint64_t>(0, allocation_size));
       newHeap.flags = flags;
 
-      result = adoptBufferHeap(eastl::move(newHeap));
+      result = adoptBufferHeap(std::move(newHeap));
 
       nau::string str;
       if (!name)
@@ -431,7 +434,7 @@ public:
     if (nextDiscardIndex < to_discared.discardCount)
     {
       // move to result for simpler later handling and RVO
-      result = eastl::move(to_discared);
+      result = std::move(to_discared);
       // advance discard index
       result.currentDiscardIndex = nextDiscardIndex;
 
@@ -493,7 +496,7 @@ public:
           }
         }
 
-        freeBufferOnFrameCompletion(eastl::move(to_discared), freeReason, true);
+        freeBufferOnFrameCompletion(std::move(to_discared), freeReason, true);
 
         if (!isOptimizedDiscard)
         {
@@ -506,10 +509,10 @@ public:
       }
       else
       {
-        result = eastl::move(to_discared);
-        // only case when create buffer fails if when an error happened and we need to reset
-        // start over on the same buffer to keep everything from crashing
-        result.currentDiscardIndex = 0;
+          result = std::move(to_discared);
+          // only case when create buffer fails if when an error happened and we need to reset
+          // start over on the same buffer to keep everything from crashing
+          result.currentDiscardIndex = 0;
       }
     }
     if (0 == result.fistDiscardFrame)
@@ -598,14 +601,14 @@ public:
 
       auto bufferHeapStateAccess = bufferHeapState.access();
       // First try to allocate from ready list
-      eastl::tie(selectedHeap, allocationRange) =
-        bufferHeapStateAccess->tryAllocateFromReadyList(heapProperties, payloadSize, flags, offsetAlignment, true);
+      std::tie(selectedHeap, allocationRange) =
+          bufferHeapStateAccess->tryAllocateFromReadyList(heapProperties, payloadSize, flags, offsetAlignment, true);
 
       // Second try to allocate from existing heaps
       if (!selectedHeap)
       {
-        eastl::tie(selectedHeap, allocationRange) =
-          bufferHeapStateAccess->trySuballocateFromExistingHeaps(heapProperties, payloadSize, flags, offsetAlignment);
+          std::tie(selectedHeap, allocationRange) =
+              bufferHeapStateAccess->trySuballocateFromExistingHeaps(heapProperties, payloadSize, flags, offsetAlignment);
       }
 
       // Third create a new heap
@@ -698,8 +701,8 @@ public:
       {
         auto bufferHeapStateAccess = bufferHeapState.access();
 
-        eastl::tie(selectedHeap, allocationRange) =
-          bufferHeapStateAccess->tryAllocateFromReadyList(heapProperties, totalSize, flags, offsetAlignment, false);
+        std::tie(selectedHeap, allocationRange) =
+            bufferHeapStateAccess->tryAllocateFromReadyList(heapProperties, totalSize, flags, offsetAlignment, false);
 
         if (!selectedHeap)
         {
@@ -768,10 +771,13 @@ public:
   void doFreeBufferOnFrameCompletion(BufferState &&buffer, FreeReason free_reason)
   {
     BufferFreeWithReason info;
-    info.buffer = eastl::move(buffer);
+    info.buffer = std::move(buffer);
     info.freeReason = free_reason;
     accessRecodingPendingFrameCompletion<PendingForCompletedFrameData>(
-      [&](auto &data) { data.deletedBuffers.push_back(eastl::move(info)); });
+        [&](auto& data)
+    {
+        data.deletedBuffers.push_back(std::move(info));
+    });
   }
 
 public:
@@ -783,18 +789,18 @@ public:
     {
       auto bufferHeapStateAccess = bufferHeapState.access();
       bufferHeapStateAccess->bufferHeapDiscardStandbyList.erase(
-        eastl::remove_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-          end(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-          [&memoryFreedSize, &bufferHeapStateAccess, this, pi = info.progressIndex](auto info) //
+          std::remove_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                         end(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                         [&memoryFreedSize, &bufferHeapStateAccess, this, pi = info.progressIndex](auto info)  //
+      {
+          if (info.progress + standby_max_progress_age > pi)
           {
-            if (info.progress + standby_max_progress_age > pi)
-            {
               return false;
-            }
-            memoryFreedSize += bufferHeapStateAccess->freeBufferHeap(this, info.index, info.range, "<ready list>");
-            return true;
-          }),
-        end(bufferHeapStateAccess->bufferHeapDiscardStandbyList));
+          }
+          memoryFreedSize += bufferHeapStateAccess->freeBufferHeap(this, info.index, info.range, "<ready list>");
+          return true;
+      }),
+          end(bufferHeapStateAccess->bufferHeapDiscardStandbyList));
 
       char strBuf[MAX_OBJECT_NAME_LENGTH];
       for (auto &&freeInfo : data.deletedBuffers)
@@ -839,9 +845,12 @@ public:
         continue;
       }
       bool isDiscardReady =
-        end(bufferHeapStateAccess->bufferHeapDiscardStandbyList) !=
-        eastl::find_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
-          end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), [id = buf.resId.index()](auto info) { return info.index == id; });
+          end(bufferHeapStateAccess->bufferHeapDiscardStandbyList) !=
+          std::find_if(begin(bufferHeapStateAccess->bufferHeapDiscardStandbyList),
+                       end(bufferHeapStateAccess->bufferHeapDiscardStandbyList), [id = buf.resId.index()](auto info)
+      {
+          return info.index == id;
+      });
 
       clb(get_resource_name(buf.buffer.Get(), resnameBuffer), buf.bufferMemory.size(), buf.bufferMemory.size(), isDiscardReady);
     }
@@ -851,7 +860,7 @@ public:
   {
     if (is_still_valid)
     {
-      doFreeBufferOnFrameCompletion(eastl::move(buffer), free_reason);
+        doFreeBufferOnFrameCompletion(std::move(buffer), free_reason);
     }
     else
     {
@@ -859,7 +868,7 @@ public:
       // Have to hold the access until enqueue is done, otherwise we may do it while the buffer table is reset.
       if (access->isValidBuffer(buffer))
       {
-        doFreeBufferOnFrameCompletion(eastl::move(buffer), free_reason);
+          doFreeBufferOnFrameCompletion(std::move(buffer), free_reason);
       }
     }
   }

@@ -5,6 +5,8 @@
 
 #include <daECS/utility/enum_registration.h>
 
+#include <string_view>
+
 namespace ecs
 {
 struct EnumLoaderDesc
@@ -16,7 +18,7 @@ struct EnumLoaderDesc
   component_type_t compType = 0;
 };
 
-const EnumLoaderDesc *find_enum_description(eastl::string_view tp_name);
+const EnumLoaderDesc* find_enum_description(std::string_view tp_name);
 
 bool is_type_ecs_enum(const char *type_name);
 

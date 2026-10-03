@@ -1,19 +1,19 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/module/module_manager.h"
 
-#include <EASTL/map.h>
-
 #include <filesystem>
+#include <map>
+#include <memory>
+#include <string>
 
 #include "nau/io/file_system.h"
 #include "nau/memory/singleton_memop.h"
 #include "nau/module/internal/module_entry.h"
 #include "nau/module/module.h"
 #if !defined(NAU_STATIC_RUNTIME)
-#include "nau/platform/windows/diag/win_error.h"
+    #include "nau/platform/windows/diag/win_error.h"
 #endif
 #include "nau/string/hash_string.h"
 #include "nau/string/string_conv.h"
@@ -64,7 +64,7 @@ namespace nau
             }
         }
 
-        void registerModule(const char* moduleName, eastl::shared_ptr<::nau::IModule> inModule) override
+        void registerModule(const char* moduleName, std::shared_ptr<::nau::IModule> inModule) override
         {
             lock_(m_mutex);
 
@@ -94,7 +94,7 @@ namespace nau
             return moduleRegistry.count(moduleName);
         }
 
-        eastl::shared_ptr<IModule> getModule(nau::hash_string moduleName) override
+        std::shared_ptr<IModule> getModule(nau::hash_string moduleName) override
         {
             lock_(m_mutex);
 
@@ -105,7 +105,7 @@ namespace nau
             return entry.iModule;
         }
 
-        eastl::shared_ptr<IModule> getModuleInitialized(nau::hash_string moduleName) override
+        std::shared_ptr<IModule> getModuleInitialized(nau::hash_string moduleName) override
         {
             lock_(m_mutex);
 
@@ -136,7 +136,7 @@ namespace nau
                 return ResultSuccess;
             }
 
-            eastl::wstring dllWStringPath = strings::utf8ToWString(dllPath);
+            std::wstring dllWStringPath = strings::utf8ToWString(dllPath);
 
             HMODULE hmodule = GetModuleHandleW(dllWStringPath.c_str());
             if (!hmodule)
@@ -147,7 +147,6 @@ namespace nau
                     const auto errCode = diag::getAndResetLastErrorCode();
                     NAU_LOG_ERROR("Fail to load library ({}) with error:()", dllPath, diag::getWinErrorMessageA(errCode));
                     return NauMakeError("Fail to load library ({})({}):({})", dllPath.tostring(), errCode, diag::getWinErrorMessageA(errCode));
-                    
                 }
             }
 
@@ -163,7 +162,7 @@ namespace nau
                 return NauMakeError("Module does not export 'createModule' function");
             }
 
-            eastl::shared_ptr<IModule> iModule = eastl::shared_ptr<IModule>(createModuleFuncPtr());
+            std::shared_ptr<IModule> iModule = std::shared_ptr<IModule>(createModuleFuncPtr());
             if (!iModule)
             {
                 NAU_LOG_ERROR("Invalid module object, module:({})", dllPath);
@@ -226,7 +225,7 @@ namespace nau
             }
         }
 
-        eastl::map<nau::hash_string, ModuleEntry> moduleRegistry;
+        std::map<nau::hash_string, ModuleEntry> moduleRegistry;
         std::mutex m_mutex;
         bool m_needInitializeNewModules = false;
 
@@ -236,7 +235,7 @@ namespace nau
 
     IModuleManager::Ptr createModuleManager()
     {
-        return eastl::make_unique<ModuleManagerImpl>();
+        return std::make_unique<ModuleManagerImpl>();
     }
 
     IModuleManager& getModuleManager()

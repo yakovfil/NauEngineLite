@@ -3,18 +3,15 @@
 
 #pragma once
 
-#include <EASTL/variant.h>
-
 #include <shared_mutex>
-
-#include "camera/internal_camera_properties.h"
+#include <variant>
 
 #include "camera/detached_camera.h"
+#include "camera/internal_camera_properties.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/weak_ptr.h"
 #include "nau/scene/camera/camera.h"
 #include "nau/scene/nau_object.h"
-
 
 namespace nau::scene
 {
@@ -35,7 +32,7 @@ namespace nau::scene
     private:
         using SceneCameraWeakRef = ObjectWeakRef<ICameraControl>;
         using DetachedCameraWeakRef = nau::WeakPtr<DetachedCamera>;
-        using CameraReference = eastl::variant<SceneCameraWeakRef, DetachedCameraWeakRef>;
+        using CameraReference = std::variant<SceneCameraWeakRef, DetachedCameraWeakRef>;
 
         std::shared_mutex m_mutex;
         CameraReference m_cameraReference;

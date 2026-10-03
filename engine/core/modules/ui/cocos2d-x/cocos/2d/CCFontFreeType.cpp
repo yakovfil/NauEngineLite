@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include "2d/CCFontFreeType.h"
 #include FT_BBOX_H
 #include "edtaa3func.h"
@@ -215,7 +216,7 @@ FontAtlas * FontFreeType::createFontAtlas()
         _fontAtlas = new (std::nothrow) FontAtlas(*this);
         if (_fontAtlas && _usedGlyphs != GlyphCollection::DYNAMIC)
         {
-            eastl::u32string utf32 = nau::string{getGlyphCollection()}.tou32string();
+            std::u32string utf32 = nau::string{getGlyphCollection()}.tou32string();
             _fontAtlas->prepareLetterDefinitions(utf32);
         }
 //        this->autorelease();
@@ -224,7 +225,7 @@ FontAtlas * FontFreeType::createFontAtlas()
     return _fontAtlas;
 }
 
-int * FontFreeType::getHorizontalKerningForTextUTF32(const eastl::u32string& text, int &outNumLetters) const
+int * FontFreeType::getHorizontalKerningForTextUTF32(const std::u32string& text, int &outNumLetters) const
 {
     if (!_fontRef)
         return nullptr;

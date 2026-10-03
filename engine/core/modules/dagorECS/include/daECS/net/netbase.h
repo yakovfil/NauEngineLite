@@ -1,17 +1,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <daECS/core/entityId.h>
 #include <daECS/core/component.h>
-#include "connid.h"
-#include "scope_query_cb.h"
-#include <daNet/daNetEchoManager.h> // for EchoResponse
-#include <daNet/packetPriority.h>
+#include <daECS/core/entityId.h>
+#include <daNet/daNetEchoManager.h>  // for EchoResponse
 #include <daNet/daNetTypes.h>
 #include <daNet/disconnectionCause.h>
-#include <generic/dag_tab.h>
+#include <daNet/packetPriority.h>
 #include <generic/dag_enumBitMask.h>
+#include <generic/dag_tab.h>
 
+#include <optional>
+
+#include "connid.h"
+#include "scope_query_cb.h"
 
 namespace danet
 {
@@ -113,7 +115,10 @@ public:
   virtual ~INetDriver() {}
   virtual void destroy() { delete this; }
   virtual bool connect(const char * /*connecturl*/, uint16_t /*protov*/) { return false; }
-  virtual eastl::optional<danet::EchoResponse> receiveEchoResponse() { return eastl::nullopt; }
+  virtual std::optional<danet::EchoResponse> receiveEchoResponse()
+  {
+      return std::nullopt;
+  }
   virtual Packet *receive(int cur_time_ms) = 0;
   virtual void free(Packet *pkt) = 0;
   virtual void shutdown(int wait_time_ms) = 0;

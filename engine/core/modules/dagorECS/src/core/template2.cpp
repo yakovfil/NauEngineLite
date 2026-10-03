@@ -1,17 +1,25 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
+#include <ctype.h>
+#include <daECS/core/entityManager.h>
 #include <daECS/core/template.h>
-#include <daECS/core/entityManager.h>
-#include <daECS/core/entityManager.h>
 #include <nau/utils/mum_hash.h>
 #include <string.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/fixed_string.h>
-#include <ctype.h>
-#include "tokenize_const_string.h"
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_string.h"
+#include "nau/utils/sorted_vector.h"
 #include "singletonName.h"
+#include "tokenize_const_string.h"
 
 namespace ecs
 {
@@ -25,17 +33,18 @@ inline void combine_hash(To &to, From b)
 #define TAG_SEP              ", "
 #define TEMPL_CONCAT_SEP_STR "+"
 
-bool filter_needed(const char *filter_tags, const ska::flat_hash_set<eastl::string> &valid_tags)
+bool filter_needed(const char* filter_tags, const ska::flat_hash_set<std::string>& valid_tags)
 {
   if (!filter_tags || !*filter_tags)
     return true;
-  return tokenize_const_string(filter_tags, TAG_SEP, [&](eastl::string_view tag) {
-    static constexpr int MAX_TAG = 128;
-    eastl::fixed_string<char, MAX_TAG> tagName(tag.data(), tag.length());
-    NAU_ASSERT(tag.length() < MAX_TAG);
-    if (valid_tags.find_as(tagName.c_str()) == valid_tags.end())
-      return false;
-    return true;
+  return tokenize_const_string(filter_tags, TAG_SEP, [&](std::string_view tag)
+  {
+      static constexpr int MAX_TAG = 128;
+      nau::InlineString<char, MAX_TAG> tagName(tag.data(), tag.length());
+      NAU_ASSERT(tag.length() < MAX_TAG);
+      if (valid_tags.find_as(tagName.c_str()) == valid_tags.end())
+          return false;
+      return true;
   });
 };
 
@@ -44,7 +53,10 @@ bool filter_needed(const char *filter_tags, const TagsSet &valid_tags)
   if (!filter_tags || !*filter_tags)
     return true;
   return tokenize_const_string(filter_tags, TAG_SEP,
-    [&](eastl::string_view tag) { return valid_tags.find(ecs_hash(tag)) != valid_tags.end(); });
+                               [&](std::string_view tag)
+  {
+      return valid_tags.find(ecs_hash(tag)) != valid_tags.end();
+  });
 };
 
 
@@ -96,7 +108,7 @@ inline bool fast_isalnum_or_(char c_)
   unsigned char c = (unsigned char)c_;
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9');
 }
-static inline bool validate_template_name(const eastl::string_view &tname)
+static inline bool validate_template_name(const std::string_view& tname)
 {
   if (tname.empty())
     return false;
@@ -111,7 +123,7 @@ static inline bool validate_template_name(const eastl::string_view &tname)
 }
 bool TemplateDB::is_valid_template_name(const char *n, size_t nlen)
 {
-  return n && validate_template_name(eastl::string_view(n, nlen));
+    return n && validate_template_name(std::string_view(n, nlen));
 }
 
 Template::template_hash_t Template::buildHash() const
@@ -131,31 +143,33 @@ Template::template_hash_t Template::buildHash() const
 void Template::buildSets(const component_set &tracked_set, const component_set &replicated_set,
   const component_set &ignored_initial_repl)
 {
-  sets = eastl::make_unique<component_t[]>(tracked_set.size() + replicated_set.size() + ignored_initial_repl.size());
-  trackedCount = tracked_set.size();
-  replicatedCount = replicated_set.size();
-  ignoredCount = ignored_initial_repl.size();
-  memcpy(sets.get() + trackedOfs(), tracked_set.data(), trackedCount * sizeof(component_t));
-  memcpy(sets.get() + replicatedOfs(), replicated_set.data(), replicatedCount * sizeof(component_t));
-  memcpy(sets.get() + ignoredOfs(), ignored_initial_repl.data(), ignoredCount * sizeof(component_t));
-  localFlags &= ~FLAG_REPLICATED_OR_TRACKED;
-  localFlags |= (trackedSet().empty() ? 0 : FLAG_CHANGE_EVENT) | (replicatedSet().empty() ? 0 : FLAG_REPLICATED);
+    sets = std::make_unique<component_t[]>(tracked_set.size() + replicated_set.size() + ignored_initial_repl.size());
+    trackedCount = tracked_set.size();
+    replicatedCount = replicated_set.size();
+    ignoredCount = ignored_initial_repl.size();
+    memcpy(sets.get() + trackedOfs(), tracked_set.data(), trackedCount * sizeof(component_t));
+    memcpy(sets.get() + replicatedOfs(), replicated_set.data(), replicatedCount * sizeof(component_t));
+    memcpy(sets.get() + ignoredOfs(), ignored_initial_repl.data(), ignoredCount * sizeof(component_t));
+    localFlags &= ~FLAG_REPLICATED_OR_TRACKED;
+    localFlags |= (trackedSet().empty() ? 0 : FLAG_CHANGE_EVENT) | (replicatedSet().empty() ? 0 : FLAG_REPLICATED);
 }
 
-Template::Template(const char *tname, ComponentsMap &&amap, component_set &&tracked_set, component_set &&replicated_set,
-  component_set &&ignored_initial_repl, bool singleton_, const char *path_ /*= ""*/) :
-  name(tname),
-  components(eastl::move(amap))
+Template::Template(const char* tname, ComponentsMap&& amap, component_set&& tracked_set, component_set&& replicated_set, component_set&& ignored_initial_repl, bool singleton_, const char* path_ /*= ""*/) :
+    name(tname),
+    components(std::move(amap))
 #if NAU_DEBUG
-  ,
-  path(path_)
+    ,
+    path(path_)
 #endif
 {
 #if NAU_DEBUG
   auto checkSet = [&](const char *n, const component_set &s) {
     for (auto t : s)
     {
-      if (components.end() == eastl::find_if(components.begin(), components.end(), [&](auto &c) { return c.first == t; }))
+        if (components.end() == std::find_if(components.begin(), components.end(), [&](auto& c)
+        {
+            return c.first == t;
+        }))
         {
             logerr("{} component (0x{}) in template <{}> is not in it's component's list", n, t, tname);
         }
@@ -181,8 +195,8 @@ Template::~Template() = default;
 Template::Template(const Template &t)
 {
   const int setsNum = t.trackedCount + t.replicatedCount + t.ignoredCount;
-  sets = eastl::make_unique<component_t[]>(setsNum);
-  eastl::copy(t.sets.get(), t.sets.get() + setsNum, sets.get());
+  sets = std::make_unique<component_t[]>(setsNum);
+  std::copy(t.sets.get(), t.sets.get() + setsNum, sets.get());
   parents = t.parents;
   name = t.name;
 #if NAU_DEBUG
@@ -231,15 +245,15 @@ void Template::setParentsInternal(const uint32_t *pb, const uint32_t *pe)
 
 void TemplateDB::push_back(Template &&templ)
 {
-  templates.emplace_back(eastl::move(templ)).resolveFlags(*this);
-  instantiatedTemplates.push_back();
+    templates.emplace_back(std::move(templ)).resolveFlags(*this);
+    instantiatedTemplates.emplace_back();
 }
 
 template_t TemplateDB::getInstantiatedTemplateByName(const char *name) const
 {
   const int id = getTemplateIdByName(name);
-  if (EASTL_UNLIKELY(id == -1))
-    return ecs::INVALID_TEMPLATE_INDEX;
+  if (NAU_UNLIKELY(id == -1))
+      return ecs::INVALID_TEMPLATE_INDEX;
   return instantiatedTemplates[id].t;
 }
 
@@ -247,37 +261,38 @@ int TemplateDB::buildTemplateIdByName(const char *name_)
 {
   HashedLenConstString name = ECS_HASHLEN_SLOW(name_);
   int id = getTemplateIdByName(name);
-  if (EASTL_LIKELY(id != -1)) // likely
-    return id;
+  if (NAU_LIKELY(id != -1))  // likely
+      return id;
   // Template not exist -> try build new one (if name is compound)
-  eastl::vector<char, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> copyName;
+  std::vector<char, std::allocator<char>> copyName;
   copyName.reserve(name.len + 1);
-  eastl::vector<uint32_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> parents;
+  std::vector<uint32_t, std::allocator<uint32_t>> parents;
   // Template not exist -> try build new one (if name is compound)
-  if (!tokenize_const_string(name_, TEMPL_CONCAT_SEP_STR, [&](eastl::string_view str1) {
-        const int it = templatesIds.getNameId(str1.data(), str1.size());
-        if (it == -1)
-        {
+  if (!tokenize_const_string(name_, TEMPL_CONCAT_SEP_STR, [&](std::string_view str1)
+  {
+      const int it = templatesIds.getNameId(str1.data(), str1.size());
+      if (it == -1)
+      {
           logerr("Can't find template '%.*s' while building compound template '{}'", str1.length(), str1.data(), name_);
           return false;
-        }
-        if (str1.data() == name.str && str1.size() == name.len) // not a compound
+      }
+      if (str1.data() == name.str && str1.size() == name.len)  // not a compound
           return false;
-        for (const uint32_t parentId : parents)
-        {
+      for (const uint32_t parentId : parents)
+      {
           if (parentId == it)
           {
-            logerr("Ignore duplicate parent <%.*s> while building compound template <{}>", str1.data(), str1.length(), name_);
-            return true;
+              logerr("Ignore duplicate parent <%.*s> while building compound template <{}>", str1.data(), str1.length(), name_);
+              return true;
           }
-        }
-        if (!copyName.empty())
+      }
+      if (!copyName.empty())
           copyName.push_back(TEMPL_CONCAT_SEP_STR[0]);
-        copyName.insert(copyName.end(), str1.data(), str1.data() + str1.size());
-        parents.insert(parents.begin(), (uint32_t)it); // 'parents' are reversed so first one in array is last one in data decl
-        return true;
-      }))
-    return -1;
+      copyName.insert(copyName.end(), str1.data(), str1.data() + str1.size());
+      parents.insert(parents.begin(), (uint32_t)it);  // 'parents' are reversed so first one in array is last one in data decl
+      return true;
+  }))
+      return -1;
 
   if (copyName.size() != name.len) // we better have compounds->actual templates resolution (where leaves are 1->1), rather than use
                                    // naming. still works
@@ -293,7 +308,7 @@ int TemplateDB::buildTemplateIdByName(const char *name_)
   id = templatesIds.addNameId(name.str, name.len, name.hash);
   newTemplate.name = templatesIds.getName(id);
   DAECS_EXT_ASSERT(id == templates.size());
-  push_back(eastl::move(newTemplate));
+  push_back(std::move(newTemplate));
   return id;
 }
 
@@ -313,7 +328,7 @@ static bool get_parents(const TemplatesData &db, Container &to, Template *templ,
       }
       to.push_back((uint32_t)parent);
     }
-    eastl::reverse(to.begin(), to.end()); // last parent is overwriting previous one
+    std::reverse(to.begin(), to.end());  // last parent is overwriting previous one
   }
   return true;
 }
@@ -375,7 +390,7 @@ bool Template::calcValidDependencies(const TemplatesData &db) const
     ret &= hasAll;
   };
 
-  size_t id = this - db.begin();
+  size_t id = this - std::to_address(db.begin());
   NAU_ASSERT_RETURN(id < db.size() || this->getParents().empty(), false);
 
   bool ret = true;
@@ -416,7 +431,7 @@ bool Template::reportInvalidDependencies(const TemplatesData &db) const
     }
   };
 
-  size_t id = this - db.begin();
+  size_t id = this - std::to_address(db.begin());
   NAU_ASSERT_RETURN(id < db.size() || this->getParents().empty(), false);
   db.iterate_parents(
     id, [&](uint32_t t) { return ret && !db.getTemplateRefById(t).canInstantiate(); }, // no sense to iterate over templates that can
@@ -446,8 +461,8 @@ TemplateDB::AddResult TemplateDB::addTemplateWithParents(Template &&templ, uint3
       return AR_OK;
     if (templ.parents.size() != existingTempl->parents.size())
       return AR_DUP;
-    if (!eastl::equal(templ.parents.begin(), templ.parents.end(), existingTempl->parents.begin()))
-      return AR_DUP;
+    if (!std::equal(templ.parents.begin(), templ.parents.end(), existingTempl->parents.begin()))
+        return AR_DUP;
     if (!existingTempl->isEqual(templ))
       return AR_DUP;
     return AR_OK;
@@ -460,7 +475,7 @@ TemplateDB::AddResult TemplateDB::addTemplateWithParents(Template &&templ, uint3
   templ.path = pathNames.getName(pathNames.addNameId(templ.path));
 #endif
   DAECS_EXT_ASSERT(id == templates.size());
-  push_back(eastl::move(templ));
+  push_back(std::move(templ));
   templates[id].resolveFlags(*this);
   return AR_OK;
 }
@@ -469,14 +484,14 @@ TemplateDB::AddResult TemplateDB::addTemplate(Template &&templ, nau::ConstSpan<c
 {
   if (pnames)
   {
-    eastl::vector<uint32_t> pars;/* framemem_allocator TODO Allocators.*/ 
-    if (!get_parents(*this, pars, &templ, pnames))
-      return AR_UNKNOWN_PARENT;
-    templ.setParentsInternal(pars.begin(), pars.end());
+      std::vector<uint32_t> pars; /* framemem_allocator TODO Allocators.*/
+      if (!get_parents(*this, pars, &templ, pnames))
+          return AR_UNKNOWN_PARENT;
+      templ.setParentsInternal(pars.data(), pars.data() + pars.size());
   }
   else
     templ.parents.clear();
-  return addTemplateWithParents(eastl::move(templ), tag);
+  return addTemplateWithParents(std::move(templ), tag);
 }
 
 TemplateDB::AddResult TemplateDB::addTemplate(Template &&templ, nau::ConstSpan<template_t> parentIds, uint32_t tag)
@@ -489,24 +504,24 @@ TemplateDB::AddResult TemplateDB::addTemplate(Template &&templ, nau::ConstSpan<t
           templ.parents.push_back(parent);
       }
   }
-  return addTemplateWithParents(eastl::move(templ), tag);
+  return addTemplateWithParents(std::move(templ), tag);
 }
 
 void TemplateRefs::emplace(Template &&t, Template::ParentsList &&parents)
 {
-  t.parents = eastl::move(parents);
-  int nid = templatesIds.getNameId(t.getName());
-  if (nid < 0)
-  {
-    nid = templatesIds.addNameId(t.getName());
-    NAU_ASSERT(nid == templates.size());
-    templates.emplace_back(eastl::move(t));
-  }
+    t.parents = std::move(parents);
+    int nid = templatesIds.getNameId(t.getName());
+    if (nid < 0)
+    {
+        nid = templatesIds.addNameId(t.getName());
+        NAU_ASSERT(nid == templates.size());
+        templates.emplace_back(std::move(t));
+    }
   else
   {
     NAU_ASSERT(emptyCount > 0);
     emptyCount--;
-    templates[nid] = eastl::move(t);
+    templates[nid] = std::move(t);
   }
 #if NAU_DEBUG
   for (size_t i = 0, e = templates.size(); i != e; ++i)
@@ -524,7 +539,7 @@ void TemplateRefs::amend(Template &&templ, Template::ParentsList &&parentNameIds
   auto eit = find(templ.getName());
   if (eit == end() || !eit->isValid())
   {
-    emplace(eastl::move(templ), eastl::move(parentNameIds));
+      emplace(std::move(templ), std::move(parentNameIds));
   }
   else
   {
@@ -538,7 +553,7 @@ void TemplateRefs::amend(Template &&templ, Template::ParentsList &&parentNameIds
     eit->buildSets(tracked, replicated, ignored);
     eit->localFlags |= templ.localFlags;
     for (auto &&c : templ.components)
-      eit->components[c.first] = eastl::move(c.second);
+        eit->components[c.first] = std::move(c.second);
     eit->setInstantiatable(eit->calcValidDependencies(*this));
   }
 }
@@ -553,7 +568,7 @@ void TemplateRefs::amend(TemplateRefs &&overrides)
       continue;
     for (auto &p : templ.parents)
       p = ensureTemplate(overrides.templatesIds.getName(p));
-    amend(eastl::move(templ), eastl::move(templ.parents));
+    amend(std::move(templ), std::move(templ.parents));
   }
 }
 
@@ -567,7 +582,7 @@ uint32_t TemplateRefs::pushEmpty(const char *n)
 
   uint32_t nid = templatesIds.addNameId(n);
   NAU_ASSERT(nid == templates.size());
-  templates.emplace_back(eastl::move(t));
+  templates.emplace_back(std::move(t));
   return nid;
 }
 
@@ -583,10 +598,10 @@ bool TemplateRefs::isTopoSorted() const
 void TemplateRefs::topoSort()
 {
   FRAMEMEM_REGION;
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> temp(templates.size()), perm(templates.size());
-  eastl::vector<uint32_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> order;
+  nau::DynamicBitVector<> temp(templates.size()), perm(templates.size());
+  std::vector<uint32_t, std::allocator<uint32_t>> order;
   order.reserve(templates.size());
-  eastl::vector<uint32_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> remap;
+  std::vector<uint32_t, std::allocator<uint32_t>> remap;
   remap.resize(templates.size(), ~0u);
   for (uint32_t i = 0, sz = templates.size(); i < sz; ++i)
     if (!templates[i].isValid())
@@ -636,10 +651,10 @@ void TemplateRefs::topoSort()
       }
     }
     t.name = newTemplatesIds.getName(newTemplates.size());
-    newTemplates.emplace_back(eastl::move(templates[i]));
+    newTemplates.emplace_back(std::move(templates[i]));
   }
-  eastl::swap(templates, newTemplates);
-  eastl::swap(templatesIds, newTemplatesIds);
+  std::swap(templates, newTemplates);
+  std::swap(templatesIds, newTemplatesIds);
   emptyCount = 0; // we cleaned empty as well
 }
 
@@ -648,7 +663,7 @@ void TemplateRefs::resolveBroken()
   if (getEmptyCount() == 0)
     return;
   // we have to fix all of them
-  eastl::vector_set<uint32_t, eastl::less<uint32_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> broken;
+  nau::SortedVectorSet<uint32_t, std::less<uint32_t>, std::allocator<uint32_t>> broken;
   for (uint32_t i = 0, e = templates.size(); i < e; ++i)
     if (!templates[i].isValid())
       broken.emplace(i);
@@ -709,12 +724,12 @@ void TemplateRefs::finalize(uint32_t tag)
 #if 0
         if (getComponentName(c.first) && strstr(getComponentName(c.first), "."))
         {
-          eastl::string str = getComponentName(c.first);
+          std::string str = getComponentName(c.first);
           for (size_t index = 0;;index++)
           {
              /* Locate the substring to replace. */
              index = str.find(".", index);
-             if (index == eastl::string::npos)
+             if (index == std::string::npos)
                break;
              str.replace(index, 1, "_");
           }
@@ -756,7 +771,7 @@ void TemplateDB::addTemplates(TemplateRefs &trefs, uint32_t tag)
   if (trefs.getEmptyCount() == 0 && templates.empty())
   {
     ECS_LOG("fast path of templates move");
-    ((TemplatesData &)*this) = eastl::move((TemplatesData &&) trefs);
+    ((TemplatesData&)*this) = std::move((TemplatesData&&)trefs);
     instantiatedTemplates.resize(templates.size());
   }
   else
@@ -765,7 +780,7 @@ void TemplateDB::addTemplates(TemplateRefs &trefs, uint32_t tag)
     const uint32_t start = templates.size();
     templates.reserve(trefs.size() + start);
     instantiatedTemplates.reserve(templates.size());
-    eastl::vector<uint32_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> remap;
+    std::vector<uint32_t, std::allocator<uint32_t>> remap;
     if (trefs.getEmptyCount() != 0)
       remap.resize(trefs.size());
 
@@ -785,7 +800,7 @@ void TemplateDB::addTemplates(TemplateRefs &trefs, uint32_t tag)
         DAECS_EXT_ASSERT(p < i + start); // ensure toposorting
       }
 
-      AddResult ar = addTemplateWithParents(eastl::move(tref), tag);
+      AddResult ar = addTemplateWithParents(std::move(tref), tag);
       if (ar != AR_OK && ar != AR_DUP)
       {
           logerr("Failed to add template '{}' due to {}", tref.getName(), (int)ar);
@@ -871,7 +886,7 @@ void TemplateDBInfo::updateComponentTags(HashedConstString comp_name, const char
 struct TemplateDBInfo::MetaInfoData
 {
   DataBlock metaDataBlock;
-  typedef ska::flat_hash_map<eastl::string, int> TLinks;
+  typedef ska::flat_hash_map<std::string, int> TLinks;
   ska::flat_hash_set<uint64_t, ska::power_of_two_std_hash<uint64_t>> templatesComps;
   TLinks commonComponentsLinks;
   TLinks commonTemplatesLinks;
@@ -1003,21 +1018,22 @@ bool Template::isEqual(const Template &t) const
   if (trackedSet() != t.trackedSet() || replicatedSet() != t.replicatedSet())
     return false;
 
-  if (!eastl::equal(components.begin(), components.end(), t.components.begin(), [&](auto const &a, auto const &b) {
-        if (a.first != b.first)
+  if (!std::equal(components.begin(), components.end(), t.components.begin(), [&](auto const& a, auto const& b)
+  {
+      if (a.first != b.first)
           return false;
-        if (a.second == b.second)
+      if (a.second == b.second)
           return true;
-        const type_index_t typeIdx = a.second.isNull() ? b.second.getTypeId() : a.second.getTypeId();
-        // this is the only difference from default comparison
-        // we assume, that templates with shared components ARE same.
-        // that is not always true, but we can't differentiate change in shared component made by Entity and difference in templates
-        //  (and that is universally used pattern for all shared components, as deferred common initialization)
-        const bool isShared =
+      const type_index_t typeIdx = a.second.isNull() ? b.second.getTypeId() : a.second.getTypeId();
+      // this is the only difference from default comparison
+      // we assume, that templates with shared components ARE same.
+      // that is not always true, but we can't differentiate change in shared component made by Entity and difference in templates
+      //  (and that is universally used pattern for all shared components, as deferred common initialization)
+      const bool isShared =
           (g_entity_mgr->getComponentTypes().getTypeInfo(typeIdx).flags & COMPONENT_TYPE_CREATE_ON_TEMPL_INSTANTIATE);
-        return isShared;
-      }))
-    return false;
+      return isShared;
+  }))
+      return false;
   return true;
 }
 

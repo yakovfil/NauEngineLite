@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_entity.h"
+
+#include <string_view>
 
 #include "nau/shaders/shader_globals.h"
 
@@ -102,7 +103,7 @@ void nau::RenderEntity::renderZPrepassInstanced(const math::Matrix4& viewProj, M
     d3d::drawind_instanced(PRIM_TRILIST, startIndex, (endIndex - startIndex) / 3, 0, instancesCount, 0);
 }
 
-void nau::RenderEntity::prepareZPrepass(eastl::string_view pipeline, const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const
+void nau::RenderEntity::prepareZPrepass(std::string_view pipeline, const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const
 {
     NAU_ASSERT(zPrepassMat);
 

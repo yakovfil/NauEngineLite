@@ -1,12 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/controller/animation_controller_direct.h"
 
-#include "nau/animation/playback/animation_instance.h"
+#include <algorithm>
+#include <string_view>
 
-#include <EASTL/algorithm.h>
+#include "nau/animation/playback/animation_instance.h"
 
 namespace nau::animation
 {
@@ -29,7 +29,7 @@ namespace nau::animation
 
     void DirectAnimationController::setWeight(TAnimDescrParam animationId, float weight)
     {
-        auto it = eastl::find_if(m_playbackTable.begin(), m_playbackTable.end(), [&animationId](const auto& data)
+        auto it = std::find_if(m_playbackTable.begin(), m_playbackTable.end(), [&animationId](const auto& data)
         {
             return data.id == animationId;
         });
@@ -40,14 +40,14 @@ namespace nau::animation
         }
     }
 
-    const eastl::string_view DirectAnimationController::getControllerTypeName() const
+    const std::string_view DirectAnimationController::getControllerTypeName() const
     {
         return "direct";
     }
 
     float DirectAnimationController::getWeight(TAnimDescrParam animationId) const
     {
-        auto it = eastl::find_if(m_playbackTable.begin(), m_playbackTable.end(), [&animationId](const auto& data)
+        auto it = std::find_if(m_playbackTable.begin(), m_playbackTable.end(), [&animationId](const auto& data)
         {
             return data.id == animationId;
         });

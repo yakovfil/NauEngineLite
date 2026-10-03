@@ -1,12 +1,19 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/core/entityManager.h>
 #include <daECS/core/coreEvents.h>
+#include <daECS/core/entityManager.h>
 #include <nau/utils/scope_guard.h>
-#include "ecsInternal.h"
-#include "tokenize_const_string.h"
 
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <vector>
+
+#include "ecsInternal.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/sorted_vector.h"
+#include "tokenize_const_string.h"
 
 namespace ecs
 {
@@ -30,7 +37,7 @@ void EntityManager::updateEntitiesWithTemplate(template_t oldT, template_t newTe
   // Step4. recreate all entities of that template with new template!
   const uint32_t oldArchetype = templates.getTemplate(oldT).archetype;
   const uint32_t newArchetype = templates.getTemplate(newTemp).archetype;
-  eastl::vector<EntityComponentRef> changedComponents; // bit vector of components being changed in new template
+  std::vector<EntityComponentRef> changedComponents;  // bit vector of components being changed in new template
   bool changedTemplValues = false;
   if (update_templ_values)
   {
@@ -111,7 +118,7 @@ void EntityManager::updateEntitiesWithTemplate(template_t oldT, template_t newTe
             // validateInitializer(newTemp, init);
           }
 
-          createEntityInternal(eid, newTemp, eastl::move(init), ComponentsMap(), create_entity_async_cb_t());
+          createEntityInternal(eid, newTemp, std::move(init), ComponentsMap(), create_entity_async_cb_t());
           if (oldArchetype != newArchetype)
           {
             goto end_loop; // break out of loop. we can't be sure anything good happens in ES handlers on recreate. there can be new
@@ -131,7 +138,7 @@ TemplateDB::AddResult EntityManager::updateTemplate(Template &&update_templ, nau
 {
   // add mutex?
   const int existingId = templateDB.getTemplateIdByName(update_templ.getName());
-  TemplateDB::AddResult r = addTemplate(eastl::move(update_templ), pnames);
+  TemplateDB::AddResult r = addTemplate(std::move(update_templ), pnames);
   if (r != TemplateDB::AR_DUP)
     return existingId >= 0 && r == TemplateDB::AR_OK ? TemplateDB::AR_SAME : r;
   update_templ.resolveFlags(templateDB);
@@ -155,7 +162,7 @@ TemplateDB::AddResult EntityManager::updateTemplate(Template &&update_templ, nau
     updateEntitiesWithTemplate(oldT, newTemp, update_templ_values);
   };
 
-  templateDB.templates[existingId] = eastl::move(update_templ); // replace THE template
+  templateDB.templates[existingId] = std::move(update_templ);  // replace THE template
   updateEntities(existingId);
   // change all templates that extends THAT
   for (size_t i = 0, e = templateDB.size(); i < e; ++i)
@@ -175,7 +182,7 @@ void EntityManager::removeTemplateInternal(const uint32_t *to_remove, const uint
 {
   if (!cnt)
     return;
-  DAECS_EXT_ASSERT(cnt == 1 || eastl::is_sorted(to_remove, to_remove + cnt));
+  DAECS_EXT_ASSERT(cnt == 1 || std::is_sorted(to_remove, to_remove + cnt));
   for (auto i = to_remove + cnt - 1, e = to_remove - 1; i != e; --i)
   {
     templateDB.templates.erase(templateDB.templates.begin() + *i);
@@ -192,7 +199,7 @@ void EntityManager::removeTemplateInternal(const uint32_t *to_remove, const uint
       p -= cnt;
       continue;
     }
-    auto it = eastl::lower_bound(to_remove, to_remove + cnt, p);
+    auto it = std::lower_bound(to_remove, to_remove + cnt, p);
     NAU_FAST_ASSERT(it != (to_remove + cnt));
     if (p == *it)
       p = ~0u;
@@ -203,19 +210,20 @@ void EntityManager::removeTemplateInternal(const uint32_t *to_remove, const uint
   for (size_t i = 0, e = templateDB.templates.size(); i < e; ++i)
   {
     auto &t = templateDB.templates[i];
-    for (auto pi = t.parents.end() - 1, pe = t.parents.begin() - 1; pi != pe; --pi)
+    for (size_t index = t.parents.size(); index != 0;)
     {
-      auto &p = *pi;
-      if (p < to_remove[0])
-      {
-        continue;
-      }
+        auto pi = t.parents.begin() + --index;
+        auto& p = *pi;
+        if (p < to_remove[0])
+        {
+            continue;
+        }
       if (p > to_remove[cnt - 1])
       {
         p -= cnt;
         continue;
       }
-      auto it = eastl::lower_bound(to_remove, to_remove + cnt, p);
+      auto it = std::lower_bound(to_remove, to_remove + cnt, p);
       NAU_FAST_ASSERT(it != (to_remove + cnt));
       if (p == *it)
         t.parents.erase(pi);
@@ -230,7 +238,7 @@ EntityManager::RemoveTemplateResult EntityManager::removeTemplate(const char *na
   const int id = templateDB.getTemplateIdByName(name);
   if (id < 0)
     return RemoveTemplateResult::NotFound;
-  eastl::vector<uint32_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> toRemove;
+  std::vector<uint32_t, std::allocator<uint32_t>> toRemove;
   for (size_t i = 0, e = templateDB.templates.size(); i < e; ++i)
   {
     if (i == id || is_son_of(templateDB.templates[i], id, templateDB))
@@ -241,12 +249,11 @@ EntityManager::RemoveTemplateResult EntityManager::removeTemplate(const char *na
       toRemove.push_back(i);
     }
   }
-  removeTemplateInternal(toRemove.begin(), toRemove.size());
+  removeTemplateInternal(toRemove.data(), toRemove.size());
   return RemoveTemplateResult::Removed;
 }
 
-bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_values, uint32_t tag,
-  eastl::function<void(const char *, EntityManager::UpdateTemplateResult)> cb)
+bool EntityManager::updateTemplates(ecs::TemplateRefs& trefs, bool update_templ_values, uint32_t tag, std::function<void(const char*, EntityManager::UpdateTemplateResult)> cb)
 {
   // first - check if we can remove templates
   bool errors = false;
@@ -276,8 +283,8 @@ bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_
     }
 
   trefs.finalize(tag);
-  eastl::vector_set<uint32_t, eastl::less<uint32_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templatesToRemove;  // Note: this also handle dups so vector
-                                                                                            // can't be used here
+  nau::SortedVectorSet<uint32_t, std::less<uint32_t>, std::allocator<uint32_t>> templatesToRemove;  // Note: this also handle dups so vector
+                                                                                                    // can't be used here
   bool instantiatedTemplatesChanged = false;
 
   for (size_t ti = 0, te = templateDB.templates.size(); ti != te; ++ti)
@@ -307,7 +314,7 @@ bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_
   }
 
   // no check if we can update/add templates
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> noChange(trefs.size());
+  nau::DynamicBitVector<> noChange(trefs.size());
   uint32_t noChangeCount = 0;
   for (size_t tid = 0, tidE = trefs.size(); tid != tidE; ++tid)
   {
@@ -386,8 +393,8 @@ bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_
     cb(trefs.begin()[t].getName(), UpdateTemplateResult::Removed);
 
   templateDB.addComponentNames(trefs);
-  removeTemplateInternal(templatesToRemove.begin(), templatesToRemove.size()); // first remove all templates
-  eastl::vector_set<uint32_t, eastl::less<uint32_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> templatesToUpdate;
+  removeTemplateInternal(templatesToRemove.data(), templatesToRemove.size());  // first remove all templates
+  nau::SortedVectorSet<uint32_t, std::less<uint32_t>, std::allocator<uint32_t>> templatesToUpdate;
   for (size_t tid = 0, tidE = trefs.size(); tid != tidE; ++tid)
   {
     if (noChange.test(tid, true))
@@ -414,19 +421,19 @@ bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_
     const int existingId = templateDB.getTemplateIdByName(updateTempl.getName());
     if (existingId < 0)
     {
-      TemplateDB::AddResult r = templateDB.addTemplateWithParents(eastl::move(updateTempl), tag);
-      if (r != TemplateDB::AR_OK)
-      {
-        logerr("this was not supposed to happen. add template <{}> failed, due to {}", updateTempl.getName(), (int)r);
-        cb(updateTempl.getName(), UpdateTemplateResult::Unknown);
-      }
+        TemplateDB::AddResult r = templateDB.addTemplateWithParents(std::move(updateTempl), tag);
+        if (r != TemplateDB::AR_OK)
+        {
+            logerr("this was not supposed to happen. add template <{}> failed, due to {}", updateTempl.getName(), (int)r);
+            cb(updateTempl.getName(), UpdateTemplateResult::Unknown);
+        }
       else
         cb(updateTempl.getName(), UpdateTemplateResult::Added);
       continue;
     }
     // all these should be one line!
     updateTempl.name = templateDB.templates[existingId].getName(); // update name, ugly
-    templateDB.templates[existingId] = eastl::move(updateTempl);   // replace THE template
+    templateDB.templates[existingId] = std::move(updateTempl);     // replace THE template
     //--
 
     templatesToUpdate.insert((uint32_t)existingId);
@@ -435,7 +442,7 @@ bool EntityManager::updateTemplates(ecs::TemplateRefs &trefs, bool update_templ_
   if (templatesToUpdate.empty())
     return true;
 
-  eastl::vector_set<uint32_t, eastl::less<uint32_t>, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> allTemplatesToUpdate = templatesToUpdate;
+  nau::SortedVectorSet<uint32_t, std::less<uint32_t>, std::allocator<uint32_t>> allTemplatesToUpdate = templatesToUpdate;
   for (auto id : templatesToUpdate)
   {
     for (uint32_t i = 0, e = templateDB.templates.size(); i < e; ++i)

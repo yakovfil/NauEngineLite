@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <EASTL/shared_ptr.h>
-#include <EASTL/span.h>
-
 #include <memory>
+#include <span>
 
 #include "nau/kernel/kernel_config.h"
 #include "nau/rtti/ptr.h"
@@ -38,10 +36,10 @@ namespace nau
         virtual bool claimDisposal(IRttiObject&) = 0;
 
         template <typename Callback>
-        requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
+        requires(std::is_invocable_v<Callback, std::span<IRttiObject*>>)
         void visitAllObjects(Callback callback)
         {
-            const auto callbackHelper = [](eastl::span<IRttiObject*> objects, void* callbackData)
+            const auto callbackHelper = [](std::span<IRttiObject*> objects, void* callbackData)
             {
                 (*reinterpret_cast<Callback*>(callbackData))(objects);
             };
@@ -50,10 +48,10 @@ namespace nau
         }
 
         template <typename T, typename Callback>
-        requires(std::is_invocable_v<Callback, eastl::span<IRttiObject*>>)
+        requires(std::is_invocable_v<Callback, std::span<IRttiObject*>>)
         void visitObjects(Callback callback)
         {
-            const auto callbackHelper = [](eastl::span<IRttiObject*> objects, void* callbackData)
+            const auto callbackHelper = [](std::span<IRttiObject*> objects, void* callbackData)
             {
                 (*reinterpret_cast<Callback*>(callbackData))(objects);
             };
@@ -63,7 +61,7 @@ namespace nau
 
     protected:
         using ObjectId = uint64_t;
-        using VisitObjectsCallback = void (*)(eastl::span<IRttiObject*>, void*);
+        using VisitObjectsCallback = void (*)(std::span<IRttiObject*>, void*);
 
         virtual void visitObjects(VisitObjectsCallback callback, const rtti::TypeInfo*, void*) = 0;
 

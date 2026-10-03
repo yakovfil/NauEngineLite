@@ -2,25 +2,24 @@
 //
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
-#include "nau/memory/nau_allocator_wrapper.h"
-#include "nau/memory/string_allocator.h"
+#include <chrono>
+#include <limits>
+#include <mutex>
+#include <unordered_set>
+
 #include "nau/memory/array_allocator.h"
 #include "nau/memory/frame_allocator.h"
-#include "nau/memory/stack_allocator.h"
 #include "nau/memory/general_allocator.h"
-#include "nau/memory/eastl_aliases.h"
 #include "nau/memory/nau_allocator_wrapper.h"
 #include "nau/memory/platform/aligned_allocator_windows.h"
-
-#include <limits>
-#include <unordered_set>
-#include <chrono>
-#include <mutex>
+#include "nau/memory/stack_allocator.h"
+#include "nau/memory/standard_aliases.h"
+#include "nau/memory/string_allocator.h"
 
 namespace nau::test
 {
-    
-    template<class Ty>
+
+    template <class Ty>
     class MyStrAllocator
     {
     public:
@@ -28,10 +27,14 @@ namespace nau::test
         using size_type = size_t;
         using difference_type = ptrdiff_t;
 
-        MyStrAllocator() noexcept {}
+        MyStrAllocator() noexcept
+        {
+        }
         ~MyStrAllocator() = default;
         template <class _Other>
-        constexpr MyStrAllocator(const MyStrAllocator<_Other>&) noexcept {}
+        constexpr MyStrAllocator(const MyStrAllocator<_Other>&) noexcept
+        {
+        }
         MyStrAllocator(const MyStrAllocator&) noexcept = default;
         MyStrAllocator& operator=(const MyStrAllocator&) = default;
 
@@ -45,7 +48,7 @@ namespace nau::test
             m_allocator.deallocate((char*)_Ptr, _Count * sizeof(value_type));
         }
 
-        bool operator !=(MyStrAllocator left) const
+        bool operator!=(MyStrAllocator left) const
         {
             return true;
         }
@@ -56,7 +59,7 @@ namespace nau::test
 
     using MyString = std::basic_string<char, std::char_traits<char>, MyStrAllocator<char>>;
 
-    template<class Ty>
+    template <class Ty>
     class MyVecAllocator
     {
     public:
@@ -64,11 +67,15 @@ namespace nau::test
         using size_type = size_t;
         using difference_type = ptrdiff_t;
         using allocator = ArrayAllocator<10 * 1024 * 1024>;
-         
-        MyVecAllocator() noexcept {}
+
+        MyVecAllocator() noexcept
+        {
+        }
         ~MyVecAllocator() = default;
         template <class _Other>
-        constexpr MyVecAllocator(const MyVecAllocator<_Other>&) noexcept {}
+        constexpr MyVecAllocator(const MyVecAllocator<_Other>&) noexcept
+        {
+        }
         MyVecAllocator(const MyVecAllocator&) noexcept = default;
         MyVecAllocator& operator=(const MyVecAllocator&) = default;
 
@@ -90,9 +97,8 @@ namespace nau::test
         static constexpr size_t _Minimum_asan_allocation_alignment = 8;
     };
 
-    template<class Ty>
+    template <class Ty>
     using MyVector = std::vector<Ty, MyVecAllocator<Ty>>;
-
 
     template <class TVal>
     class MyFixedSizeAllocator
@@ -101,17 +107,22 @@ namespace nau::test
         {
             return sizeof(TVal) > 16 ? sizeof(TVal) : 16;
         }
+
     public:
         using value_type = TVal;
         using size_type = size_t;
         using difference_type = ptrdiff_t;
         using allocator = FixedBlocksAllocator<getBlockSize()>;
 
-        MyFixedSizeAllocator() noexcept {}
+        MyFixedSizeAllocator() noexcept
+        {
+        }
         ~MyFixedSizeAllocator() = default;
 
         template <class _Other>
-        constexpr MyFixedSizeAllocator(const MyFixedSizeAllocator<_Other>&) noexcept {}
+        constexpr MyFixedSizeAllocator(const MyFixedSizeAllocator<_Other>&) noexcept
+        {
+        }
         MyFixedSizeAllocator(const MyFixedSizeAllocator&) noexcept = default;
         MyFixedSizeAllocator& operator=(const MyFixedSizeAllocator&) = default;
 
@@ -126,7 +137,7 @@ namespace nau::test
             allocator::instance().deallocate((char*)_Ptr);
         }
 
-        bool operator !=(MyFixedSizeAllocator left) const
+        bool operator!=(MyFixedSizeAllocator left) const
         {
             return true;
         }
@@ -134,23 +145,23 @@ namespace nau::test
         static constexpr size_t _Minimum_asan_allocation_alignment = 8;
     };
 
-    template<class TKey, class TVal>
+    template <class TKey, class TVal>
     using MyMap = std::map<TKey, TVal, std::less<TKey>, MyFixedSizeAllocator<std::pair<const TKey, TVal>>>;
-    
-    template< class TKey>
+
+    template <class TKey>
     using MySet = std::set<TKey, std::less<TKey>, MyFixedSizeAllocator<TKey>>;
-    
+
     TEST(TestAllocator, StringAllocator)
     {
-        MyString str = "test < 16"; // < 16
-        str = "test < 32  00000000"; //  <32
-        str = "test < 64  000000000000000000000000000000"; //  <64
-        str = "test < 128 0000000000000000000000000000000000000000000000000000000"; //  <128
+        MyString str = "test < 16";                                                  // < 16
+        str = "test < 32  00000000";                                                 //  <32
+        str = "test < 64  000000000000000000000000000000";                           //  <64
+        str = "test < 128 0000000000000000000000000000000000000000000000000000000";  //  <128
         str = R"#(test < 256
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
-                0000000000000)#"; //  <256
+                0000000000000)#";                                                    //  <256
         str = R"#(test vector
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
@@ -158,7 +169,7 @@ namespace nau::test
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
-                0000000000000)#"; //  > 256
+                0000000000000)#";                                                    //  > 256
 
         MyString str2 = R"#(test vector
                 000000000000000000000000000000000000
@@ -167,7 +178,7 @@ namespace nau::test
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
                 000000000000000000000000000000000000
-                0000000000000)#"; //  > 256
+                0000000000000)#";  //  > 256
 
         EXPECT_EQ(str, str2);
         EXPECT_NE(str.c_str(), str2.c_str());
@@ -178,7 +189,7 @@ namespace nau::test
         struct Color
         {
             int r = 0;
-            int g = 0; 
+            int g = 0;
             int b = 0;
         };
 
@@ -195,28 +206,28 @@ namespace nau::test
             colors.push_back(unique_new(block_allocator) Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new(general_Allocator) Color { 1, 2, 3 });
-        
-        for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new(array_allocator) Color { 1, 2, 3 });
+            colors.push_back(unique_new(general_Allocator) Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new(frame_allocator) Color { 1, 2, 3 });
-   
-        for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new(stack_allocator.get()) Color { 1, 2, 3 });
+            colors.push_back(unique_new(array_allocator) Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new() Color{ 1, 2, 3 });
+            colors.push_back(unique_new(frame_allocator) Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(stack_new Color { 1, 2, 3 });
+            colors.push_back(unique_new(stack_allocator.get()) Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(frame_new Color{ 1, 2, 3 });
+            colors.push_back(unique_new() Color{1, 2, 3});
 
         for (auto i = 0; i < 1000; ++i)
-            colors.push_back(unique_new_ Color { 1, 2, 3 });
+            colors.push_back(stack_new Color{1, 2, 3});
+
+        for (auto i = 0; i < 1000; ++i)
+            colors.push_back(frame_new Color{1, 2, 3});
+
+        for (auto i = 0; i < 1000; ++i)
+            colors.push_back(unique_new_ Color{1, 2, 3});
 
         for (auto& color : colors)
         {
@@ -229,10 +240,9 @@ namespace nau::test
         EXPECT_TRUE(stack_allocator->isClear());
         EXPECT_TRUE(frame_allocator.prepareFrame());
     }
-    
 
     TEST(TestAllocator, VectorAllocator)
-    {      
+    {
         MySet<void*> mem_used;
         for (int r = 0; r < 1000; ++r)
         {
@@ -289,7 +299,7 @@ namespace nau::test
 
     namespace
     {
-        template<class alignedAllocatorBase>
+        template <class alignedAllocatorBase>
         class AlignTestAllocator final : public alignedAllocatorBase
         {
         public:
@@ -363,7 +373,7 @@ namespace nau::test
 
         for (int i = 0; i < 100; ++i)
         {
-            for(int j = i; j < 10; ++j)
+            for (int j = i; j < 10; ++j)
                 intMap[std::to_string(i).c_str()].push_back(MyString(std::to_string(j).c_str()));
         }
 
@@ -425,14 +435,14 @@ namespace nau::test
         for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             test_threads.push_back(stack_new std::thread([&, ParentStackAllocator]
-                {
-                    StackAllocatorInheritParent;
+            {
+                StackAllocatorInheritParent;
 
-                    auto test = stack_new MyString(std::to_string(hash(std::this_thread::get_id())).c_str());
-                    std::lock_guard lock(mutex);
-                    ids.insert(hash(std::this_thread::get_id()));
-                    ids_strings.insert(std::move(test));
-                }));
+                auto test = stack_new MyString(std::to_string(hash(std::this_thread::get_id())).c_str());
+                std::lock_guard lock(mutex);
+                ids.insert(hash(std::this_thread::get_id()));
+                ids_strings.insert(std::move(test));
+            }));
         }
 
         for (auto& th : test_threads)
@@ -453,18 +463,17 @@ namespace nau::test
             EXPECT_TRUE(contain);
         }
 
-
         for (int i = 0; i < std::thread::hardware_concurrency(); ++i)
         {
             test_threads.push_back(stack_new std::thread([&, allocator = IStackAllocator::getStackAllocator()]
-                {
-                    StackAllocatorInherit(*allocator);
-                    auto test = stack_new MyString(std::to_string(hash(std::this_thread::get_id())).c_str());
+            {
+                StackAllocatorInherit(*allocator);
+                auto test = stack_new MyString(std::to_string(hash(std::this_thread::get_id())).c_str());
 
-                    std::lock_guard lock(mutex);
-                    ids.insert(hash(std::this_thread::get_id()));
-                    ids_strings.insert(std::move(test));
-                }));
+                std::lock_guard lock(mutex);
+                ids.insert(hash(std::this_thread::get_id()));
+                ids_strings.insert(std::move(test));
+            }));
         }
 
         for (auto& th : test_threads)
@@ -499,7 +508,7 @@ namespace nau::test
         using Allocator = ArrayAllocator<512>;
 
         auto ptr = Allocator::instance().allocate(BlockSize);
-        memset(ptr, 0, BlockSize );
+        memset(ptr, 0, BlockSize);
 
         ptr = Allocator::instance().reallocate(ptr, BlockSize2);
         memset(ptr, 0, BlockSize2);
@@ -507,7 +516,7 @@ namespace nau::test
         Allocator::instance().deallocate(ptr);
     }
 
-    TEST(TestEastlAleasesAllocator, Vector)
+    TEST(TestStandardAliasesAllocator, Vector)
     {
         {
             nau::Vector<int> test_vector;
@@ -549,8 +558,7 @@ namespace nau::test
         }
     }
 
-
-    TEST(TestEastlAleasesAllocator, Map)
+    TEST(TestStandardAliasesAllocator, Map)
     {
         {
             nau::Map<int, int> test;
@@ -587,6 +595,5 @@ namespace nau::test
                 EXPECT_EQ(val.first, val.second);
             }
         }
-
     }
-}
+}  // namespace nau::test

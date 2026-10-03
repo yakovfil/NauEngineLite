@@ -3,18 +3,22 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
-#include <EASTL/variant.h>
+#include <array>
+#include <limits>
+#include <optional>
+#include <span>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include "nau/3d/dag_resPtr.h"
-#include "nau/math/math.h"
-#include <EASTL/vector_map.h>
-#include <EASTL/fixed_map.h>
-#include "dabfg/id/idIndexedFlags.h"
 #include "dabfg/backend/intermediateRepresentation.h"
 #include "dabfg/common/graphDumper.h"
-#include "nau/memory/eastl_aliases.h"
-
+#include "dabfg/id/idIndexedFlags.h"
+#include "nau/3d/dag_resPtr.h"
+#include "nau/math/math.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/fixed_map.h"
+#include "nau/utils/sorted_vector.h"
 
 #define DABFG_STATISTICS_REPORTING DAGOR_DBGLEVEL > 0
 
@@ -22,207 +26,205 @@
 namespace dabfg
 {
 
-using DynamicResolutions = IdIndexedMapping<AutoResTypeNameId, eastl::optional<nau::math::IVector2>, nau::EastlFrameAllocator>;
+    using DynamicResolutions = IdIndexedMapping<AutoResTypeNameId, std::optional<nau::math::IVector2>, nau::FrameStdAllocator<std::optional<nau::math::IVector2>>>;
 
-class ResourceScheduler
-{
-public:
-  struct Event
-  {
-    struct Activation
+    class ResourceScheduler
     {
-      ResourceActivationAction action;
-      ResourceClearValue clearValue;
-    };
+    public:
+        struct Event
+        {
+            struct Activation
+            {
+                ResourceActivationAction action;
+                ResourceClearValue clearValue;
+            };
 
-    struct CpuActivation
-    {
-      TypeErasedCall func;
-    };
+            struct CpuActivation
+            {
+                TypeErasedCall func;
+            };
 
-    struct CpuDeactivation
-    {
-      TypeErasedCall func;
-    };
+            struct CpuDeactivation
+            {
+                TypeErasedCall func;
+            };
 
-    struct Barrier
-    {
-      ResourceBarrier barrier;
-    };
+            struct Barrier
+            {
+                ResourceBarrier barrier;
+            };
 
-    struct Deactivation
-    {};
+            struct Deactivation
+            {
+            };
 
-    intermediate::ResourceIndex resource;
-    uint32_t frameResourceProducedOn;
+            intermediate::ResourceIndex resource;
+            uint32_t frameResourceProducedOn;
 
-    // NOTE: at each timepoint events are executed in order of their
-    // type, from last one to first one. Meaning deactivations happen
-    // before barriers, barriers before activations.
-    using Payload = eastl::variant<CpuActivation, Activation, Barrier, Deactivation, CpuDeactivation>;
-    Payload data;
-  };
+            // NOTE: at each timepoint events are executed in order of their
+            // type, from last one to first one. Meaning deactivations happen
+            // before barriers, barriers before activations.
+            using Payload = std::variant<CpuActivation, Activation, Barrier, Deactivation, CpuDeactivation>;
+            Payload data;
+        };
 
-  static const int SCHEDULE_FRAME_WINDOW = 2; // even and odd frames
+        static const int SCHEDULE_FRAME_WINDOW = 2;  // even and odd frames
 
-  using NodeEventsRef = eastl::span<const Event>;
-  using FrameEventsRef = eastl::span<const NodeEventsRef>;
-  using EventsCollectionRef = eastl::array<FrameEventsRef, SCHEDULE_FRAME_WINDOW>;
+        using NodeEventsRef = std::span<const Event>;
+        using FrameEventsRef = std::span<const NodeEventsRef>;
+        using EventsCollectionRef = std::array<FrameEventsRef, SCHEDULE_FRAME_WINDOW>;
 
+    public:
+        ResourceScheduler(IGraphDumper& dumper) :
+            graphDumper{dumper}
+        {
+        }
 
-public:
-  ResourceScheduler(IGraphDumper &dumper) : graphDumper{dumper} {}
+        struct BlobDeactivationRequest
+        {
+            void (*destructor)(void*);
+            void* blob;
+        };
 
-  struct BlobDeactivationRequest
-  {
-    void (*destructor)(void *);
-    void *blob;
-  };
+        using ResourceDeactivationRequest = std::variant<Texture*, Sbuffer*, BlobDeactivationRequest>;
 
-  using ResourceDeactivationRequest = eastl::variant<Texture *, Sbuffer *, BlobDeactivationRequest>;
+        struct SchedulingResult
+        {
+            EventsCollectionRef events;
+            std::vector<ResourceDeactivationRequest, nau::FrameStdAllocator<ResourceDeactivationRequest>> deactivations;
+        };
 
-  struct SchedulingResult
-  {
-    EventsCollectionRef events;
-    eastl::vector<ResourceDeactivationRequest, nau::EastlFrameAllocator> deactivations;
-  };
+        // Returned spans are valid until the method gets called again
+        SchedulingResult scheduleResources(int prev_frame, const intermediate::Graph& graph);
 
-  // Returned spans are valid until the method gets called again
-  SchedulingResult scheduleResources(int prev_frame, const intermediate::Graph &graph);
+        virtual void resizeAutoResTextures(int frame, const DynamicResolutions& resolutions) = 0;
 
-  virtual void resizeAutoResTextures(int frame, const DynamicResolutions &resolutions) = 0;
+        BlobView getBlob(int frame, intermediate::ResourceIndex res_idx);
+        virtual ManagedTexView getTexture(int frame, intermediate::ResourceIndex res_idx) const = 0;
+        virtual ManagedBufView getBuffer(int frame, intermediate::ResourceIndex res_idx) const = 0;
+        const D3dResource* getD3dResource(int frame, intermediate::ResourceIndex res_idx) const;
+        bool isResourcePreserved(int frame, intermediate::ResourceIndex res_idx) const;
 
-  BlobView getBlob(int frame, intermediate::ResourceIndex res_idx);
-  virtual ManagedTexView getTexture(int frame, intermediate::ResourceIndex res_idx) const = 0;
-  virtual ManagedBufView getBuffer(int frame, intermediate::ResourceIndex res_idx) const = 0;
-  const D3dResource *getD3dResource(int frame, intermediate::ResourceIndex res_idx) const;
-  bool isResourcePreserved(int frame, intermediate::ResourceIndex res_idx) const;
+        void shutdown(int frame);
 
-  void shutdown(int frame);
+        virtual ~ResourceScheduler() = default;
 
-  virtual ~ResourceScheduler() = default;
+    protected:
+        using ResourceProperties = IdIndexedMapping<intermediate::ResourceIndex, ResourceAllocationProperties>;
 
-protected:
-  using ResourceProperties = IdIndexedMapping<intermediate::ResourceIndex, ResourceAllocationProperties>;
+        enum class HeapIndex : uint32_t
+        {
+            Invalid = ~0u
+        };
 
-  enum class HeapIndex : uint32_t
-  {
-    Invalid = ~0u
-  };
+        struct AllocationLocation
+        {
+            HeapIndex heap;
+            uint32_t offset;
+        };
+        using AllocationLocations = std::array<IdIndexedMapping<intermediate::ResourceIndex, AllocationLocation>, SCHEDULE_FRAME_WINDOW>;
 
-  struct AllocationLocation
-  {
-    HeapIndex heap;
-    uint32_t offset;
-  };
-  using AllocationLocations = eastl::array<IdIndexedMapping<intermediate::ResourceIndex, AllocationLocation>, SCHEDULE_FRAME_WINDOW>;
+        struct HeapRequest
+        {
+            ResourceHeapGroup* group;
+            uint32_t size;
+        };
+        using HeapRequests = IdIndexedMapping<HeapIndex, HeapRequest>;
 
-  struct HeapRequest
-  {
-    ResourceHeapGroup *group;
-    uint32_t size;
-  };
-  using HeapRequests = IdIndexedMapping<HeapIndex, HeapRequest>;
+        ResourceProperties gatherResourceProperties(const intermediate::Graph& graph);
 
-  ResourceProperties gatherResourceProperties(const intermediate::Graph &graph);
+        // Returns per node events for even and odd frames. Modifies eventStorage and returns views to it.
+        EventsCollectionRef scheduleEvents(const intermediate::Graph& graph);
 
+        using PotentialResourceDeactivation = std::variant<std::monostate, BaseTexture*, Sbuffer*, BlobDeactivationRequest>;
+        using PotentialDeactivationSet = IdIndexedMapping<intermediate::ResourceIndex, PotentialResourceDeactivation>;
 
-  // Returns per node events for even and odd frames. Modifies eventStorage and returns views to it.
-  EventsCollectionRef scheduleEvents(const intermediate::Graph &graph);
+        PotentialDeactivationSet gatherPotentialDeactivationSet(int prev_frame);
 
-  using PotentialResourceDeactivation = eastl::variant<eastl::monostate, BaseTexture *, Sbuffer *, BlobDeactivationRequest>;
-  using PotentialDeactivationSet = IdIndexedMapping<intermediate::ResourceIndex, PotentialResourceDeactivation>;
+        using IntermediateResources = IdIndexedMapping<intermediate::ResourceIndex, intermediate::Resource>;
+        using IntermediateRemapping = IdIndexedMapping<intermediate::ResourceIndex, intermediate::ResourceIndex, nau::FrameStdAllocator<intermediate::ResourceIndex>>;
 
-  PotentialDeactivationSet gatherPotentialDeactivationSet(int prev_frame);
+        // After recompiling, the resource index may change for the same resource.
+        // So we must map the new idx to the old idx in order to check the offset hints.
+        IntermediateRemapping remapResources(const IntermediateResources& resources) const;
 
+        // Calculates a schedule of resource usage, i.e. where exactly in
+        // each heap the resource will be allocated
+        std::pair<AllocationLocations, HeapRequests> scheduleResourcesIntoHeaps(const ResourceProperties& resources,
+                                                                                const EventsCollectionRef& events,
+                                                                                const IntermediateRemapping& cached_res_idx_remapping);
 
-  using IntermediateResources = IdIndexedMapping<intermediate::ResourceIndex, intermediate::Resource>;
-  using IntermediateRemapping = IdIndexedMapping<intermediate::ResourceIndex, intermediate::ResourceIndex, nau::EastlFrameAllocator>;
+        // This lists the heaps that were either completely destroyed
+        // or recreated with a larger size (and their resources hence died)
+        using DestroyedHeapSet = std::vector<HeapIndex, nau::FrameStdAllocator<HeapIndex>>;
 
-  // After recompiling, the resource index may change for the same resource.
-  // So we must map the new idx to the old idx in order to check the offset hints.
-  IntermediateRemapping remapResources(const IntermediateResources &resources) const;
+        // Creates actual memory storage for our resources
+        virtual DestroyedHeapSet allocateHeaps(const HeapRequests& requests) = 0;
 
-  // Calculates a schedule of resource usage, i.e. where exactly in
-  // each heap the resource will be allocated
-  eastl::pair<AllocationLocations, HeapRequests> scheduleResourcesIntoHeaps(const ResourceProperties &resources,
-    const EventsCollectionRef &events, const IntermediateRemapping &cached_res_idx_remapping);
+        DestroyedHeapSet allocateCpuHeaps(int prev_frame, const HeapRequests& requests, const PotentialDeactivationSet& potential_deactivation_set);
 
-  // This lists the heaps that were either completely destroyed
-  // or recreated with a larger size (and their resources hence died)
-  using DestroyedHeapSet = eastl::vector<HeapIndex, nau::EastlFrameAllocator>;
+        // Note: this function does not deal with aliases, only with
+        // representatives of alias groups.
+        void placeResources(const intermediate::Graph& graph, const ResourceProperties& resource_properties, const AllocationLocations& allocation_locations);
 
-  // Creates actual memory storage for our resources
-  virtual DestroyedHeapSet allocateHeaps(const HeapRequests &requests) = 0;
+        void restoreResourceApiNames() const;
 
-  DestroyedHeapSet allocateCpuHeaps(int prev_frame, const HeapRequests &requests,
-    const PotentialDeactivationSet &potential_deactivation_set);
+        virtual void placeResource(int frame, intermediate::ResourceIndex res_idx, HeapIndex heap_idx, const ResourceDescription& desc, uint32_t offset, const ResourceAllocationProperties& properties) = 0;
 
-  // Note: this function does not deal with aliases, only with
-  // representatives of alias groups.
-  void placeResources(const intermediate::Graph &graph, const ResourceProperties &resource_properties,
-    const AllocationLocations &allocation_locations);
+        virtual ResourceAllocationProperties getResourceAllocationProperties(const ResourceDescription& desc,
+                                                                             bool force_not_on_chip = false) = 0;
+        virtual ResourceHeapGroupProperties getResourceHeapGroupProperties(ResourceHeapGroup* heap_group) = 0;
 
-  void restoreResourceApiNames() const;
+        void closeTransientResources();
 
-  virtual void placeResource(int frame, intermediate::ResourceIndex res_idx, HeapIndex heap_idx, const ResourceDescription &desc,
-    uint32_t offset, const ResourceAllocationProperties &properties) = 0;
+        virtual void shutdownInternal() = 0;
 
-  virtual ResourceAllocationProperties getResourceAllocationProperties(const ResourceDescription &desc,
-    bool force_not_on_chip = false) = 0;
-  virtual ResourceHeapGroupProperties getResourceHeapGroupProperties(ResourceHeapGroup *heap_group) = 0;
+    protected:
+        IGraphDumper& graphDumper;
 
-  void closeTransientResources();
+        // The following 2 fields are wiped and
+        // recalculated on each compilation
 
-  virtual void shutdownInternal() = 0;
+        std::vector<Event> eventStorage;
+        std::array<std::vector<std::span<const Event>>, SCHEDULE_FRAME_WINDOW> eventRefStorage;
+        std::array<IdIndexedMapping<intermediate::ResourceIndex, uint32_t>, SCHEDULE_FRAME_WINDOW> resourceIndexInCollection;
 
-protected:
-  IGraphDumper &graphDumper;
+        static constexpr uint32_t UNSCHEDULED = std::numeric_limits<uint32_t>::max();
 
+        // Required for answering external get resource and set resolution requests
+        IntermediateResources cachedIntermediateResources;
+        IdIndexedMapping<intermediate::ResourceIndex, intermediate::DebugResourceName> cachedIntermediateResourceNames;
 
-  // The following 2 fields are wiped and
-  // recalculated on each compilation
+        // Fake heap group used for CPU resources
+        inline static ResourceHeapGroup* const CPU_HEAP_GROUP = reinterpret_cast<ResourceHeapGroup*>(~uintptr_t{0});
 
-  eastl::vector<Event> eventStorage;
-  eastl::array<eastl::vector<eastl::span<const Event>>, SCHEDULE_FRAME_WINDOW> eventRefStorage;
-  eastl::array<IdIndexedMapping<intermediate::ResourceIndex, uint32_t>, SCHEDULE_FRAME_WINDOW> resourceIndexInCollection;
+        // Caching of heaps to reduce memory reallocation. For simplicity,
+        // heaps are never totally removed and heap IDs are never freed.
+        HeapRequests allocatedHeaps;
+        // Offset hints and sizes for history resource per heap in case of rescheduling
+        struct HintedResource
+        {
+            uint64_t offsetHint;
+            uint64_t size;
+            uint32_t start;
+            uint32_t end;
+        };
+        IdIndexedMapping<HeapIndex,
+                         std::array<nau::FixedMap<intermediate::ResourceIndex, HintedResource, 32>, SCHEDULE_FRAME_WINDOW>>
+            hintedResources;
+        std::array<IdIndexedFlags<intermediate::ResourceIndex>, SCHEDULE_FRAME_WINDOW> preservedResources;
+        // Keep track of history resource flags,
+        // because their change invalidates the preservation mechanism.
+        nau::FixedMap<ResNameId, uint32_t, 32> historyResourceFlags;
 
-  static constexpr uint32_t UNSCHEDULED = eastl::numeric_limits<uint32_t>::max();
+    private:
+        // For every heap and every frame, we keep a list of resources that
+        // that we use to figure out which resources got destroyed when a
+        // heap is deactivated and hence don't need to be deactivated.
+        IdIndexedMapping<HeapIndex, std::array<std::vector<intermediate::ResourceIndex>, SCHEDULE_FRAME_WINDOW>> heapToResourceList;
 
-  // Required for answering external get resource and set resolution requests
-  IntermediateResources cachedIntermediateResources;
-  IdIndexedMapping<intermediate::ResourceIndex, intermediate::DebugResourceName> cachedIntermediateResourceNames;
-
-  // Fake heap group used for CPU resources
-  inline static ResourceHeapGroup *const CPU_HEAP_GROUP = reinterpret_cast<ResourceHeapGroup *>(~uintptr_t{0});
-
-  // Caching of heaps to reduce memory reallocation. For simplicity,
-  // heaps are never totally removed and heap IDs are never freed.
-  HeapRequests allocatedHeaps;
-  // Offset hints and sizes for history resource per heap in case of rescheduling
-  struct HintedResource
-  {
-    uint64_t offsetHint;
-    uint64_t size;
-    uint32_t start;
-    uint32_t end;
-  };
-  IdIndexedMapping<HeapIndex,
-    eastl::array<eastl::fixed_map<intermediate::ResourceIndex, HintedResource, 32>, SCHEDULE_FRAME_WINDOW>>
-    hintedResources;
-  eastl::array<IdIndexedFlags<intermediate::ResourceIndex>, SCHEDULE_FRAME_WINDOW> preservedResources;
-  // Keep track of history resource flags,
-  // because their change invalidates the preservation mechanism.
-  eastl::fixed_map<ResNameId, uint32_t, 32> historyResourceFlags;
-
-private:
-  // For every heap and every frame, we keep a list of resources that
-  // that we use to figure out which resources got destroyed when a
-  // heap is deactivated and hence don't need to be deactivated.
-  IdIndexedMapping<HeapIndex, eastl::array<eastl::vector<intermediate::ResourceIndex>, SCHEDULE_FRAME_WINDOW>> heapToResourceList;
-
-  eastl::array<IdIndexedMapping<intermediate::ResourceIndex, HeapIndex>, SCHEDULE_FRAME_WINDOW> heapForCpuResource;
-  IdIndexedMapping<HeapIndex, eastl::vector<char>> cpuHeaps;
+        std::array<IdIndexedMapping<intermediate::ResourceIndex, HeapIndex>, SCHEDULE_FRAME_WINDOW> heapForCpuResource;
+        IdIndexedMapping<HeapIndex, std::vector<char>> cpuHeaps;
 
 #if DABFG_STATISTICS_REPORTING
   // Empirical non-normalized probability density functions for various

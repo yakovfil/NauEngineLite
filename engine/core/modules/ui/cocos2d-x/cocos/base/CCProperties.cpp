@@ -21,6 +21,7 @@
  */
 
 
+#include <string>
 #include "base/CCProperties.h"
 
 #include <string.h>
@@ -71,7 +72,7 @@ Properties::Properties(Data* data, ssize_t* dataIdx)
     rewind();
 }
 
-Properties::Properties(Data* data, ssize_t* dataIdx, const eastl::string& name, const char* id, const char* parentID, Properties* parent)
+Properties::Properties(Data* data, ssize_t* dataIdx, const std::string& name, const char* id, const char* parentID, Properties* parent)
     : _dataIdx(dataIdx), _data(data), _namespace(name), _variables(NULL), _dirPath(NULL), _parent(parent)
 {
     if (id)
@@ -1118,11 +1119,11 @@ void calculateNamespacePath(const std::string& urlString, std::string& fileStrin
     // If the url references a specific namespace within the file,
     // calculate the full namespace path to the final namespace.
     size_t loc = urlString.rfind('#');
-    if (loc != eastl::string::npos)
+    if (loc != std::string::npos)
     {
         fileString = urlString.substr(0, loc);
         std::string namespacePathString = urlString.substr(loc + 1);
-        while ((loc = namespacePathString.find('/')) != eastl::string::npos)
+        while ((loc = namespacePathString.find('/')) != std::string::npos)
         {
             namespacePath.push_back(namespacePathString.substr(0, loc));
             namespacePathString = namespacePathString.substr(loc + 1);

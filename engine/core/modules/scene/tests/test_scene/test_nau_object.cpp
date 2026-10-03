@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
 
 #include "nau/utils/functor.h"
 #include "scene_test_base.h"
@@ -13,7 +15,7 @@ namespace nau::test
         {
             NAU_INTERFACE(nau::test::ISomeInterface, IRttiObject)
 
-            virtual eastl::string getName() const = 0;
+            virtual std::string getName() const = 0;
         };
 
         class CustomObject : public scene::NauObject,
@@ -35,12 +37,12 @@ namespace nau::test
                 m_destructorCallback = callback;
             }
 
-            eastl::string getName() const override
+            std::string getName() const override
             {
                 return m_name;
             }
 
-            void setName(eastl::string_view name)
+            void setName(std::string_view name)
             {
                 m_name = name;
             }
@@ -48,7 +50,7 @@ namespace nau::test
         private:
             Functor<void()> m_destructorCallback;
 
-            eastl::string m_name;
+            std::string m_name;
         };
     }  // namespace
 

@@ -82,7 +82,7 @@ def remove_const_from_type(type_name):
 
 
 def is_flag_type(ro_type):
-  if (ro_type == 'eastl::true_type' or ro_type == 'eastl::false_type'):
+  if (ro_type == 'std::true_type' or ro_type == 'std::false_type'):
     return True
   return False
 
@@ -429,7 +429,7 @@ def gen_condition(esFunction, conditions):
   secondCondition = False
   expression = ''
   for i in conditions:
-    expression += (' && ' if secondCondition else '') + ('!' if i['flag_type'] == 'eastl::false_type' else '') + gen_getter(esFunction, i)
+    expression += (' && ' if secondCondition else '') + ('!' if i['flag_type'] == 'std::false_type' else '') + gen_getter(esFunction, i)
     secondCondition = True
   return expression
 

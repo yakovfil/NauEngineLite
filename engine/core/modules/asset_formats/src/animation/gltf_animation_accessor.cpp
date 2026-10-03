@@ -1,10 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "gltf_animation_accessor.h"
 
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <vector>
 
 #include "nau/assets/skeleton_asset_accessor.h"
 #include "nau/io/file_system.h"
@@ -15,13 +15,13 @@ namespace nau
 {
 
     template <typename TData>
-    TData readElement(const eastl::vector<float>& rawData, size_t& seekp)
+    TData readElement(const std::vector<float>& rawData, size_t& seekp)
     {
         return TData(rawData[seekp++]);
     }
 
     template <>
-    math::vec3 readElement(const eastl::vector<float>& rawData, size_t& seekp)
+    math::vec3 readElement(const std::vector<float>& rawData, size_t& seekp)
     {
         math::vec3 result{
             rawData[seekp],
@@ -33,7 +33,7 @@ namespace nau
     }
 
     template <>
-    math::quat readElement(const eastl::vector<float>& rawData, size_t& seekp)
+    math::quat readElement(const std::vector<float>& rawData, size_t& seekp)
     {
         math::quat result{
             rawData[seekp],
@@ -46,12 +46,12 @@ namespace nau
     }
 
     template <typename TData>
-    void readRawGltfData(io::IStreamReader* reader, size_t size, eastl::vector<TData>& result)
+    void readRawGltfData(io::IStreamReader* reader, size_t size, std::vector<TData>& result)
     {
         const size_t numFloats = size / sizeof(float);
-        eastl::vector<float> rawData;
+        std::vector<float> rawData;
         rawData.resize(numFloats);
-        io::copyFromStream(rawData.begin(), size, *reader).ignore();
+        io::copyFromStream(rawData.data(), size, *reader).ignore();
 
         size_t seekp = 0;
         while (seekp < rawData.size())
@@ -61,7 +61,7 @@ namespace nau
     }
 
     template <typename TData>
-    static void readBinaryData(const GltfAnimationAssetAccessor::BinaryAccessor& binAccessor, eastl::vector<TData>& result)
+    static void readBinaryData(const GltfAnimationAssetAccessor::BinaryAccessor& binAccessor, std::vector<TData>& result)
     {
         auto inputStream = binAccessor.file->createStream(io::AccessMode::Read);
         inputStream->setPosition(io::OffsetOrigin::Begin, binAccessor.offset);
@@ -88,7 +88,7 @@ namespace nau
         }
     }
 
-    GltfAnimationAssetAccessor::GltfAnimationAssetAccessor(const GltfFile& file, size_t animationIndex, size_t channelIndex, const eastl::vector<io::IFile::Ptr>& bufferFiles)
+    GltfAnimationAssetAccessor::GltfAnimationAssetAccessor(const GltfFile& file, size_t animationIndex, size_t channelIndex, const std::vector<io::IFile::Ptr>& bufferFiles)
     {
         NAU_ASSERT(animationIndex < file.animations.size());
 

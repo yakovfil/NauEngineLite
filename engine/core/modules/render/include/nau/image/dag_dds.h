@@ -4,6 +4,7 @@
 #pragma once
 
 #include "nau/3d/dag_tex3d.h"
+#include "nau/memory/heap_byte_allocator.h"
 
 // forward declarations for external classes
 class IGenLoad;
@@ -23,5 +24,5 @@ struct ImageInfoDDS
 };
 
 bool load_dds(void *ptr, int len, int levels, int topmipmap, ImageInfoDDS &image_info);
-void *load_dds_file(const char *fn, int levels, int quality, eastl::allocator *mem, ImageInfoDDS &image_info, bool ignore_missing = false);
+void* load_dds_file(const char* fn, int levels, int quality, nau::HeapByteAllocator* mem, ImageInfoDDS& image_info, bool ignore_missing = false);
 Texture *create_dds_texture(bool srgb, const ImageInfoDDS &image_info, const char *tex_name = NULL, int flags = 0);

@@ -9,12 +9,11 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
-
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "nau/rtti/ptr.h"
 #include "nau/threading/lock_guard.h"

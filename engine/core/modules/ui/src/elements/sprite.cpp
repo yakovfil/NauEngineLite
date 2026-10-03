@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/elements/sprite.h"
+
+#include <string>
+
 #include "../nau_controls/Button/States/sprite_frame_handler.h"
 #include "../nau_controls/Label/texture_2d_handler.h"
 #include "2d/CCSprite.h"
-
 
 namespace nau::ui
 {
@@ -50,12 +51,12 @@ bool Sprite::initWithTexture2dContainer(const Texture2DHandler& container)
     return initWithTexture(container.m_texture, container.m_rect); 
 }
 
-bool Sprite::initWithFile(const eastl::string& filename)
+bool Sprite::initWithFile(const std::string& filename)
 {
     return cocos2d::Sprite::initWithFile(filename.c_str());
 }
 
-bool Sprite::initWithFile(const eastl::string& filename, const cocos2d::Rect& rect)
+bool Sprite::initWithFile(const std::string& filename, const cocos2d::Rect& rect)
 {
     return cocos2d::Sprite::initWithFile(filename.c_str(), rect);
 }

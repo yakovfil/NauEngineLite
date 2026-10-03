@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #pragma once
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <algorithm>
+#include <memory>
+#include <vector>
 
 #ifndef RESTRICT_FUN
 #ifdef _MSC_VER
@@ -37,11 +38,11 @@ struct CreationAllocator
   }; // pow-of-two size
   struct CreationChunk
   {
-    eastl::unique_ptr<uint8_t[]> data = eastl::make_unique<uint8_t[]>(CHUNK_SIZE);
-    uint32_t allocated = 0;
-    uint32_t freed = 0;
+      std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(CHUNK_SIZE);
+      uint32_t allocated = 0;
+      uint32_t freed = 0;
   };
-  eastl::vector<CreationChunk> chunks;
+  std::vector<CreationChunk> chunks;
   void pushChunk()
   {
     chunks.emplace_back();
@@ -66,22 +67,30 @@ struct CreationAllocator
   void deallocate(uint8_t *__restrict data, uint32_t size)
   {
     size = (size + ALIGN_TO_MASK) & ~ALIGN_TO_MASK; // align to 16
-    eastl::find_if(chunks.rbegin(), chunks.rend(), [data, size](CreationChunk &a) -> bool {
-      const uintptr_t ofs = (data - a.data.get());
-      if ((ofs & ~uintptr_t(CHUNK_MASK)) != 0)
-        return false;
-      if (ofs == a.allocated - size) // just pop allocated data
-        a.allocated = a.allocated - size;
-      else
-        a.freed += size;
-      return true;
+    std::find_if(chunks.rbegin(), chunks.rend(), [data, size](CreationChunk& a) -> bool
+    {
+        const uintptr_t ofs = (data - a.data.get());
+        if ((ofs & ~uintptr_t(CHUNK_MASK)) != 0)
+            return false;
+        if (ofs == a.allocated - size)  // just pop allocated data
+            a.allocated = a.allocated - size;
+        else
+            a.freed += size;
+        return true;
     });
   }
   void gc()
   {
-    for (auto i = chunks.rbegin(), ei = chunks.rend() - 1; i != ei; ++i)
-      if (i->freed == i->allocated || i->allocated == 0)
-        chunks.erase_unsorted(i);
+      for (size_t i = chunks.size(); i > 1;)
+      {
+          --i;
+          if (chunks[i].freed == chunks[i].allocated || chunks[i].allocated == 0)
+          {
+              if (i + 1 != chunks.size())
+                  chunks[i] = std::move(chunks.back());
+              chunks.pop_back();
+          }
+      }
     NAU_ASSERT(chunks.size() >= 1);
     if (chunks.begin()->freed == chunks.begin()->allocated)
       chunks.begin()->allocated = chunks.begin()->freed = 0;

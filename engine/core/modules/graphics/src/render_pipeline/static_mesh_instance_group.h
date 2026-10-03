@@ -6,6 +6,9 @@
 
 #include <graphics_assets/static_mesh_asset.h>
 
+#include <functional>
+#include <unordered_map>
+
 #include "graphics_assets/static_meshes/static_mesh.h"
 #include "instance_group.h"
 #include "nau/3d/dag_drv3d.h"
@@ -34,8 +37,8 @@ namespace nau
 
         RenderEntity createRenderEntity() override;
         RenderList::Ptr createRenderList(const nau::math::Vector3& viewerPosition,
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
+                                         std::function<bool(const InstanceInfo&)>& filterFunc,
+                                         std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
 
         void clearPendingInstances();
 
@@ -48,7 +51,7 @@ namespace nau
 
     protected:
         nau::ReloadableAssetView::Ptr m_staticMesh;
-        eastl::unordered_map<InstanceID, InstanceInfo> m_instances;
+        std::unordered_map<InstanceID, InstanceInfo> m_instances;
         std::atomic<InstanceID> freeInstanceId = 0;
     };
 

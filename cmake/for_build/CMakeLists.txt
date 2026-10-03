@@ -83,8 +83,6 @@ endfunction()
 
 try_inc(cmake/3rdPartyLibs/asio/asio-config.cmake)
 try_inc(cmake/3rdPartyLibs/brotli/brotli-config.cmake)
-try_inc(cmake/3rdPartyLibs/EABase/EABase-config.cmake)
-try_inc(cmake/3rdPartyLibs/EASTL/EASTL-config.cmake)
 try_inc(cmake/3rdPartyLibs/fast_float/fast_float-config.cmake)
 try_inc(cmake/3rdPartyLibs/jsoncpp/jsoncpp-config.cmake)
 try_inc(cmake/3rdPartyLibs/lzma-9.20/lzma-9.20-config.cmake)

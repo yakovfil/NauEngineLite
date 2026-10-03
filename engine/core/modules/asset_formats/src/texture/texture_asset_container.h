@@ -3,6 +3,11 @@
 
 #pragma once
 
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/assets/asset_container.h"
 #include "nau/assets/texture_asset_accessor.h"
 #include "nau/io/stream.h"
@@ -39,11 +44,11 @@ namespace nau
     private:
         TextureDescription getDescription() const override;
 
-        void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination) override;
+        void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination) override;
 
-        nau::Ptr<> getAsset(eastl::string_view) override;
+        nau::Ptr<> getAsset(std::string_view) override;
 
-        eastl::vector<eastl::string> getContent() const override;
+        std::vector<std::string> getContent() const override;
 
         TextureSourceData m_textureData;
     };
@@ -58,7 +63,7 @@ namespace nau
         TextureAssetContainerLoader() = default;
 
     private:
-        eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        std::vector<std::string_view> getSupportedAssetKind() const override;
 
         async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr, AssetContentInfo info) override;
 

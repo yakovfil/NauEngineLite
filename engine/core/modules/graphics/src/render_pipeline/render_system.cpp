@@ -1,19 +1,21 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "render_system.h"
 
-#include "nau/gui/dag_imgui.h"
-#include "nau/gui/imguiInput.h"
 #include <imgui.h>
+
+#include <span>
+#include <string>
+#include <vector>
 
 #include "graphics_assets/shader_asset.h"
 #include "nau/app/core_window_manager.h"
 #include "nau/app/platform_window.h"
 #include "nau/app/window_manager.h"
-#include "nau/app/core_window_manager.h"
 #include "nau/diag/logging.h"
+#include "nau/gui/dag_imgui.h"
+#include "nau/gui/imguiInput.h"
 #include "nau/osApiWrappers/dag_cpuJobs.h"
 #include "nau/service/service_provider.h"
 #include "nau/utils/performance_profiling.h"
@@ -97,8 +99,7 @@ namespace nau
 
     RenderSystem::~RenderSystem() = default;
 
-
-    RenderScene::Ptr RenderSystem::createScene(const eastl::string& sceneName)
+    RenderScene::Ptr RenderSystem::createScene(const std::string& sceneName)
     {
         NAU_ASSERT(m_scenes.count(sceneName) == 0);
 
@@ -233,8 +234,7 @@ namespace nau
         }
     }
 
-
-    async::Task<> RenderSystem::activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, async::Task<> barrier)
+    async::Task<> RenderSystem::activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, async::Task<> barrier)
     {
         return async::makeResolvedTask();
     }
@@ -278,7 +278,7 @@ namespace nau
             m_preRenderJobs.clear();
         }
 
-        eastl::vector<Task<>> tasks;
+        std::vector<Task<>> tasks;
         tasks.reserve(jobs.size());
 
         for (auto& work : jobs)

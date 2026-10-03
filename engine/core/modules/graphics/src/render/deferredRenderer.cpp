@@ -7,6 +7,9 @@
 #include <graphics_assets/material_asset.h>
 #include <nau/assets/asset_ref.h>
 
+#include <memory>
+#include <string_view>
+
 // TODO: Console variables
 // CONSOLE_BOOL_VAL("render", debug_tiled_resolve, false);
 
@@ -14,7 +17,7 @@ namespace nau::render
 {
     namespace
     {
-        inline void initShaderVar(eastl::string_view name, size_t size)
+        inline void initShaderVar(std::string_view name, size_t size)
         {
             if (nau::shader_globals::containsName(name))
             {
@@ -24,7 +27,7 @@ namespace nau::render
         }
     }  // namespace
 
-    ShadingResolver::ShadingResolver(eastl::unique_ptr<PostFxRenderer> resolveShading) :
+    ShadingResolver::ShadingResolver(std::unique_ptr<PostFxRenderer> resolveShading) :
         resolveShading(std::move(resolveShading))
     {
         initShaderVar("globtm_inv", sizeof(math::Matrix4));
@@ -75,7 +78,7 @@ namespace nau::render
         resolveShading->render();
     }
 
-    DeferredRenderTarget::DeferredRenderTarget(eastl::unique_ptr<render::ShadingResolver> resolveShading,
+    DeferredRenderTarget::DeferredRenderTarget(std::unique_ptr<render::ShadingResolver> resolveShading,
                                                const char* name,
                                                int w,
                                                int h,
@@ -85,7 +88,7 @@ namespace nau::render
     {
     }
 
-    DeferredRenderTarget::DeferredRenderTarget(eastl::unique_ptr<render::ShadingResolver> resolveShading,
+    DeferredRenderTarget::DeferredRenderTarget(std::unique_ptr<render::ShadingResolver> resolveShading,
                                                const char* name_,
                                                const int w,
                                                const int h,

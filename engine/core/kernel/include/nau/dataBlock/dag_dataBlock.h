@@ -2,7 +2,6 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/unique_ptr.h>
 #include <nau/math/dag_e3dColor.h>
 #include <nau/math/math.h>
 #include <nau/string/string.h>
@@ -11,11 +10,10 @@
 #include <nau/utils/dag_stdint.h>
 
 #include <cstddef>
-
-#include "EASTL/span.h"
-#include "nau/memory/mem_allocator.h"
+#include <span>
 
 #include "nau/dag_ioSys/dag_genIo.h"
+#include "nau/memory/mem_allocator.h"
 
 struct ZSTD_CDict_s;
 struct ZSTD_DDict_s;
@@ -28,7 +26,6 @@ namespace nau
     struct DataBlockShared;
     struct DataBlockOwned;
     struct DBNameMap;
-
 
     struct RoDataBlock;
 
@@ -466,7 +463,7 @@ namespace nau
         /// but removes existing sub-blocks with the same name first.
         DataBlock* setBlock(const DataBlock* blk, const char* as_name = NULL)
         {
-            if(!blk)
+            if (!blk)
                 return NULL;
             removeBlock(as_name ? as_name : blk->getBlockName());
             return addNewBlock(blk, as_name);
@@ -689,7 +686,7 @@ namespace nau
         {
             const int nid = getNameId(name);
             const int pid = findParam<rw>(nid);
-            if(pid >= 0)
+            if (pid >= 0)
                 return get<T, rw>(pid);
             issue_error_missing_param(name, TypeOf<T>::type);
             return T();
@@ -790,7 +787,7 @@ namespace nau
         }
         __forceinline void toOwned()
         {
-            if(!isOwned())
+            if (!isOwned())
                 convertToOwned();
         }
 
@@ -825,7 +822,7 @@ namespace nau
         NAU_KERNEL_EXPORT bool load(DataBlock& blk, const char* fname, ReadFlags flg = ReadFlags(), DataBlock::IFileNotify* fnotify = nullptr);
 
         /// Load BLK from text (fname is used only for error reporting)
-        NAU_KERNEL_EXPORT bool load_text(DataBlock& blk, const eastl::span<char> text, ReadFlags flg = ReadFlags(), const char* fname = nullptr, DataBlock::IFileNotify* fnotify = nullptr);
+        NAU_KERNEL_EXPORT bool load_text(DataBlock& blk, const std::span<char> text, ReadFlags flg = ReadFlags(), const char* fname = nullptr, DataBlock::IFileNotify* fnotify = nullptr);
 
         /// Load BLK from stream (fname is used only for error reporting)
         NAU_KERNEL_EXPORT bool load_from_stream(DataBlock& blk, iosys::IGenLoad& crd, ReadFlags flg = ReadFlags(), const char* fname = nullptr, DataBlock::IFileNotify* fnotify = nullptr, unsigned hint_size = 128);
@@ -1048,14 +1045,14 @@ namespace nau
     template <typename Cb>
     static inline void dblk::iterate_child_blocks(const DataBlock& db, Cb cb)
     {
-        if(const DataBlock* b = db.getBlockROPtr())
+        if (const DataBlock* b = db.getBlockROPtr())
         {
-            for(const DataBlock* be = b + db.blockCount(); b < be; b++)
+            for (const DataBlock* be = b + db.blockCount(); b < be; b++)
                 cb(*b);
         }
-        else if(const DataBlock* const* b = db.getBlockRWPtr())
+        else if (const DataBlock* const* b = db.getBlockRWPtr())
         {
-            for(const DataBlock* const* be = b + db.blockCount(); b < be; b++)
+            for (const DataBlock* const* be = b + db.blockCount(); b < be; b++)
                 cb(**b);
         }
     }
@@ -1072,14 +1069,14 @@ namespace nau
     static inline void dblk::iterate_blocks_lev(const DataBlock& db, Cb cb, int lev)
     {
         cb(db, lev);
-        if(const DataBlock* b = db.getBlockROPtr())
+        if (const DataBlock* b = db.getBlockROPtr())
         {
-            for(const DataBlock* be = b + db.blockCount(); b < be; b++)
+            for (const DataBlock* be = b + db.blockCount(); b < be; b++)
                 iterate_blocks_lev(*b, cb, lev + 1);
         }
-        else if(const DataBlock* const* b = db.getBlockRWPtr())
+        else if (const DataBlock* const* b = db.getBlockRWPtr())
         {
-            for(const DataBlock* const* be = b + db.blockCount(); b < be; b++)
+            for (const DataBlock* const* be = b + db.blockCount(); b < be; b++)
                 iterate_blocks_lev(**b, cb, lev + 1);
         }
     }
@@ -1088,7 +1085,7 @@ namespace nau
     {
         iterate_child_blocks(db, [&](const DataBlock& b)
         {
-            if(b.getBlockNameId() == nid)
+            if (b.getBlockNameId() == nid)
                 cb(b);
         });
     }
@@ -1096,13 +1093,13 @@ namespace nau
     static inline void dblk::iterate_child_blocks_by_name(const DataBlock& db, const char* nm, Cb cb)
     {
         int nid = db.getNameId(nm);
-        if(nid >= 0)
+        if (nid >= 0)
             iterate_child_blocks_by_name_id(db, nid, cb);
     }
     template <typename Cb>
     static inline void dblk::iterate_blocks_by_name_id(const DataBlock& db, int nid, Cb cb)
     {
-        if(db.getBlockNameId() == nid)
+        if (db.getBlockNameId() == nid)
             cb(db);
         iterate_child_blocks_by_name_id(db, nid, [&](const DataBlock& b)
         {
@@ -1113,7 +1110,7 @@ namespace nau
     static inline void dblk::iterate_blocks_by_name(const DataBlock& db, const char* nm, Cb cb)
     {
         int nid = db.getNameId(nm);
-        if(nid >= 0)
+        if (nid >= 0)
             dblk::iterate_blocks_by_name_id(db, nid, cb);
     }
 
@@ -1121,7 +1118,7 @@ namespace nau
     static inline void dblk::iterate_params(const DataBlock& db, Cb cb)
     {
         const DataBlock::Param *s = db.getParamsPtr(), *e = s + db.paramsCount;
-        for(uint32_t i = 0; s < e; s++, i++)
+        for (uint32_t i = 0; s < e; s++, i++)
             cb(i, s->nameId, s->type);
     }
 
@@ -1130,7 +1127,7 @@ namespace nau
     {
         iterate_params(db, [&](int param_idx, int param_name_id, int param_type)
         {
-            if(param_type == type)
+            if (param_type == type)
                 cb(param_idx, param_name_id, param_type);
         });
     }
@@ -1140,7 +1137,7 @@ namespace nau
     {
         iterate_params(db, [&](int param_idx, int param_name_id, int param_type)
         {
-            if(param_name_id == name_id)
+            if (param_name_id == name_id)
                 cb(param_idx, param_name_id, param_type);
         });
     }
@@ -1148,7 +1145,7 @@ namespace nau
     static inline void dblk::iterate_params_by_name(const DataBlock& db, const char* nm, Cb cb)
     {
         int name_id = db.getNameId(nm);
-        if(name_id >= 0)
+        if (name_id >= 0)
             iterate_params_by_name_id(db, name_id, cb);
     }
 
@@ -1157,7 +1154,7 @@ namespace nau
     {
         iterate_params(db, [&](int param_idx, int param_name_id, int param_type)
         {
-            if(param_name_id == name_id && param_type == type)
+            if (param_name_id == name_id && param_type == type)
                 cb(param_idx);
         });
     }
@@ -1165,7 +1162,7 @@ namespace nau
     static inline void dblk::iterate_params_by_name_and_type(const DataBlock& db, const char* nm, int type, Cb cb)
     {
         int name_id = db.getNameId(nm);
-        if(name_id >= 0)
+        if (name_id >= 0)
             iterate_params_by_name_id_and_type(db, name_id, type, cb);
     }
 

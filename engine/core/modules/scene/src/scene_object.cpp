@@ -1,15 +1,17 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/scene/scene_object.h"
+
+#include <optional>
+#include <string_view>
 
 #include "./scene_management/scene_manager_impl.h"
 #include "nau/messaging/messaging.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/internal/component_factory.h"
-#include "nau/service/service_provider.h"
 #include "nau/scene/scene_factory.h"
+#include "nau/service/service_provider.h"
 
 namespace nau::scene
 {
@@ -104,12 +106,12 @@ namespace nau::scene
         }
     }
 
-    eastl::string_view SceneObject::getName() const
+    std::string_view SceneObject::getName() const
     {
         return m_name;
     }
 
-    void SceneObject::setName(eastl::string_view name)
+    void SceneObject::setName(std::string_view name)
     {
         m_name = name;
     }
@@ -223,7 +225,7 @@ namespace nau::scene
 
         NAU_FATAL(m_rootComponent);
 
-        eastl::optional<math::Transform> oldWorldTransform;
+        std::optional<math::Transform> oldWorldTransform;
         if (!options.has(SetParentOpts::DontKeepWorldTransform))
         {
             oldWorldTransform = m_rootComponent->getWorldTransform();

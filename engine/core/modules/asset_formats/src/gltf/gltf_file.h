@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -17,8 +18,8 @@ namespace nau
 {
     struct GltfHeader
     {
-        eastl::string generator;
-        eastl::string version;
+        std::string generator;
+        std::string version;
         RuntimeValue::Ptr extras;
 
 #pragma region Class Info
@@ -36,8 +37,8 @@ namespace nau
 
     struct GltfNodeBase
     {
-        eastl::string name;
-        eastl::vector<unsigned> children;
+        std::string name;
+        std::vector<unsigned> children;
         Float3 translation = {0.f, 0.f, 0.f};
         Float3 scale = {1.f, 1.f, 1.f};
         Float4 rotation = {0.f, 0.f, 0.f, 1.f};
@@ -56,8 +57,8 @@ namespace nau
 
     struct GltfSceneData
     {
-        eastl::string name;
-        eastl::vector<unsigned> nodes;
+        std::string name;
+        std::vector<unsigned> nodes;
 
 #pragma region Class Info
 
@@ -72,7 +73,7 @@ namespace nau
     {
         struct MeshPrimitive
         {
-            eastl::map<eastl::string, unsigned> attributes;
+            std::map<std::string, unsigned> attributes;
             unsigned indices;
             std::optional<unsigned> material;
 
@@ -86,9 +87,9 @@ namespace nau
 #pragma endregion
         };
 
-        eastl::string name;
-        eastl::vector<MeshPrimitive> primitives;
-        eastl::map<eastl::string, RuntimeValue::Ptr> extras;
+        std::string name;
+        std::vector<MeshPrimitive> primitives;
+        std::map<std::string, RuntimeValue::Ptr> extras;
 
 #pragma region Class Info
 
@@ -121,8 +122,8 @@ namespace nau
             CLASS_FIELD(type),
             CLASS_FIELD(perspective))
 
-        eastl::string name;
-        eastl::string type;
+        std::string name;
+        std::string type;
         std::optional<GltfPerspective> perspective;
     };
 
@@ -133,7 +134,7 @@ namespace nau
         unsigned bufferView;
         unsigned componentType;
         unsigned count;
-        eastl::string type;
+        std::string type;
         std::optional<FArray3> max;
         std::optional<FArray3> min;
 
@@ -171,7 +172,7 @@ namespace nau
     struct GltfBuffer
     {
         unsigned byteLength;
-        eastl::string uri;
+        std::string uri;
 
 #pragma region Class Info
 
@@ -189,7 +190,7 @@ namespace nau
             struct Target
             {
                 int node;
-                eastl::string path;
+                std::string path;
 
                 NAU_CLASS_FIELDS(
                         CLASS_FIELD(node),
@@ -197,7 +198,7 @@ namespace nau
             };
 
             int sampler;
-            eastl::string name;
+            std::string name;
             Target target;
 
             NAU_CLASS_FIELDS(
@@ -209,7 +210,7 @@ namespace nau
         struct Sampler
         {
             int input;
-            eastl::string interpolation;
+            std::string interpolation;
             int output;
 
             NAU_CLASS_FIELDS(
@@ -218,9 +219,9 @@ namespace nau
                 CLASS_FIELD(output))
         };
 
-        eastl::vector<Channel> channels;
-        eastl::string name;
-        eastl::vector<Sampler> samplers;
+        std::vector<Channel> channels;
+        std::string name;
+        std::vector<Sampler> samplers;
 
 #pragma region Class Info
 
@@ -234,9 +235,9 @@ namespace nau
 
     struct GltfSkin
     {
-        eastl::string name;
+        std::string name;
         unsigned inverseBindMatrices;
-        eastl::vector<unsigned> joints;
+        std::vector<unsigned> joints;
 
 #pragma region Class Info
 
@@ -252,15 +253,15 @@ namespace nau
     {
         GltfHeader asset;
         int scene = -1;
-        eastl::vector<GltfSceneData> scenes;
-        eastl::vector<nau::RuntimeValue::Ptr> nodes;
-        eastl::vector<GltfMeshData> meshes;
-        eastl::vector<GltfCameraData> cameras;
-        eastl::vector<GltfAccessor> accessors;
-        eastl::vector<GltfBufferView> bufferViews;
-        eastl::vector<GltfBuffer> buffers;
-        eastl::vector<GltfAnimation> animations;
-        eastl::vector<GltfSkin> skins;
+        std::vector<GltfSceneData> scenes;
+        std::vector<nau::RuntimeValue::Ptr> nodes;
+        std::vector<GltfMeshData> meshes;
+        std::vector<GltfCameraData> cameras;
+        std::vector<GltfAccessor> accessors;
+        std::vector<GltfBufferView> bufferViews;
+        std::vector<GltfBuffer> buffers;
+        std::vector<GltfAnimation> animations;
+        std::vector<GltfSkin> skins;
 
 #pragma region Class Info
 

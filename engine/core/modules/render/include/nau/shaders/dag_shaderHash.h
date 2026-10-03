@@ -3,8 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/util/dag_strUtil.h"
+#include <span>
+
 #include "nau/hash/sha1.h"
+#include "nau/util/dag_strUtil.h"
 
 struct ShaderHashValue
 {
@@ -21,7 +23,7 @@ struct ShaderHashValue
   friend bool operator!=(const ShaderHashValue &l, const ShaderHashValue &r) { return !(l == r); }
 
   template <typename T>
-  static ShaderHashValue calculate(eastl::span<const T> data)
+  static ShaderHashValue calculate(std::span<const T> data)
   {
     ShaderHashValue value;
     sha1_csum(reinterpret_cast<const unsigned char *>(data.data()), static_cast<int>(data_size(data)),

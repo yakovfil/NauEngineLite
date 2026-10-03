@@ -58,8 +58,8 @@ public:
     bool isEnabled() const { return _enabled; }
     virtual void setEnabled(bool enabled);
     
-    const eastl::string& getName() const { return _name; }
-    virtual void setName(const eastl::string& name) { _name = name; }
+    const std::string& getName() const { return _name; }
+    virtual void setName(const std::string& name) { _name = name; }
     
     Node* getOwner() const { return _owner; }
     virtual void setOwner(Node *owner);
@@ -80,7 +80,7 @@ CC_CONSTRUCTOR_ACCESS:
 
 protected:
     Node* _owner;
-    eastl::string _name;
+    std::string _name;
     bool _enabled;
 };
 

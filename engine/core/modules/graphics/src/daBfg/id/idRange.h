@@ -3,14 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-#include <EASTL/iterator.h>
-
+#include <iterator>
+#include <type_traits>
 
 template <class EnumType>
 class IdRange
 {
-  using Underlying = eastl::underlying_type_t<EnumType>;
+    using Underlying = std::underlying_type_t<EnumType>;
 
 public:
   IdRange(Underlying end) : begin_{0}, end_{end} {}
@@ -26,8 +25,8 @@ public:
     using value_type = EnumType;
     using reference = EnumType;
     using pointer = void;
-    using iterator_category = eastl::input_iterator_tag;
-    using difference_type = eastl::make_signed<Underlying>;
+    using iterator_category = std::input_iterator_tag;
+    using difference_type = std::make_signed<Underlying>;
 
     EnumType operator*() const { return static_cast<EnumType>(current_); }
     // Yeah, this is intentional. Casting &current_ to a pointer

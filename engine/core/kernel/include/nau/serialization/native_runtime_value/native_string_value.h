@@ -3,6 +3,8 @@
 
 #pragma once
 #include <concepts>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "nau/diag/logging.h"
@@ -185,30 +187,23 @@ namespace nau
 
     template <typename C, typename... Traits>
     requires(sizeof(C) == sizeof(char))
-    RuntimeStringValue::Ptr makeValueRef(eastl::basic_string<C, Traits...>& str, IMemAllocator::Ptr allocator)
+    RuntimeStringValue::Ptr makeValueRef(std::basic_string<C, Traits...>& str, IMemAllocator::Ptr allocator)
     {
-        using StringType = ser_detail::NativeBasicStringValue<eastl::basic_string<C, Traits...>&>;
+        using StringType = ser_detail::NativeBasicStringValue<std::basic_string<C, Traits...>&>;
 
         return rtti::createInstanceWithAllocator<StringType>(std::move(allocator), str);
     }
 
     template <typename C, typename... Traits>
     requires(sizeof(C) == sizeof(char))
-    RuntimeStringValue::Ptr makeValueRef(const eastl::basic_string<C, Traits...>& str, IMemAllocator::Ptr allocator)
+    RuntimeStringValue::Ptr makeValueRef(const std::basic_string<C, Traits...>& str, IMemAllocator::Ptr allocator)
     {
-        using StringType = ser_detail::NativeBasicStringValue<const eastl::basic_string<C, Traits...>&>;
+        using StringType = ser_detail::NativeBasicStringValue<const std::basic_string<C, Traits...>&>;
 
         return rtti::createInstanceWithAllocator<StringType>(std::move(allocator), str);
     }
 
-    inline RuntimeStringValue::Ptr makeValueCopy(eastl::string_view str, IMemAllocator::Ptr allocator)
-    {
-        using StringType = ser_detail::NativeBasicStringValue<std::basic_string<char>>;
-
-        return rtti::createInstanceWithAllocator<StringType>(std::move(allocator), str.data(), str.size());
-    }
-
-    inline RuntimeStringValue::Ptr makeValueCopy(eastl::u8string_view str, IMemAllocator::Ptr allocator)
+    inline RuntimeStringValue::Ptr makeValueCopy(std::u8string_view str, IMemAllocator::Ptr allocator)
     {
         using StringType = ser_detail::NativeBasicStringValue<std::basic_string<char>>;
 

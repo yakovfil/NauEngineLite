@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/async/task.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_object.h"
@@ -95,6 +97,6 @@ namespace nau::scene
 
     /**
      */
-    NAU_CORESCENE_EXPORT async::Task<IScene::Ptr> openScene(const eastl::string& path);
+    NAU_CORESCENE_EXPORT async::Task<IScene::Ptr> openScene(const std::string& path);
 
 }  // namespace nau::scene

@@ -7,6 +7,7 @@
 #include <corecrt_math.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 
 #include "dag_vecMath_est.h"
@@ -57,18 +58,18 @@ namespace nau::render
             return maxSlicesi.getElem(0) | (maxSlicesi.getElem(1) << 8) | (maxSlicesi.getElem(2) << 16) | (maxSlicesi.getElem(3) << 24);
         }
 
-        eastl::array<float, CLUSTERS_D + 1> sliceDists;                                                    //-V730_NOINIT
-        eastl::array<math::Point3, CLUSTERS_W + 1> x_planes;                                               //-V730_NOINIT
-        eastl::array<math::Point3, CLUSTERS_H + 1> y_planes;                                               //-V730_NOINIT
-        eastl::array<math::Point2, CLUSTERS_W + 1> x_planes2;                                              //-V730_NOINIT
-        eastl::array<math::Point2, CLUSTERS_H + 1> y_planes2;                                              //-V730_NOINIT
-        eastl::array<math::Point3, (CLUSTERS_W + 1) * (CLUSTERS_H + 1) * (CLUSTERS_D + 1)> frustumPoints;  //-V730_NOINIT
-        eastl::array<uint8_t, CLUSTERS_H> sliceNoRowMax;                                                   //-V730_NOINIT
-        eastl::array<uint8_t, CLUSTERS_W * CLUSTERS_H> maxSlicesNo;                                        //-V730_NOINIT
+        std::array<float, CLUSTERS_D + 1> sliceDists;                                                    //-V730_NOINIT
+        std::array<math::Point3, CLUSTERS_W + 1> x_planes;                                               //-V730_NOINIT
+        std::array<math::Point3, CLUSTERS_H + 1> y_planes;                                               //-V730_NOINIT
+        std::array<math::Point2, CLUSTERS_W + 1> x_planes2;                                              //-V730_NOINIT
+        std::array<math::Point2, CLUSTERS_H + 1> y_planes2;                                              //-V730_NOINIT
+        std::array<math::Point3, (CLUSTERS_W + 1) * (CLUSTERS_H + 1) * (CLUSTERS_D + 1)> frustumPoints;  //-V730_NOINIT
+        std::array<uint8_t, CLUSTERS_H> sliceNoRowMax;                                                   //-V730_NOINIT
+        std::array<uint8_t, CLUSTERS_W * CLUSTERS_H> maxSlicesNo;                                        //-V730_NOINIT
 
 #define HAS_FROXEL_SPHERES 0
 #if HAS_FROXEL_SPHERES
-        eastl::array<Point3_vec4, (CLUSTERS_W) * (CLUSTERS_H) * (CLUSTERS_D)> frustumSpheres;  //-V730_NOINIT
+        std::array<Point3_vec4, (CLUSTERS_W) * (CLUSTERS_H) * (CLUSTERS_D)> frustumSpheres;  //-V730_NOINIT
 #endif
 
         struct ItemRect3D
@@ -99,8 +100,8 @@ namespace nau::render
         struct ClusterGridItemMasks
         {
             static constexpr int MAX_ITEM_COUNT = 256;                                    // can be replaced with dynamic
-            eastl::array<MaskType, MAX_ITEM_COUNT * CLUSTERS_H * CLUSTERS_D> sliceMasks;  //-V730_NOINIT
-            eastl::array<uint16_t, MAX_ITEM_COUNT> sliceMasksStart;                       //-V730_NOINIT
+            std::array<MaskType, MAX_ITEM_COUNT * CLUSTERS_H * CLUSTERS_D> sliceMasks;    //-V730_NOINIT
+            std::array<uint16_t, MAX_ITEM_COUNT> sliceMasksStart;                         //-V730_NOINIT
 
             dag::RelocatableFixedVector<ItemRect3D, MAX_ITEM_COUNT> rects3d;
 

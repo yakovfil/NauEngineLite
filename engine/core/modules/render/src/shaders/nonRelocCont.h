@@ -3,8 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
+#include <memory>
+#include <vector>
 
 #include "nau/math/dag_adjpow2.h"
 
@@ -51,8 +51,8 @@ public:
   {
     unsigned i = n >> SA_INDEX_BITS;
     unsigned j = n & ((1 << SA_INDEX_BITS) - 1);
-    if (EASTL_LIKELY(i < arrays.size() && j < count(i)))
-      return &arrays[i][j];
+    if (NAU_LIKELY(i < arrays.size() && j < count(i)))
+        return &arrays[i][j];
     else
       return nullptr;
   }
@@ -101,7 +101,7 @@ public:
       unsigned j = backCount;
       backCount += sz;
       auto &back = arrays.back();
-      if (EASTL_LIKELY(backCount <= capacity(asize - 1)))
+      if (NAU_LIKELY(backCount <= capacity(asize - 1)))
       {
         if (p)
           for (int i = 0; i < sz; ++i)
@@ -119,13 +119,16 @@ private:
   static constexpr unsigned SA_INDEX_BITS = 24;
   struct SubArray
   {
-    eastl::unique_ptr<T[]> data;
-    SubArray() = default;
-    SubArray(uint32_t cap) : data(eastl::make_unique<T[]>(cap)) {}
+      std::unique_ptr<T[]> data;
+      SubArray() = default;
+      SubArray(uint32_t cap) :
+          data(std::make_unique<T[]>(cap))
+      {
+      }
     T &operator[](unsigned i) { return data[i]; }
     const T &operator[](unsigned i) const { return data[i]; }
   };
-  eastl::vector<SubArray> arrays;
+  std::vector<SubArray> arrays;
   uint32_t backCount = 0, totalCount = 0;
   uint32_t count(uint32_t i) const
   {

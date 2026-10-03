@@ -6,11 +6,6 @@ if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   endforeach()
   nau_target_add_compile_options(TARGETS ${NAU_MINIMAL_DEPENDENCY_TARGETS})
   set_target_properties(${NAU_MINIMAL_DEPENDENCY_TARGETS} PROPERTIES FOLDER "${FolderName}")
-  target_compile_definitions(EASTL PUBLIC EA_DLL=0 EASTL_USER_DEFINED_ALLOCATOR)
-  target_sources(EASTL PRIVATE EASTL/EASTL.natvis)
-  if(EMSCRIPTEN)
-    target_sources(EASTL PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/platformSpec/emscripten_eastl_debug_break.cpp")
-  endif()
   if(NAU_MINIMAL_TESTS)
     set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
     set(BUILD_GMOCK ${NAU_MINIMAL_GMOCK} CACHE BOOL "" FORCE)
@@ -25,8 +20,6 @@ endif()
 
 set (3rdPartyLibDirs
   asio
-  EABase
-  EASTL
 #  GameNetworkingSockets
   lua
   DirectX-Headers
@@ -63,8 +56,6 @@ set (3rdPartyLibDirs
 
 set (3rdPartyLibTargets
   asio
-  EABase
-  EASTL
   lua
   DirectX-Headers
   DirectX-Guids
@@ -136,13 +127,6 @@ set_target_properties ( ${3rdPartyLibTargets}
     FOLDER "${FolderName}"
 )
 
-if (BUILD_SHARED_LIBS)
-  target_compile_definitions(EASTL PUBLIC EA_DLL=1)
-else()
-  target_compile_definitions(EASTL PUBLIC EA_DLL=0 EASTL_USER_DEFINED_ALLOCATOR)
-endif()
-
-target_sources(EASTL PRIVATE EASTL/EASTL.natvis)
 
 
 ## test targets

@@ -32,15 +32,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include <EASTL/unordered_map.h>
-
 #include "base/CCEventListenerCustom.h"
 #include "base/CCRef.h"
+#include "nau/3d/dag_drv3d.h"
 #include "renderer/backend/Macros.h"
 #include "renderer/backend/Program.h"
 #include "renderer/backend/RenderPipelineDescriptor.h"
 #include "renderer/backend/Types.h"
-#include "nau/3d/dag_drv3d.h"
 
 DAGOR_CC_BACKEND_BEGIN
 
@@ -55,7 +53,7 @@ struct AttributeInfo
     size_t stride = 0;
     size_t offset = 0;
     bool needToBeNormallized = false;
-    eastl::string name;
+    std::string name;
 };
 
 
@@ -184,8 +182,8 @@ private:
     std::vector<AttributeInfo> _attributeInfos;  // Layout
 
     std::size_t _totalBufferSize = 0;
-    eastl::unordered_map<eastl::string ,cocos2d::backend::UniformInfo> _shaderUniformInfo;
-    eastl::vector<cocos2d::backend::AttributeBindInfo> _shaderAttributeLocation;
+    std::unordered_map<std::string, cocos2d::backend::UniformInfo> _shaderUniformInfo;
+    std::vector<cocos2d::backend::AttributeBindInfo> _shaderAttributeLocation;
     std::unordered_map<int, int> _bufferOffset;
     std::unordered_map<VDECL, PROGRAM> _shadersPool;
 };

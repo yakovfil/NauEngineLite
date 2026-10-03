@@ -26,8 +26,8 @@ THE SOFTWARE.
 #ifndef __TRIGGERFACTORY_H__
 #define __TRIGGERFACTORY_H__
 
-#include <EASTL/string.h>
-#include <EASTL/unordered_map.h>
+#include <string>
+#include <unordered_map>
 #include <functional>
 #include "base/CCRef.h"
 #include "platform/CCPlatformMacros.h"
@@ -42,20 +42,20 @@ public:
     struct CC_DLL TInfo
     {
         TInfo();
-        TInfo(const eastl::string& type, Instance ins = nullptr);
-        TInfo(const eastl::string& type, InstanceFunc ins = nullptr);
+        TInfo(const std::string& type, Instance ins = nullptr);
+        TInfo(const std::string& type, InstanceFunc ins = nullptr);
         TInfo(const TInfo &t);
         ~TInfo();
         TInfo& operator= (const TInfo &t);
-        eastl::string _class;
+        std::string _class;
         Instance _fun;
         InstanceFunc _func;
     };
-    typedef eastl::unordered_map<eastl::string, TInfo>  FactoryMap;
+    typedef std::unordered_map<std::string, TInfo>  FactoryMap;
 
     static ObjectFactory* getInstance();
     static void destroyInstance();
-    cocos2d::Ref* createObject(const eastl::string &name);
+    cocos2d::Ref* createObject(const std::string &name);
 
     void registerType(const TInfo &t);
     void removeAll();

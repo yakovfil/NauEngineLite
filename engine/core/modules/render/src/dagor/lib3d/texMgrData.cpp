@@ -3,12 +3,18 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "texMgrData.h"
-#include "nau/util/dag_texMetaData.h"
+
+#include <algorithm>
+#include <utility>
+#include <vector>
+
+#include "nau/3d/ddsxTex.h"
 #include "nau/dag_ioSys/dag_genIo.h"
+#include "nau/diag/logging.h"
 #include "nau/math/dag_adjpow2.h"
 #include "nau/osApiWrappers/dag_miscApi.h"
-#include "nau/3d/ddsxTex.h"
-#include "nau/diag/logging.h"
+#include "nau/util/dag_texMetaData.h"
+#include "nau/utils/sorted_vector.h"
 
 // The performance overhead of this check is too much to be
 // done all the time on resources which are registered/unregistered
@@ -172,26 +178,29 @@ void D3dResManagerData::report_bad_generation_used(D3DRESID id)
 
 namespace texmgr_internal
 {
-eastl::vector<MipBiasRule> mip_bias_rules;
-float default_mip_bias = 0.0f;
-TextureIdSet anisotropy_exceptions;
-TextureFactory *default_tex_mgr_factory = NULL;
-NauFastStrMapT<int, -1> managed_tex_map_by_name(strmem, false);
-eastl::vector<const char *> managed_tex_map_by_idx(*strmem);
-TexTagInfoArray textagInfo;
-int mt_enabled = 0;
-bool auto_add_tex_on_get_id = false;
-bool disable_add_warning = false;
-static thread_local int texmgr_critsec_lock_count = 0;
-bool texq_load_on_demand = false;
-uint8_t texq_load_disabled = 0;
-int reload_jobmgr_id = -1;
-int dbg_texq_load_sleep_ms = 0;
-bool dbg_texq_only_stubs = false;
-volatile int drv_res_updates_flush_count = 0;
-bool enable_cur_ql_mismatch_assert = true;
+    std::vector<MipBiasRule> mip_bias_rules;
+    float default_mip_bias = 0.0f;
+    TextureIdSet anisotropy_exceptions;
+    TextureFactory* default_tex_mgr_factory = NULL;
+    NauFastStrMapT<int, -1> managed_tex_map_by_name(strmem, false);
+    std::vector<const char*> managed_tex_map_by_idx;
+    TexTagInfoArray textagInfo;
+    int mt_enabled = 0;
+    bool auto_add_tex_on_get_id = false;
+    bool disable_add_warning = false;
+    static thread_local int texmgr_critsec_lock_count = 0;
+    bool texq_load_on_demand = false;
+    uint8_t texq_load_disabled = 0;
+    int reload_jobmgr_id = -1;
+    int dbg_texq_load_sleep_ms = 0;
+    bool dbg_texq_only_stubs = false;
+    volatile int drv_res_updates_flush_count = 0;
+    bool enable_cur_ql_mismatch_assert = true;
 
-static bool always_should_release_tex(BaseTexture *) { return true; }
+    static bool always_should_release_tex(BaseTexture*)
+    {
+        return true;
+    }
 bool (*should_release_tex)(BaseTexture *b) = &always_should_release_tex;
 void (*stop_bkg_tex_loading)(int sleep_quant) = NULL;
 void (*hook_on_get_texture_id)(TEXTUREID id) = nullptr;
@@ -205,7 +214,7 @@ dag::CriticalSection rec_lock;
 int (*drv3d_cmd)(int command, void *par1, void *par2, void *par3) = NULL;
 }; // namespace texmgr_internal
 
-eastl::vector<BaseTexture *> tql::texStub(*eastl::GetDefaultAllocator());
+std::vector<BaseTexture*> tql::texStub;
 bool tql::streaming_enabled = false;
 int tql::mem_quota_kb = 0;
 int tql::mem_quota_limit_kb = INT32_MAX;
@@ -250,7 +259,7 @@ static void dump_tex_state_base(TEXTUREID idx) { RMGR.dumpTexState(idx.index());
 void (*tql::dump_tex_state)(TEXTUREID idx) = &dump_tex_state_base;
 
 dag::CriticalSection tql::reqLDCritSection;
-eastl::vector_set<TEXTUREID> tql::reqLD;
+nau::SortedVectorSet<TEXTUREID> tql::reqLD;
 int tql::mem_used_persistent_kb = 0;
 int tql::mem_quota_reserve_kb = 256 << 10;
 #if _TARGET_C1 | _TARGET_C2
@@ -312,6 +321,7 @@ template <typename T, T invalidId = (T)BAD_TEXTUREID>
 struct PublicFastStrMapT : public NauFastStrMapT<T, invalidId>
 {
   using NauFastStrMapT<T, invalidId>::fastMap;
+  using NauFastStrMapT<T, invalidId>::stringAllocator;
 };
 
 void texmgr_internal::add_mip_bias_rule(const char *substring, float bias)
@@ -323,16 +333,19 @@ void texmgr_internal::add_mip_bias_rule(const char *substring, float bias)
   }
 
   // Remove old rule with same substring.
-  mip_bias_rules.erase(eastl::remove_if(mip_bias_rules.begin(), mip_bias_rules.end(),
-                         [substring](const MipBiasRule &r) { return strcmp(r.substring, substring) == 0; }),
-    mip_bias_rules.end());
+  mip_bias_rules.erase(std::remove_if(mip_bias_rules.begin(), mip_bias_rules.end(),
+                                      [substring](const MipBiasRule& r)
+  {
+      return strcmp(r.substring, substring) == 0;
+  }),
+                       mip_bias_rules.end());
 
   // Insert new rule to begin of vector, so latest updated rule will always be first, this way we can keep ordering by
   // applying the first matching rule for newly created textures.
   MipBiasRule newRule;
   newRule.substring = substring;
   newRule.bias = bias;
-  mip_bias_rules.insert(mip_bias_rules.begin(), eastl::move(newRule));
+  mip_bias_rules.insert(mip_bias_rules.begin(), std::move(newRule));
 }
 
 void texmgr_internal::apply_mip_bias_rules(BaseTexture *tex, const char *name)
@@ -370,7 +383,7 @@ void texmgr_internal::remove_from_managed_tex_map(int idx)
 
   auto f = RMGR.getFactory(idx);
   if (!(f && f->isPersistentTexName(name)))
-    memfree((void *)name, &mp.fastMap.get_allocator());
+      memfree((void*)name, mp.stringAllocator);
 
   texmgr_internal::managed_tex_map_by_idx[idx] = nullptr;
   //erase_items(mp.fastMap, map_idx, 1);

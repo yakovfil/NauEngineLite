@@ -2,6 +2,13 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <iterator>
+#include <span>
+#include <tuple>
+#include <variant>
+#include <vector>
+
 #include "device.h"
 
 using namespace drv3d_dx12;
@@ -19,7 +26,7 @@ uint32_t frontend::BindlessManager::registerSampler(Device &device, DeviceContex
   uint32_t newIndex;
   {
     auto stateAccess = state.access();
-    auto ref = eastl::find(begin(stateAccess->samplerTable), end(stateAccess->samplerTable), sampler);
+    auto ref = std::find(begin(stateAccess->samplerTable), end(stateAccess->samplerTable), sampler);
     if (ref != end(stateAccess->samplerTable))
     {
       return static_cast<uint32_t>(ref - begin(stateAccess->samplerTable));
@@ -32,26 +39,26 @@ uint32_t frontend::BindlessManager::registerSampler(Device &device, DeviceContex
   return newIndex;
 }
 
-void frontend::BindlessManager::unregisterBufferDescriptors(eastl::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
+void frontend::BindlessManager::unregisterBufferDescriptors(std::span<const D3D12_CPU_DESCRIPTOR_HANDLE> descriptors)
 {
   auto stateAccess = state.access();
   for (auto descriptor : descriptors)
   {
-    auto ref = eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo),
-      [descriptor](auto &var) //
+      auto ref = std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo),
+                              [descriptor](auto& var)  //
       {
-        auto *bufferInfo = eastl::get_if<BufferSlotUsage>(&var);
-        if (!bufferInfo)
-        {
-          return false;
-        }
-        return bufferInfo->descriptor == descriptor;
+          auto* bufferInfo = std::get_if<BufferSlotUsage>(&var);
+          if (!bufferInfo)
+          {
+              return false;
+          }
+          return bufferInfo->descriptor == descriptor;
       });
-    if (ref != end(stateAccess->resourceSlotInfo))
-    {
-      freeBindlessResourceRange(eastl::distance(begin(stateAccess->resourceSlotInfo), ref), 1);
-      *ref = eastl::monostate{};
-    }
+      if (ref != end(stateAccess->resourceSlotInfo))
+      {
+          freeBindlessResourceRange(std::distance(begin(stateAccess->resourceSlotInfo), ref), 1);
+          *ref = std::monostate{};
+      }
   }
 }
 
@@ -62,7 +69,7 @@ uint32_t frontend::BindlessManager::allocateBindlessResourceRange(uint32_t count
   if (range.empty())
   {
     auto r = stateAccess->resourceSlotInfo.size();
-    stateAccess->resourceSlotInfo.resize(r + count, eastl::monostate{});
+    stateAccess->resourceSlotInfo.resize(r + count, std::monostate{});
     return r;
   }
   else
@@ -86,7 +93,7 @@ uint32_t frontend::BindlessManager::resizeBindlessResourceRange(DeviceContext &c
     if (range_end == stateAccess->resourceSlotInfo.size())
     {
       // the range is in the end of the heap, so we just update the heap size
-      stateAccess->resourceSlotInfo.resize(index + new_count, eastl::monostate{});
+      stateAccess->resourceSlotInfo.resize(index + new_count, std::monostate{});
       return index;
     }
 
@@ -112,19 +119,19 @@ void frontend::BindlessManager::freeBindlessResourceRange(uint32_t index, uint32
     "DX12: freeBindlessResourceRange tried to free out of range slots, range %u - "
     "%u, bindless count %u",
     index, index + count, stateAccess->resourceSlotInfo.size());
-  eastl::fill_n(begin(stateAccess->resourceSlotInfo) + index, count, ResourceSlotInfoType{eastl::monostate{}});
+  std::fill_n(begin(stateAccess->resourceSlotInfo) + index, count, ResourceSlotInfoType{std::monostate{}});
   if (index + count != stateAccess->resourceSlotInfo.size())
   {
     free_list_insert_and_coalesce(stateAccess->freeSlotRanges, make_value_range(index, count));
     return;
   }
 
-  stateAccess->resourceSlotInfo.resize(index, eastl::monostate{});
+  stateAccess->resourceSlotInfo.resize(index, std::monostate{});
   // Now check if we can further shrink the heap
   if (!stateAccess->freeSlotRanges.empty() && (stateAccess->freeSlotRanges.back().stop == index))
   {
-    stateAccess->resourceSlotInfo.resize(stateAccess->freeSlotRanges.back().start, eastl::monostate{});
-    stateAccess->freeSlotRanges.pop_back();
+      stateAccess->resourceSlotInfo.resize(stateAccess->freeSlotRanges.back().start, std::monostate{});
+      stateAccess->freeSlotRanges.pop_back();
   }
 }
 
@@ -141,7 +148,7 @@ void frontend::BindlessManager::updateBindlessBuffer(DeviceContext &ctx, uint32_
     auto stateAccess = state.access();
     // if this slot already used the given descriptor, then we skip the update, no point in rewriting the same thing
     auto &slot = stateAccess->resourceSlotInfo[index];
-    auto bufferInfo = eastl::get_if<BufferSlotUsage>(&slot);
+    auto bufferInfo = std::get_if<BufferSlotUsage>(&slot);
     if (bufferInfo)
     {
       if (buffer == bufferInfo->buffer && descriptor == bufferInfo->descriptor)
@@ -169,7 +176,7 @@ void frontend::BindlessManager::updateBindlessTexture(DeviceContext &ctx, uint32
     auto stateAccess = state.access();
     auto &slot = stateAccess->resourceSlotInfo[index];
     // if this slot already used the given view, then we skip the update, no point in rewriting the same thing
-    auto imageInfo = eastl::get_if<TextureSlotUsage>(&slot);
+    auto imageInfo = std::get_if<TextureSlotUsage>(&slot);
     if (imageInfo)
     {
       if (texture == imageInfo->texture && image == imageInfo->image && view == imageInfo->view)
@@ -192,16 +199,17 @@ frontend::BindlessManager::CheckTextureImagePairResultType frontend::BindlessMan
   CheckTextureImagePairResultType result;
   // Find first entry with tex
   auto stateAccess = state.access();
-  auto ref = eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex](auto &slot) {
-    auto info = eastl::get_if<TextureSlotUsage>(&slot);
-    return info && info->texture == tex;
+  auto ref = std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->texture == tex;
   });
   if (ref != end(stateAccess->resourceSlotInfo))
   {
-    auto &info = eastl::get<TextureSlotUsage>(*ref);
-    result.firstFound = eastl::distance(begin(stateAccess->resourceSlotInfo), ref);
-    // See if we are matching
-    result.mismatchFound = (info.image != image);
+      auto& info = std::get<TextureSlotUsage>(*ref);
+      result.firstFound = std::distance(begin(stateAccess->resourceSlotInfo), ref);
+      // See if we are matching
+      result.mismatchFound = (info.image != image);
   }
   if (!result.mismatchFound)
   {
@@ -210,11 +218,11 @@ frontend::BindlessManager::CheckTextureImagePairResultType frontend::BindlessMan
     // and stop
     for (++ref; ref != end(stateAccess->resourceSlotInfo); ++ref)
     {
-      auto info = eastl::get_if<TextureSlotUsage>(&*ref);
-      if (!info)
-      {
-        continue;
-      }
+        auto info = std::get_if<TextureSlotUsage>(&*ref);
+        if (!info)
+        {
+            continue;
+        }
       if (info->texture != tex)
       {
         continue;
@@ -244,27 +252,28 @@ void frontend::BindlessManager::updateTextureReferences(DeviceContext &ctx, Base
       {
         break;
       }
-      auto ref = eastl::find_if(begin(stateAccess->resourceSlotInfo) + search_offset, end(stateAccess->resourceSlotInfo),
-        [tex, old_image](const auto &slot) {
-          auto info = eastl::get_if<TextureSlotUsage>(&slot);
+      auto ref = std::find_if(begin(stateAccess->resourceSlotInfo) + search_offset, end(stateAccess->resourceSlotInfo),
+                              [tex, old_image](const auto& slot)
+      {
+          auto info = std::get_if<TextureSlotUsage>(&slot);
           if (!info)
           {
-            return false;
+              return false;
           }
           return tex == info->texture && old_image == info->image;
-        });
+      });
       if (end(stateAccess->resourceSlotInfo) == ref)
       {
         break;
       }
-      view = eastl::get<TextureSlotUsage>(*ref).view;
-      index = eastl::distance(begin(stateAccess->resourceSlotInfo), ref);
+      view = std::get<TextureSlotUsage>(*ref).view;
+      index = std::distance(begin(stateAccess->resourceSlotInfo), ref);
       search_offset = index + 1;
     }
     ctx.bindlessSetResourceDescriptor(index, new_image, view);
     {
       auto stateAccess = state.access();
-      auto info = eastl::get_if<TextureSlotUsage>(&stateAccess->resourceSlotInfo[index]);
+      auto info = std::get_if<TextureSlotUsage>(&stateAccess->resourceSlotInfo[index]);
       if (info)
       {
         info->image = new_image;
@@ -291,25 +300,26 @@ void frontend::BindlessManager::updateBufferReferences(DeviceContext &ctx, D3D12
     {
       auto stateAccess = state.access();
       auto ref =
-        eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [old_descriptor](const auto &slot) {
-          auto info = eastl::get_if<BufferSlotUsage>(&slot);
+          std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [old_descriptor](const auto& slot)
+      {
+          auto info = std::get_if<BufferSlotUsage>(&slot);
           if (!info)
           {
-            return false;
+              return false;
           }
           return old_descriptor == info->descriptor;
-        });
+      });
       if (end(stateAccess->resourceSlotInfo) == ref)
       {
         break;
       }
-      index = eastl::distance(begin(stateAccess->resourceSlotInfo), ref);
+      index = std::distance(begin(stateAccess->resourceSlotInfo), ref);
       nextIndex = index + 1;
     }
     ctx.bindlessSetResourceDescriptor(index, new_descriptor);
     {
       auto stateAccess = state.access();
-      auto info = eastl::get_if<BufferSlotUsage>(&stateAccess->resourceSlotInfo[index]);
+      auto info = std::get_if<BufferSlotUsage>(&stateAccess->resourceSlotInfo[index]);
       if (info)
       {
         info->descriptor = new_descriptor;
@@ -329,10 +339,11 @@ bool frontend::BindlessManager::hasTextureReference(BaseTex *tex)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex](auto &slot) {
-           auto info = eastl::get_if<TextureSlotUsage>(&slot);
-           return info && info->texture == tex;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->texture == tex;
+  });
 }
 
 bool frontend::BindlessManager::hasTextureImageReference(BaseTex *tex, Image *image)
@@ -340,60 +351,66 @@ bool frontend::BindlessManager::hasTextureImageReference(BaseTex *tex, Image *im
   auto stateAccess = state.access();
 
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex, image](auto &slot) {
-           auto info = eastl::get_if<TextureSlotUsage>(&slot);
-           return info && info->texture == tex && info->image == image;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex, image](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->texture == tex && info->image == image;
+  });
 }
 
 bool frontend::BindlessManager::hasTextureImageViewReference(BaseTex *tex, Image *image, ImageViewState view)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex, image, view](auto &slot) {
-           auto info = eastl::get_if<TextureSlotUsage>(&slot);
-           return info && info->texture == tex && info->image == image && info->view == view;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [tex, image, view](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->texture == tex && info->image == image && info->view == view;
+  });
 }
 
 bool frontend::BindlessManager::hasImageReference(Image *image)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [image](auto &slot) {
-           auto info = eastl::get_if<TextureSlotUsage>(&slot);
-           return info && info->image == image;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [image](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->image == image;
+  });
 }
 
 bool frontend::BindlessManager::hasImageViewReference(Image *image, ImageViewState view)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [image, view](auto &slot) {
-           auto info = eastl::get_if<TextureSlotUsage>(&slot);
-           return info && info->image == image && info->view == view;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [image, view](auto& slot)
+  {
+      auto info = std::get_if<TextureSlotUsage>(&slot);
+      return info && info->image == image && info->view == view;
+  });
 }
 
 bool frontend::BindlessManager::hasBufferReference(Sbuffer *buf)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [buf](auto &slot) {
-           auto info = eastl::get_if<BufferSlotUsage>(&slot);
-           return info && info->buffer == buf;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [buf](auto& slot)
+  {
+      auto info = std::get_if<BufferSlotUsage>(&slot);
+      return info && info->buffer == buf;
+  });
 }
 
 bool frontend::BindlessManager::hasBufferViewReference(Sbuffer *buf, D3D12_CPU_DESCRIPTOR_HANDLE view)
 {
   auto stateAccess = state.access();
   return end(stateAccess->resourceSlotInfo) !=
-         eastl::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [buf, view](auto &slot) {
-           auto info = eastl::get_if<BufferSlotUsage>(&slot);
-           return info && info->buffer == buf && info->descriptor == view;
-         });
+         std::find_if(begin(stateAccess->resourceSlotInfo), end(stateAccess->resourceSlotInfo), [buf, view](auto& slot)
+  {
+      auto info = std::get_if<BufferSlotUsage>(&slot);
+      return info && info->buffer == buf && info->descriptor == view;
+  });
 }
 
 namespace
@@ -423,20 +440,21 @@ void frontend::BindlessManager::onTextureDeletion(DeviceContext &ctx, BaseTex *t
     uint32_t index;
     {
       auto stateAccess = state.access();
-      auto ref = eastl::find_if(begin(stateAccess->resourceSlotInfo) + nextIndex, end(stateAccess->resourceSlotInfo),
-        [texture](const auto &slot) {
-          auto info = eastl::get_if<TextureSlotUsage>(&slot);
+      auto ref = std::find_if(begin(stateAccess->resourceSlotInfo) + nextIndex, end(stateAccess->resourceSlotInfo),
+                              [texture](const auto& slot)
+      {
+          auto info = std::get_if<TextureSlotUsage>(&slot);
           if (!info)
           {
-            return false;
+              return false;
           }
           return texture == info->texture;
-        });
+      });
       if (end(stateAccess->resourceSlotInfo) == ref)
       {
         break;
       }
-      index = eastl::distance(begin(stateAccess->resourceSlotInfo), ref);
+      index = std::distance(begin(stateAccess->resourceSlotInfo), ref);
       nextIndex = index + 1;
     }
     // reset slots descriptor to the corresponding null descriptor to make it safe to still read from
@@ -446,7 +464,7 @@ void frontend::BindlessManager::onTextureDeletion(DeviceContext &ctx, BaseTex *t
       auto stateAccess = state.access();
       // reset slot to empty, has to be done after we send the reset descriptor command, otherwise we risk overwriting valid
       // descriptors on a race condition
-      stateAccess->resourceSlotInfo[index] = eastl::monostate{};
+      stateAccess->resourceSlotInfo[index] = std::monostate{};
     }
   }
 }
@@ -456,7 +474,7 @@ void frontend::BindlessManager::updateBindlessNull(DeviceContext &ctx, uint32_t 
 {
   {
     auto stateAccess = state.access();
-    eastl::fill_n(stateAccess->resourceSlotInfo.begin() + index, count, eastl::monostate{});
+    std::fill_n(stateAccess->resourceSlotInfo.begin() + index, count, std::monostate{});
   }
   for (uint32_t i = index; i < index + count; ++i)
   {
@@ -469,7 +487,7 @@ void frontend::BindlessManager::preRecovery()
   auto stateAccess = state.access();
   for (auto &slot : stateAccess->resourceSlotInfo)
   {
-    slot = eastl::monostate{};
+      slot = std::monostate{};
   }
 }
 
@@ -510,7 +528,7 @@ void backend::BindlessSetManager::preRecovery()
   samplerHeap.Reset();
 }
 
-void backend::BindlessSetManager::recover(ID3D12Device *device, const eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &bindless_samplers)
+void backend::BindlessSetManager::recover(ID3D12Device* device, const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& bindless_samplers)
 {
   init(device);
   // not very optimal, but good enough for now

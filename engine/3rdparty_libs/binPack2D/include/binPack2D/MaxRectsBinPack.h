@@ -7,7 +7,7 @@
 */
 #pragma once
 
-#include <EASTL/vector.h>
+#include <vector>
 #include "binPack2D_config.h"
 #include "Rect.h"
 
@@ -43,7 +43,7 @@ public:
 	/// @param rects The list of rectangles to insert. This vector will be destroyed in the process.
 	/// @param dst [out] This list will contain the packed rectangles. The indices will not correspond to that of rects.
 	/// @param method The rectangle placement rule to use when packing.
-	void Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &dst, FreeRectChoiceHeuristic method, bool allowFlip);
+	void Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &dst, FreeRectChoiceHeuristic method, bool allowFlip);
 
 	/// Inserts a single rectangle into the bin, possibly rotated.
 	Rect Insert(int width, int height, FreeRectChoiceHeuristic method, bool allowFlip);
@@ -51,7 +51,7 @@ public:
     /// Returns the internal list of disjoint rectangles that track the free area of the bin. You may alter this vector
 	/// any way desired, as long as the end result still is a list of disjoint rectangles.
     // however, usedSurfaceArea won't be updated
-	eastl::vector<Rect> &GetFreeRectangles() { return freeRectangles; }
+	std::vector<Rect> &GetFreeRectangles() { return freeRectangles; }
 
     // add one of previously allocated rects to free. beware that it is actually one of allocated!
     void freeUsedRect(const Rect &rect)
@@ -70,7 +70,7 @@ private:
 	int binHeight;
     unsigned usedSurfaceArea;
 
-	eastl::vector<Rect> freeRectangles;
+	std::vector<Rect> freeRectangles;
 
 	/// Computes the placement score for placing the given rectangle with the given method.
 	/// @param score1 [out] The primary placement score will be outputted here.

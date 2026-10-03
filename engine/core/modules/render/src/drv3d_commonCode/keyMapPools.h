@@ -3,10 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/fixed_vector.h>
+#include <type_traits>
+#include <vector>
 
+#include "nau/utils/inline_vector.h"
 
 __forceinline uint32_t hash32shiftmult(uint32_t key)
 {
@@ -31,7 +31,7 @@ struct KeyMap
     Entry(KeyType &k, T &v) : key(k), val(v) {}
   };
 
-  typename eastl::type_select<N == 0, eastl::vector<Entry>, eastl::fixed_vector<Entry, N>>::type table;
+  typename std::conditional<N == 0, std::vector<Entry>, nau::InlineVector<Entry, N>>::type table;
 
   KeyMap() = default;
 

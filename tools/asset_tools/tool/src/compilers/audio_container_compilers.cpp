@@ -1,31 +1,25 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/asset_tools/compilers/audio_container_compilers.h"
 
-#include <EASTL/vector.h>
 #include <nau/shared/logger.h>
 #include <pxr/usd/sdf/fileFormat.h>
 
+#include <vector>
+
 #include "nau/asset_tools/asset_utils.h"
 #include "nau/asset_tools/db_manager.h"
-#include "nau/diag/logging.h"
-
 #include "nau/assets/animation_asset_accessor.h"
+#include "nau/assets/asset_db.h"
 #include "nau/assets/ui_asset_accessor.h"
-#include "nau/shared/file_system.h"
-
 #include "nau/dataBlock/dag_dataBlock.h"
-
+#include "nau/diag/logging.h"
 #include "nau/io/stream_utils.h"
 #include "nau/io/virtual_file_system.h"
 #include "nau/service/service_provider.h"
 #include "nau/shared/file_system.h"
-#include "nau/assets/asset_db.h"
-
 #include "nau/usd_meta_tools/usd_meta_info.h"
-
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
 #include "usd_proxy/usd_prim_proxy.h"

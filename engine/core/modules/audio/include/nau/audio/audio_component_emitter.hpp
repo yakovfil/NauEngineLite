@@ -3,15 +3,16 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/audio/audio_common.hpp"
 #include "nau/audio/audio_container.hpp"
 #include "nau/meta/class_info.h"
+#include "nau/rtti/ptr.h"
 #include "nau/scene/components/component_attributes.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/internal/component_internal_attributes.h"
 #include "nau/scene/scene.h"
-#include "nau/rtti/ptr.h"
-
 
 NAU_AUDIO_BEGIN
 
@@ -51,7 +52,7 @@ struct NAU_AUDIO_EXPORT AudioComponentEmitter
     bool playOnStart = false;
 
 protected:
-    void createContainerFromBlk(const eastl::string& path);
+    void createContainerFromBlk(const std::string& path);
 
 private:
     enum State

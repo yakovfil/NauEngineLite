@@ -10,12 +10,7 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/algorithm.h>
-#include <EASTL/list.h>
-#include <EASTL/map.h>
-#include <EASTL/span.h>
-#include <EASTL/vector.h>
-
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -32,6 +27,7 @@
 #include <optional>
 #include <random>
 #include <regex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>

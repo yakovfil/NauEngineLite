@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/vector.h>
+#include <string_view>
+#include <vector>
 
 #include "nau/memory/bytes_buffer.h"
 
@@ -73,12 +74,13 @@ namespace nau
          * 
          * @param [in] str String to convert in to a message
         */
-        NetworkingMessage(const eastl::string_view& str)
+        NetworkingMessage(const std::string_view& str)
         {
             size_t length = str.length();
             buffer.resize(length);
             std::byte* data = buffer.data();
-            std::memcpy(data, str.begin(), length);
+            if (length != 0)
+                std::memcpy(data, str.data(), length);
         }
 
         /**
@@ -88,12 +90,13 @@ namespace nau
          * 
          * @param [in] str String to convert in to a message.
          */
-        NetworkingMessage(const eastl::u8string_view& str)
+        NetworkingMessage(const std::u8string_view& str)
         {
             size_t length = str.length();
             buffer.resize(length);
             std::byte* data = buffer.data();
-            std::memcpy(data, str.begin(), length);
+            if (length != 0)
+                std::memcpy(data, str.data(), length);
         }
     };
 }  // namespace nau

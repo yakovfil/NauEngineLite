@@ -3,12 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/bitset.h>
-#include <EASTL/span.h>
+#include <bitset>
+#include <span>
+
 #include "nau/math/dag_bits.h"
 
 template <size_t N>
-inline eastl::bitset<N> &or_bit(eastl::bitset<N> &s, size_t i, bool b = true)
+inline std::bitset<N>& or_bit(std::bitset<N>& s, size_t i, bool b = true)
 {
   return s.set(i, s.test(i) || b);
 }
@@ -39,13 +40,13 @@ inline T align_value(T value, T alignment)
 }
 
 template <size_t N>
-inline eastl::span<const char> string_literal_span(const char (&sl)[N])
+inline std::span<const char> string_literal_span(const char (&sl)[N])
 {
   return {sl, N - 1};
 }
 
 template <size_t N>
-inline eastl::span<const wchar_t> string_literal_span(const wchar_t (&sl)[N])
+inline std::span<const wchar_t> string_literal_span(const wchar_t (&sl)[N])
 {
   return {sl, N - 1};
 }

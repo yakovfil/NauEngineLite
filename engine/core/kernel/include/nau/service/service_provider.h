@@ -1,17 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/span.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
-
+#include <array>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <type_traits>
+#include <vector>
 
 #include "nau/diag/assertion.h"
 #include "nau/dispatch/class_descriptor.h"
@@ -100,7 +97,7 @@ namespace nau
             DoNotCreate
         };
 
-        using Ptr = eastl::unique_ptr<ServiceAccessor>;
+        using Ptr = std::unique_ptr<ServiceAccessor>;
 
         virtual ~ServiceAccessor() = default;
 
@@ -116,7 +113,7 @@ namespace nau
 namespace nau::core_detail
 {
     template <typename T>
-    constexpr inline bool IsKnownInstanceUniquePtr = IsTemplateOf<std::unique_ptr, T> || IsTemplateOf<eastl::unique_ptr, T>;
+    constexpr inline bool IsKnownInstanceUniquePtr = IsTemplateOf<std::unique_ptr, T> || IsTemplateOf<std::unique_ptr, T>;
 
     template <typename T>
     constexpr inline bool IsKnownInstancePtr = IsKnownInstanceUniquePtr<T> || IsTemplateOf<nau::Ptr, T>;
@@ -313,7 +310,7 @@ namespace nau
     {
         NAU_INTERFACE(ServiceProvider, IRttiObject)
 
-        using Ptr = eastl::unique_ptr<ServiceProvider>;
+        using Ptr = std::unique_ptr<ServiceProvider>;
 
         virtual ~ServiceProvider() = default;
 
@@ -335,7 +332,7 @@ namespace nau
 
         template <rtti::WithTypeInfo T>
         [[nodiscard]]
-        eastl::vector<T*> getAll();
+        std::vector<T*> getAll();
 
         template <rtti::WithTypeInfo T, typename Predicate>
         T* findIf(Predicate);
@@ -345,9 +342,6 @@ namespace nau
         */
         template <rtti::WithTypeInfo T>
         void addService(std::unique_ptr<T>&&);
-
-        template <rtti::WithTypeInfo T>
-        void addService(eastl::unique_ptr<T>&&);
 
         template <rtti::WithTypeInfo T>
         void addService(nau::Ptr<T>);
@@ -365,19 +359,19 @@ namespace nau
 
         */
         template <rtti::WithTypeInfo T, rtti::WithTypeInfo... U>
-        eastl::vector<IClassDescriptor::Ptr> findClasses(bool anyType = true);
+        std::vector<IClassDescriptor::Ptr> findClasses(bool anyType = true);
 
         virtual void addClass(IClassDescriptor::Ptr&& classDesc) = 0;
 
-        virtual eastl::vector<IClassDescriptor::Ptr> findClasses(const rtti::TypeInfo& type) = 0;
+        virtual std::vector<IClassDescriptor::Ptr> findClasses(const rtti::TypeInfo& type) = 0;
 
-        virtual eastl::vector<IClassDescriptor::Ptr> findClasses(eastl::span<const rtti::TypeInfo*> types, bool anyType = true) = 0;
+        virtual std::vector<IClassDescriptor::Ptr> findClasses(std::span<const rtti::TypeInfo*> types, bool anyType = true) = 0;
 
     protected:
         using GenericServiceFactory = Functor<std::unique_ptr<IRttiObject>()>;
 
         template <typename T, typename... U>
-        static eastl::vector<const rtti::TypeInfo*> makeTypesInfo(TypeList<T, U...>)
+        static std::vector<const rtti::TypeInfo*> makeTypesInfo(TypeList<T, U...>)
         {
             return {&rtti::getTypeInfo<T>(), &rtti::getTypeInfo<U>()...};
         }
@@ -413,9 +407,9 @@ namespace nau
     }
 
     template <rtti::WithTypeInfo T>
-    eastl::vector<T*> ServiceProvider::getAll()
+    std::vector<T*> ServiceProvider::getAll()
     {
-        eastl::vector<T*> services;
+        std::vector<T*> services;
         findAllInternal(rtti::getTypeInfo<T>(), [](void* ptr, void* data)
         {
             T* const instance = reinterpret_cast<T*>(ptr);
@@ -455,35 +449,14 @@ namespace nau
         if constexpr (std::is_base_of_v<IRttiObject, T>)
         {
             using Accessor = core_detail::RttiServiceAccessor<std::unique_ptr>;
-            addServiceAccessorInternal(eastl::make_unique<Accessor>(std::move(instance)));
+            addServiceAccessorInternal(std::make_unique<Accessor>(std::move(instance)));
         }
         else
         {
             static_assert(!std::is_abstract_v<T>, "Type can not be registered as service because runtime type info access is not avail (abstract or non IRttiObject)");
 
             using Accessor = core_detail::NonRttiServiceAccessor<T, std::unique_ptr<T>>;
-            addServiceAccessorInternal(eastl::make_unique<Accessor>(std::move(instance)));
-        }
-    }
-
-    template <rtti::WithTypeInfo T>
-    void ServiceProvider::addService(eastl::unique_ptr<T>&& instance)
-    {
-        NAU_ASSERT(instance);
-        if (!instance)
-        {
-            return;
-        }
-
-        if constexpr (std::is_base_of_v<IRttiObject, T>)
-        {
-            using Accessor = core_detail::RttiServiceAccessor<eastl::unique_ptr>;
-            addServiceAccessorInternal(eastl::make_unique<Accessor>(std::move(instance)));
-        }
-        else
-        {
-            using Accessor = core_detail::NonRttiServiceAccessor<T, eastl::unique_ptr<T>>;
-            addServiceAccessorInternal(eastl::make_unique<Accessor>(std::move(instance)));
+            addServiceAccessorInternal(std::make_unique<Accessor>(std::move(instance)));
         }
     }
 
@@ -497,7 +470,7 @@ namespace nau
         }
 
         using Accessor = core_detail::RttiServiceAccessor<nau::Ptr>;
-        addServiceAccessorInternal(eastl::make_unique<Accessor>(std::move(instance)));
+        addServiceAccessorInternal(std::make_unique<Accessor>(std::move(instance)));
     }
 
     template <rtti::ClassWithTypeInfo T>
@@ -506,20 +479,20 @@ namespace nau
         if constexpr (std::is_base_of_v<IRefCounted, T>)
         {
             using Accessor = core_detail::RefCountedLazyServiceAccessor;
-            auto accessor = eastl::make_unique<Accessor>(TypeTag<T>{});
+            auto accessor = std::make_unique<Accessor>(TypeTag<T>{});
             auto classDescriptor = accessor->getClassDescriptor();
 
             addServiceAccessorInternal(std::move(accessor), std::move(classDescriptor));
         }
         else
         {
-            auto factory = []() -> eastl::unique_ptr<T>
+            auto factory = []() -> std::unique_ptr<T>
             {
-                return eastl::make_unique<T>();
+                return std::make_unique<T>();
             };
 
             using Accessor = core_detail::FactoryLazyServiceAccessor<decltype(factory)>;
-            auto accessor = eastl::make_unique<Accessor>(std::move(factory));
+            auto accessor = std::make_unique<Accessor>(std::move(factory));
             auto classDescriptor = accessor->getClassDescriptor();
 
             addServiceAccessorInternal(std::move(accessor), std::move(classDescriptor));
@@ -530,10 +503,10 @@ namespace nau
     void ServiceProvider::addServiceLazy(F factory)
     {
         static_assert(std::is_invocable_v<F>, "Invalid factory functor signature, or factory is not invocable object.");
-        static_assert(core_detail::IsKnownInstancePtr<std::invoke_result_t<F>>, "Factory result must be known pointer: std::unique_ptr<>, eastl::unique_ptr<>, nau::Ptr<>");
+        static_assert(core_detail::IsKnownInstancePtr<std::invoke_result_t<F>>, "Factory result must be known pointer: std::unique_ptr<>, std::unique_ptr<>, nau::Ptr<>");
 
         using Accessor = core_detail::FactoryLazyServiceAccessor<decltype(factory)>;
-        auto accessor = eastl::make_unique<Accessor>(std::move(factory));
+        auto accessor = std::make_unique<Accessor>(std::move(factory));
         IClassDescriptor::Ptr classDescriptor = accessor->getClassDescriptor();
 
         addServiceAccessorInternal(std::move(accessor), std::move(classDescriptor));
@@ -547,13 +520,13 @@ namespace nau
     }
 
     template <rtti::WithTypeInfo T, rtti::WithTypeInfo... U>
-    eastl::vector<IClassDescriptor::Ptr> ServiceProvider::findClasses([[maybe_unused]] bool anyType)
+    std::vector<IClassDescriptor::Ptr> ServiceProvider::findClasses([[maybe_unused]] bool anyType)
     {
         using namespace nau::rtti;
         if constexpr (sizeof...(U) > 0)
         {
-            eastl::array types = {&getTypeInfo<T>(), &getTypeInfo<U>()...};
-            return findClasses(eastl::span<const TypeInfo*>{types.data(), types.size()}, anyType);
+            std::array types = {&getTypeInfo<T>(), &getTypeInfo<U>()...};
+            return findClasses(std::span<const TypeInfo*>{types.data(), types.size()}, anyType);
         }
         else
         {

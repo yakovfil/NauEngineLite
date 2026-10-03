@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
+#include <vector>
+
 #include "test_ecs_common.h"
 #include "test_template_declaration.h"
 
@@ -24,7 +26,7 @@ namespace nau::test
 
     TEST_F(TestDagorECS, TemplateDeclaration)
     {
-        eastl::vector<ecs::EntityId> eid;
+        std::vector<ecs::EntityId> eid;
         auto eid1 = g_entity_mgr->createEntitySync(TestTemplate1::getTemplateId());
         auto eid2 = g_entity_mgr->createEntitySync<TestTemplate1>();
         auto eid3 = g_entity_mgr->createEntitySync(TestTemplate2::getTemplateId());

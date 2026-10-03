@@ -24,7 +24,7 @@
 #ifndef __cocos2d_libs__CCProperties__
 #define __cocos2d_libs__CCProperties__
 
-#include <EASTL/string.h>
+#include <string>
 #include <functional>
 #include <cstdint>
 #include <vector>
@@ -546,9 +546,9 @@ private:
      */
     struct Property
     {
-        eastl::string name;
-        eastl::string value;
-        Property(const eastl::string& aname, const eastl::string& avalue) : name(aname), value(avalue) { }
+        std::string name;
+        std::string value;
+        Property(const std::string& aname, const std::string& avalue) : name(aname), value(avalue) { }
     };
 
     /**
@@ -567,7 +567,7 @@ private:
     /**
      * Constructor. Read from the beginning of namespace specified.
      */
-    Properties(Data* data, ssize_t* dataIdx, const eastl::string& name, const char* id, const char* parentID, Properties* parent);
+    Properties(Data* data, ssize_t* dataIdx, const std::string& name, const char* id, const char* parentID, Properties* parent);
 
     // Data manipulation methods
     void readProperties();
@@ -598,9 +598,9 @@ private:
     ssize_t *_dataIdx;
     Data *_data;
 
-    eastl::string _namespace;
-    eastl::string _id;
-    eastl::string _parentID;
+    std::string _namespace;
+    std::string _id;
+    std::string _parentID;
     std::vector<Property> _properties;
     std::vector<Property>::iterator _propertiesItr;
     std::vector<Properties*> _namespaces;

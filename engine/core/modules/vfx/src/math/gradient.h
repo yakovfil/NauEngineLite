@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <map>
+
 #include "nau/math/dag_color.h"
 #include "nau/math/math.h"
 
@@ -22,6 +24,6 @@ namespace nau::vfx::math
 
     private:
         static constexpr int MaxPoints = 64;
-        eastl::map<float, nau::math::Color4> m_gradientStops;
+        std::map<float, nau::math::Color4> m_gradientStops;
     };
 }  // namespace nau::vfx::math

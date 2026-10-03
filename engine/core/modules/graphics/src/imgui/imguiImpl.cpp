@@ -2,15 +2,19 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "nau/gui/dag_imgui.h"
-#include "imguiRenderer.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <implot.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "imguiRenderer.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3dReset.h"
+#include "nau/gui/dag_imgui.h"
 #include "nau/perfMon/dag_cpuFreq.h"
 //#include "nau/dataBlock/dag_dataBlock.h"
 //#include "nau/dataBlock/dag_dataBlockUtils.h"
@@ -22,20 +26,20 @@
 static ImGuiState imgui_state = ImGuiState::OFF;
 static ImGuiState requested_state = ImGuiState::OFF;
 static bool is_state_change_requested = false;
-static eastl::unique_ptr<eastl::vector<OnStateChangeHandlerFunc>> on_state_change_functions;
+static std::unique_ptr<std::vector<OnStateChangeHandlerFunc>> on_state_change_functions;
 
 static bool is_initialized = false;
-static eastl::unique_ptr<DagImGuiRenderer> renderer;
-//static eastl::unique_ptr<nau::DataBlock> imgui_blk;
-//static eastl::unique_ptr<nau::DataBlock> override_imgui_blk;
+static std::unique_ptr<DagImGuiRenderer> renderer;
+// static std::unique_ptr<nau::DataBlock> imgui_blk;
+// static std::unique_ptr<nau::DataBlock> override_imgui_blk;
 static const char *imgui_blk_path = "imgui.blk";
-static eastl::string full_blk_path;
-static eastl::string full_ini_path;
-static eastl::string full_log_path;
+static std::string full_blk_path;
+static std::string full_ini_path;
+static std::string full_log_path;
 
 static float active_window_bg_alpha = 1.0f;
 static float overlay_window_bg_alpha = 0.5f;
-static eastl::unique_ptr<ImFontConfig> requested_font_cfg;
+static std::unique_ptr<ImFontConfig> requested_font_cfg;
 static constexpr float MIN_SCALE = 1.0f;
 static constexpr float MAX_SCALE = 4.0f;
 static bool frameEnded = true;
@@ -45,13 +49,12 @@ static bool imguiSubmenuEnabled = true;
 ImDrawData* cachedDrawData = nullptr;
 ImDrawData* copiedDrawData = nullptr;
 
-//void imgui_set_override_blk(const nau::DataBlock &imgui_blk_)
+// void imgui_set_override_blk(const nau::DataBlock &imgui_blk_)
 //{
-//  NAU_ASSERT(!is_initialized, "imgui_set_override_blk() should be called before init_on_demand()");
-//  override_imgui_blk = eastl::make_unique<nau::DataBlock>();
-//  override_imgui_blk->setFrom(&imgui_blk_);
-//}
-
+//   NAU_ASSERT(!is_initialized, "imgui_set_override_blk() should be called before init_on_demand()");
+//   override_imgui_blk = std::make_unique<nau::DataBlock>();
+//   override_imgui_blk->setFrom(&imgui_blk_);
+// }
 
 void deleteDrawData(ImDrawData* data)
 {
@@ -95,7 +98,7 @@ static void apply_style_from_blk()
   active_window_bg_alpha = ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w;
   overlay_window_bg_alpha = active_window_bg_alpha * 0.5f;
 
-  requested_font_cfg = eastl::make_unique<ImFontConfig>();
+  requested_font_cfg = std::make_unique<ImFontConfig>();
   requested_font_cfg->OversampleH = requested_font_cfg->OversampleV = 1;
   requested_font_cfg->PixelSnapH = true; // some fonts are blurry without this
   // FIXME: Non-integer amount of imguiScale produces blurry text with default ImGui font. We should consider using our
@@ -115,16 +118,16 @@ static bool init()
   ImGuiIO &io = ImGui::GetIO();
 
   // Load blk
-  //imgui_blk = eastl::make_unique<nau::DataBlock>();
+  // imgui_blk = std::make_unique<nau::DataBlock>();
 
 #if _TARGET_ANDROID || _TARGET_C3
   full_blk_path = String(0, "%s/%s", folders::get_gamedata_dir(), imgui_blk_path);
   full_ini_path = String(0, "%s/%s", folders::get_temp_dir(), io.IniFilename);
   full_log_path = String(0, "%s/%s", folders::get_temp_dir(), io.LogFilename);
 #else
-  full_blk_path = eastl::string(eastl::string::CtorSprintf(), "%s", imgui_blk_path);
-  full_ini_path = eastl::string(eastl::string::CtorSprintf(), "%s", io.IniFilename);
-  full_log_path = eastl::string(eastl::string::CtorSprintf(), "%s", io.LogFilename);
+  full_blk_path = std::string(imgui_blk_path ? imgui_blk_path : "");
+  full_ini_path = std::string(io.IniFilename ? io.IniFilename : "");
+  full_log_path = std::string(io.LogFilename ? io.LogFilename : "");
 #endif
   //if (dd_file_exist(full_blk_path.c_str()))
   //  imgui_blk->load(full_blk_path.c_str());
@@ -138,7 +141,7 @@ static bool init()
   io.LogFilename = full_log_path.c_str();
 
   // Init our own renderer backend
-  renderer = eastl::make_unique<DagImGuiRenderer>();
+  renderer = std::make_unique<DagImGuiRenderer>();
   renderer->setBackendFlags(io);
 
   is_initialized = true;
@@ -228,7 +231,7 @@ void imgui_request_state_change(ImGuiState new_state)
 void imgui_register_on_state_change_handler(OnStateChangeHandlerFunc func)
 {
   if (on_state_change_functions == nullptr)
-    on_state_change_functions = eastl::make_unique<eastl::vector<OnStateChangeHandlerFunc>>();
+      on_state_change_functions = std::make_unique<std::vector<OnStateChangeHandlerFunc>>();
   on_state_change_functions->push_back(func);
 }
 
@@ -380,16 +383,16 @@ void imgui_cascade_windows()
 
   if (ImGuiContext *ctx = ImGui::GetCurrentContext())
   {
-    eastl::vector<ImGuiWindow *> windows;
-    for (ImGuiWindow *window : ctx->Windows)
-    {
-      if (window->IsFallbackWindow || window->Hidden || window->RootWindow != window)
-        continue;
-      if (window->Flags & ImGuiWindowFlags_NoMove &&
-          (window->Collapsed || window->Flags & ImGuiWindowFlags_NoResize || window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
-        continue;
-      windows.push_back(window);
-    }
+      std::vector<ImGuiWindow*> windows;
+      for (ImGuiWindow* window : ctx->Windows)
+      {
+          if (window->IsFallbackWindow || window->Hidden || window->RootWindow != window)
+              continue;
+          if (window->Flags & ImGuiWindowFlags_NoMove &&
+              (window->Collapsed || window->Flags & ImGuiWindowFlags_NoResize || window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
+              continue;
+          windows.push_back(window);
+      }
     if (!windows.empty())
     {
       ImGuiWindow *prevWindow = ctx->CurrentWindow;
@@ -400,7 +403,7 @@ void imgui_cascade_windows()
       nau::math::Vector2 viewSize = nau::math::Vector2(viewSizeIm.x, viewSizeIm.y);
 
       const nau::math::Vector2 maxStep = (viewSize * 0.6f) / float(windows.size() + 1);
-      const nau::math::Vector2 step    = nau::math::Vector2(eastl::min(maxStep.getX(), 50.f), eastl::min(maxStep.getY(), 50.f));
+      const nau::math::Vector2 step = nau::math::Vector2(std::min(maxStep.getX(), 50.f), std::min(maxStep.getY(), 50.f));
       int i = 1;
       for (ImGuiWindow *window : windows)
       {
@@ -416,8 +419,8 @@ void imgui_cascade_windows()
         {
           const ImVec2 size = ImGui::GetWindowSize();
           const ImVec2 newSize = ImVec2(
-              eastl::clamp(size.x, 50.f, viewSize.getX() - pos.getX()),
-              eastl::clamp(size.y, 50.f, viewSize.getY() - pos.getY()));
+              std::clamp(size.x, 50.f, viewSize.getX() - pos.getX()),
+              std::clamp(size.y, 50.f, viewSize.getY() - pos.getY()));
           ImGui::SetWindowSize(newSize);
         }
         i += 1;
@@ -467,7 +470,7 @@ void imgui_perform_registered()
 
       const float defaultScale = get_default_scale();
       float imguiScale = defaultScale; //imgui_blk->getReal("imgui_scale", defaultScale);
-      if (ImGui::Button(eastl::string(eastl::string::CtorSprintf(), "Default ({})", defaultScale).c_str()))
+      if (ImGui::Button(nau::utils::format("Default ({})", defaultScale).c_str()))
       {
         imguiScale = defaultScale;
         //imgui_blk->setReal("imgui_scale", imguiScale);

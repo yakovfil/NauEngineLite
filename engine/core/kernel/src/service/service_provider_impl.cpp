@@ -3,7 +3,17 @@
 
 #include "./service_provider_impl.h"
 
-#include "nau/memory/eastl_aliases.h"
+#include <algorithm>
+#include <list>
+#include <memory>
+#include <set>
+#include <span>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "nau/memory/standard_aliases.h"
 #include "nau/runtime/async_disposable.h"
 #include "nau/runtime/disposable.h"
 #include "nau/runtime/internal/runtime_object_registry.h"
@@ -16,7 +26,7 @@ namespace nau
         {
             IServiceInitialization* service;
             bool collectingDependencies = true;
-            eastl::set<rtti::TypeIndex> dependencies;
+            std::set<rtti::TypeIndex> dependencies;
 
             ServiceEntry(IServiceInitialization* serviceIn) :
                 service(serviceIn)
@@ -24,7 +34,7 @@ namespace nau
             }
 
         private:
-            void appendDependencies(const eastl::vector<const rtti::TypeInfo*>& typeInfoCollection)
+            void appendDependencies(const std::vector<const rtti::TypeInfo*>& typeInfoCollection)
             {
                 for (const rtti::TypeInfo* const type : typeInfoCollection)
                 {
@@ -32,7 +42,7 @@ namespace nau
                 }
             }
 
-            void appendDependencies(const eastl::set<rtti::TypeIndex> typeInfoCollection)
+            void appendDependencies(const std::set<rtti::TypeIndex> typeInfoCollection)
             {
                 for (const rtti::TypeIndex& type : typeInfoCollection)
                 {
@@ -59,12 +69,12 @@ namespace nau
         class OrderedServiceListBuilder
         {
         public:
-            OrderedServiceListBuilder(eastl::vector<IServiceInitialization*> allServices) :
+            OrderedServiceListBuilder(std::vector<IServiceInitialization*> allServices) :
                 m_allServices(std::move(allServices))
             {
             }
 
-            eastl::tuple<eastl::list<ServiceEntry>, eastl::list<ServiceEntry>> takeOutServiceList()
+            std::tuple<std::list<ServiceEntry>, std::list<ServiceEntry>> takeOutServiceList()
             {
                 for (IServiceInitialization* const service : m_allServices)
                 {
@@ -79,7 +89,7 @@ namespace nau
                 });
 
                 // ensure that services without dependencies have forced previous services with dependencies
-                eastl::list<ServiceEntry> servicesWithNoDependencies;
+                std::list<ServiceEntry> servicesWithNoDependencies;
                 for (auto iter = m_services.begin(); iter != m_services.end();)
                 {
                     if (iter->dependencies.empty())
@@ -100,7 +110,7 @@ namespace nau
             }
 
         private:
-            static bool isDependencyFor(const IServiceInitialization& service, const eastl::vector<const rtti::TypeInfo*>& types)
+            static bool isDependencyFor(const IServiceInitialization& service, const std::vector<const rtti::TypeInfo*>& types)
             {
                 return std::any_of(types.begin(), types.end(), [&service](const rtti::TypeInfo* t)
                 {
@@ -110,7 +120,7 @@ namespace nau
 
             ServiceEntry& getServiceEntry(IServiceInitialization* service)
             {
-                auto iter = eastl::find_if(m_services.begin(), m_services.end(), [service](const ServiceEntry& entry)
+                auto iter = std::find_if(m_services.begin(), m_services.end(), [service](const ServiceEntry& entry)
                 {
                     return entry.service == service;
                 });
@@ -148,9 +158,9 @@ namespace nau
                 return *iter;
             }
 
-            const eastl::vector<IServiceInitialization*> m_allServices;
+            const std::vector<IServiceInitialization*> m_allServices;
 
-            eastl::list<ServiceEntry> m_services;
+            std::list<ServiceEntry> m_services;
         };
 
         /**
@@ -159,7 +169,7 @@ namespace nau
 
             returns two sequences : 1) independent services (can initialize in parallel) 2) ordered dependent services (MUST initialize sequentially)
          */
-        auto makeInitOrderedServiceList(eastl::vector<IServiceInitialization*> allServices)
+        auto makeInitOrderedServiceList(std::vector<IServiceInitialization*> allServices)
         {
             OrderedServiceListBuilder serviceListBuilder{std::move(allServices)};
             return serviceListBuilder.takeOutServiceList();
@@ -169,13 +179,13 @@ namespace nau
             reorder services to shutdown to takes into account the dependencies between them:
             returns two sequences : 1) independent services (MUST shutdown in parallel) 2) ordered dependent services (MUST shutdown sequentially)
          */
-        std::tuple<eastl::list<IServiceShutdown*>, eastl::list<IServiceShutdown*>> makeShutdownOrderedServiceList(eastl::vector<IServiceShutdown*> unorderedShutdownSequence)
+        std::tuple<std::list<IServiceShutdown*>, std::list<IServiceShutdown*>> makeShutdownOrderedServiceList(std::vector<IServiceShutdown*> unorderedShutdownSequence)
         {
-            eastl::vector<IServiceInitialization*> initializationList;
+            std::vector<IServiceInitialization*> initializationList;
             initializationList.reserve(unorderedShutdownSequence.size());
 
-            eastl::list<IServiceShutdown*> orderedIndependentServices;
-            eastl::list<IServiceShutdown*> orderedDependentServices;
+            std::list<IServiceShutdown*> orderedIndependentServices;
+            std::list<IServiceShutdown*> orderedDependentServices;
 
             for (IServiceShutdown* const serviceShutdown : unorderedShutdownSequence)
             {
@@ -269,7 +279,7 @@ namespace nau
         }
 
         // todo: use stack allocator
-        eastl::vector<ServiceAccessor*> accessors;
+        std::vector<ServiceAccessor*> accessors;
         {
             shared_lock_(m_mutex);
             for (const ServiceAccessor::Ptr& accessor : m_accessors)
@@ -316,9 +326,9 @@ namespace nau
         m_classDescriptors.push_back(std::move(descriptor));
     }
 
-    eastl::vector<IClassDescriptor::Ptr> ServiceProviderImpl::findClasses(const rtti::TypeInfo& t)
+    std::vector<IClassDescriptor::Ptr> ServiceProviderImpl::findClasses(const rtti::TypeInfo& t)
     {
-        eastl::vector<IClassDescriptor::Ptr> classes;
+        std::vector<IClassDescriptor::Ptr> classes;
 
         shared_lock_(m_mutex);
 
@@ -337,15 +347,15 @@ namespace nau
         return classes;
     }
 
-    eastl::vector<IClassDescriptor::Ptr> ServiceProviderImpl::findClasses(eastl::span<const rtti::TypeInfo*> types, bool anyType)
+    std::vector<IClassDescriptor::Ptr> ServiceProviderImpl::findClasses(std::span<const rtti::TypeInfo*> types, bool anyType)
     {
         using MatchPredicate = bool (*)(decltype(types), const IClassDescriptor&);
 
-        eastl::vector<IClassDescriptor::Ptr> classes;
+        std::vector<IClassDescriptor::Ptr> classes;
 
         const MatchPredicate matchAny = [](decltype(types) types, const IClassDescriptor& classDescriptor) -> bool
         {
-            return eastl::any_of(types.begin(), types.end(), [&classDescriptor](const rtti::TypeInfo* type)
+            return std::any_of(types.begin(), types.end(), [&classDescriptor](const rtti::TypeInfo* type)
             {
                 NAU_FATAL(type);
                 return classDescriptor.hasInterface(*type);
@@ -354,7 +364,7 @@ namespace nau
 
         const MatchPredicate matchAll = [](decltype(types) types, const IClassDescriptor& classDescriptor) -> bool
         {
-            return eastl::all_of(types.begin(), types.end(), [&classDescriptor](const rtti::TypeInfo* type)
+            return std::all_of(types.begin(), types.end(), [&classDescriptor](const rtti::TypeInfo* type)
             {
                 NAU_FATAL(type);
                 return classDescriptor.hasInterface(*type);
@@ -380,7 +390,7 @@ namespace nau
     {
         shared_lock_(m_mutex);
 
-        return eastl::any_of(m_accessors.begin(), m_accessors.end(), [&type](ServiceAccessor::Ptr& accessor)
+        return std::any_of(m_accessors.begin(), m_accessors.end(), [&type](ServiceAccessor::Ptr& accessor)
         {
             return accessor->hasApi(type);
         });
@@ -445,7 +455,7 @@ namespace nau
             co_await Result<>{m_initializationError};
         }
 
-        eastl::vector<IServiceInitialization*> services;
+        std::vector<IServiceInitialization*> services;
         findAllInternal(rtti::getTypeInfo<IServiceInitialization>(), [](void* servicePtr, void* serviceCollection)
         {
             reinterpret_cast<decltype(services)*>(serviceCollection)->push_back(reinterpret_cast<IServiceInitialization*>(servicePtr));
@@ -454,7 +464,7 @@ namespace nau
         auto [independentServices, orderedDependentServices] = makeInitOrderedServiceList(services);
 
         {
-            eastl::vector<eastl::pair<IServiceInitialization*, Task<>>> independentInitializationTasks;
+            std::vector<std::pair<IServiceInitialization*, Task<>>> independentInitializationTasks;
             for (const ServiceEntry& entry : independentServices)
             {
                 if (m_stopToken && m_stopToken->load())
@@ -473,7 +483,7 @@ namespace nau
             {
                 m_activeLifecycleTasks.clear();
             };
-            eastl::string errors;
+            std::string errors;
             for (auto& [service, task] : independentInitializationTasks)
             {
                 const Result<> result = task ? co_await task.doTry() : Result<>{};
@@ -555,7 +565,7 @@ namespace nau
     async::Task<> ServiceProviderImpl::shutdownServices()
     {
         using namespace nau::async;
-        eastl::string errors;
+        std::string errors;
         const auto recordError = [this, &errors](const Result<>& result)
         {
             ++m_completedServiceTasks;
@@ -587,7 +597,7 @@ namespace nau
         // 2. invoke service disposeAsync -> dispose, wait all dispose task
 
         {
-            eastl::vector<IServiceShutdown*> unorderedShutdownSequence;
+            std::vector<IServiceShutdown*> unorderedShutdownSequence;
 
             for (const ServiceAccessor::Ptr& accessor : m_accessors)
             {
@@ -595,7 +605,7 @@ namespace nau
                 {
                     auto* service = reinterpret_cast<IServiceShutdown*>(serviceShutdown);
                     const auto* initialization = service->as<IServiceInitialization*>();
-                    if (!initialization || eastl::find(m_initializedServices.begin(), m_initializedServices.end(), initialization) != m_initializedServices.end())
+                    if (!initialization || std::find(m_initializedServices.begin(), m_initializedServices.end(), initialization) != m_initializedServices.end())
                     {
                         unorderedShutdownSequence.push_back(service);
                     }
@@ -612,7 +622,7 @@ namespace nau
                 }
             }
 
-            eastl::vector<Task<>> shutdownIndependentTasks;
+            std::vector<Task<>> shutdownIndependentTasks;
             for (IServiceShutdown* const serviceShutdown : independentServices)
             {
                 if (auto task = getInitializationInstance(serviceShutdown).shutdownService(); task)
@@ -634,7 +644,7 @@ namespace nau
         }
 
         {
-            eastl::vector<Task<>> disposeTasks;
+            std::vector<Task<>> disposeTasks;
 
             {
                 for (const ServiceAccessor::Ptr& accessor : m_accessors)
@@ -691,7 +701,7 @@ namespace nau
 
     ServiceProvider::Ptr createServiceProvider()
     {
-        return eastl::make_unique<ServiceProviderImpl>();
+        return std::make_unique<ServiceProviderImpl>();
     }
 
     void setDefaultServiceProvider(ServiceProvider::Ptr&& provider)

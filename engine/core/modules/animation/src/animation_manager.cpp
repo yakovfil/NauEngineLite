@@ -1,15 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/animation_manager.h"
+
+#include <algorithm>
+#include <memory>
 
 #include "instruments/animation_manager_ui_controller.h"
 #include "nau/animation/components/animation_component.h"
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_object.h"
-
-#include <algorithm>
 
 namespace nau::animation
 {
@@ -36,7 +36,7 @@ namespace nau::animation
 
     void AnimationManager::onComponentActivated()
     {
-        m_uiController = eastl::make_unique<AnimationManagerImguiController>(*this);
+        m_uiController = std::make_unique<AnimationManagerImguiController>(*this);
     }
 
     void AnimationManager::updateComponent(float dt)

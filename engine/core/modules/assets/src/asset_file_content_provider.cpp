@@ -3,6 +3,10 @@
 
 #include "./asset_file_content_provider.h"
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/assets/asset_container.h"
 #include "nau/assets/import_settings_provider.h"
 #include "nau/io/file_system.h"
@@ -17,7 +21,7 @@ namespace nau
 
         auto& fileSystem = getServiceProvider().get<io::IFileSystem>();
 
-        const eastl::string_view containerPath = assetPath.getContainerPath();
+        const std::string_view containerPath = assetPath.getContainerPath();
 
         auto file = fileSystem.openFile(containerPath, {io::AccessMode::Read, io::AccessMode::Async}, io::OpenFileMode::OpenExisting);
         if (!file)
@@ -38,13 +42,13 @@ namespace nau
         }
 
         io::FsPath fileFsPath(containerPath);
-        const eastl::string_view ext = strings::toStringView(fileFsPath.getExtension());
+        const std::string_view ext = strings::toStringView(fileFsPath.getExtension());
         if (ext.empty())
         {
             NAU_LOG_WARNING("Opening file with empty extension. Provider can not determine asset kind:({})", containerPath);
         }
 
-        eastl::string assetKind(ext.empty() ? eastl::string_view{} : ext.substr(1, ext.size()));
+        std::string assetKind(ext.empty() ? std::string_view{} : ext.substr(1, ext.size()));
 
         return AssetContent{
             file->createStream(),
@@ -52,7 +56,7 @@ namespace nau
         };
     }
 
-    eastl::vector<eastl::string_view> AssetFileContentProvider::getSupportedSchemes() const
+    std::vector<std::string_view> AssetFileContentProvider::getSupportedSchemes() const
     {
         return {"file"};
     }

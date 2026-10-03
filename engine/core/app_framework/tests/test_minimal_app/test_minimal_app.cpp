@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <thread>
 
 #include "nau/app/application.h"
@@ -79,7 +80,7 @@ namespace nau::test
         {
             NauCheckResult(loadModulesList(NAU_MODULES_LIST))
             getServiceProvider().addService(createPlatformWindowService());
-            getServiceProvider().addService(eastl::make_unique<LifecycleObserver>(state));
+            getServiceProvider().addService(std::make_unique<LifecycleObserver>(state));
             return ResultSuccess;
         });
         ASSERT_NE(app, nullptr);

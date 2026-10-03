@@ -1,16 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nanim_asset_container.h"
+
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nanim_animation_accessor.h"
 
-#include <mutex>
-
 namespace nau
 {
-    eastl::vector<eastl::string_view> NanimAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> NanimAssetContainerLoader::getSupportedAssetKind() const
     {
         return { "nanim" };
     }
@@ -36,7 +38,7 @@ namespace nau
         return m_stream;
     }
 
-    nau::Ptr<> NanimStreamAssetContainer::getAsset(eastl::string_view path)
+    nau::Ptr<> NanimStreamAssetContainer::getAsset(std::string_view path)
     {
         if (m_assetInstance == nullptr)
         {
@@ -45,7 +47,7 @@ namespace nau
         return m_assetInstance;
     }
 
-    eastl::vector<eastl::string> NanimStreamAssetContainer::getContent() const
+    std::vector<std::string> NanimStreamAssetContainer::getContent() const
     {
         return {};
     }

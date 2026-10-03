@@ -25,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
+#include <string>
 #include "2d/CCLabelAtlas.h"
 #include "renderer/CCTextureAtlas.h"
 #include "platform/CCFileUtils.h"
@@ -55,7 +56,7 @@ LabelAtlas* LabelAtlas::create()
     return ret;
 }
 
-LabelAtlas* LabelAtlas::create(const eastl::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap)
+LabelAtlas* LabelAtlas::create(const std::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap)
 {
     LabelAtlas* ret = new (std::nothrow) LabelAtlas();
     if(ret && ret->initWithString(string, charMapFile, itemWidth, itemHeight, startCharMap))
@@ -67,13 +68,13 @@ LabelAtlas* LabelAtlas::create(const eastl::string& string, const std::string& c
     return nullptr;
 }
 
-bool LabelAtlas::initWithString(const eastl::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap)
+bool LabelAtlas::initWithString(const std::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap)
 {
     Texture2D *texture = Director::getInstance()->getTextureCache()->addImage(charMapFile);
     return initWithString(string, texture, itemWidth, itemHeight, startCharMap);
 }
 
-bool LabelAtlas::initWithString(const eastl::string& string, Texture2D* texture, int itemWidth, int itemHeight, int startCharMap)
+bool LabelAtlas::initWithString(const std::string& string, Texture2D* texture, int itemWidth, int itemHeight, int startCharMap)
 {
     if (AtlasNode::initWithTexture(texture, itemWidth, itemHeight, static_cast<int>(string.size())))
     {
@@ -84,7 +85,7 @@ bool LabelAtlas::initWithString(const eastl::string& string, Texture2D* texture,
     return false;
 }
 
-LabelAtlas* LabelAtlas::create(const eastl::string& string, const std::string& fntFile)
+LabelAtlas* LabelAtlas::create(const std::string& string, const std::string& fntFile)
 {    
     LabelAtlas *ret = new (std::nothrow) LabelAtlas();
     if (ret)
@@ -102,7 +103,7 @@ LabelAtlas* LabelAtlas::create(const eastl::string& string, const std::string& f
     return ret;
 }
 
-bool LabelAtlas::initWithString(const eastl::string& theString, const std::string& fntFile)
+bool LabelAtlas::initWithString(const std::string& theString, const std::string& fntFile)
 {
     std::string pathStr = FileUtils::getInstance()->fullPathForFilename(fntFile);
     std::string relPathStr = pathStr.substr(0, pathStr.find_last_of('/'))+"/";
@@ -204,7 +205,7 @@ void LabelAtlas::updateAtlasValues()
 }
 
 //CCLabelAtlas - LabelProtocol
-void LabelAtlas::setString(const eastl::string &label)
+void LabelAtlas::setString(const std::string &label)
 {
     ssize_t len = label.size();
     if (len > _textureAtlas->getTotalQuads())
@@ -222,7 +223,7 @@ void LabelAtlas::setString(const eastl::string &label)
     _quadsToDraw = len;
 }
 
-eastl::string LabelAtlas::getString() const
+std::string LabelAtlas::getString() const
 {
     return _string.tostring();
 }
@@ -270,9 +271,9 @@ void LabelAtlas::draw(Renderer *renderer, const Mat4 &transform, uint32_t flags)
 }
 #endif
 
-eastl::string LabelAtlas::getDescription() const
+std::string LabelAtlas::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<LabelAtlas | Tag = %d, Label = '%s'>", _tag, _string.c_str());
+    return cocos2d::StringUtils::format("<LabelAtlas | Tag = %d, Label = '%s'>", _tag, _string.c_str());
 }
 
 NS_CC_END

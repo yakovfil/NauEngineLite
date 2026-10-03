@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <span>
+
 #include "nau/scene/components/component.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/scene_processor.h"
@@ -30,7 +32,7 @@ namespace nau::animation
 
         async::Task<> initService() override;
 
-        async::Task<> activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, async::Task<> barrier) override;
+        async::Task<> activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, async::Task<> barrier) override;
 
         void syncSceneState() override;
     };

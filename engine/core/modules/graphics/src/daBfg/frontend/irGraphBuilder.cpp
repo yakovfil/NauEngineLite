@@ -4,30 +4,40 @@
 
 #include "irGraphBuilder.h"
 
-#include "nau/math/dag_random.h"
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <iterator>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include "dabfg/frontend/multiplexingInternal.h"
-#include "dabfg/frontend/dumpInternalRegistry.h"
-#include "dabfg/frontend/dependencyData.h"
-#include "dabfg/frontend/nameResolver.h"
 #include "dabfg/common/resourceUsage.h"
+#include "dabfg/frontend/dependencyData.h"
+#include "dabfg/frontend/dumpInternalRegistry.h"
+#include "dabfg/frontend/multiplexingInternal.h"
+#include "dabfg/frontend/nameResolver.h"
 #include "nau/diag/logging.h"
-#include <EASTL/vector_map.h>
-
-
+#include "nau/math/dag_random.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_string.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 #define NAU_ASSERT_DO_AND_LOG(expression, action, ...) \
-  do                                                 \
-  {                                                  \
-    if (EASTL_UNLIKELY(!(expression)))               \
-    {                                                \
-      action;                                        \
-      NAU_LOG_ERROR(__VA_ARGS__);                    \
-    }                                                \
-  } while (0)
-
-
-
+    do                                                 \
+    {                                                  \
+        if (NAU_UNLIKELY(!(expression)))               \
+        {                                              \
+            action;                                    \
+            NAU_LOG_ERROR(__VA_ARGS__);                \
+        }                                              \
+    } while (0)
 
 extern bool randomize_order;
 
@@ -74,7 +84,7 @@ intermediate::Graph IrGraphBuilder::build(multiplexing::Extents extents) const
   setIrGraphDebugNames(graph);
 
   // NRVO does not work with structured bindings
-  return eastl::move(graph);
+  return std::move(graph);
 }
 
 
@@ -103,9 +113,9 @@ void IrGraphBuilder::validateLifetimes(ValidityInfo &validity) const
 
     dag::RelocatableFixedVector<NodeNameId, 32> sortedReaders;
     sortedReaders.assign(lifetime.readers.begin(), lifetime.readers.end());
-    eastl::sort(sortedReaders.begin(), sortedReaders.end());
+    std::sort(sortedReaders.begin(), sortedReaders.end());
 
-    if (eastl::binary_search(sortedReaders.begin(), sortedReaders.end(), lifetime.introducedBy))
+    if (std::binary_search(sortedReaders.begin(), sortedReaders.end(), lifetime.introducedBy))
     {
       NAU_LOG_ERROR("Resource '{}' was both read and introduced by node '{}'! "
              "This is impossible to satisfy, disabling the resource! ",
@@ -114,7 +124,7 @@ void IrGraphBuilder::validateLifetimes(ValidityInfo &validity) const
       validity.resourceValid.set(resId, false);
     }
 
-    if (eastl::binary_search(sortedReaders.begin(), sortedReaders.end(), lifetime.consumedBy))
+    if (std::binary_search(sortedReaders.begin(), sortedReaders.end(), lifetime.consumedBy))
     {
       NAU_LOG_ERROR("Resource '{}' was both read and consumed by node '{}'! "
              "This is impossible to satisfy, disabling the node! ",
@@ -125,21 +135,21 @@ void IrGraphBuilder::validateLifetimes(ValidityInfo &validity) const
 
     dag::RelocatableFixedVector<NodeNameId, 32> sortedModifiers;
     sortedModifiers.assign(lifetime.modificationChain.begin(), lifetime.modificationChain.end());
-    eastl::sort(sortedModifiers.begin(), sortedModifiers.end());
+    std::sort(sortedModifiers.begin(), sortedModifiers.end());
 
     dag::RelocatableFixedVector<NodeNameId, 8> conflicts;
-    eastl::set_intersection(sortedReaders.begin(), sortedReaders.end(), sortedModifiers.begin(), sortedModifiers.end(),
-      eastl::back_insert_iterator<decltype(conflicts)>(conflicts));
+    std::set_intersection(sortedReaders.begin(), sortedReaders.end(), sortedModifiers.begin(), sortedModifiers.end(),
+                          std::back_insert_iterator<decltype(conflicts)>(conflicts));
 
     if (!conflicts.empty())
     {
-      eastl::string list;
-      for (const auto nodeId : conflicts)
-      {
-        list += "'";
-        list += registry.knownNames.getName(nodeId);
-        list += "' ";
-      }
+        std::string list;
+        for (const auto nodeId : conflicts)
+        {
+            list += "'";
+            list += registry.knownNames.getName(nodeId);
+            list += "' ";
+        }
 
       NAU_LOG_ERROR("Found nodes that both modify and read resource '{}'! Offender(s): {}. "
              "This is impossible to satisfy, disabling these nodes!",
@@ -214,9 +224,9 @@ bool IrGraphBuilder::validateNode(NodeNameId nodeId) const
     const auto svType = SHVT_BUFFER; // ShaderGlobal::get_var_type(bindId);
     NAU_FAILURE("ShaderGlobal::get_var_type - not implemented");
 
-    static constexpr eastl::array<char const *const, 8> SHVT_MESSAGES{"is missing from the shader map", "only accepts INTs",
-      "only accepts REALs", "only accepts COLOR4s", "only accepts TEXTUREs", "only accepts BUFFERs", "only accepts INT4s",
-      "only accepts FLOAT4X4s"};
+    static constexpr std::array<char const* const, 8> SHVT_MESSAGES{"is missing from the shader map", "only accepts INTs",
+                                                                    "only accepts REALs", "only accepts COLOR4s", "only accepts TEXTUREs", "only accepts BUFFERs", "only accepts INT4s",
+                                                                    "only accepts FLOAT4X4s"};
 
     NAU_ASSERT_CONTINUE(svType >= -1 && 1 + svType < SHVT_MESSAGES.size()); // Sanity check
 
@@ -262,38 +272,41 @@ bool IrGraphBuilder::validateNode(NodeNameId nodeId) const
   bool anyUsageConflictsAfterNameResolution = false;
 
   const auto checkResIdRequest = [this, nodeId, &anyUsageConflictsAfterNameResolution](bool history, auto resolvedResId,
-                                   eastl::span<const ResNameId> unresolvedResIds) {
-    NAU_ASSERT(!unresolvedResIds.empty());
+                                                                                       std::span<const ResNameId> unresolvedResIds)
+  {
+      NAU_ASSERT(!unresolvedResIds.empty());
 
-    // We expect to always find a correct request, otherwise nameResolver is broken.
-    const auto getUsage = [&](ResNameId unresolvedResId) -> eastl::optional<ResourceUsage> {
-      const auto &requests = history ? registry.nodes[nodeId].historyResourceReadRequests : registry.nodes[nodeId].resourceRequests;
-
-      const auto reqIt = requests.find(unresolvedResId);
-      if (reqIt != requests.end())
-        return reqIt->second.usage;
-
-      return eastl::nullopt;
-    };
-
-    const auto firstUsage = getUsage(unresolvedResIds.front());
-    NAU_ASSERT_RETURN(firstUsage.has_value(), );
-
-    for (const auto unresolvedResId : unresolvedResIds)
-    {
-      const auto usage = getUsage(unresolvedResId);
-      NAU_ASSERT_CONTINUE(usage.has_value());
-
-      if (firstUsage->access != usage->access || firstUsage->type != usage->type)
+      // We expect to always find a correct request, otherwise nameResolver is broken.
+      const auto getUsage = [&](ResNameId unresolvedResId) -> std::optional<ResourceUsage>
       {
-        NAU_LOG_ERROR("Resource requests for names '{}' and '{}' both resolved to the same resource with name '{}' "
-               "within the node '{}', but the requested usages were different! This would result in impossible"
-               "barriers, disabling this node!",
-          registry.knownNames.getName(unresolvedResIds.front()), registry.knownNames.getName(unresolvedResId),
-          registry.knownNames.getName(resolvedResId), registry.knownNames.getName(nodeId));
-        anyUsageConflictsAfterNameResolution = true;
+          const auto& requests = history ? registry.nodes[nodeId].historyResourceReadRequests : registry.nodes[nodeId].resourceRequests;
+
+          const auto reqIt = requests.find(unresolvedResId);
+          if (reqIt != requests.end())
+              return reqIt->second.usage;
+
+          return std::nullopt;
+      };
+
+      const auto firstUsage = getUsage(unresolvedResIds.front());
+      NAU_ASSERT_RETURN(firstUsage.has_value(), );
+
+      for (const auto unresolvedResId : unresolvedResIds)
+      {
+          const auto usage = getUsage(unresolvedResId);
+          NAU_ASSERT_CONTINUE(usage.has_value());
+
+          if (firstUsage->access != usage->access || firstUsage->type != usage->type)
+          {
+              NAU_LOG_ERROR(
+                  "Resource requests for names '{}' and '{}' both resolved to the same resource with name '{}' "
+                  "within the node '{}', but the requested usages were different! This would result in impossible"
+                  "barriers, disabling this node!",
+                  registry.knownNames.getName(unresolvedResIds.front()), registry.knownNames.getName(unresolvedResId),
+                  registry.knownNames.getName(resolvedResId), registry.knownNames.getName(nodeId));
+              anyUsageConflictsAfterNameResolution = true;
+          }
       }
-    }
   };
 
   nameResolver.iterateInverseMapping(nodeId, checkResIdRequest);
@@ -337,14 +350,14 @@ auto IrGraphBuilder::findValidResourcesAndNodes() const -> ValidityInfo
   // We need a "resource -> [nodes with mandatory dependency on it]"
   // mapping that also accounts for history resources for the BFS to be quick.
   using ResToNodeMapping =
-    IdIndexedMapping<ResNameId, eastl::fixed_vector<NodeNameId, 64, true, nau::EastlFrameAllocator>, nau::EastlFrameAllocator>;
+      IdIndexedMapping<ResNameId, nau::InlineVector<NodeNameId, 64, true, nau::FrameStdAllocator<NodeNameId>>, nau::FrameStdAllocator<nau::InlineVector<NodeNameId, 64, true, nau::FrameStdAllocator<NodeNameId>>>>;
   ResToNodeMapping nodesDependentOnResource(resourceValid.size());
 
   // We also need a mapping that says us which resources are actually
   // other resources, just renamed. This is used to disable the renamed
   // resource even if the node that does the renaming will not be disabled
   // itself due to the renaming being optional.
-  using ResToResMapping = IdIndexedMapping<ResNameId, eastl::optional<ResNameId>, nau::EastlFrameAllocator>;
+  using ResToResMapping = IdIndexedMapping<ResNameId, std::optional<ResNameId>, nau::FrameStdAllocator<std::optional<ResNameId>>>;
   ResToResMapping resourceRenamingDependencies(resourceValid.size());
 
   for (auto [nodeId, nodeData] : registry.nodes.enumerate())
@@ -366,7 +379,7 @@ auto IrGraphBuilder::findValidResourcesAndNodes() const -> ValidityInfo
 
   // Wave of resources which are definitely invalid but who's dependent
   // nodes/resources may have not been marked as invalid yet.
-  using Wave = eastl::fixed_vector<ResNameId, 64, true, nau::EastlFrameAllocator>;
+  using Wave = nau::InlineVector<ResNameId, 64, true, nau::FrameStdAllocator<ResNameId>>;
   Wave wave;
 
   // Fill in the initial wave of invalid resources
@@ -427,20 +440,21 @@ auto IrGraphBuilder::findValidResourcesAndNodes() const -> ValidityInfo
       }
     }
 
-    wave = eastl::move(nextWave);
+    wave = std::move(nextWave);
   }
 
   return result;
 }
 
-eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDiscreteGraph(const ValidityInfo &validity,
-  multiplexing::Extents extents) const
+std::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDiscreteGraph(const ValidityInfo& validity,
+                                                                                          multiplexing::Extents extents) const
 {
   const auto irMultiplexingExtents = multiplexing_extents_to_ir(extents);
 
-  eastl::pair<intermediate::Graph, intermediate::Mapping> result{
-    {}, intermediate::Mapping(registry.knownNames.nameCount<NodeNameId>(), registry.knownNames.nameCount<ResNameId>(),
-          irMultiplexingExtents)};
+  std::pair<intermediate::Graph, intermediate::Mapping> result{
+      {},
+      intermediate::Mapping(registry.knownNames.nameCount<NodeNameId>(), registry.knownNames.nameCount<ResNameId>(),
+                            irMultiplexingExtents)};
 
   auto &graph = result.first;
   auto &mapping = result.second;
@@ -461,28 +475,29 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
       const auto nodeMultiplexingExtents = extents_for_node(nodeData.multiplexingMode, extents);
 
       auto processResource = [&extents, &nodeMultiplexingExtents, &graph, &mapping](ResNameId resId,
-                               const eastl::variant<intermediate::ScheduledResource, ExternalResource> &variant) {
-        for (multiplexing::Index i = {}; index_inside_extents(i, extents); i = next_index(i, extents))
-        {
-          const auto irMultiplexingIndex = multiplexing_index_to_ir(i, extents);
-
-          if (!index_inside_extents(i, nodeMultiplexingExtents))
+                                                                                    const std::variant<intermediate::ScheduledResource, ExternalResource>& variant)
+      {
+          for (multiplexing::Index i = {}; index_inside_extents(i, extents); i = next_index(i, extents))
           {
-            // Index outside of this node's multiplexing extents, redirect
-            // the mapping to the intersection with the valid extents
-            const auto fromIrIndex = multiplexing_index_to_ir(clamp(i, nodeMultiplexingExtents), extents);
-            mapping.mapRes(resId, irMultiplexingIndex) = mapping.mapRes(resId, fromIrIndex);
-            continue;
-          }
+              const auto irMultiplexingIndex = multiplexing_index_to_ir(i, extents);
 
-          // Correct multiindex for this frontend node, multiplex the
-          // resource (unique physical resource per index)
-          auto [idx, irRes] = graph.resources.appendNew();
-          mapping.mapRes(resId, irMultiplexingIndex) = idx;
-          irRes.resource = variant;
-          irRes.frontendResources.insert(resId);
-          irRes.multiplexingIndex = irMultiplexingIndex;
-        }
+              if (!index_inside_extents(i, nodeMultiplexingExtents))
+              {
+                  // Index outside of this node's multiplexing extents, redirect
+                  // the mapping to the intersection with the valid extents
+                  const auto fromIrIndex = multiplexing_index_to_ir(clamp(i, nodeMultiplexingExtents), extents);
+                  mapping.mapRes(resId, irMultiplexingIndex) = mapping.mapRes(resId, fromIrIndex);
+                  continue;
+              }
+
+              // Correct multiindex for this frontend node, multiplex the
+              // resource (unique physical resource per index)
+              auto [idx, irRes] = graph.resources.appendNew();
+              mapping.mapRes(resId, irMultiplexingIndex) = idx;
+              irRes.resource = variant;
+              irRes.frontendResources.insert(resId);
+              irRes.multiplexingIndex = irMultiplexingIndex;
+          }
       };
 
       for (auto resId : nodeData.createdResources)
@@ -496,7 +511,7 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
                                           const auto &process_modifiers) {
           //FRAMEMEM_VALIDATE;
           // Save scanned resources to prevent hanging if there is cycle in renaming chains
-          eastl::vector_set<ResNameId, eastl::less<ResNameId>, nau::EastlFrameAllocator> knownCandidates;
+          nau::SortedVectorSet<ResNameId, std::less<ResNameId>, nau::FrameStdAllocator<ResNameId>> knownCandidates;
           const auto scanNodeSlotsOrResource = [this](NodeNameId node_id, ResNameId res_id, const auto &process_node) {
             for (const auto unresolvedResId : nameResolver.unresolve(node_id, res_id))
               process_node(node_id, unresolvedResId);
@@ -525,7 +540,7 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
           }
         };
 
-        if (auto resDesc = eastl::get_if<ResourceDescription>(&resData.creationInfo))
+        if (auto resDesc = std::get_if<ResourceDescription>(&resData.creationInfo))
         {
           // If the node introducer do not specify usage, find the first usage
           // in the modification requests in all renamings.
@@ -569,12 +584,12 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
           intermediate::ScheduledResource res{desc, resData.type, resData.resolution, resData.history};
           processResource(resId, res);
         }
-        else if (auto blobDesc = eastl::get_if<BlobDescription>(&resData.creationInfo))
+        else if (auto blobDesc = std::get_if<BlobDescription>(&resData.creationInfo))
         {
-          intermediate::ScheduledResource res{*blobDesc, resData.type, eastl::nullopt, resData.history};
-          processResource(resId, res);
+            intermediate::ScheduledResource res{*blobDesc, resData.type, std::nullopt, resData.history};
+            processResource(resId, res);
         }
-        else if (auto externalProvider = eastl::get_if<ExternalResourceProvider>(&resData.creationInfo))
+        else if (auto externalProvider = std::get_if<ExternalResourceProvider>(&resData.creationInfo))
         {
           switch (resData.type)
           {
@@ -629,16 +644,17 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
 
   // Group and multiplex nodes
   {
-    eastl::vector<NodeNameId, nau::EastlFrameAllocator> validNodes;
-    validNodes.reserve(registry.nodes.size());
-    for (auto [nodeId, _] : registry.nodes.enumerate())
-      if (nodeValid[nodeId])
-        validNodes.emplace_back(nodeId);
+      std::vector<NodeNameId, nau::FrameStdAllocator<NodeNameId>> validNodes;
+      validNodes.reserve(registry.nodes.size());
+      for (auto [nodeId, _] : registry.nodes.enumerate())
+          if (nodeValid[nodeId])
+              validNodes.emplace_back(nodeId);
 
-    if (randomize_order)
-    {
-      eastl::random_shuffle(validNodes.begin(), validNodes.end(), [](uint32_t n) { return static_cast<uint32_t>(grnd() % n); });
-    }
+      if (randomize_order)
+      {
+          for (size_t i = 1; i < validNodes.size(); ++i)
+              std::swap(validNodes[i], validNodes[grnd() % (i + 1)]);
+      }
 
     graph.nodes.reserve(mapping.mappedNodeIndexCount());
     graph.nodeStates.reserve(mapping.mappedNodeIndexCount());
@@ -672,9 +688,8 @@ eastl::pair<intermediate::Graph, intermediate::Mapping> IrGraphBuilder::createDi
         irNode.priority = nodeData.priority;
         irNode.multiplexingIndex = irMultiplexingIndex;
 
-
-        eastl::array<eastl::vector_map<ResNameId, uint32_t, eastl::less<ResNameId>, nau::EastlFrameAllocator>, 2>
-          resolvedResIdxToIndexInIrRequests;
+        std::array<nau::SortedVectorMap<ResNameId, uint32_t, std::less<ResNameId>, nau::FrameStdAllocator<std::pair<ResNameId, uint32_t>>>, 2>
+            resolvedResIdxToIndexInIrRequests;
 
         auto processRequest = [&irNode = irNode, &mapping, &resourceValid, &nodeData, &validity, &graph,
                                 &resolvedResIdxToIndexInIrRequests, this, irMultiplexingIndex,
@@ -763,7 +778,7 @@ void IrGraphBuilder::fixupFalseHistoryFlags(intermediate::Graph &graph) const
 {
   //FRAMEMEM_VALIDATE;
 
-  IdIndexedFlags<intermediate::ResourceIndex, nau::EastlFrameAllocator> historyWasRequested;
+  IdIndexedFlags<intermediate::ResourceIndex, nau::FrameStdAllocator<nau::BitVectorWord>> historyWasRequested;
   historyWasRequested.reserve(graph.resources.size());
 
   for (const auto &node : graph.nodes)
@@ -858,8 +873,8 @@ void IrGraphBuilder::addEdgesToIrGraph(intermediate::Graph &graph, const Validit
     };
 
     const auto nodeValidPred = [&nodeValid](NodeNameId n) { return nodeValid[n]; };
-    const bool anyValidReaders = eastl::any_of(lifetime.readers.begin(), lifetime.readers.end(), nodeValidPred);
-    const bool anyValidModifiers = eastl::any_of(lifetime.modificationChain.begin(), lifetime.modificationChain.end(), nodeValidPred);
+    const bool anyValidReaders = std::any_of(lifetime.readers.begin(), lifetime.readers.end(), nodeValidPred);
+    const bool anyValidModifiers = std::any_of(lifetime.modificationChain.begin(), lifetime.modificationChain.end(), nodeValidPred);
 
     // There are 4 cases of how the graph should look depending on
     // whether modifier and/or reader sets are empty.
@@ -905,8 +920,7 @@ void IrGraphBuilder::addEdgesToIrGraph(intermediate::Graph &graph, const Validit
   }
 }
 
-auto IrGraphBuilder::findSinkIrNodes(const intermediate::Graph &graph, const intermediate::Mapping &mapping,
-  eastl::span<const ResNameId> sinkResources) const -> SinkSet
+auto IrGraphBuilder::findSinkIrNodes(const intermediate::Graph& graph, const intermediate::Mapping& mapping, std::span<const ResNameId> sinkResources) const -> SinkSet
 {
   SinkSet result;
   const auto findIrNodes = [this, &mapping, &result](NodeNameId id) {
@@ -942,7 +956,7 @@ auto IrGraphBuilder::findSinkIrNodes(const intermediate::Graph &graph, const int
       continue;
     }
 
-    if (!eastl::holds_alternative<ExternalResourceProvider>(registry.resources[depData.renamingRepresentatives[resId]].creationInfo))
+    if (!std::holds_alternative<ExternalResourceProvider>(registry.resources[depData.renamingRepresentatives[resId]].creationInfo))
     {
       NAU_LOG_ERROR("Attempted to mark a FG-internal resource '{}' as an "
              "externally consumed resource. This is impossible, as FG "
@@ -978,22 +992,23 @@ auto IrGraphBuilder::findSinkIrNodes(const intermediate::Graph &graph, const int
   return result;
 }
 
-IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::EastlFrameAllocator> IrGraphBuilder::pruneGraph(
-  const intermediate::Graph &graph, const intermediate::Mapping &mapping, eastl::span<const intermediate::NodeIndex> sinkNodes,
-  const ValidityInfo &validity) const
+IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> IrGraphBuilder::pruneGraph(
+    const intermediate::Graph& graph,
+    const intermediate::Mapping& mapping,
+    std::span<const intermediate::NodeIndex> sinkNodes,
+    const ValidityInfo& validity) const
 {
   // We reindex nodes to go in bfs order, this makes memory access
   // pattern better when scheduling, plus the code is simpler than if we
   // tried to preserve the original order
   static constexpr intermediate::NodeIndex NOT_VISITED = MINUS_ONE_SENTINEL_FOR<intermediate::NodeIndex>;
-  IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::EastlFrameAllocator> visited(graph.nodes.size(), NOT_VISITED);
-
+  IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::FrameStdAllocator<intermediate::NodeIndex>> visited(graph.nodes.size(), NOT_VISITED);
 
   //FRAMEMEM_REGION;
   // This is a way to write a BFS. Instead of a queue, we store a "wave"
   // of nodes, iterate adjacent nodes of the "wave" building a the next
   // wave out of not visited ones and then repeat.
-  using Wave = eastl::fixed_vector<intermediate::NodeIndex, 64, true, nau::EastlFrameAllocator>;
+  using Wave = nau::InlineVector<intermediate::NodeIndex, 64, true, nau::FrameStdAllocator<intermediate::NodeIndex>>;
   Wave wave{sinkNodes.begin(), sinkNodes.end()};
   uint32_t lastAdded = 0;
   auto recordVisited = [&lastAdded, &visited](intermediate::NodeIndex node) {
@@ -1035,7 +1050,7 @@ IdIndexedMapping<intermediate::NodeIndex, intermediate::NodeIndex, nau::EastlFra
         }
     }
 
-    wave = eastl::move(nextWave);
+    wave = std::move(nextWave);
   }
 
   bool anyNodePruned = false;
@@ -1070,7 +1085,7 @@ struct StateFieldSetter
     to.frameLayer = from.frameLayer;
   }
 
-  void set(eastl::optional<intermediate::VrsState> &to, const eastl::optional<VrsStateRequirements> &from)
+  void set(std::optional<intermediate::VrsState>& to, const std::optional<VrsStateRequirements>& from)
   {
     if (!from.has_value())
       return;
@@ -1084,27 +1099,28 @@ struct StateFieldSetter
     to->pixelCombiner = from->pixelCombiner;
   }
 
-  void set(eastl::optional<intermediate::RenderPass> &to, const eastl::optional<VirtualPassRequirements> &from)
+  void set(std::optional<intermediate::RenderPass>& to, const std::optional<VirtualPassRequirements>& from)
   {
     if (!from.has_value())
       return;
 
     to.emplace();
 
-    const auto getAttachment = [this](VirtualSubresourceRef res) -> eastl::optional<intermediate::SubresourceRef> {
-      if (res.nameId != ResNameId::Invalid)
-      {
-        const auto resNameId = nameResolver.resolve(res.nameId);
-        const auto resIndex = mapping.mapRes(resNameId, multiIndex);
-        if (resIndex == intermediate::RESOURCE_NOT_MAPPED)
+    const auto getAttachment = [this](VirtualSubresourceRef res) -> std::optional<intermediate::SubresourceRef>
+    {
+        if (res.nameId != ResNameId::Invalid)
         {
-          // Sanity check, node should've been skipped otherwise
-          NAU_ASSERT(registry.nodes[nodeId].resourceRequests.find(resNameId)->second.optional);
-          return eastl::nullopt;
+            const auto resNameId = nameResolver.resolve(res.nameId);
+            const auto resIndex = mapping.mapRes(resNameId, multiIndex);
+            if (resIndex == intermediate::RESOURCE_NOT_MAPPED)
+            {
+                // Sanity check, node should've been skipped otherwise
+                NAU_ASSERT(registry.nodes[nodeId].resourceRequests.find(resNameId)->second.optional);
+                return std::nullopt;
+            }
+            return intermediate::SubresourceRef{mapping.mapRes(resNameId, multiIndex), res.mipLevel, res.layer};
         }
-        return intermediate::SubresourceRef{mapping.mapRes(resNameId, multiIndex), res.mipLevel, res.layer};
-      }
-      return eastl::nullopt;
+        return std::nullopt;
     };
 
     to->colorAttachments.reserve(from->colorAttachments.size());
@@ -1136,7 +1152,7 @@ struct StateFieldSetter
 
         // bind "nothing", nullptr for projector is intentional
         // cuz it's not supposed to be called for nullopt resource idx
-        to.emplace(bindIdx, intermediate::Binding{bindInfo.type, eastl::nullopt, false, bindInfo.projectedTag, nullptr});
+        to.emplace(bindIdx, intermediate::Binding{bindInfo.type, std::nullopt, false, bindInfo.projectedTag, nullptr});
         continue;
       }
 
@@ -1189,7 +1205,7 @@ void IrGraphBuilder::setIrGraphDebugNames(intermediate::Graph &graph) const
 
   auto genMultiplexingRow = [](uint32_t idx) {
     static constexpr const char *HEX_DIGITS = "0123456789ABCDEF";
-    eastl::fixed_string<char, 16> result = " {0x$$$$} ";
+    nau::InlineString<char, 16> result = " {0x$$$$} ";
     for (uint32_t i = 7; i >= 4; --i)
     {
       result[i] = HEX_DIGITS[idx & 0xF];
@@ -1217,8 +1233,8 @@ void IrGraphBuilder::setIrGraphDebugNames(intermediate::Graph &graph) const
       size_t size = 2 + MULTI_INDEX_STRING_APPROX_SIZE;
       for (auto userResId : irRes.frontendResources)
       {
-        const eastl::string_view name = registry.knownNames.getName(userResId);
-        size += name.size() + 2;
+          const std::string_view name = registry.knownNames.getName(userResId);
+          size += name.size() + 2;
       }
       debugName.reserve(size);
     }

@@ -1,11 +1,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
+#include <utility>
+#include <vector>
 #include <daECS/net/netEvent.h>
 #include <daECS/net/object.h>
 #include <daECS/core/entityManager.h>
 #include <daECS/core/entitySystem.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/bitvector.h>
+#include "nau/utils/sorted_vector.h"
+#include <memory>
+#include "nau/utils/dynamic_bit_vector.h"
 #include <memory/dag_framemem.h>
 #include <daECS/net/msgSink.h>
 #include <daECS/net/network.h>
@@ -16,17 +18,17 @@ ECS_REGISTER_EVENT(EventNetEventDummy);     // Dummy event type to ensure that E
 
 inline void entity_events(const ecs::Event &event, ecs::EntityId eid)
 {
-  eastl::unique_ptr<net::IMessage, framememDeleter> msg(net::event::create_message_by_event(event, net::Er::Unicast, framemem_ptr()));
+  std::unique_ptr<net::IMessage, framememDeleter> msg(net::event::create_message_by_event(event, net::Er::Unicast, framemem_ptr()));
   if (msg)
-    send_net_msg(eid, eastl::move(*msg));
+    send_net_msg(eid, std::move(*msg));
 }
 
 inline void broadcast_events(const ecs::Event &event)
 {
-  eastl::unique_ptr<net::IMessage, framememDeleter> msg(
+  std::unique_ptr<net::IMessage, framememDeleter> msg(
     net::event::create_message_by_event(event, net::Er::Broadcast, framemem_ptr()));
   if (msg)
-    send_net_msg(net::get_msg_sink(), eastl::move(*msg));
+    send_net_msg(net::get_msg_sink(), std::move(*msg));
 }
 
 ECS_ON_EVENT(EventNetEventDummy) // we actually won't receive this event
@@ -55,12 +57,12 @@ static void update_esd_event_set(nau::ConstSpan<net::MessageRouting> tx_routings
     if (evtfn == &net_unicast_events_es_event_handler_all_events)
     {
       ecs::EventSet evs = build_event_set_for_tx_routing(tx_routings, net::Er::Unicast);
-      esd->setEvSet(evs.empty() ? ecs::EventSetBuilder<EventNetEventDummy>::build() : eastl::move(evs));
+      esd->setEvSet(evs.empty() ? ecs::EventSetBuilder<EventNetEventDummy>::build() : std::move(evs));
     }
     else if (evtfn == &net_broadcast_events_es_event_handler_all_events)
     {
       ecs::EventSet evs = build_event_set_for_tx_routing(tx_routings, net::Er::Broadcast);
-      esd->setEvSet(evs.empty() ? ecs::EventSetBuilder<EventNetEventDummy>::build() : eastl::move(evs));
+      esd->setEvSet(evs.empty() ? ecs::EventSetBuilder<EventNetEventDummy>::build() : std::move(evs));
     }
   });
 }
@@ -72,9 +74,9 @@ namespace net
 {
 /*static*/ EventRegRecord *EventRegRecord::netEventsRegList = nullptr;
 // This is just cache of content EventRegRecord registry (for faster access)
-static eastl::vector_map<ecs::event_type_t, const EventRegRecord *> tx_events_index;
-static eastl::bitvector<> rx_msg_bitmap;                   // for faster negative tests
-static eastl::vector<const EventRegRecord *> rx_msg_index; // To consider: use sorted array instead?
+static nau::SortedVectorMap<ecs::event_type_t, const EventRegRecord *> tx_events_index;
+static nau::DynamicBitVector<> rx_msg_bitmap;                   // for faster negative tests
+static std::vector<const EventRegRecord *> rx_msg_index; // To consider: use sorted array instead?
 
 static void do_init_indexes(nau::ConstSpan<MessageRouting> tx_routings)
 {

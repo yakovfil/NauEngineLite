@@ -3,12 +3,13 @@
 
 #pragma once
 
+#include <string_view>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/math/dag_color.h"
 #include "nau/scene/nau_object.h"
 #include "nau/scene/scene.h"
 #include "nau/scene/world.h"
-
 
 namespace nau::render
 {
@@ -57,10 +58,9 @@ namespace nau::render
         virtual bool getDrawViewportGrid() = 0;
 
         virtual void*  getHwnd() const = 0;
-        virtual eastl::string_view getName() const = 0;
+        virtual std::string_view getName() const = 0;
 
         virtual SWAPID getSwapchain() const = 0;
-        virtual void initialize(eastl::string_view name, SWAPID swapchain, void* hwnd) = 0;
-
+        virtual void initialize(std::string_view name, SWAPID swapchain, void* hwnd) = 0;
     };
 }  // namespace nau::render

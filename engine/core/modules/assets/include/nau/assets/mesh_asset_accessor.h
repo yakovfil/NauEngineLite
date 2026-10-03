@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
-#include <EASTL/vector.h>
+#include <optional>
+#include <span>
+#include <vector>
 
 #include "nau/assets/asset_accessor.h"
 #include "nau/async/task.h"
@@ -62,9 +62,9 @@ namespace nau
 
         virtual MeshDescription getDescription() const = 0;
 
-        virtual eastl::vector<VertAttribDescription> getVertAttribDescriptions() const = 0;
+        virtual std::vector<VertAttribDescription> getVertAttribDescriptions() const = 0;
 
-        virtual Result<> copyVertAttribs(eastl::span<OutputVertAttribDescription>) const = 0;
+        virtual Result<> copyVertAttribs(std::span<OutputVertAttribDescription>) const = 0;
 
         virtual Result<> copyIndices(void* outputBuffer, size_t outputBufferSize, ElementFormat outputIndexFormat) const = 0;
     };

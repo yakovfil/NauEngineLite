@@ -1,20 +1,21 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./asset_pack_file_system.h"
 
-#include <EASTL/sort.h>
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <tuple>
 
 #include "./asset_pack_file.h"
 #include "nau/io/fs_path.h"
 #include "nau/io/nau_container.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/memory/stack_allocator.h"
 #include "nau/serialization/runtime_value_builder.h"
-#include "nau/utils/preprocessor.h"
-
 #include "nau/string/string_utils.h"
+#include "nau/utils/preprocessor.h"
 
 #include NAU_PLATFORM_HEADER(diag/win_error.h)
 
@@ -22,11 +23,11 @@ namespace nau::io
 {
     namespace
     {
-        eastl::string splitAndMergePath(eastl::string& path)
+        std::string splitAndMergePath(std::string& path)
         {
             std::replace(path.begin(), path.end(), '\\', '/');
 
-            eastl::string result;
+            std::string result;
 
             for (auto element : strings::split(path, "/"))
             {
@@ -135,7 +136,7 @@ namespace nau::io
         return m_view.size != 0;
     }
 
-    AssetPackFileSystemImpl::AssetPackFileSystemImpl(eastl::u8string_view assetPackPath, AssetPackFileSystemSettings settings) :
+    AssetPackFileSystemImpl::AssetPackFileSystemImpl(std::u8string_view assetPackPath, AssetPackFileSystemSettings settings) :
         m_lifetimeOfCache(settings.lifetimeOfCache),
         m_maxCacheSize(settings.maxCacheSize),
         m_assetPackPath(std::move(assetPackPath)),
@@ -166,7 +167,7 @@ namespace nau::io
 
         RuntimeValue::Ptr packData;
         size_t headerDataOffset;
-        eastl::tie(packData, headerDataOffset) = *readContainerHeader(stream);
+        std::tie(packData, headerDataOffset) = *readContainerHeader(stream);
 
         io::AssetPackIndexData packIndexData;
         auto value = nau::makeValueRef(packIndexData);
@@ -179,7 +180,7 @@ namespace nau::io
             content.filePath = splitAndMergePath(content.filePath);
 
             FsPath contentPath(content.filePath);
-           
+
             AssetPackNode* node = &m_root;
             for (auto name : contentPath.splitElements())
             {
@@ -288,7 +289,7 @@ namespace nau::io
         return assetPackNodeToFsEntry(data->basePath, data->current);
     }
 
-    eastl::tuple<void*, size_t> AssetPackFileSystemImpl::requestRead(size_t offset, size_t size)
+    std::tuple<void*, size_t> AssetPackFileSystemImpl::requestRead(size_t offset, size_t size)
     {
         const size_t alignOffset = pageAlignedOffset(offset);
         const size_t pageCount = std::ceil(double(size) / m_memPageSize);
@@ -313,7 +314,7 @@ namespace nau::io
     {
         {
             lock_(m_mutex);
-            auto iter = eastl::find_if(m_liveFiles.begin(), m_liveFiles.end(), [offset](const LiveFileEntry& f)
+            auto iter = std::find_if(m_liveFiles.begin(), m_liveFiles.end(), [offset](const LiveFileEntry& f)
             {
                 return f.offset == offset;
             });
@@ -368,12 +369,12 @@ namespace nau::io
         // pages with older access times come first
         StackVector<const MemPages*> ageSortedPages;
         ageSortedPages.reserve(m_memPages.size());
-        eastl::transform(m_memPages.begin(), m_memPages.end(), eastl::back_inserter(ageSortedPages), [](const MemPages& pages)
+        for (const MemPages& pages : m_memPages)
         {
-            return &pages;
-        });
+            ageSortedPages.push_back(&pages);
+        }
 
-        eastl::sort(ageSortedPages.begin(), ageSortedPages.end(), [](const MemPages* left, const MemPages* right)
+        std::sort(ageSortedPages.begin(), ageSortedPages.end(), [](const MemPages* left, const MemPages* right)
         {
             return left->m_lastAccessTime < right->m_lastAccessTime;
         });
@@ -399,7 +400,7 @@ namespace nau::io
 
         const auto anyLiveFileOverlapsPages = [this, &fileOverlapsPages](const MemPages& pages)
         {
-            return eastl::any_of(m_liveFiles.begin(), m_liveFiles.end(), [&pages, &fileOverlapsPages](const LiveFileEntry& file)
+            return std::any_of(m_liveFiles.begin(), m_liveFiles.end(), [&pages, &fileOverlapsPages](const LiveFileEntry& file)
             {
                 return fileOverlapsPages(file, pages);
             });
@@ -461,7 +462,7 @@ namespace nau::io
         return findOrCreateMemPage(offset);
     }
 
-    eastl::tuple<FsPath, AssetPackFileSystemImpl::AssetPackNode*> AssetPackFileSystemImpl::findAssetPackNodeForPath(const FsPath& path)
+    std::tuple<FsPath, AssetPackFileSystemImpl::AssetPackNode*> AssetPackFileSystemImpl::findAssetPackNodeForPath(const FsPath& path)
     {
         AssetPackNode* node = &m_root;
         FsPath basePath{"/"};
@@ -491,7 +492,7 @@ namespace nau::io
         return {std::move(basePath), node};
     }
 
-    IFileSystem::Ptr createAssetPackFileSystem(eastl::u8string_view assetPackPath, AssetPackFileSystemSettings settings)
+    IFileSystem::Ptr createAssetPackFileSystem(std::u8string_view assetPackPath, AssetPackFileSystemSettings settings)
     {
         NAU_ASSERT(!assetPackPath.empty());
         if (assetPackPath.empty())

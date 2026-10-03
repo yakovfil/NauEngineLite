@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
 
 #include "./logging_service.h"
 #include "nau/app/global_properties.h"
@@ -18,7 +20,7 @@ namespace nau
          */
         struct SceneConfig
         {
-            eastl::string startupScene;
+            std::string startupScene;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(startupScene))
@@ -46,10 +48,10 @@ namespace nau
             nau::scene::IScene::Ptr scene = co_await nau::scene::openScene(startupScene);
 
             if (!scene)
-			{
-				NAU_LOG_ERROR("Failed to load startup scene: {}", startupScene);
-				co_return;
-			}
+            {
+                NAU_LOG_ERROR("Failed to load startup scene: {}", startupScene);
+                co_return;
+            }
 
             scene->setName("Startup Scene");
 
@@ -66,7 +68,7 @@ namespace nau
             }
 
             auto wcsProjectDir = projectRootDir.wstring();
-            auto utf8ProjectDir = strings::wstringToUtf8(eastl::wstring_view{wcsProjectDir.data(), wcsProjectDir.size()});
+            auto utf8ProjectDir = strings::wstringToUtf8(std::wstring_view{wcsProjectDir.data(), wcsProjectDir.size()});
 
             GlobalProperties& globalProperties = getServiceProvider().get<GlobalProperties>();
 

@@ -2,16 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <EASTL/unique_ptr.h>
-#include <imgui.h>
 #include "nau/gui/imguiInput.h"
-#include "nau/gui/dag_imgui.h"
+
+#include <imgui.h>
+
+#include <memory>
+#include <utility>
+
+#include "imguiInputHandler.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/diag/logging.h"
+#include "nau/gui/dag_imgui.h"
 #include "nau/input.h"
-#include "imguiInputHandler.h"
-
-
 
 void register_hid_event_handler(DearImGuiInputHandler* handler)
 {
@@ -27,8 +29,7 @@ void unregister_hid_event_handler(DearImGuiInputHandler* handler)
     handler->listenerId = -1;
 }
 
-
-static eastl::unique_ptr<DearImGuiInputHandler> imgui_input_handler;
+static std::unique_ptr<DearImGuiInputHandler> imgui_input_handler;
 static GlobalInputHandler imgui_global_input_handler;
 static nau::math::IVector2 saved_mouse_pos = nau::math::IVector2(0, 0);
 static bool saved_draw_cursor = false;
@@ -39,13 +40,13 @@ static void on_imgui_state_change(ImGuiState old_state, ImGuiState new_state)
 {
   if (!imgui_input_handler)
   {
-    imgui_input_handler = eastl::make_unique<DearImGuiInputHandler>();
-    imgui_input_handler->hybridInput = hybrid_input_mode;
-    int w,h;
-    d3d::get_screen_size(w, h);
-    saved_mouse_pos.setX(w);
-    saved_mouse_pos.setY(h);
-    saved_mouse_pos /= 2;
+      imgui_input_handler = std::make_unique<DearImGuiInputHandler>();
+      imgui_input_handler->hybridInput = hybrid_input_mode;
+      int w, h;
+      d3d::get_screen_size(w, h);
+      saved_mouse_pos.setX(w);
+      saved_mouse_pos.setY(h);
+      saved_mouse_pos /= 2;
   }
 
   if (new_state == ImGuiState::ACTIVE)
@@ -118,7 +119,7 @@ bool imgui_handle_special_keys_up(bool, bool, bool, int btn_idx, unsigned key_mo
 
 void imgui_register_global_input_handler(GlobalInputHandler handler)
 {
-    imgui_global_input_handler = eastl::move(handler);
+    imgui_global_input_handler = std::move(handler);
 }
 
 

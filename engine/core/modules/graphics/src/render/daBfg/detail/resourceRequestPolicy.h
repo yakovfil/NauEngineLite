@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/utility.h>
+#include <utility>
 
+#include "nau/utils/enum_utils.h"
 
 namespace dabfg::detail
 {
@@ -22,12 +23,12 @@ enum class ResourceRequestPolicy : uint32_t
 
 inline constexpr ResourceRequestPolicy operator&(ResourceRequestPolicy fst, ResourceRequestPolicy snd)
 {
-  return static_cast<ResourceRequestPolicy>(eastl::to_underlying(fst) & eastl::to_underlying(snd));
+    return static_cast<ResourceRequestPolicy>(nau::to_underlying(fst) & nau::to_underlying(snd));
 }
 
 inline constexpr ResourceRequestPolicy operator|(ResourceRequestPolicy fst, ResourceRequestPolicy snd)
 {
-  return static_cast<ResourceRequestPolicy>(eastl::to_underlying(fst) | eastl::to_underlying(snd));
+    return static_cast<ResourceRequestPolicy>(nau::to_underlying(fst) | nau::to_underlying(snd));
 }
 
 } // namespace dabfg::detail

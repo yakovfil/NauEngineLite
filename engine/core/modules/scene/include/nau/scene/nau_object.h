@@ -3,22 +3,21 @@
 
 #pragma once
 
-#include <EASTL/intrusive_list.h>
-#include <EASTL/optional.h>
-
 #include <concepts>
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 
 #include "nau/kernel/kernel_config.h"
-#include "nau/memory/eastl_aliases.h"
 #include "nau/memory/mem_allocator.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/runtime/disposable.h"
 #include "nau/scene/scene_query.h"
 #include "nau/serialization/native_runtime_value/native_value_base.h"
+#include "nau/utils/intrusive_list.h"
 #include "nau/utils/uid.h"
 
 namespace nau::scene
@@ -42,7 +41,7 @@ namespace nau::scene_internal
      * It is not responsible for memory deallocation on destruction of the referenced object.
      * See also: ObjectUniquePtr.
      */
-    class NAU_CORESCENE_EXPORT ObjectWeakRefBase : public eastl::intrusive_list_node
+    class NAU_CORESCENE_EXPORT ObjectWeakRefBase : public nau::IntrusiveListNode
     {
     protected:
 
@@ -138,7 +137,7 @@ namespace nau::scene_internal
         }
 
         scene::NauObject* m_object = nullptr;
-        eastl::optional<scene::SceneQuery> m_objectQuery;
+        std::optional<scene::SceneQuery> m_objectQuery;
 
         friend class scene::NauObject;
 
@@ -328,7 +327,7 @@ namespace nau::scene
         /**
          * @brief List of references bound to the object.
          */
-        eastl::intrusive_list<scene_internal::ObjectWeakRefBase> m_references;
+        nau::IntrusiveList<scene_internal::ObjectWeakRefBase> m_references;
 
         IMemAllocator* m_allocator = nullptr;
         void* m_allocationAddress = nullptr;

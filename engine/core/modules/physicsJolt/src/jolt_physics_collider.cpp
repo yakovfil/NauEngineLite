@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/physics/jolt/jolt_physics_collider.h"
+
+#include <algorithm>
 
 #include "nau/physics//jolt/jolt_physics_shapes.h"
 #include "nau/physics/jolt/jolt_physics_material.h"
@@ -14,12 +15,12 @@ namespace nau::physics::jolt
     {
         inline TFloat getBoxConvexRadius(math::vec3 extent)
         {
-            return eastl::min(eastl::min(JPH::cDefaultConvexRadius, extent.getX() * 0.5f), eastl::min(extent.getY() * 0.5f, extent.getZ() * 0.5f));
+            return std::min(std::min(JPH::cDefaultConvexRadius, extent.getX() * 0.5f), std::min(extent.getY() * 0.5f, extent.getZ() * 0.5f));
         }
 
         inline TFloat getCylinderConvexRadius(TFloat halfHeight, TFloat radius)
         {
-            return eastl::min(eastl::min(JPH::cDefaultConvexRadius, halfHeight), radius);
+            return std::min(std::min(JPH::cDefaultConvexRadius, halfHeight), radius);
         }
 
     }  // namespace

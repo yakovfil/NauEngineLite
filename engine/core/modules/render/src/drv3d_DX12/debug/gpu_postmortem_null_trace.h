@@ -3,14 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <span>
+#include <unordered_map>
+#include <variant>
+
 #include "call_stack.h"
-
-#include <EASTL/variant.h>
-#include <EASTL/span.h>
-#include <EASTL/unordered_map.h>
-
 #include "pipeline.h"
-
 
 namespace drv3d_dx12
 {
@@ -29,9 +27,15 @@ public:
   void configure() { NAU_LOG_DEBUG("DX12: ...no GPU postmortem tracer active..."); }
   void beginCommandBuffer(ID3D12Device3 *, ID3D12GraphicsCommandList *) {}
   void endCommandBuffer(ID3D12GraphicsCommandList *) {}
-  void beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>, eastl::span<const char>) {}
-  void endEvent(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
-  void marker(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+  void beginEvent(ID3D12GraphicsCommandList*, std::span<const char>, std::span<const char>)
+  {
+  }
+  void endEvent(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
+  void marker(ID3D12GraphicsCommandList*, std::span<const char>)
+  {
+  }
   void draw(const call_stack::CommandData &, ID3D12GraphicsCommandList2 *, const PipelineStageStateBase &,
     const PipelineStageStateBase &, BasePipeline &, PipelineVariant &, uint32_t, uint32_t, uint32_t, uint32_t,
     D3D12_PRIMITIVE_TOPOLOGY)

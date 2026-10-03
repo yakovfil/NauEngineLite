@@ -30,6 +30,6 @@ namespace nau
         /**
          * @brief Address text representation.
          */
-        eastl::string address;
+        std::string address;
     };
 }  // namespace nau

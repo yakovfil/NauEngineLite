@@ -43,17 +43,17 @@ struct QueryContainer
 
   __forceinline void pushChunkEntitiesCnt(uint32_t c)
   {
-    if (EASTL_UNLIKELY(entitiesCnt >= entitiesCntEnd))
-      data.chunkEntitiesCnt.growStack(entitiesCnt, 1, entitiesCntEnd);
-    *(entitiesCnt++) = c;
+      if (NAU_UNLIKELY(entitiesCnt >= entitiesCntEnd))
+          data.chunkEntitiesCnt.growStack(entitiesCnt, 1, entitiesCntEnd);
+      *(entitiesCnt++) = c;
   }
   QueryView::OneComponentLine *__restrict *__restrict addComponentData(uint32_t c)
   {
-    if (EASTL_UNLIKELY(componentsData + c > componentsDataEnd))
-      data.componentData.growStack(componentsData, c, componentsDataEnd);
-    auto ret = componentsData;
-    componentsData += c;
-    return ret;
+      if (NAU_UNLIKELY(componentsData + c > componentsDataEnd))
+          data.componentData.growStack(componentsData, c, componentsDataEnd);
+      auto ret = componentsData;
+      componentsData += c;
+      return ret;
   }
 };
 
@@ -95,7 +95,7 @@ __forceinline uint32_t EntityManager::fillQuery(const ArchetypesQuery &__restric
   const uint32_t totalComponentsCount = archDesc.getComponentsCount();
   uint32_t totalSize = 0;
   // reserve doesn't make much sense, since we are using fixed_vector, and initial grow value will be of reasonable size anyway
-  if (EASTL_UNLIKELY(totalComponentsCount == 0)) // this is very rare case, where we have only require/require_not in broadcast message
+  if (NAU_UNLIKELY(totalComponentsCount == 0))  // this is very rare case, where we have only require/require_not in broadcast message
   {
     do
     {
@@ -139,7 +139,7 @@ __forceinline uint32_t EntityManager::fillQuery(const ArchetypesQuery &__restric
         *(componentDataPtr++) =
           (ofs != ArchetypesQuery::INVALID_OFFSET) ? (QueryView::OneComponentLine *__restrict)(data + (ofs << capacityBits)) : nullptr;
       } while (archetypeOffsetsPtr != archetypeOffsetsPtrEnd);
-    } while (EASTL_UNLIKELY(++chunksPtr != chunksE));
+    } while (NAU_UNLIKELY(++chunksPtr != chunksE));
     archetypeOffsets = archetypeOffsetsPtrEnd;
   } while (++aqi != aqEnd);
 
@@ -157,8 +157,8 @@ __forceinline QueryCbResult EntityManager::performQueryStoppable(const Query &__
   {
     qv.componentData = (QueryView::ComponentsData *__restrict)query.getChunkData(chunk);
     qv.chunkEntitiesEnd = query.chunkEntitiesCnt[chunk];
-    if (EASTL_UNLIKELY(fun(qv) == QueryCbResult::Stop))
-      return QueryCbResult::Stop;
+    if (NAU_UNLIKELY(fun(qv) == QueryCbResult::Stop))
+        return QueryCbResult::Stop;
   } while (++chunk != e);
 
   return QueryCbResult::Continue;
@@ -208,12 +208,15 @@ inline void EntityManager::performQueryES(QueryId h, ESFuncType fun, const ESPay
   ecsdebug::track_ecs_component(queryDescs[index].getDesc(), queryDescs[index].getName());
   EntityManager::ScopedQueryingArchetypesCheck scopedCheck(index, *this);
   RaiiOptionalCounter nested(!isConstrainedMTMode(), nestedQuery);
-  if (EASTL_UNLIKELY(min_quant && maxNumJobs && querySize > min_quant * 2)) // doesn't make sense to run multithreading if there is
-                                                                            // less work than for one additional thread. We use 3 as
-                                                                            // heurestics, because threadpool has it's own cost as well
-    if (performMTQuery(
-          query, [&evt, &fun](const QueryView &qv) { fun(evt, qv); }, user_data, min_quant))
-      return;
+  if (NAU_UNLIKELY(min_quant && maxNumJobs && querySize > min_quant * 2))  // doesn't make sense to run multithreading if there is
+                                                                           // less work than for one additional thread. We use 3 as
+                                                                           // heurestics, because threadpool has it's own cost as well
+      if (performMTQuery(
+              query, [&evt, &fun](const QueryView& qv)
+      {
+          fun(evt, qv);
+      }, user_data, min_quant))
+          return;
   performSTQuery(query, user_data, [&fun, &evt](const QueryView &__restrict qv) { fun(evt, qv); });
 }
 

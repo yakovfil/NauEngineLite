@@ -32,19 +32,19 @@ inline bool Archetypes::delEntity(uint32_t archetype, chunk_type_t chunkId, uint
   DAECS_EXT_ASSERT(archetype < archetypes.size());
   Archetype &arch = archetypes.get<ARCHETYPE>()[archetype]; // -V758
   if (arch.manager.removeFromChunk(chunkId, id, arch.entitySize,
-        &eastl::get<DATA_SIZE>(archetypeComponents[getArchetypeComponentOfsUnsafe(archetype)]), movedChunkIndex))
-    return true;
+                                   &std::get<DATA_SIZE>(archetypeComponents[getArchetypeComponentOfsUnsafe(archetype)]), movedChunkIndex))
+      return true;
   return false;
 }
 
 inline DataComponentManager::DefragResult Archetypes::defragment(uint32_t arch, chunk_type_t &moved_from_chunk,
   chunk_type_t &moved_to_chunk, uint32_t &moved_at_id, uint32_t &moved_cnt)
 {
-  Archetype &archetype = eastl::get<ARCHETYPE>(archetypes[arch]);
-  const uint32_t baseOfs = getArchetypeComponentOfsUnsafe(arch);
-  return archetype.manager.defragment(&eastl::get<DATA_SIZE>(archetypeComponents[baseOfs]),
-    &eastl::get<DATA_OFFSET>(archetypeComponents[baseOfs]), archetype.componentsCnt, archetype.entitySize, moved_from_chunk,
-    moved_to_chunk, moved_at_id, moved_cnt);
+    Archetype& archetype = std::get<ARCHETYPE>(archetypes[arch]);
+    const uint32_t baseOfs = getArchetypeComponentOfsUnsafe(arch);
+    return archetype.manager.defragment(&std::get<DATA_SIZE>(archetypeComponents[baseOfs]),
+                                        &std::get<DATA_OFFSET>(archetypeComponents[baseOfs]), archetype.componentsCnt, archetype.entitySize, moved_from_chunk,
+                                        moved_to_chunk, moved_at_id, moved_cnt);
 }
 
 

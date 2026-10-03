@@ -27,6 +27,7 @@
 #ifndef __cocos2d_libs__CCKeyboardEventListener__
 #define __cocos2d_libs__CCKeyboardEventListener__
 
+#include <string>
 #include "base/CCEventListener.h"
 #include "base/CCEventKeyboard.h"
 
@@ -46,7 +47,7 @@ class Event;
 class CC_DLL EventListenerKeyboard : public EventListener
 {
 public:
-    static const eastl::string LISTENER_ID;
+    static const std::string LISTENER_ID;
     
     /** Create a keyboard event listener.
      * 

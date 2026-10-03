@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include "call_stack.h"
+#include <algorithm>
+#include <string_view>
+#include <vector>
 
+#include "call_stack.h"
 
 namespace drv3d_dx12::debug::break_point
 {
@@ -13,26 +15,26 @@ namespace core
 {
 class Controller : public call_stack::ExecutionContextDataStore, public debug::call_stack::Reporter
 {
-  eastl::vector<nau::string> breakPoints;
+    std::vector<nau::string> breakPoints;
 
-  using BaseType = call_stack::ExecutionContextDataStore;
-  bool isBreakPoint(const call_stack::CommandData &call_stack_info)
-  {
-    if (breakPoints.empty())
+    using BaseType = call_stack::ExecutionContextDataStore;
+    bool isBreakPoint(const call_stack::CommandData& call_stack_info)
     {
-      return false;
+        if (breakPoints.empty())
+        {
+            return false;
+        }
+        auto resolved = resolve(call_stack_info);
+        for (auto& breakPoint : breakPoints)
+        {
+            auto ref = std::search(resolved.begin(), resolved.end(), breakPoint.begin(), breakPoint.end());
+            if (ref != resolved.end())
+            {
+                return true;
+            }
+        }
+        return false;
     }
-    auto resolved = resolve(call_stack_info);
-    for (auto &breakPoint : breakPoints)
-    {
-      auto ref = eastl::search(resolved.begin(), resolved.end(), breakPoint.begin(), breakPoint.end());
-      if (ref != resolved.end())
-      {
-        return true;
-      }
-    }
-    return false;
-  }
 
 public:
   void breakNow() { __debugbreak(); }
@@ -55,7 +57,10 @@ public:
     // name and so collide. So to avoid this, we have to cast it to string_view here.
 
     nau::string temp = text;
-    auto newEnd = eastl::remove_if(begin(breakPoints), end(breakPoints), [temp](auto &bp) { return temp == bp; });
+    auto newEnd = std::remove_if(begin(breakPoints), end(breakPoints), [temp](auto& bp)
+    {
+        return temp == bp;
+    });
     breakPoints.erase(newEnd, end(breakPoints));
   }
 };
@@ -68,8 +73,12 @@ class Controller : public call_stack::ExecutionContextDataStore, public debug::c
 
 public:
   void breakNow() {}
-  void addBreakPointString(eastl::string_view) {}
-  void removeBreakPointString(eastl::string_view) {}
+  void addBreakPointString(std::string_view)
+  {
+  }
+  void removeBreakPointString(std::string_view)
+  {
+  }
 };
 } // namespace null
 

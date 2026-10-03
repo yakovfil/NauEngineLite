@@ -2,8 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <EASTL/algorithm.h>
-#include <EASTL/string.h>
+#include <algorithm>
+#include <string>
+#include <utility>
 
 #include "nau/3d/dag_resizableTex.h"
 #include "nau/math/dag_adjpow2.h"
@@ -25,7 +26,7 @@ namespace resptr_detail
     void ResizableManagedTex::swap(ResizableManagedTex& other)
     {
         ManagedTex::swap(other);
-        eastl::swap(mAliases, other.mAliases);
+        std::swap(mAliases, other.mAliases);
     }
 
     void ResizableManagedTex::resize(int width, int height)
@@ -43,18 +44,18 @@ namespace resptr_detail
             return;
 
         char* texture_name = (char*)this->mResource->getTexName();
-        eastl::string managed_name;
-        managed_name.sprintf("%s-%dx%d", texture_name, width, height);
+        std::string managed_name;
+        managed_name = nau::utils::format("{}-{}x{}", texture_name, width, height);
 
         UniqueTex this_tex;
         this->ManagedTex::swap(this_tex);
 
-        bool inserted = mAliases.emplace(my_key, eastl::move(this_tex)).second;
+        bool inserted = mAliases.emplace(my_key, std::move(this_tex)).second;
         NAU_ASSERT(inserted);
         G_UNUSED(inserted);
 
         const UniqueTex& bigest_texture = mAliases.rbegin()->second;
-        const int max_mips = eastl::min(nau::math::get_log2w(width), nau::math::get_log2w(height)) + 1;
+        const int max_mips = std::min(nau::math::get_log2w(width), nau::math::get_log2w(height)) + 1;
         int mip_levels = std::min(bigest_texture->level_count(), max_mips);
 
         auto found = mAliases.lower_bound(new_key);
@@ -63,11 +64,11 @@ namespace resptr_detail
             NAU_LOG_DEBUG("Resizing {} to larger size than it has. This texture will be recreated", texture_name);
             mAliases.clear();
             TexPtr tex = dag::create_tex(nullptr, width, height, tex_info.cflg, mip_levels, texture_name);
-            this_tex = UniqueTex(eastl::move(tex), managed_name.c_str());
+            this_tex = UniqueTex(std::move(tex), managed_name.c_str());
         }
         else if (found->first == new_key)
         {
-            this_tex = eastl::move(found->second);
+            this_tex = std::move(found->second);
             mAliases.erase(found->first);
         }
         else
@@ -81,12 +82,12 @@ namespace resptr_detail
                     {                       0,                       0},
                     {                       0,                       0}
                 });
-                this_tex = UniqueTex(eastl::move(tex), managed_name.c_str());
+                this_tex = UniqueTex(std::move(tex), managed_name.c_str());
             }
             else
             {
                 NAU_LOG_ERROR("d3d::alias_tex() not supported");
-                this_tex = eastl::move(found->second);
+                this_tex = std::move(found->second);
                 mAliases.erase(found->first);
             }
         }
@@ -98,7 +99,7 @@ namespace resptr_detail
     void ResizableUnmanagedTex::swap(ResizableUnmanagedTex& other)
     {
         TexPtr::swap(other);
-        eastl::swap(mAliases, other.mAliases);
+        std::swap(mAliases, other.mAliases);
     }
 
     void ResizableUnmanagedTex::resize(int width, int height)
@@ -120,12 +121,12 @@ namespace resptr_detail
         TexPtr this_tex;
         this->TexPtr::swap(this_tex);
 
-        bool inserted = mAliases.emplace(my_key, eastl::move(this_tex)).second;
+        bool inserted = mAliases.emplace(my_key, std::move(this_tex)).second;
         NAU_ASSERT(inserted);
         G_UNUSED(inserted);
 
         const TexPtr& bigest_texture = mAliases.rbegin()->second;
-        const int max_mips = eastl::min(nau::math::get_log2w(width), nau::math::get_log2w(height)) + 1;
+        const int max_mips = std::min(nau::math::get_log2w(width), nau::math::get_log2w(height)) + 1;
         int mip_levels = std::min(bigest_texture->level_count(), max_mips);
 
         auto reallocateTexture = [&, this]()
@@ -138,7 +139,7 @@ namespace resptr_detail
                                          realWidth,
                                          realHeight,
                                          tex_info.cflg, mip_levels, texture_name);
-            bool inserted = mAliases.emplace(make_key(realWidth, realHeight), eastl::move(tex)).second;
+            bool inserted = mAliases.emplace(make_key(realWidth, realHeight), std::move(tex)).second;
             NAU_ASSERT(inserted);
         };
 
@@ -166,7 +167,7 @@ namespace resptr_detail
 
         if (found->first == new_key)
         {
-            this_tex = eastl::move(found->second);
+            this_tex = std::move(found->second);
             mAliases.erase(found->first);
         }
         else
@@ -180,12 +181,12 @@ namespace resptr_detail
                     {                  0,                       0},
                     {                  0,                       0}
                 });
-                this_tex = TexPtr(eastl::move(tex));
+                this_tex = TexPtr(std::move(tex));
             }
             else
             {
                 NAU_LOG_ERROR("d3d::alias_tex() not supported");
-                this_tex = eastl::move(found->second);
+                this_tex = std::move(found->second);
                 mAliases.erase(found->first);
             }
         }

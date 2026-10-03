@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <string>
+
 #include "button_state_base.h"
 #include "nau/rtti/ptr.h"
-
-#include <EASTL/string.h>
 
 namespace nau::animation
 {
@@ -30,13 +30,13 @@ namespace nau::ui
         virtual void enter(nau::ui::NauButton* button) override;
         virtual void exit(nau::ui::NauButton* button) override;
 
-        const eastl::string& getName() const;
+        const std::string& getName() const;
 
     protected:
         virtual nau::Ptr<animation::AnimationInstance> createStateAnimation(const NauButtonData& data, const char* name, bool& reverseOnExit) const = 0;
 
     private:
-        eastl::string m_name;
+        std::string m_name;
         bool m_reverseAnimationOnExit = false;
     };
 

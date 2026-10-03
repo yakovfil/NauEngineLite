@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_strings.cpp
 
+#include <vector>
 
 #include "nau/string/string_utils.h"
 
@@ -26,9 +27,9 @@ namespace nau::test
         nau::string str(u8"one;two;;three;");
         nau::string sep(u8";");
 
-        eastl::vector<nau::string> strings;
+        std::vector<nau::string> strings;
 
-        for(auto elem : strings::split(nau::string_view{str}, nau::string_view{sep}))
+        for (auto elem : strings::split(nau::string_view{str}, nau::string_view{sep}))
         {
             strings.emplace_back(elem);
         }

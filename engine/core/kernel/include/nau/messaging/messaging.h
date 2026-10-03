@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/messaging/messaging.h
 
-
 #pragma once
 
-#include <EASTL/string_view.h>
-
 #include <mutex>
+#include <string_view>
 
 #include "nau/async/task.h"
 #include "nau/kernel/kernel_config.h"
@@ -49,18 +47,18 @@ namespace nau::nau_detail
         {
         }
 
-        eastl::string_view getStreamName() const
+        std::string_view getStreamName() const
         {
             return m_streamName;
         }
 
-        operator eastl::string_view() const
+        operator std::string_view() const
         {
             return m_streamName;
         }
 
     private:
-        const eastl::string_view m_streamName;
+        const std::string_view m_streamName;
     };
 
 }  // namespace nau::nau_detail
@@ -72,9 +70,8 @@ namespace nau
 
     /**
      */
-    class [[nodiscard]]
-    NAU_KERNEL_EXPORT AsyncMessageSubscription final : public IDisposable,
-                                                       public IAsyncDisposable
+    class [[nodiscard]] NAU_KERNEL_EXPORT AsyncMessageSubscription final : public IDisposable,
+                                                                           public IAsyncDisposable
     {
         NAU_RTTI_CLASS(nau::AsyncMessageSubscription, IDisposable, IAsyncDisposable)
 
@@ -86,7 +83,7 @@ namespace nau
         AsyncMessageSubscription(const AsyncMessageSubscription&) = delete;
 
         template <typename Callable>
-        AsyncMessageSubscription(AsyncMessageSource&, eastl::string_view streamName, Callable handler, async::Executor::Ptr);
+        AsyncMessageSubscription(AsyncMessageSource&, std::string_view streamName, Callable handler, async::Executor::Ptr);
 
         ~AsyncMessageSubscription();
 
@@ -127,7 +124,7 @@ namespace nau
         }
 
         template <typename Callable>
-            requires(std::is_invocable_r_v<void, Callable, T> || std::is_invocable_r_v<async::Task<>, Callable, T>)
+        requires(std::is_invocable_r_v<void, Callable, T> || std::is_invocable_r_v<async::Task<>, Callable, T>)
         inline AsyncMessageSubscription subscribe(AsyncMessageSource& broadcaster, Callable handler, async::Executor::Ptr executor = nullptr) const
         {
             return AsyncMessageSubscription{broadcaster, this->getStreamName(), std::move(handler), std::move(executor)};
@@ -148,7 +145,7 @@ namespace nau
         }
 
         template <typename Callable>
-            requires(std::is_invocable_r_v<void, Callable> || std::is_invocable_r_v<async::Task<>, Callable>)
+        requires(std::is_invocable_r_v<void, Callable> || std::is_invocable_r_v<async::Task<>, Callable>)
         inline AsyncMessageSubscription subscribe(AsyncMessageSource& broadcaster, Callable handler, async::Executor::Ptr executor = nullptr) const
         {
             return AsyncMessageSubscription{broadcaster, this->getStreamName(), std::move(handler), std::move(executor)};
@@ -156,7 +153,7 @@ namespace nau
     };
 
     template <typename Callable>
-    AsyncMessageSubscription::AsyncMessageSubscription(AsyncMessageSource& source, const eastl::string_view streamName, Callable handler, async::Executor::Ptr executor)
+    AsyncMessageSubscription::AsyncMessageSubscription(AsyncMessageSource& source, const std::string_view streamName, Callable handler, async::Executor::Ptr executor)
     {
         AsyncMessageStream stream = source.getStream(streamName);
         NAU_FATAL(stream);
@@ -175,7 +172,7 @@ namespace nau
 
         static_assert(std::is_same_v<ResultType, void> || std::is_same_v<ResultType, Task<>>);
 
-        if(executor)
+        if (executor)
         {  // must release executor as soon as possible
             scope_on_leave
             {
@@ -185,35 +182,35 @@ namespace nau
             co_await executor;
         }
 
-        while(!cancellation.isCancelled())
+        while (!cancellation.isCancelled())
         {
             Task<RuntimeValue::Ptr> task = stream.getNextMessage();
 
-            if(!task.isReady())
+            if (!task.isReady())
             {
                 task.detach();
                 // WA for coroutine related MSVC compiler issue error C7587: 'co_await' cannot appear in an unevaluated context
                 auto result = co_await async::whenAny(cancellation, task);
-                if(!result)
+                if (!result)
                 {
                     co_return;
                 }
             }
 
-            if(task.isRejected())
+            if (task.isRejected())
             {
                 co_yield task.getError();
             }
 
             RuntimeValue::Ptr message = *std::move(task);
-            if constexpr(std::is_same_v<ResultType, void>)
+            if constexpr (std::is_same_v<ResultType, void>)
             {
                 invokeHandler<Callable, void>(handler, std::move(message));
             }
             else
             {
                 Task<> continuation = invokeHandler<Callable, Task<>>(handler, std::move(message));
-                if(continuation)
+                if (continuation)
                 {
                     co_await continuation;
                 }
@@ -229,27 +226,27 @@ namespace nau
 
         using ArgumentType = std::decay_t<typename nau_detail::MessageHandlerArgument<typename CallableInfo::ParametersList>::type>;
 
-        if constexpr(std::is_same_v<ArgumentType, void>)
+        if constexpr (std::is_same_v<ArgumentType, void>)
         {
             return handler();
         }
         else
         {
-            if(messageValue)
+            if (messageValue)
             {
-                if constexpr(rtti::HasTypeInfo<ArgumentType>)
+                if constexpr (rtti::HasTypeInfo<ArgumentType>)
                 {
                     RuntimeNativeValue* const nativeValue = messageValue->as<RuntimeNativeValue*>();
                     const rtti::TypeInfo* const messageTypeInfo = nativeValue ? nativeValue->getValueTypeInfo() : nullptr;
 
-                    if(messageTypeInfo && (*messageTypeInfo == rtti::getTypeInfo<ArgumentType>()))
+                    if (messageTypeInfo && (*messageTypeInfo == rtti::getTypeInfo<ArgumentType>()))
                     {
                         const ArgumentType& arg = nativeValue->getReadonlyRef<ArgumentType>();
                         return handler(arg);
                     }
                 }
 
-                if(Result<ArgumentType> arg = nau::runtimeValueCast<ArgumentType>(messageValue); arg)
+                if (Result<ArgumentType> arg = nau::runtimeValueCast<ArgumentType>(messageValue); arg)
                 {
                     return handler(*std::move(arg));
                 }
@@ -260,7 +257,7 @@ namespace nau
             }
 
             // eliminate compilation errors. In real never should ne here
-            if constexpr(!std::is_same_v<ResultType, void>)
+            if constexpr (!std::is_same_v<ResultType, void>)
             {
                 return ResultType{};
             }

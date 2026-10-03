@@ -4,6 +4,12 @@
 #pragma once
 
 #include <daECS/core/internal/dataComponentManager.h>
+
+#include <algorithm>
+#include <limits>
+#include <type_traits>
+#include <utility>
+
 #include "specialized_memcpy.h"
 
 namespace ecs
@@ -26,19 +32,19 @@ __forceinline void DataComponentManager::addToChunk(Chunk &chunk, const uint32_t
 
 inline uint32_t DataComponentManager::allocateChunk(const uint32_t entity_size, uint8_t capacity_bits)
 {
-  capacity_bits = eastl::clamp(capacity_bits, initialBits, (uint8_t)MAX_CAPACITY_BITS);
-  currentCapacityBits = eastl::max(currentCapacityBits, capacity_bits);
-  Chunk chunk(getAllocateSize(capacity_bits, entity_size), capacity_bits);
-  totalEntitiesCapacity += chunk.getCapacity();
-  if (!aliasedChunks.isArray() && aliasedChunks.getSingleChunk().data == NULL)
-  {
-    aliasedChunks.getSingleChunk().swap(eastl::move(chunk));
-    return 0;
-  }
+    capacity_bits = std::clamp(capacity_bits, initialBits, (uint8_t)MAX_CAPACITY_BITS);
+    currentCapacityBits = std::max(currentCapacityBits, capacity_bits);
+    Chunk chunk(getAllocateSize(capacity_bits, entity_size), capacity_bits);
+    totalEntitiesCapacity += chunk.getCapacity();
+    if (!aliasedChunks.isArray() && aliasedChunks.getSingleChunk().data == NULL)
+    {
+        aliasedChunks.getSingleChunk().swap(std::move(chunk));
+        return 0;
+    }
   else
   {
     auto &chunksArray = aliasedChunks.getArray();
-    chunksArray.emplace_back(eastl::move(chunk));
+    chunksArray.emplace_back(std::move(chunk));
     return (uint32_t)chunksArray.size() - 1;
   }
 }
@@ -48,13 +54,13 @@ inline void DataComponentManager::removeChunk(uint32_t c)
   if (c >= getChunksCount())
     return;
   NAU_ASSERT(totalEntitiesCapacity >= getChunk(c).getCapacity());
-  if (EASTL_UNLIKELY(getChunkUsed(c)))
+  if (NAU_UNLIKELY(getChunkUsed(c)))
   {
     NAU_ASSERT(0, "removing used chunk={}(out of {})! {} used", c, getChunksCount(), getChunkUsed(c));
     return;
   }
   else
-    totalEntitiesCapacity = eastl::max((int)0, (int)totalEntitiesCapacity - (int)getChunk(c).getCapacity());
+      totalEntitiesCapacity = std::max((int)0, (int)totalEntitiesCapacity - (int)getChunk(c).getCapacity());
   aliasedChunks.eraseChunk(c);
   workingChunk = 0;
 }
@@ -64,10 +70,10 @@ inline DataComponentManager::Chunk &DataComponentManager::allocateEmpty(chunk_ty
   // select suitable chunk
   Chunk *__restrict chunk = &getChunk(workingChunk);
 #if NAU_DEBUG
-  NAU_ASSERT(chunk->getUsed() < eastl::numeric_limits<eastl::remove_reference<decltype(id)>::type>::max());
+  NAU_ASSERT(chunk->getUsed() < std::numeric_limits<std::remove_reference<decltype(id)>::type>::max());
 #endif
   const uint32_t cUsed = chunk->getUsed();
-  if (EASTL_LIKELY(cUsed < chunk->getCapacity() && isUnlocked())) // current chunk has no sufficient memory
+  if (NAU_LIKELY(cUsed < chunk->getCapacity() && isUnlocked()))  // current chunk has no sufficient memory
   {
     // do the allocation
     id = cUsed; // we always add to the end

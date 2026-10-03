@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
 
 #include "nau/diag/logging.h"

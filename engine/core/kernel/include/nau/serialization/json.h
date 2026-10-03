@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "nau/io/stream.h"
 #include "nau/kernel/kernel_config.h"
@@ -13,7 +13,6 @@
 #include "nau/serialization/serialization.h"
 #include "nau/utils/functor.h"
 #include "nau/utils/result.h"
-
 
 #if __has_include(<json/json.h>)
     #define HAS_JSONCPP
@@ -43,13 +42,13 @@ namespace nau::serialization
     /**
      */
     NAU_KERNEL_EXPORT
-    Result<RuntimeValue::Ptr> jsonParseString(eastl::string_view, IMemAllocator::Ptr = nullptr);
+    Result<RuntimeValue::Ptr> jsonParseString(std::string_view, IMemAllocator::Ptr = nullptr);
 
     /**
      */
-    inline Result<RuntimeValue::Ptr> jsonParseString(eastl::u8string_view str, IMemAllocator::Ptr allocator = nullptr)
+    inline Result<RuntimeValue::Ptr> jsonParseString(std::u8string_view str, IMemAllocator::Ptr allocator = nullptr)
     {
-        return jsonParseString(eastl::string_view{reinterpret_cast<const char*>(str.data()), str.size()}, std::move(allocator));
+        return jsonParseString(std::string_view{reinterpret_cast<const char*>(str.data()), str.size()}, std::move(allocator));
     }
 
 #ifdef HAS_JSONCPP
@@ -58,7 +57,7 @@ namespace nau::serialization
      */
     struct NAU_ABSTRACT_TYPE JsonValueHolder
     {
-        using GetStringCallback = Functor<eastl::optional<eastl::string>(eastl::string_view)>;
+        using GetStringCallback = Functor<std::optional<std::string>(std::string_view)>;
 
         NAU_TYPEID(nau::serialization::JsonValueHolder)
 
@@ -75,11 +74,11 @@ namespace nau::serialization
     Json::CharReader& jsonGetParser();
 
     NAU_KERNEL_EXPORT
-    Result<Json::Value> jsonParseToValue(eastl::string_view jsonString);
+    Result<Json::Value> jsonParseToValue(std::string_view jsonString);
 
-    inline Result<Json::Value> jsonParseToValue(eastl::u8string_view jsonString)
+    inline Result<Json::Value> jsonParseToValue(std::u8string_view jsonString)
     {
-        return jsonParseToValue(eastl::string_view{reinterpret_cast<const char*>(jsonString.data()), jsonString.size()});
+        return jsonParseToValue(std::string_view{reinterpret_cast<const char*>(jsonString.data()), jsonString.size()});
     }
 
     /**

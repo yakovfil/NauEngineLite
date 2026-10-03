@@ -1,3 +1,4 @@
+#include <utility>
 // Copyright 2026 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
@@ -52,8 +53,8 @@ TEST(BrowserPlatform, ProductionService)
         EXPECT_FALSE(manager.createWindow());
         EXPECT_TRUE(window.isVisible());
         window.setSize(320, 240);
-        EXPECT_EQ(window.getSize(), (eastl::pair<unsigned, unsigned>{320, 240}));
-        EXPECT_EQ(window.getClientSize(), (eastl::pair<unsigned, unsigned>{316, 236}));
+        EXPECT_EQ(window.getSize(), (std::pair<unsigned, unsigned>{320, 240}));
+        EXPECT_EQ(window.getClientSize(), (std::pair<unsigned, unsigned>{316, 236}));
         window.setVisible(false);
         EXPECT_FALSE(window.isVisible());
         EXPECT_EQ(window.getSize().first, 320u);

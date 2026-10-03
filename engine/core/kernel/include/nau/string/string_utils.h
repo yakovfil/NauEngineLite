@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/utils/strings.h
 
-
 #pragma once
 
-#include <EASTL/string_view.h>
 #include <ctype.h>
 
 #include <algorithm>
@@ -27,7 +25,7 @@ namespace nau::str_detail
     template <typename T>
     constexpr inline auto choose([[maybe_unused]] const wchar_t* wstr, [[maybe_unused]] const char* str)
     {
-        if constexpr(std::is_same_v<T, wchar_t>)
+        if constexpr (std::is_same_v<T, wchar_t>)
         {
             return wstr;
         }
@@ -40,7 +38,7 @@ namespace nau::str_detail
     template <typename T>
     constexpr inline auto choose([[maybe_unused]] wchar_t wchr, [[maybe_unused]] char chr)
     {
-        if constexpr(std::is_same_v<T, wchar_t>)
+        if constexpr (std::is_same_v<T, wchar_t>)
         {
             return wchr;
         }
@@ -49,9 +47,6 @@ namespace nau::str_detail
             return chr;
         }
     }
-
-    NAU_KERNEL_EXPORT
-    eastl::string_view splitNext(eastl::string_view str, eastl::string_view current, eastl::string_view separators);
 
     NAU_KERNEL_EXPORT
     std::string_view splitNext(std::string_view str, std::string_view current, std::string_view separators);
@@ -76,8 +71,6 @@ namespace nau::strings
     concept KnownStringView =
         std::is_same_v<std::string_view, T> ||
         std::is_same_v<std::wstring_view, T> ||
-        std::is_same_v<eastl::string_view, T> ||
-        std::is_same_v<eastl::wstring_view, T> ||
         std::is_same_v<nau::string_view, T>;
 
     template <KnownStringView StringView>
@@ -100,7 +93,7 @@ namespace nau::strings
 
             bool operator==(const iterator& other) const
             {
-                if(m_current.empty() || other.m_current.empty())
+                if (m_current.empty() || other.m_current.empty())
                 {
                     return m_current.empty() && other.m_current.empty();
                 }
@@ -115,7 +108,7 @@ namespace nau::strings
 
             iterator& operator++()
             {
-                if(m_current = str_detail::splitNext(m_str, m_current, m_separators); m_current.empty())
+                if (m_current = str_detail::splitNext(m_str, m_current, m_separators); m_current.empty())
                 {
                     m_str = {};
                     m_separators = {};
@@ -176,7 +169,7 @@ namespace nau::strings
     template <typename C, typename... A>
     SplitSequence(std::basic_string_view<C, A...>, std::basic_string_view<C, A...>) -> SplitSequence<std::basic_string_view<C, A...>>;
 
-    SplitSequence(eastl::string_view, eastl::string_view) -> SplitSequence<eastl::string_view>;
+    SplitSequence(std::string_view, std::string_view) -> SplitSequence<std::string_view>;
 
     SplitSequence(nau::string_view, nau::string_view) -> SplitSequence<nau::string_view>;
 
@@ -233,7 +226,7 @@ namespace nau::strings
         return SplitSequence{str, separators};
     }
 
-    inline auto split(eastl::string_view str, eastl::string_view separators)
+    inline auto split(std::string_view str, std::string_view separators)
     {
         return SplitSequence{str, separators};
     }
@@ -250,10 +243,7 @@ namespace nau::strings
     std::pair<std::string_view, std::string_view> cut(std::string_view str, char separator);
 
     NAU_KERNEL_EXPORT
-    eastl::pair<eastl::string_view, eastl::string_view> cut(eastl::string_view str, char separator);
-
-    NAU_KERNEL_EXPORT
-    eastl::pair<eastl::u8string_view, eastl::u8string_view> cut(eastl::u8string_view str, char8_t separator);
+    std::pair<std::u8string_view, std::u8string_view> cut(std::u8string_view str, char8_t separator);
 
     NAU_KERNEL_EXPORT
     std::string_view trimEnd(std::string_view str);
@@ -272,15 +262,6 @@ namespace nau::strings
 
     NAU_KERNEL_EXPORT
     std::wstring_view trim(std::wstring_view str);
-
-    NAU_KERNEL_EXPORT
-    eastl::string_view trimEnd(eastl::string_view str);
-
-    NAU_KERNEL_EXPORT
-    eastl::string_view trimStart(eastl::string_view str);
-
-    NAU_KERNEL_EXPORT
-    eastl::string_view trim(eastl::string_view str);
 
     // bool endWith(std::string_view str, std::string_view);
 
@@ -321,7 +302,7 @@ namespace nau::strings
         const auto len1 = std::distance(begin1, end1);
         const auto len2 = std::distance(begin2, end2);
 
-        if(len1 != len2)
+        if (len1 != len2)
         {
             return false;
         }
@@ -329,12 +310,12 @@ namespace nau::strings
         auto iter1 = begin1;
         auto iter2 = begin2;
 
-        while(iter1 != end1)
+        while (iter1 != end1)
         {
             const auto ch1 = *iter1;
             const auto ch2 = *iter2;
 
-            if(lower(ch1) != lower(ch2))
+            if (lower(ch1) != lower(ch2))
             {
                 return false;
             }
@@ -352,15 +333,15 @@ namespace nau::strings
         static_assert(std::is_same_v<decltype(*begin1), decltype(*begin2)>, "String type mismatch");
 
         auto p = std::mismatch(begin1, end1, begin2, end2, [](auto c1, auto c2)
-                               {
-                                   return lower(c1) == lower(c2);
-                               });
+        {
+            return lower(c1) == lower(c2);
+        });
 
-        if(p.first == end1)
+        if (p.first == end1)
         {
             return p.second == end2 ? 0 : -1;
         }
-        else if(p.second == end2)
+        else if (p.second == end2)
         {
             return 1;
         }
@@ -383,45 +364,33 @@ namespace nau::strings
         return icaseEqual(std::begin(str1), std::end(str1), std::begin(str2), std::end(str2));
     }
 
-    inline bool icaseEqual(eastl::string_view str1, eastl::string_view str2)
-    {
-        return icaseEqual(std::begin(str1), std::end(str1), std::begin(str2), std::end(str2));
-    }
-
     template <typename Char>
     int icaseCompare(std::basic_string_view<Char> str1, std::basic_string_view<Char> str2) noexcept
     {
         return icaseCompare(std::begin(str1), std::end(str1), std::begin(str2), std::end(str2));
     }
 
-    template <typename Char>
-    int icaseCompare(eastl::basic_string_view<Char> str1, eastl::basic_string_view<Char> str2) noexcept
-    {
-        return icaseCompare(std::begin(str1), std::end(str1), std::begin(str2), std::end(str2));
-    }
-
-    template <typename String = eastl::string_view>
+    template <typename String = std::string_view>
     struct CiStringComparer
     {
         using is_transparent = int;
 
-        template<typename Left, typename Right>
-        requires (std::is_constructible_v<String, Left> && std::is_constructible_v<String, Right>)
+        template <typename Left, typename Right>
+        requires(std::is_constructible_v<String, Left> && std::is_constructible_v<String, Right>)
         bool operator()(const Left& str1, const Right& str2) const noexcept
         {
             return icaseCompare(String{str1}, String{str2}) < 0;
         }
     };
 
-
     template <typename Number>
     Number lexicalCast(std::string_view str)
-        requires(std::is_arithmetic_v<Number>)
+    requires(std::is_arithmetic_v<Number>)
     {
         Number number{};
 
         const auto [ptr, err] = std::from_chars(str.data(), str.data() + str.size(), number);
-        if(err == std::errc::invalid_argument)
+        if (err == std::errc::invalid_argument)
         {
             return 0;
         }
@@ -432,20 +401,20 @@ namespace nau::strings
     }
 
     template <typename Number, typename C>
-        requires(sizeof(C) == sizeof(char) && std::is_arithmetic_v<Number>)
-    Number lexicalCast(eastl::basic_string_view<C> str)
+    requires(sizeof(C) == sizeof(char) && std::is_arithmetic_v<Number>)
+    Number lexicalCast(std::basic_string_view<C> str)
     {
-       return strings::lexicalCast<Number>(std::string_view {reinterpret_cast<const char*>(str.data()), str.size()});
+        return strings::lexicalCast<Number>(std::string_view{reinterpret_cast<const char*>(str.data()), str.size()});
     }
 
     template <>
     inline bool lexicalCast<bool>(std::string_view str)
     {
-        if(icaseEqual(str, "true"))
+        if (icaseEqual(str, "true"))
         {
             return true;
         }
-        else if(icaseEqual(str, "false"))
+        else if (icaseEqual(str, "false"))
         {
             return false;
         }
@@ -455,7 +424,7 @@ namespace nau::strings
 
     template <typename Number>
     std::string lexicalCast(const Number number)
-        requires(std::is_arithmetic_v<Number>)
+    requires(std::is_arithmetic_v<Number>)
     {
         return std::to_string(number);
     }

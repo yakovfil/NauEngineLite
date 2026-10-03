@@ -27,6 +27,7 @@
 #ifndef __cocos2d_libs__CCMouseEventListener__
 #define __cocos2d_libs__CCMouseEventListener__
 
+#include <string>
 #include "base/CCEventListener.h"
 #include "base/CCEventMouse.h"
 
@@ -46,7 +47,7 @@ class Event;
 class CC_DLL EventListenerMouse : public EventListener
 {
 public:
-    static const eastl::string LISTENER_ID;
+    static const std::string LISTENER_ID;
     
     /** Create a mouse event listener.
      *

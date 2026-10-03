@@ -23,6 +23,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
+#include <string>
 #include "base/CCUserDefault.h"
 #include "platform/CCPlatformConfig.h"
 #include "base/ccUtils.h"
@@ -44,7 +45,7 @@ THE SOFTWARE.
 #include "tinyxml2.h"
 #endif
 
-static const eastl::string helperClassName = "org.cocos2dx.lib.Cocos2dxHelper";
+static const std::string helperClassName = "org.cocos2dx.lib.Cocos2dxHelper";
 
 using namespace std;
 NS_CC_BEGIN
@@ -80,7 +81,7 @@ static tinyxml2::XMLElement* getXMLNodeForKey(const char* pKey, tinyxml2::XMLDoc
         *doc = xmlDoc;
         ssize_t size;
 
-        eastl::string xmlBuffer = FileUtils::getInstance()->getStringFromFile(UserDefault::getInstance()->getXMLFilePath());
+        std::string xmlBuffer = FileUtils::getInstance()->getStringFromFile(UserDefault::getInstance()->getXMLFilePath());
 
         if (xmlBuffer.empty())
         {
@@ -300,12 +301,12 @@ double UserDefault::getDoubleForKey(const char* pKey, double defaultValue)
 	return JniHelper::callStaticDoubleMethod(helperClassName, "getDoubleForKey", pKey, defaultValue);
 }
 
-eastl::string UserDefault::getStringForKey(const char* pKey)
+std::string UserDefault::getStringForKey(const char* pKey)
 {
     return getStringForKey(pKey, "");
 }
 
-string UserDefault::getStringForKey(const char* pKey, const eastl::string & defaultValue)
+string UserDefault::getStringForKey(const char* pKey, const std::string & defaultValue)
 {
 #ifdef KEEP_COMPATABILITY
     tinyxml2::XMLDocument* doc = nullptr;
@@ -439,7 +440,7 @@ void UserDefault::setDoubleForKey(const char* pKey, double value)
     JniHelper::callStaticVoidMethod(helperClassName, "setDoubleForKey", pKey, value);
 }
 
-void UserDefault::setStringForKey(const char* pKey, const eastl::string& value)
+void UserDefault::setStringForKey(const char* pKey, const std::string& value)
 {
 #ifdef KEEP_COMPATABILITY
     deleteNodeByKey(pKey);
@@ -491,7 +492,7 @@ void UserDefault::initXMLFilePath()
     if (! _isFilePathInitialized)
     {
         // UserDefault.xml is stored in /data/data/<package-path>/ before v2.1.2
-        eastl::string packageName = JniHelper::callStaticStringMethod(helperClassName, "getCocos2dxPackageName");
+        std::string packageName = JniHelper::callStaticStringMethod(helperClassName, "getCocos2dxPackageName");
         _filePath += "/data/data/" + packageName + "/" + XML_FILE_NAME;
         _isFilePathInitialized = true;
     }

@@ -3,11 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "emitter_utils.h"
 
+#include <algorithm>
+
 namespace nau::vfx::modfx
 {
     void emitter_utils::create_emitter_state(EmitterState& state, const EmitterData& data, int elem_limit, float emission_factor)
     {
-        emission_factor = eastl::max(emission_factor, data.minEmissionFactor);
+        emission_factor = std::max(emission_factor, data.minEmissionFactor);
         float delay = data.delay;
         if (data.type == EmitterType::LINEAR)  // we only need that for linear ticks
             delay *= emission_factor;          // we need to compensate for altered dt
@@ -15,7 +17,7 @@ namespace nau::vfx::modfx
         state.emissionLimit = elem_limit;
         state.localTickRate = 1.0f;
         state.totalTickRate = state.localTickRate;
-        state.globalLifeLimit = eastl::max(data.globalLifeLimitMin, 0.0f);
+        state.globalLifeLimit = std::max(data.globalLifeLimitMin, 0.0f);
         state.globalLifeLimit += state.globalLifeLimit > 0 ? delay : 0;
         state.globalLifeLimitRef = state.globalLifeLimit;
 
@@ -23,7 +25,7 @@ namespace nau::vfx::modfx
         {
             state.isDistanceBased = false;
             state.lifeLimit = 150; // we need a large fixed lifetime
-            state.batchSize = eastl::max((int)(data.fixedData.count * emission_factor), 1);
+            state.batchSize = std::max((int)(data.fixedData.count * emission_factor), 1);
             state.cyclesCount = 1;
 
             state.spawnTick = 0;
@@ -34,7 +36,7 @@ namespace nau::vfx::modfx
         {
             state.isDistanceBased = false;
             state.lifeLimit = data.burstData.lifeLimit;
-            state.batchSize = eastl::max((int)(data.burstData.countMax * emission_factor), 1);
+            state.batchSize = std::max((int)(data.burstData.countMax * emission_factor), 1);
             state.cyclesCount = data.burstData.cycles > 0 ? data.burstData.cycles : -1;
 
             state.tickLimit = data.burstData.period;
@@ -50,7 +52,7 @@ namespace nau::vfx::modfx
             state.batchSize = 1;
             state.cyclesCount = -1;
 
-            int count = eastl::max((int)(data.linearData.countMax * emission_factor), 1);
+            int count = std::max((int)(data.linearData.countMax * emission_factor), 1);
             state.tickLimit = data.linearData.lifeLimit / count;
 
             state.spawnTick = -delay;

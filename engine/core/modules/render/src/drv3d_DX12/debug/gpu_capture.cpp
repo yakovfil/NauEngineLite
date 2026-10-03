@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <span>
+
 #include "drv3d_DX12/device.h"
 
 #if USE_PIX
@@ -62,14 +64,14 @@ void debug::gpu_capture::RenderDoc::onPresent() {}
 
 void debug::gpu_capture::RenderDoc::captureFrames(const wchar_t *, int count) { api->TriggerMultiFrameCapture(count); }
 
-void debug::gpu_capture::RenderDoc::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::RenderDoc::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->BeginEvent(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }
 
 void debug::gpu_capture::RenderDoc::endEvent(ID3D12GraphicsCommandList *cmd) { cmd->EndEvent(); }
 
-void debug::gpu_capture::RenderDoc::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::RenderDoc::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->SetMarker(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }
@@ -127,14 +129,14 @@ void debug::gpu_capture::LegacyPIX::onPresent()
 
 void debug::gpu_capture::LegacyPIX::captureFrames(const wchar_t *, int count) { framesToCapture = count; }
 
-void debug::gpu_capture::LegacyPIX::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::LegacyPIX::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->BeginEvent(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }
 
 void debug::gpu_capture::LegacyPIX::endEvent(ID3D12GraphicsCommandList *cmd) { cmd->EndEvent(); }
 
-void debug::gpu_capture::LegacyPIX::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::LegacyPIX::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->SetMarker(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }
@@ -175,7 +177,7 @@ void debug::gpu_capture::PIX::captureFrames(const wchar_t *file_name, int count)
   PIXGpuCaptureNextFrames(filePath, count);
 }
 
-void debug::gpu_capture::PIX::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::PIX::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   if (runtimeLib)
   {
@@ -199,7 +201,7 @@ void debug::gpu_capture::PIX::endEvent(ID3D12GraphicsCommandList *cmd)
   }
 }
 
-void debug::gpu_capture::PIX::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::PIX::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   if (runtimeLib)
   {
@@ -217,9 +219,13 @@ void debug::gpu_capture::PIX::beginCapture() {}
 void debug::gpu_capture::PIX::endCapture() {}
 void debug::gpu_capture::PIX::onPresent() {}
 void debug::gpu_capture::PIX::captureFrames(const wchar_t *, int) {}
-void debug::gpu_capture::PIX::beginEvent(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+void debug::gpu_capture::PIX::beginEvent(ID3D12GraphicsCommandList*, std::span<const char>)
+{
+}
 void debug::gpu_capture::PIX::endEvent(ID3D12GraphicsCommandList *) {}
-void debug::gpu_capture::PIX::marker(ID3D12GraphicsCommandList *, eastl::span<const char>) {}
+void debug::gpu_capture::PIX::marker(ID3D12GraphicsCommandList*, std::span<const char>)
+{
+}
 #endif
 
 bool debug::gpu_capture::nvidia::NSight::try_connect_interface()
@@ -250,12 +256,12 @@ void debug::gpu_capture::nvidia::NSight::beginCapture() {}
 void debug::gpu_capture::nvidia::NSight::endCapture() {}
 void debug::gpu_capture::nvidia::NSight::onPresent() {}
 void debug::gpu_capture::nvidia::NSight::captureFrames(const wchar_t *, int) {}
-void debug::gpu_capture::nvidia::NSight::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::nvidia::NSight::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->BeginEvent(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }
 void debug::gpu_capture::nvidia::NSight::endEvent(ID3D12GraphicsCommandList *cmd) { cmd->EndEvent(); }
-void debug::gpu_capture::nvidia::NSight::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_capture::nvidia::NSight::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   cmd->SetMarker(PIX_EVENT_ANSI_VERSION, text.data(), text.size());
 }

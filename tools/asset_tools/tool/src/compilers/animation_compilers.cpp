@@ -1,32 +1,34 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/asset_tools/compilers/animation_compilers.h"
 
-#include "nau/animation/playback/animation_instance.h"
-#include "nau/asset_tools/asset_utils.h"
-#include "nau/asset_tools/db_manager.h"
-#include "nau/assets/animation_asset_accessor.h"
-#include "nau/assets/ui_asset_accessor.h"
-#include "nau/dataBlock/dag_dataBlock.h"
-#include "nau/io/stream_utils.h"
-#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
-#include "nau/NauAnimationClipAsset/nauAnimationTrack.h"
 #include <nau/shared/logger.h>
-#include "nau/usd_meta_tools/usd_meta_info.h"
-
-#include <EASTL/vector.h>
 #include <pxr/usd/sdf/fileFormat.h>
-#include "pxr/usd/usd/prim.h"
-#include "pxr/usd/usd/stage.h"
 #include <pxr/usd/usdSkel/bindingAPI.h>
 #include <pxr/usd/usdSkel/cache.h>
 #include <pxr/usd/usdSkel/root.h>
 #include <pxr/usd/usdSkel/skeleton.h>
 #include <pxr/usd/usdSkel/skeletonQuery.h>
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "nau/NauAnimationClipAsset/nauAnimationClip.h"
+#include "nau/NauAnimationClipAsset/nauAnimationTrack.h"
+#include "nau/animation/playback/animation_instance.h"
+#include "nau/asset_tools/asset_utils.h"
+#include "nau/asset_tools/db_manager.h"
 #include "nau/asset_tools/gltf2ozz_copy.h"
+#include "nau/assets/animation_asset_accessor.h"
+#include "nau/assets/ui_asset_accessor.h"
+#include "nau/dataBlock/dag_dataBlock.h"
+#include "nau/io/stream_utils.h"
+#include "nau/usd_meta_tools/usd_meta_info.h"
+#include "pxr/usd/usd/prim.h"
+#include "pxr/usd/usd/stage.h"
 
 namespace nau::compilers
 {
@@ -42,7 +44,7 @@ namespace nau::compilers
             virtual void toBlk(DataBlock& blk) const { }
             virtual void pushVector(float time, const math::vec3& value) { }
 
-            static eastl::unique_ptr<KeyFrameAnimationTrackData> create(const AnimationDataDescriptor& descriptor);
+            static std::unique_ptr<KeyFrameAnimationTrackData> create(const AnimationDataDescriptor& descriptor);
 
             AnimationDataDescriptor descriptor;
         };
@@ -74,8 +76,8 @@ namespace nau::compilers
                 }
             }
 
-            eastl::string skeletonAssetPath;
-            eastl::string animationAssetPath;
+            std::string skeletonAssetPath;
+            std::string animationAssetPath;
         };
 
         template<typename TDataType>
@@ -89,7 +91,7 @@ namespace nau::compilers
         struct KeyFrameAnimationTrackDataImpl : KeyFrameAnimationTrackData
         {
             using TKeyFrame = KeyFrameData<TDataType>;
-            using TDataContainer = eastl::vector<TKeyFrame>;
+            using TDataContainer = std::vector<TKeyFrame>;
             using TImpl = KeyFrameAnimationTrackDataImpl<TDataType>;
 
             KeyFrameAnimationTrackDataImpl(const AnimationDataDescriptor& desc)
@@ -175,18 +177,18 @@ namespace nau::compilers
             { }
         };
 
-        eastl::unique_ptr<KeyFrameAnimationTrackData> KeyFrameAnimationTrackData::create(const AnimationDataDescriptor& descriptor)
+        std::unique_ptr<KeyFrameAnimationTrackData> KeyFrameAnimationTrackData::create(const AnimationDataDescriptor& descriptor)
         {
             switch (descriptor.dataType)
             {
             case AnimationDataDescriptor::DataType::Translation:
-                return eastl::make_unique<TranslationAnimationTrackData>(descriptor);
+                return std::make_unique<TranslationAnimationTrackData>(descriptor);
 
             case AnimationDataDescriptor::DataType::Rotation:
-                return eastl::make_unique<RotationAnimationTrackData>(descriptor);
+                return std::make_unique<RotationAnimationTrackData>(descriptor);
 
             case AnimationDataDescriptor::DataType::Scale:
-                return eastl::make_unique<ScaleAnimationTrackData>(descriptor);
+                return std::make_unique<ScaleAnimationTrackData>(descriptor);
             }
 
             return nullptr;
@@ -207,12 +209,12 @@ namespace nau::compilers
                     track->toBlk(blk);
                 }
             }
-            void addTrack(eastl::unique_ptr<KeyFrameAnimationTrackData>&& track)
+            void addTrack(std::unique_ptr<KeyFrameAnimationTrackData>&& track)
             {
                 tracks.push_back(std::move(track));
             }
 
-            eastl::vector<eastl::shared_ptr<KeyFrameAnimationTrackData>> tracks;
+            std::vector<std::shared_ptr<KeyFrameAnimationTrackData>> tracks;
         };
 
         struct SkeletalAnimationAssetData : AnimationAssetData
@@ -248,9 +250,9 @@ namespace nau::compilers
                 tracks.push_back(std::move(track));
             }
 
-            eastl::vector<SkeletalAnimationTrackData> tracks;
+            std::vector<SkeletalAnimationTrackData> tracks;
             int32_t jointsCount = 0;
-            eastl::vector<nau::math::mat4> bindMatrices;
+            std::vector<nau::math::mat4> bindMatrices;
         };
 
         bool saveAnimAssetBlk(const AnimationAssetData& asset, const std::string& outputFilePath)
@@ -262,9 +264,9 @@ namespace nau::compilers
             return outBlk.saveToTextFile(outputFilePath.c_str());
         }
 
-        eastl::unique_ptr<KeyFrameAnimationTrackData> loadAnimationTrack(const nau::AnimationDataDescriptor& descriptor, const pxr::UsdPrim& trackPrim)
+        std::unique_ptr<KeyFrameAnimationTrackData> loadAnimationTrack(const nau::AnimationDataDescriptor& descriptor, const pxr::UsdPrim& trackPrim)
         {
-            eastl::unique_ptr<KeyFrameAnimationTrackData> clip = KeyFrameAnimationTrackData::create(descriptor);
+            std::unique_ptr<KeyFrameAnimationTrackData> clip = KeyFrameAnimationTrackData::create(descriptor);
 
             if (!clip)
             {
@@ -297,7 +299,7 @@ namespace nau::compilers
             return clip;
         }
 
-        eastl::unique_ptr<KeyFrameAnimationTrackData> compileAnimationTrack(pxr::UsdNauAnimationClip& clip, const pxr::UsdPrim& prim)
+        std::unique_ptr<KeyFrameAnimationTrackData> compileAnimationTrack(pxr::UsdNauAnimationClip& clip, const pxr::UsdPrim& prim)
         {
             pxr::TfToken modeToken;
             clip.GetPlayModeAttr().Get(&modeToken);
@@ -362,7 +364,7 @@ namespace nau::compilers
             return nullptr;
         }
 
-        eastl::optional<KeyFrameAnimationAssetData> loadUsdAnimation(const pxr::UsdPrim& prim, const std::string& outputPath, const UsdMetaInfo& metaInfo)
+        std::optional<KeyFrameAnimationAssetData> loadUsdAnimation(const pxr::UsdPrim& prim, const std::string& outputPath, const UsdMetaInfo& metaInfo)
         {
             KeyFrameAnimationAssetData loadedAsset;
 
@@ -767,8 +769,8 @@ namespace nau::compilers
         }
 
         pxr::SdfFileFormat::FileFormatArguments exportArguments;
-        exportArguments["embedImages"] = false;
-        exportArguments["useMaterialExtensions"] = false;
+        exportArguments["embedImages"] = "false";
+        exportArguments["useMaterialExtensions"] = "false";
 
         namespace fs = std::filesystem;
         const fs::path targetDirectoryPath = fs::path(outputPath) / std::to_string(folderIndex);

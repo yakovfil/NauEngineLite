@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "graphics_assets/static_meshes/static_mesh.h"
+
+#include <array>
+#include <span>
 
 #include "nau/async/task.h"
 
@@ -10,10 +12,10 @@ nau::StaticMesh::StaticMesh()
 {
 }
 
-eastl::span<nau::math::float4> getTangents(const eastl::span<uint16_t>& indices,
-                                           const eastl::span<nau::math::float3>& positions,
-                                           const eastl::span<nau::math::float3>& normals,
-                                           const eastl::span<nau::math::float2>& uvs)
+std::span<nau::math::float4> getTangents(const std::span<uint16_t>& indices,
+                                         const std::span<nau::math::float3>& positions,
+                                         const std::span<nau::math::float3>& normals,
+                                         const std::span<nau::math::float2>& uvs)
 {
     if (indices.empty() || positions.empty() || uvs.empty())
     {
@@ -61,7 +63,7 @@ eastl::span<nau::math::float4> getTangents(const eastl::span<uint16_t>& indices,
         tangents[index1] = nau::math::float4(tangent1[0], tangent1[1], tangent1[2], 1.0f);
         tangents[index2] = nau::math::float4(tangent2[0], tangent2[1], tangent2[2], 1.0f);
     }
-    eastl::span span = {tangents, normals.size()};
+    std::span span = {tangents, normals.size()};
     return span;
 }
 
@@ -115,7 +117,7 @@ nau::async::Task<nau::Ptr<nau::StaticMesh>> nau::StaticMesh::createFromStaticMes
                                  nullptr, texBufferSize};
         }
 
-        eastl::array<OutputVertAttribDescription,4> outLayout;
+        std::array<OutputVertAttribDescription, 4> outLayout;
 
         auto& posDesc = outLayout[0];
         {

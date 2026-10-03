@@ -3,17 +3,22 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <span>
+#include <utility>
+#include <vector>
+
+#include "constants.h"
+#include "device_caps_and_shader_model.h"
+#include "format_store.h"
+#include "nau/dxil/compiled_shader_header.h"
 #include "nau/generic/dag_bitset.h"
 #include "nau/math/dag_lsbVisitor.h"
 #include "nau/supp/dag_comPtr.h"
-#include "nau/dxil/compiled_shader_header.h"
-
 #include "render_state.h"
-#include "device_caps_and_shader_model.h"
-#include "format_store.h"
-#include "constants.h"
 #include "shader.h"
-
 
 inline const char CACHE_FILE_NAME[] = "cache/dx12.cache";
 
@@ -36,12 +41,12 @@ struct FramebufferLayout
 
   void clear()
   {
-    eastl::fill(eastl::begin(colorFormats), eastl::end(colorFormats), FormatStore{});
-    depthStencilFormat = FormatStore{};
-    colorTargetMask = 0;
-    depthBitStates.hasDepth = 0;
-    depthBitStates.depthMsaaLevel = 0;
-    colorMsaaLevels = 0;
+      std::fill(std::begin(colorFormats), std::end(colorFormats), FormatStore{});
+      depthStencilFormat = FormatStore{};
+      colorTargetMask = 0;
+      depthBitStates.hasDepth = 0;
+      depthBitStates.depthMsaaLevel = 0;
+      colorMsaaLevels = 0;
   }
 
   void setColorAttachment(uint8_t index, uint8_t msaa_level, FormatStore format)
@@ -76,12 +81,12 @@ struct FramebufferLayout
 
   void checkMsaaLevelsEqual() const
   {
-    eastl::optional<uint8_t> previous;
-    for (const auto index : nau::math::LsbVisitor{colorTargetMask})
-    {
-      NAU_ASSERT(!previous || *previous == getColorMsaaLevel(index));
-      previous = getColorMsaaLevel(index);
-    }
+      std::optional<uint8_t> previous;
+      for (const auto index : nau::math::LsbVisitor{colorTargetMask})
+      {
+          NAU_ASSERT(!previous || *previous == getColorMsaaLevel(index));
+          previous = getColorMsaaLevel(index);
+      }
     NAU_ASSERT(!previous || !depthBitStates.hasDepth || *previous == depthBitStates.depthMsaaLevel);
   }
 
@@ -111,10 +116,10 @@ private:
 
 inline bool operator==(const FramebufferLayout &l, const FramebufferLayout &r)
 {
-  return (l.colorTargetMask == r.colorTargetMask) && (l.depthBitStates.hasDepth == r.depthBitStates.hasDepth) &&
-         (l.depthStencilFormat == r.depthStencilFormat) && l.colorMsaaLevels == r.colorMsaaLevels &&
-         l.depthBitStates.depthMsaaLevel == r.depthBitStates.depthMsaaLevel &&
-         eastl::equal(eastl::begin(l.colorFormats), eastl::end(l.colorFormats), eastl::begin(r.colorFormats));
+    return (l.colorTargetMask == r.colorTargetMask) && (l.depthBitStates.hasDepth == r.depthBitStates.hasDepth) &&
+           (l.depthStencilFormat == r.depthStencilFormat) && l.colorMsaaLevels == r.colorMsaaLevels &&
+           l.depthBitStates.depthMsaaLevel == r.depthBitStates.depthMsaaLevel &&
+           std::equal(std::begin(l.colorFormats), std::end(l.colorFormats), std::begin(r.colorFormats));
 }
 
 inline bool operator!=(const FramebufferLayout &l, const FramebufferLayout &r) { return !(l == r); }
@@ -704,7 +709,7 @@ public:
     csb.def = def;
     auto from = reinterpret_cast<const uint8_t *>(blob->GetBufferPointer());
     csb.blob.assign(from, from + blob->GetBufferSize());
-    computeSignatures.push_back(eastl::move(csb));
+    computeSignatures.push_back(std::move(csb));
     hasChanged = true;
   }
   template <typename T>
@@ -721,7 +726,7 @@ public:
     gsb.def = def;
     auto from = reinterpret_cast<const uint8_t *>(blob->GetBufferPointer());
     gsb.blob.assign(from, from + blob->GetBufferSize());
-    graphicsSignatures.push_back(eastl::move(gsb));
+    graphicsSignatures.push_back(std::move(gsb));
     hasChanged = true;
   }
   template <typename T>
@@ -737,7 +742,7 @@ public:
     gsb.def = def;
     auto from = reinterpret_cast<const uint8_t *>(blob->GetBufferPointer());
     gsb.blob.assign(from, from + blob->GetBufferSize());
-    graphicsMeshSignatures.push_back(eastl::move(gsb));
+    graphicsMeshSignatures.push_back(std::move(gsb));
     hasChanged = true;
   }
   template <typename T>
@@ -764,41 +769,41 @@ public:
       clb(il);
   }
 
-  void onBindumpLoad(ID3D12Device1 *device, eastl::span<const dxil::HashValue> all_shader_hashes);
+  void onBindumpLoad(ID3D12Device1* device, std::span<const dxil::HashValue> all_shader_hashes);
 
-private:
+  private:
   bool loadFromFile(const SetupParameters &params);
 
   uint32_t getStaticRenderStateIndex(const RenderStateSystem::StaticState &state)
   {
-    auto ref = eastl::find(begin(staticRenderStates), end(staticRenderStates), state);
-    if (ref == end(staticRenderStates))
-    {
-      ref = staticRenderStates.insert(end(staticRenderStates), state);
-      hasChanged = true;
-    }
+      auto ref = std::find(begin(staticRenderStates), end(staticRenderStates), state);
+      if (ref == end(staticRenderStates))
+      {
+          ref = staticRenderStates.insert(end(staticRenderStates), state);
+          hasChanged = true;
+      }
     return static_cast<uint32_t>(ref - begin(staticRenderStates));
   }
 
   uint32_t getInputLayoutIndex(const InputLayout &layout)
   {
-    auto ref = eastl::find(begin(inputLayouts), end(inputLayouts), layout);
-    if (ref == end(inputLayouts))
-    {
-      ref = inputLayouts.insert(end(inputLayouts), layout);
-      hasChanged = true;
-    }
+      auto ref = std::find(begin(inputLayouts), end(inputLayouts), layout);
+      if (ref == end(inputLayouts))
+      {
+          ref = inputLayouts.insert(end(inputLayouts), layout);
+          hasChanged = true;
+      }
     return static_cast<uint32_t>(ref - begin(inputLayouts));
   }
 
   uint32_t getFramebufferLayoutIndex(const FramebufferLayout &layout)
   {
-    auto ref = eastl::find(begin(framebufferLayouts), end(framebufferLayouts), layout);
-    if (ref == end(framebufferLayouts))
-    {
-      ref = framebufferLayouts.insert(end(framebufferLayouts), layout);
-      hasChanged = true;
-    }
+      auto ref = std::find(begin(framebufferLayouts), end(framebufferLayouts), layout);
+      if (ref == end(framebufferLayouts))
+      {
+          ref = framebufferLayouts.insert(end(framebufferLayouts), layout);
+          hasChanged = true;
+      }
     return static_cast<uint32_t>(ref - begin(framebufferLayouts));
   }
 
@@ -826,9 +831,9 @@ private:
     BasePipelineIdentifier ident;
     struct VariantCacheEntry : GraphicsPipelineVariantState
     {
-      eastl::vector<uint8_t> blob;
+        std::vector<uint8_t> blob;
     };
-    eastl::vector<VariantCacheEntry> variantCache;
+    std::vector<VariantCacheEntry> variantCache;
   };
 
   struct GraphicsPipelineVariantName
@@ -845,34 +850,34 @@ private:
       bool is_wire_frame, uint32_t static_render_state_index, uint32_t frame_buffer_layout_index)
     {
       str[0] = L'G';
-      auto ot = eastl::begin(str) + 1;
-      // auto ed = eastl::end(str);
+      auto ot = std::begin(str) + 1;
+      // auto ed = std::end(str);
 
       char lbuf[stage_length];
       base.ps.convertToString(lbuf, sizeof(lbuf));
-      ot = eastl::copy(eastl::begin(lbuf), eastl::end(lbuf) - 1, ot);
+      ot = std::copy(std::begin(lbuf), std::end(lbuf) - 1, ot);
 
       base.vs.convertToString(lbuf, sizeof(lbuf));
-      ot = eastl::copy(eastl::begin(lbuf), eastl::end(lbuf) - 1, ot);
+      ot = std::copy(std::begin(lbuf), std::end(lbuf) - 1, ot);
 
       // as one hex byte
       auto topByte = static_cast<uint8_t>(top);
       data_to_str_hex_buf(lbuf, sizeof(lbuf), &topByte, sizeof(topByte));
-      ot = eastl::copy(eastl::begin(lbuf), eastl::begin(lbuf) + topology_length - 1, ot);
+      ot = std::copy(std::begin(lbuf), std::begin(lbuf) + topology_length - 1, ot);
 
       char sbuf[sizeof(uint32_t) * 2 + 1];
       data_to_str_hex_buf(sbuf, sizeof(sbuf), &input_layout_index, sizeof(input_layout_index));
-      ot = eastl::copy(eastl::begin(sbuf), eastl::end(sbuf) - 1, ot);
+      ot = std::copy(std::begin(sbuf), std::end(sbuf) - 1, ot);
 
       *ot++ = is_wire_frame ? L'1' : L'0';
 
       char srsibuf[sizeof(uint32_t) * 2 + 1];
       data_to_str_hex_buf(srsibuf, sizeof(srsibuf), &static_render_state_index, sizeof(uint32_t));
-      ot = eastl::copy(eastl::begin(srsibuf), eastl::end(srsibuf) - 1, ot);
+      ot = std::copy(std::begin(srsibuf), std::end(srsibuf) - 1, ot);
 
       char fbuf[sizeof(uint32_t) * 2 + 1];
       data_to_str_hex_buf(fbuf, sizeof(fbuf), &frame_buffer_layout_index, sizeof(uint32_t));
-      eastl::copy(eastl::begin(fbuf), eastl::end(fbuf), ot);
+      std::copy(std::begin(fbuf), std::end(fbuf), ot);
     }
   };
 
@@ -888,40 +893,40 @@ private:
       str[0] = L'C';
       char lbuf[length - 1];
       hash.convertToString(lbuf, sizeof(lbuf));
-      eastl::copy(eastl::begin(lbuf), eastl::end(lbuf), eastl::begin(str) + 1);
+      std::copy(std::begin(lbuf), std::end(lbuf), std::begin(str) + 1);
       return *this;
     }
   };
 
   struct ComputeBlob : ComputePipelineIdentifier
   {
-    eastl::vector<uint8_t> blob;
+      std::vector<uint8_t> blob;
   };
 
   struct ComputeSignatureBlob
   {
     ComputePipelineSignature::Definition def;
-    eastl::vector<uint8_t> blob;
+    std::vector<uint8_t> blob;
   };
 
   struct GraphicsSignatureBlob
   {
     GraphicsPipelineSignature::Definition def;
-    eastl::vector<uint8_t> blob;
+    std::vector<uint8_t> blob;
   };
 
 #if !_TARGET_SCARLETT
   ComPtr<ID3D12PipelineLibrary1> library;
 #endif
-  eastl::vector<uint8_t> initialPipelineBlob;
-  eastl::vector<GraphicsPipeline> graphicsCache;
-  eastl::vector<ComputeBlob> computeBlobs;
-  eastl::vector<ComputeSignatureBlob> computeSignatures;
-  eastl::vector<GraphicsSignatureBlob> graphicsSignatures;
-  eastl::vector<GraphicsSignatureBlob> graphicsMeshSignatures;
-  eastl::vector<RenderStateSystem::StaticState> staticRenderStates;
-  eastl::vector<InputLayout> inputLayouts;
-  eastl::vector<FramebufferLayout> framebufferLayouts;
+  std::vector<uint8_t> initialPipelineBlob;
+  std::vector<GraphicsPipeline> graphicsCache;
+  std::vector<ComputeBlob> computeBlobs;
+  std::vector<ComputeSignatureBlob> computeSignatures;
+  std::vector<GraphicsSignatureBlob> graphicsSignatures;
+  std::vector<GraphicsSignatureBlob> graphicsMeshSignatures;
+  std::vector<RenderStateSystem::StaticState> staticRenderStates;
+  std::vector<InputLayout> inputLayouts;
+  std::vector<FramebufferLayout> framebufferLayouts;
   uint32_t shaderInDumpCount = 0;
   dxil::HashValue shaderInDumpHash{};
   D3D12_SHADER_CACHE_SUPPORT_FLAGS deviceFeatures = D3D12_SHADER_CACHE_SUPPORT_NONE;

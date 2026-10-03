@@ -7,7 +7,7 @@
 */
 #pragma once
 
-#include <EASTL/vector.h>
+#include <vector>
 #include "binPack2D_config.h"
 #include "Rect.h"
 #include "GuillotineBinPack.h"
@@ -40,7 +40,7 @@ public:
 	/// @param rects The list of rectangles to insert. This vector will be destroyed in the process.
 	/// @param dst [out] This list will contain the packed rectangles. The indices will not correspond to that of rects.
 	/// @param method The rectangle placement rule to use when packing.
-	void Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &dst, LevelChoiceHeuristic method, bool allowFlip);
+	void Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &dst, LevelChoiceHeuristic method, bool allowFlip);
 
 	/// Inserts a single rectangle into the bin, possibly rotated.
 	Rect Insert(int width, int height, LevelChoiceHeuristic method, bool allowFlip);
@@ -75,7 +75,7 @@ private:
 		int width;
 	};
 
-	eastl::vector<SkylineNode> skyLine;
+	std::vector<SkylineNode> skyLine;
 
 	unsigned long usedSurfaceArea;
 

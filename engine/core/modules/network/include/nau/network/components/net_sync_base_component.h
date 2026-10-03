@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/diag/logging.h"
 #include "nau/network/components/net_component_api.h"
 #include "nau/network/components/net_scene_component.h"
@@ -11,7 +15,6 @@
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/internal/component_internal_attributes.h"
 #include "nau/service/service_provider.h"
-
 
 namespace nau
 {
@@ -58,7 +61,7 @@ namespace nau
          * 
          * @return Scene name.
          */
-        eastl::string_view getSceneName() override
+        std::string_view getSceneName() override
         {
             return m_scene->getSceneName();
         }
@@ -68,7 +71,7 @@ namespace nau
          * 
          * @return Full path to the component.
          */
-        eastl::string_view getComponentPath() override
+        std::string_view getComponentPath() override
         {
             return m_path;
         }
@@ -96,7 +99,7 @@ namespace nau
          * 
          * @param [out] buffer
          */
-        virtual void netWrite(eastl::string& buffer) override
+        virtual void netWrite(std::string& buffer) override
         {
         }
 
@@ -105,7 +108,7 @@ namespace nau
          *
          * @param [in] buffer 
          */
-        virtual void netRead(const eastl::string& buffer) override
+        virtual void netRead(const std::string& buffer) override
         {
         }
 
@@ -169,24 +172,24 @@ namespace nau
          * @param [in] delimiter    Delimiter to separate subdirectories.
          * @return                  Full object path relative to root.
          */
-        eastl::string getObjectPath(const eastl::string& delimiter)
+        std::string getObjectPath(const std::string& delimiter)
         {
             scene::SceneObject* obj = &getParentObject();
-            eastl::stack<const scene::SceneObject*> objs;
-            objs.get_container().reserve(16);
-            objs.push(obj);
+            std::vector<const scene::SceneObject*> objs;
+            objs.reserve(16);
+            objs.push_back(obj);
             auto* parent = obj->getParentObject();
             while (parent != nullptr)
             {
-                objs.push(parent);
+                objs.push_back(parent);
                 parent = parent->getParentObject();
             }
-            eastl::string path;
+            std::string path;
             while (objs.size() > 0)
             {
                 path += delimiter;
-                path += objs.top()->getName().data();
-                objs.pop();
+                path += objs.back()->getName();
+                objs.pop_back();
             }
             return path;
         }
@@ -195,6 +198,6 @@ namespace nau
         bool m_activated = false;
         INetSnapshots* m_snapshots = nullptr;
         IComponentNetScene* m_scene = nullptr;
-        eastl::string m_path;
+        std::string m_path;
     };
 }  // namespace nau

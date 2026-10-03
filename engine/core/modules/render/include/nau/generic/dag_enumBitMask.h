@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
+#include <type_traits>
 
 /*
  * Usage:
@@ -27,45 +27,45 @@
  * And struct specialization approach doesn't supports non global enums.
  */
 
-#define DAGOR_ENABLE_ENUM_BITMASK(Enum)                                                                                               \
-  static_assert(eastl::is_enum<Enum>::value, #Enum " is not enum!");                                                                  \
-  inline Enum operator|(Enum lhs, Enum rhs)                                                                                           \
-  {                                                                                                                                   \
-    return static_cast<Enum>(                                                                                                         \
-      static_cast<eastl::underlying_type<Enum>::type>(lhs) | static_cast<eastl::underlying_type<Enum>::type>(rhs));                   \
-  }                                                                                                                                   \
-  inline Enum operator&(Enum lhs, Enum rhs)                                                                                           \
-  {                                                                                                                                   \
-    return static_cast<Enum>(                                                                                                         \
-      static_cast<eastl::underlying_type<Enum>::type>(lhs) & static_cast<eastl::underlying_type<Enum>::type>(rhs));                   \
-  }                                                                                                                                   \
-  inline Enum operator^(Enum lhs, Enum rhs)                                                                                           \
-  {                                                                                                                                   \
-    return static_cast<Enum>(                                                                                                         \
-      static_cast<eastl::underlying_type<Enum>::type>(lhs) ^ static_cast<eastl::underlying_type<Enum>::type>(rhs));                   \
-  }                                                                                                                                   \
-  inline Enum operator~(Enum rhs)                                                                                                     \
-  {                                                                                                                                   \
-    return static_cast<Enum>(~static_cast<eastl::underlying_type<Enum>::type>(rhs));                                                  \
-  }                                                                                                                                   \
-  inline Enum &operator|=(Enum &lhs, Enum rhs)                                                                                        \
-  {                                                                                                                                   \
-    lhs =                                                                                                                             \
-      static_cast<Enum>(static_cast<eastl::underlying_type<Enum>::type>(lhs) | static_cast<eastl::underlying_type<Enum>::type>(rhs)); \
-                                                                                                                                      \
-    return lhs;                                                                                                                       \
-  }                                                                                                                                   \
-  inline Enum &operator&=(Enum &lhs, Enum rhs)                                                                                        \
-  {                                                                                                                                   \
-    lhs =                                                                                                                             \
-      static_cast<Enum>(static_cast<eastl::underlying_type<Enum>::type>(lhs) & static_cast<eastl::underlying_type<Enum>::type>(rhs)); \
-                                                                                                                                      \
-    return lhs;                                                                                                                       \
-  }                                                                                                                                   \
-  inline Enum &operator^=(Enum &lhs, Enum rhs)                                                                                        \
-  {                                                                                                                                   \
-    lhs =                                                                                                                             \
-      static_cast<Enum>(static_cast<eastl::underlying_type<Enum>::type>(lhs) ^ static_cast<eastl::underlying_type<Enum>::type>(rhs)); \
-                                                                                                                                      \
-    return lhs;                                                                                                                       \
-  }
+#define DAGOR_ENABLE_ENUM_BITMASK(Enum)                                                                                                 \
+    static_assert(std::is_enum<Enum>::value, #Enum " is not enum!");                                                                    \
+    inline Enum operator|(Enum lhs, Enum rhs)                                                                                           \
+    {                                                                                                                                   \
+        return static_cast<Enum>(                                                                                                       \
+            static_cast<std::underlying_type<Enum>::type>(lhs) | static_cast<std::underlying_type<Enum>::type>(rhs));                   \
+    }                                                                                                                                   \
+    inline Enum operator&(Enum lhs, Enum rhs)                                                                                           \
+    {                                                                                                                                   \
+        return static_cast<Enum>(                                                                                                       \
+            static_cast<std::underlying_type<Enum>::type>(lhs) & static_cast<std::underlying_type<Enum>::type>(rhs));                   \
+    }                                                                                                                                   \
+    inline Enum operator^(Enum lhs, Enum rhs)                                                                                           \
+    {                                                                                                                                   \
+        return static_cast<Enum>(                                                                                                       \
+            static_cast<std::underlying_type<Enum>::type>(lhs) ^ static_cast<std::underlying_type<Enum>::type>(rhs));                   \
+    }                                                                                                                                   \
+    inline Enum operator~(Enum rhs)                                                                                                     \
+    {                                                                                                                                   \
+        return static_cast<Enum>(~static_cast<std::underlying_type<Enum>::type>(rhs));                                                  \
+    }                                                                                                                                   \
+    inline Enum& operator|=(Enum& lhs, Enum rhs)                                                                                        \
+    {                                                                                                                                   \
+        lhs =                                                                                                                           \
+            static_cast<Enum>(static_cast<std::underlying_type<Enum>::type>(lhs) | static_cast<std::underlying_type<Enum>::type>(rhs)); \
+                                                                                                                                        \
+        return lhs;                                                                                                                     \
+    }                                                                                                                                   \
+    inline Enum& operator&=(Enum& lhs, Enum rhs)                                                                                        \
+    {                                                                                                                                   \
+        lhs =                                                                                                                           \
+            static_cast<Enum>(static_cast<std::underlying_type<Enum>::type>(lhs) & static_cast<std::underlying_type<Enum>::type>(rhs)); \
+                                                                                                                                        \
+        return lhs;                                                                                                                     \
+    }                                                                                                                                   \
+    inline Enum& operator^=(Enum& lhs, Enum rhs)                                                                                        \
+    {                                                                                                                                   \
+        lhs =                                                                                                                           \
+            static_cast<Enum>(static_cast<std::underlying_type<Enum>::type>(lhs) ^ static_cast<std::underlying_type<Enum>::type>(rhs)); \
+                                                                                                                                        \
+        return lhs;                                                                                                                     \
+    }

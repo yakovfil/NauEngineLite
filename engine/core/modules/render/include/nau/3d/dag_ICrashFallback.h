@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/unique_ptr.h>
+#include <memory>
 
 // This interface is a temporary solution until dx12 driver is stable enough.
 // If the game crashes before getting to the menu so that users can change the
@@ -33,4 +33,4 @@ struct ICrashFallback
   virtual ~ICrashFallback() = default;
 };
 
-extern eastl::unique_ptr<ICrashFallback> crash_fallback_helper;
+extern std::unique_ptr<ICrashFallback> crash_fallback_helper;

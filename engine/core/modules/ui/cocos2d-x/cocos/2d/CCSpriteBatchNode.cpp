@@ -26,6 +26,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
+#include <string>
 #include "2d/CCSpriteBatchNode.h"
 #include <stddef.h> // offsetof
 #include "base/ccTypes.h"
@@ -256,7 +257,7 @@ void SpriteBatchNode::addChild(Node *child, int zOrder, int tag)
     appendChild(sprite);
 }
 
-void SpriteBatchNode::addChild(Node * child, int zOrder, const eastl::string &name)
+void SpriteBatchNode::addChild(Node * child, int zOrder, const std::string &name)
 {
     CCASSERT(child != nullptr, "child should not be null");
     CCASSERT(dynamic_cast<Sprite*>(child) != nullptr, "CCSpriteBatchNode only supports Sprites as children");
@@ -795,9 +796,9 @@ SpriteBatchNode * SpriteBatchNode::addSpriteWithoutQuad(Sprite*child, int z, int
     return this;
 }
 
-eastl::string SpriteBatchNode::getDescription() const
+std::string SpriteBatchNode::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<SpriteBatchNode | tag = %d>", _tag);
+    return cocos2d::StringUtils::format("<SpriteBatchNode | tag = %d>", _tag);
 }
 
 NS_CC_END

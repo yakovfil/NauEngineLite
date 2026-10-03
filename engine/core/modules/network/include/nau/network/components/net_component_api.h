@@ -3,7 +3,8 @@
 // network_component_api.h
 
 #pragma once
-#include <EASTL/string_view.h>
+#include <string>
+#include <string_view>
 
 #include "nau/memory/bytes_buffer.h"
 #include "nau/rtti/rtti_object.h"
@@ -23,13 +24,13 @@ namespace nau
          * 
          * @return Scene name.
          */
-        virtual eastl::string_view getSceneName() = 0;
+        virtual std::string_view getSceneName() = 0;
         /**
          * @brief Retrieves the absolute path to to the parent object in the scene.
          * 
          * @return Absolute path to to the parent object.
          */
-        virtual eastl::string_view getComponentPath() = 0;
+        virtual std::string_view getComponentPath() = 0;
 
         /**
          * @brief Changes whether the component is owned or replicated.
@@ -64,14 +65,14 @@ namespace nau
          * 
          * @param [out] buffer Buffer storing the serialized data.
          */
-        virtual void netWrite(eastl::string& buffer) = 0;
+        virtual void netWrite(std::string& buffer) = 0;
 
         /**
          * @brief Deserializes the JSON text buffer into the scene component.
          * 
          * @param [in] buffer Buffer with serialized data.
          */
-        virtual void netRead(const eastl::string& buffer) = 0;
+        virtual void netRead(const std::string& buffer) = 0;
     };
 
     /**
@@ -86,14 +87,14 @@ namespace nau
          * 
          * @return Peer ID.
          */
-        virtual eastl::string_view getPeerId() = 0;
+        virtual std::string_view getPeerId() = 0;
 
         /**
          * @brief Retrieves the scene name.
          * 
          * @return Scene name.
          */
-        virtual eastl::string_view getSceneName() = 0;
+        virtual std::string_view getSceneName() = 0;
 
         /**
          * @brief Retrieves the network component, possibly creating it.
@@ -101,6 +102,6 @@ namespace nau
          * @return Pointer to the IComponentNetSync instance which is valid until scene deactivation.
          * 
          */
-        virtual IComponentNetSync* getOrCreateComponent(eastl::string_view path, eastl::string_view type) = 0;
+        virtual IComponentNetSync* getOrCreateComponent(std::string_view path, std::string_view type) = 0;
     };
 }  // namespace nau

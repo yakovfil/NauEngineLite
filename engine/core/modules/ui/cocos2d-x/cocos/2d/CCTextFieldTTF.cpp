@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include "2d/CCTextFieldTTF.h"
 
 #include "base/CCDirector.h"
@@ -108,7 +109,7 @@ TextFieldTTF::~TextFieldTTF()
 // static constructor
 //////////////////////////////////////////////////////////////////////////
 
-TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const eastl::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize)
+TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const std::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize)
 {
     TextFieldTTF *ret = new (std::nothrow) TextFieldTTF();
     if(ret && ret->initWithPlaceHolder("", dimensions, alignment, fontName, fontSize))
@@ -124,7 +125,7 @@ TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const eastl::string& place
     return nullptr;
 }
 
-TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const eastl::string& placeholder, const std::string& fontName, float fontSize)
+TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const std::string& placeholder, const std::string& fontName, float fontSize)
 {
     TextFieldTTF *ret = new (std::nothrow) TextFieldTTF();
     if(ret && ret->initWithPlaceHolder("", fontName, fontSize))
@@ -144,14 +145,14 @@ TextFieldTTF * TextFieldTTF::textFieldWithPlaceHolder(const eastl::string& place
 // initialize
 //////////////////////////////////////////////////////////////////////////
 
-bool TextFieldTTF::initWithPlaceHolder(const eastl::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize)
+bool TextFieldTTF::initWithPlaceHolder(const std::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize)
 {
     setDimensions(dimensions.width, dimensions.height);
     setAlignment(alignment, TextVAlignment::CENTER);
 
     return initWithPlaceHolder(placeholder, fontName, fontSize);
 }
-bool TextFieldTTF::initWithPlaceHolder(const eastl::string& placeholder, const std::string& fontName, float fontSize)
+bool TextFieldTTF::initWithPlaceHolder(const std::string& placeholder, const std::string& fontName, float fontSize)
 {
     _placeHolder = placeholder;
 
@@ -344,7 +345,7 @@ void TextFieldTTF::deleteBackward()
     }
     else
     {
-        eastl::string text = _inputText.substr(0, len - deleteLen).tostring();
+        std::string text = _inputText.substr(0, len - deleteLen).tostring();
         setString(text);
     }
 }
@@ -501,7 +502,7 @@ void TextFieldTTF::setColorSpaceHolder(const Color4B& color)
 //////////////////////////////////////////////////////////////////////////
 
 // input text property
-void TextFieldTTF::setString(const eastl::string &text)
+void TextFieldTTF::setString(const std::string &text)
 {
     nau::string displayText;
 
@@ -580,7 +581,7 @@ void TextFieldTTF::makeStringSupportCursor(nau::string& displayText)
             {
                 _cursorPosition = stringUTF8.length();
             }
-            eastl::string cursorChar;
+            std::string cursorChar;
             // \b - Next char not change x position
             if (_currentLabelType == LabelType::TTF || _currentLabelType == LabelType::BMFONT)
                 cursorChar.push_back(StringUtils::AsciiCharacters::NextCharNoChangeX);
@@ -657,13 +658,13 @@ void TextFieldTTF::controlKey(EventKeyboard::KeyCode keyCode)
     }
 }
 
-eastl::string TextFieldTTF::getString() const
+std::string TextFieldTTF::getString() const
 {
     return _inputText.tostring();
 }
 
 // place holder text property
-void TextFieldTTF::setPlaceHolder(const eastl::string& text)
+void TextFieldTTF::setPlaceHolder(const std::string& text)
 {
     _placeHolder = text;
     if (_inputText.empty() && !_isAttachWithIME)
@@ -673,7 +674,7 @@ void TextFieldTTF::setPlaceHolder(const eastl::string& text)
     }
 }
 
-const eastl::string& TextFieldTTF::getPlaceHolder() const
+const std::string& TextFieldTTF::getPlaceHolder() const
 {
     return _placeHolder;
 }
@@ -711,7 +712,7 @@ void TextFieldTTF::setSecureTextEntry(bool value)
     }
 }
 
-void TextFieldTTF::setPasswordTextStyle(const eastl::string &text)
+void TextFieldTTF::setPasswordTextStyle(const std::string &text)
 {
     if (text.length() < 1)
     {
@@ -724,7 +725,7 @@ void TextFieldTTF::setPasswordTextStyle(const eastl::string &text)
     }
 }
 
-const eastl::string& TextFieldTTF::getPasswordTextStyle() const
+const std::string& TextFieldTTF::getPasswordTextStyle() const
 {
     return _passwordStyleText;
 }

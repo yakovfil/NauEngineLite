@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "2d/CCLabel.h"
 #include <vector>
 #include "base/ccUTF8.h"
@@ -73,12 +74,12 @@ void Label::computeAlignmentOffset()
     }
 }
 
-int Label::getFirstCharLen(const eastl::u32string& /*utf32Text*/, int /*startIndex*/, int /*textLen*/) const
+int Label::getFirstCharLen(const std::u32string& /*utf32Text*/, int /*startIndex*/, int /*textLen*/) const
 {
     return 1;
 }
 
-int Label::getFirstWordLen(const eastl::u32string& utf32Text, int startIndex, int textLen) const
+int Label::getFirstWordLen(const std::u32string& utf32Text, int startIndex, int textLen) const
 {
     int len = 0;
     auto nextLetterX = 0;
@@ -147,7 +148,7 @@ void Label::updateBMFontScale()
     }
 }
 
-bool Label::multilineTextWrap(const std::function<int(const eastl::u32string&, int, int)>& nextTokenLen)
+bool Label::multilineTextWrap(const std::function<int(const std::u32string&, int, int)>& nextTokenLen)
 {
     int textLen = getStringLength();
     int lineIndex = 0;

@@ -2,6 +2,11 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <iterator>
+#include <string_view>
+#include <utility>
+
 #include "device.h"
 
 using namespace drv3d_dx12;
@@ -278,9 +283,7 @@ ResourceUsageHistoryDataSetDebugger::AnalyzerMode ResourceUsageHistoryDataSetDeb
   return nextMode;
 }
 
-void ResourceUsageHistoryDataSetDebugger::addAnalziedTextureInfo(D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state,
-  eastl::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what, bool is_automatic_transition,
-  eastl::string_view what_string, AnalyzedIssueType issue_type)
+void ResourceUsageHistoryDataSetDebugger::addAnalziedTextureInfo(D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state, std::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what, bool is_automatic_transition, std::string_view what_string, AnalyzedIssueType issue_type)
 {
   AnalyzedEntry e;
   e.currentState = current_state;
@@ -295,26 +298,28 @@ void ResourceUsageHistoryDataSetDebugger::addAnalziedTextureInfo(D3D12_RESOURCE_
 }
 
 void ResourceUsageHistoryDataSetDebugger::addUniqueAnalziedTextureInfo(D3D12_RESOURCE_STATES current_state,
-  ResourceBarrier expected_state, eastl::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what,
-  bool is_automatic_transition, eastl::string_view what_string, AnalyzedIssueType issue_type)
+                                                                       ResourceBarrier expected_state,
+                                                                       std::string_view segment,
+                                                                       ResourceUsageHistoryDataSet::UsageEntryType what,
+                                                                       bool is_automatic_transition,
+                                                                       std::string_view what_string,
+                                                                       AnalyzedIssueType issue_type)
 {
-  auto ref = eastl::find_if(begin(analyzedTextureEntries), end(analyzedTextureEntries),
-    [=](auto &e) //
+    auto ref = std::find_if(begin(analyzedTextureEntries), end(analyzedTextureEntries),
+                            [=](auto& e)  //
     {
-      return e.currentState == current_state && e.expectedState == expected_state && e.segment == segment && e.what == what &&
-             e.isAutomaticTransition == is_automatic_transition && e.whatString == what_string && e.issueType == issue_type;
+        return e.currentState == current_state && e.expectedState == expected_state && e.segment == segment && e.what == what &&
+               e.isAutomaticTransition == is_automatic_transition && e.whatString == what_string && e.issueType == issue_type;
     });
-  if (ref != end(analyzedTextureEntries))
-  {
-    ++ref->count;
-    return;
-  }
+    if (ref != end(analyzedTextureEntries))
+    {
+        ++ref->count;
+        return;
+    }
   addAnalziedTextureInfo(current_state, expected_state, segment, what, is_automatic_transition, what_string, issue_type);
 }
 
-void ResourceUsageHistoryDataSetDebugger::addAnalziedBufferInfo(D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state,
-  eastl::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what, bool is_automatic_transition,
-  eastl::string_view what_string, AnalyzedIssueType issue_type)
+void ResourceUsageHistoryDataSetDebugger::addAnalziedBufferInfo(D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state, std::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what, bool is_automatic_transition, std::string_view what_string, AnalyzedIssueType issue_type)
 {
   AnalyzedEntry e;
   e.currentState = current_state;
@@ -329,59 +334,62 @@ void ResourceUsageHistoryDataSetDebugger::addAnalziedBufferInfo(D3D12_RESOURCE_S
 }
 
 void ResourceUsageHistoryDataSetDebugger::addUniqueAnalziedBufferInfo(D3D12_RESOURCE_STATES current_state,
-  ResourceBarrier expected_state, eastl::string_view segment, ResourceUsageHistoryDataSet::UsageEntryType what,
-  bool is_automatic_transition, eastl::string_view what_string, AnalyzedIssueType issue_type)
+                                                                      ResourceBarrier expected_state,
+                                                                      std::string_view segment,
+                                                                      ResourceUsageHistoryDataSet::UsageEntryType what,
+                                                                      bool is_automatic_transition,
+                                                                      std::string_view what_string,
+                                                                      AnalyzedIssueType issue_type)
 {
-  auto ref = eastl::find_if(begin(analyzedBufferEntries), end(analyzedBufferEntries),
-    [=](auto &e) //
+    auto ref = std::find_if(begin(analyzedBufferEntries), end(analyzedBufferEntries),
+                            [=](auto& e)  //
     {
-      return e.currentState == current_state && e.expectedState == expected_state && e.segment == segment && e.what == what &&
-             e.isAutomaticTransition == is_automatic_transition && e.whatString == what_string && e.issueType == issue_type;
+        return e.currentState == current_state && e.expectedState == expected_state && e.segment == segment && e.what == what &&
+               e.isAutomaticTransition == is_automatic_transition && e.whatString == what_string && e.issueType == issue_type;
     });
-  if (ref != end(analyzedBufferEntries))
-  {
-    ++ref->count;
-    return;
-  }
+    if (ref != end(analyzedBufferEntries))
+    {
+        ++ref->count;
+        return;
+    }
   addAnalziedBufferInfo(current_state, expected_state, segment, what, is_automatic_transition, what_string, issue_type);
 }
 
-void ResourceUsageHistoryDataSetDebugger::addTextureInfo(eastl::string_view name, Image *texture, SubresourceIndex sub_res,
-  FormatStore fmt, bool needs_transition)
+void ResourceUsageHistoryDataSetDebugger::addTextureInfo(std::string_view name, Image* texture, SubresourceIndex sub_res, FormatStore fmt, bool needs_transition)
 {
-  auto ref = eastl::lower_bound(begin(textures), end(textures), 0,
-    [=](auto &v, auto) //
+    auto ref = std::lower_bound(begin(textures), end(textures), 0,
+                                [=](auto& v, auto)  //
     {
-      if (eastl::string_view(v.name) < name)
-      {
-        return true;
-      }
-      if (eastl::string_view(v.name) > name)
-      {
-        return false;
-      }
-      if (v.subRes < sub_res)
-      {
-        return true;
-      }
-      if (v.subRes > sub_res)
-      {
-        return false;
-      }
-      return v.texture < texture;
+        if (std::string_view(v.name) < name)
+        {
+            return true;
+        }
+        if (std::string_view(v.name) > name)
+        {
+            return false;
+        }
+        if (v.subRes < sub_res)
+        {
+            return true;
+        }
+        if (v.subRes > sub_res)
+        {
+            return false;
+        }
+        return v.texture < texture;
     });
-  if (ref != end(textures) && ref->texture == texture && eastl::string_view(ref->name) == name && ref->subRes == sub_res)
-  {
-    ++ref->entries;
-    ref->neededTransitionCount += needs_transition ? 1 : 0;
-  }
+    if (ref != end(textures) && ref->texture == texture && std::string_view(ref->name) == name && ref->subRes == sub_res)
+    {
+        ++ref->entries;
+        ref->neededTransitionCount += needs_transition ? 1 : 0;
+    }
   else
   {
-    if (inspectingTexture >= eastl::distance(begin(textures), ref) && ~size_t(0) != inspectingTexture)
-    {
-      // have to adjust index for the new entry
-      ++inspectingTexture;
-    }
+      if (inspectingTexture >= std::distance(begin(textures), ref) && ~size_t(0) != inspectingTexture)
+      {
+          // have to adjust index for the new entry
+          ++inspectingTexture;
+      }
     TextureInfo info;
     info.name = name;
     info.texture = texture;
@@ -389,52 +397,52 @@ void ResourceUsageHistoryDataSetDebugger::addTextureInfo(eastl::string_view name
     info.fmt = fmt;
     info.entries = 1;
     info.neededTransitionCount = needs_transition ? 1 : 0;
-    textures.insert(ref, eastl::move(info));
+    textures.insert(ref, std::move(info));
   }
 }
 
-void ResourceUsageHistoryDataSetDebugger::addBufferInfo(eastl::string_view name, BufferResourceReference buffer, bool needs_transition)
+void ResourceUsageHistoryDataSetDebugger::addBufferInfo(std::string_view name, BufferResourceReference buffer, bool needs_transition)
 {
-  auto ref = eastl::lower_bound(begin(buffers), end(buffers), 0,
-    [=](auto &v, auto) //
+    auto ref = std::lower_bound(begin(buffers), end(buffers), 0,
+                                [=](auto& v, auto)  //
     {
-      if (eastl::string_view(v.name) < name)
-      {
-        return true;
-      }
-      if (eastl::string_view(v.name) > name)
-      {
-        return false;
-      }
-      if (v.buffer.resourceId.index() < buffer.resourceId.index())
-      {
-        return true;
-      }
-      if (v.buffer.resourceId.index() > buffer.resourceId.index())
-      {
-        return false;
-      }
-      return v.buffer.buffer < buffer.buffer;
+        if (std::string_view(v.name) < name)
+        {
+            return true;
+        }
+        if (std::string_view(v.name) > name)
+        {
+            return false;
+        }
+        if (v.buffer.resourceId.index() < buffer.resourceId.index())
+        {
+            return true;
+        }
+        if (v.buffer.resourceId.index() > buffer.resourceId.index())
+        {
+            return false;
+        }
+        return v.buffer.buffer < buffer.buffer;
     });
-  if (ref != end(buffers) && ref->buffer.buffer == buffer.buffer && ref->buffer.resourceId.index() &&
-      eastl::string_view(ref->name) == name)
-  {
-    ++ref->entries;
-    ref->neededTransitionCount += needs_transition ? 1 : 0;
-  }
+    if (ref != end(buffers) && ref->buffer.buffer == buffer.buffer && ref->buffer.resourceId.index() &&
+        std::string_view(ref->name) == name)
+    {
+        ++ref->entries;
+        ref->neededTransitionCount += needs_transition ? 1 : 0;
+    }
   else
   {
-    if (inspectingBuffer >= eastl::distance(begin(buffers), ref) && ~size_t(0) != inspectingBuffer)
-    {
-      // have to adjust index for the new entry
-      ++inspectingBuffer;
-    }
+      if (inspectingBuffer >= std::distance(begin(buffers), ref) && ~size_t(0) != inspectingBuffer)
+      {
+          // have to adjust index for the new entry
+          ++inspectingBuffer;
+      }
     BufferInfo info;
     info.name = name;
     info.buffer = buffer;
     info.entries = 1;
     info.neededTransitionCount = needs_transition ? 1 : 0;
-    buffers.insert(ref, eastl::move(info));
+    buffers.insert(ref, std::move(info));
   }
 }
 
@@ -685,7 +693,7 @@ void ResourceUsageHistoryDataSetDebugger::debugOverlay()
               {
                 return true;
               }
-              if (name != eastl::string_view(toInspect.name))
+              if (name != std::string_view(toInspect.name))
               {
                 return true;
               }
@@ -871,7 +879,7 @@ void ResourceUsageHistoryDataSetDebugger::debugOverlay()
             {
               return true;
             }
-            if (name != eastl::string_view(toInspect.name))
+            if (name != std::string_view(toInspect.name))
             {
               return true;
             }

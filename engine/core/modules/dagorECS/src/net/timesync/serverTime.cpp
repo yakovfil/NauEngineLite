@@ -2,14 +2,16 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <daECS/net/netbase.h>
-#include <daECS/net/time.h>
 #include <daECS/net/msgDecl.h>
 #include <daECS/net/msgSink.h>
+#include <daECS/net/netbase.h>
+#include <daECS/net/time.h>
 #include <daNet/getTime.h>
+#include <debug/dag_assert.h>
 #include <math.h>
 #include <perfMon/dag_cpuFreq.h>
-#include <debug/dag_assert.h>
+
+#include <utility>
 
 class ServerTime final : public ITimeManager
 {
@@ -37,7 +39,7 @@ public:
     int clientTime = msg->get<0>() + localQueueCorrection;
     TimeSyncResponse respMsg(clientTime, self.getMillis());
     respMsg.connection = imsg->connection;
-    send_net_msg(net::get_msg_sink(), eastl::move(respMsg));
+    send_net_msg(net::get_msg_sink(), std::move(respMsg));
   }
   // ~ITimeManager
 

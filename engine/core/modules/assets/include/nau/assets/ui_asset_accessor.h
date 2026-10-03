@@ -4,16 +4,17 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "nau/assets/asset_accessor.h"
 #include "nau/assets/asset_ref.h"
 #include "nau/async/task.h"
+#include "nau/math/dag_color.h"
 #include "nau/math/dag_e3dColor.h"
 #include "nau/math/math.h"
 #include "nau/math/transform.h"
-#include "nau/math/dag_color.h"
-
-#include <EASTL/string.h>
-#include <EASTL/shared_ptr.h>
 
 namespace nau
 {
@@ -24,8 +25,8 @@ namespace nau
 
     struct NauLabelAssetData final : UiElementAssetCustomData
     {
-        eastl::string text;
-        eastl::string fontRef;
+        std::string text;
+        std::string fontRef;
         int horizontalAlignment = 0;
         int verticalAlignment = 0;
         int overflow = 0;
@@ -34,7 +35,7 @@ namespace nau
 
     struct NauButtonStateAssetData
     {
-        eastl::string imageFileName;
+        std::string imageFileName;
         math::Color4 color;
         float scale = 1.f;
         AnimationAssetRef animationAsset;
@@ -51,7 +52,7 @@ namespace nau
 
     struct SpriteAssetData final : UiElementAssetCustomData
     {
-        eastl::string fileName;
+        std::string fileName;
     };
 
     struct DrawNodeDrawPolygon
@@ -64,7 +65,7 @@ namespace nau
 
     struct ScrollAssetData final : UiElementAssetCustomData
     {
-        eastl::string scrollType;
+        std::string scrollType;
     };
 
     struct DrawNodeAssetData final : UiElementAssetCustomData
@@ -88,7 +89,7 @@ namespace nau
     {
         UiElementType elementType;
 
-        eastl::string name;
+        std::string name;
         math::vec2 translation;
         float rotation;
         math::vec2 scale;
@@ -103,16 +104,16 @@ namespace nau
         bool cascadeOpacityEnabled;
         bool enableDebugDraw;
 
-        eastl::shared_ptr<UiElementAssetCustomData> customData;
+        std::shared_ptr<UiElementAssetCustomData> customData;
 
-        eastl::vector<UiElementAssetData> children;
+        std::vector<UiElementAssetData> children;
     };
 
     struct NAU_ABSTRACT_TYPE IUiAssetAccessor : IAssetAccessor
     {
         NAU_INTERFACE(nau::IUiAssetAccessor, IAssetAccessor)
 
-        virtual async::Task<> copyUiElements(eastl::vector<UiElementAssetData>& elements) = 0;
+        virtual async::Task<> copyUiElements(std::vector<UiElementAssetData>& elements) = 0;
     };
 
 }  // namespace nau

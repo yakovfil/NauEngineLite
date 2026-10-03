@@ -112,7 +112,7 @@ for work accepted before Stop, retaining scene ownership until completion.
 
 ## Checked shared APIs
 
-`createApplicationChecked(delegate)` returns `Result<eastl::unique_ptr<Application>>`
+`createApplicationChecked(delegate)` returns `Result<std::unique_ptr<Application>>`
 and unwinds partial creation on error. The legacy factory remains available and
 returns nullptr with a diagnostic on creation failure. Successful legacy
 `startup()`/`step()`/`stop()` callers retain their signatures.

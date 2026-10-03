@@ -3,10 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include <nau/dag_ioSys/dag_asyncWrite.h>
+
+#include <vector>
 // #include <nau/osApiWrappers/dag_miscApi.h>
 // #include <nau/osApiWrappers/dag_unicode.h>
 // #include <memory/dag_framemem.h>
-#include "EASTL/string.h"
+
 #include "nau/core_defines.h"
 #include "nau/string/string.h"
 #include "utf8/checked.h"
@@ -51,7 +53,7 @@ namespace nau::iosys
         file_handle_t fileHandle;
         int offs;
         const int bufMaxSize;
-        eastl::vector<char> buf, bufNext;
+        std::vector<char> buf, bufNext;
 
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
         aiocb aio;
@@ -82,7 +84,7 @@ namespace nau::iosys
 
         void waitPendingIO()
         {
-            while(done == WRITE_IN_PROGRESS)
+            while (done == WRITE_IN_PROGRESS)
             {
                 THREAD_YIELD;
                 poll_aio_result();
@@ -167,7 +169,7 @@ namespace nau::iosys
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
         fileHandle = mkstemp(fname);
 #elif NAU_PLATFORM_WIN32 | _TARGET_XBOX
-        if(_mktemp_s(fname, DAGOR_MAX_PATH) == 0)
+        if (_mktemp_s(fname, DAGOR_MAX_PATH) == 0)
             fileHandle = CreateFileW(reinterpret_cast<const wchar_t*>(nau::string(fname).tou16string().c_str()), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS,
                                      FILE_FLAG_OVERLAPPED, NULL);
 #else
@@ -183,7 +185,7 @@ namespace nau::iosys
 
     void AsyncWriterCB::close()
     {
-        if(fileHandle == INVALID_FILE_HANDLE)
+        if (fileHandle == INVALID_FILE_HANDLE)
             return;
         flush();
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
@@ -202,7 +204,7 @@ namespace nau::iosys
     void __stdcall AsyncWriterCB::on_write_done_cb(DWORD dwErr, DWORD cbWritten, OVERLAPPED* lpOverLap)
     {
         AsyncWriterCB* wcb = (AsyncWriterCB*)((char*)lpOverLap - offsetof(AsyncWriterCB, overlapped));
-        if(dwErr == ERROR_SUCCESS)
+        if (dwErr == ERROR_SUCCESS)
         {
             NAU_ASSERT(wcb->buf.size() == cbWritten);
             wcb->offs += cbWritten;
@@ -220,8 +222,8 @@ namespace nau::iosys
     void AsyncWriterCB::poll_aio_result()
     {
         int bwr = 0;
-        if(done == WRITE_IN_PROGRESS)
-            switch(aio_error(&aio))
+        if (done == WRITE_IN_PROGRESS)
+            switch (aio_error(&aio))
             {
                 case EINPROGRESS:
                     return;
@@ -246,11 +248,11 @@ namespace nau::iosys
 
         poll_aio_result();
 
-        if(done == WRITE_IN_PROGRESS)
+        if (done == WRITE_IN_PROGRESS)
         {
-            if(bufNext.size() + size <= bufMaxSize)
+            if (bufNext.size() + size <= bufMaxSize)
             {
-                for(int i = 0; i < size; ++i)
+                for (int i = 0; i < size; ++i)
                 {
                     bufNext.push_back(reinterpret_cast<const char*>(ptr)[i]);
                 }
@@ -259,22 +261,22 @@ namespace nau::iosys
             else  // too big to grow
                 waitPendingIO();
         }
-        else if(done == WRITE_FAILED)
+        else if (done == WRITE_FAILED)
             return;
 
         NAU_ASSERT(done == WRITE_DONE);
         NAU_ASSERT(buf.empty());
-#if(NAU_PLATFORM_WIN32 | _TARGET_XBOX) && DAGOR_DBGLEVEL > 0
+#if (NAU_PLATFORM_WIN32 | _TARGET_XBOX) && DAGOR_DBGLEVEL > 0
         DWORD lpNumberOfBytesTransferred = 0;
         NAU_ASSERT(GetOverlappedResult(fileHandle, &overlapped, &lpNumberOfBytesTransferred, /*wait*/ FALSE), "{}", GetLastError());
 #endif
 
         buf.swap(bufNext);
-        for(int i = 0; i < size; ++i)
+        for (int i = 0; i < size; ++i)
         {
             buf.push_back(reinterpret_cast<const char*>(ptr)[i]);
         }
-        if(buf.empty())
+        if (buf.empty())
             return;
 
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
@@ -294,10 +296,10 @@ namespace nau::iosys
 
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
         int failcnt = 0;
-        while(aio_write(&aio) != 0)
-            if(errno == EAGAIN)
+        while (aio_write(&aio) != 0)
+            if (errno == EAGAIN)
                 continue;
-            else if(failcnt < ERRORS_BEFORE_FAILING)
+            else if (failcnt < ERRORS_BEFORE_FAILING)
                 failcnt++;
             else
             {
@@ -310,24 +312,24 @@ namespace nau::iosys
         // so we have no choice but to do synchronous write (wait) when this function is called from non main thread
 
         NAU_ASSERT(false, "To check this later");
-        if(/*!is_main_thread() &&*/ result)
+        if (/*!is_main_thread() &&*/ result)
         {
             // Note: GetOverlappedResultEx is more effective then manual loop but it's not supported on win7
             DWORD _1;
             const bool res = GetOverlappedResult(fileHandle, &overlapped, &_1, /*wait*/ TRUE);
             NAU_ASSERT(res);
-            while(done == WRITE_IN_PROGRESS)
+            while (done == WRITE_IN_PROGRESS)
                 SleepEx(0, TRUE);
         }
 
-        if(result)  // Note: this is probably not needed since drop support of Xbox360
+        if (result)  // Note: this is probably not needed since drop support of Xbox360
         {
             errorsLeft = ERRORS_BEFORE_FAILING;
         }
         else
         {
             errorsLeft--;
-            if(errorsLeft < 0)
+            if (errorsLeft < 0)
             {
                 done = WRITE_FAILED;
                 buf.clear();
@@ -347,7 +349,7 @@ namespace nau::iosys
     void AsyncWriterCB::flush()
     {
         waitPendingIO();
-        if(bufNext.size() > 0)
+        if (bufNext.size() > 0)
         {
             write(NULL, 0);
             waitPendingIO();
@@ -358,9 +360,9 @@ namespace nau::iosys
     IGenSave* create_async_writer(const char* fname, int buf_size, AsyncWriterMode mode)
     {
         AsyncWriterCB* ret = new AsyncWriterCB(buf_size);
-        if(!ret->open(fname, mode))
+        if (!ret->open(fname, mode))
         {
-            if(ret)
+            if (ret)
             {
                 delete ret;
                 ret = nullptr;
@@ -372,9 +374,9 @@ namespace nau::iosys
     IGenSave* create_async_writer_temp(char* in_out_fname, int buf_size)
     {
         AsyncWriterCB* ret = new AsyncWriterCB(buf_size);
-        if(!ret->openTemp(in_out_fname))
+        if (!ret->openTemp(in_out_fname))
         {
-            if(ret)
+            if (ret)
             {
                 delete ret;
                 ret = nullptr;

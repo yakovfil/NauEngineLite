@@ -27,7 +27,7 @@ THE SOFTWARE.
 #ifndef __CC_IME_DELEGATE_H__
 #define __CC_IME_DELEGATE_H__
 
-#include <EASTL/string.h>
+#include <string>
 #include "math/CCGeometry.h"
 #include "base/CCEventKeyboard.h"
 
@@ -38,7 +38,7 @@ THE SOFTWARE.
 NS_CC_BEGIN
 
 /**
- * A static global empty eastl::string install.
+ * A static global empty std::string install.
  */
 extern const nau::string CC_DLL STD_STRING_EMPTY;
 

@@ -1,21 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/audio/audio_component_emitter.hpp"
 
-#include "nau/service/service_provider.h"
+#include <filesystem>
+#include <string>
+
+#include "nau/assets/asset_db.h"
+#include "nau/audio/audio_service.hpp"
+#include "nau/dataBlock/dag_dataBlock.h"
+#include "nau/io/virtual_file_system.h"
 #include "nau/scene/scene_manager.h"
 #include "nau/scene/world.h"
-
-#include "nau/audio/audio_service.hpp"
-#include "nau/assets/asset_db.h"
-#include "nau/io/virtual_file_system.h"
-
-#include "nau/dataBlock/dag_dataBlock.h"
-
-#include <filesystem>
-
+#include "nau/service/service_provider.h"
 
 NAU_AUDIO_BEGIN
 
@@ -89,7 +86,7 @@ void AudioComponentEmitter::deactivateComponent()
     NAU_LOG_DEBUG("Audio emmiter component deactivated");
 }
 
-void AudioComponentEmitter::createContainerFromBlk(const eastl::string& path)
+void AudioComponentEmitter::createContainerFromBlk(const std::string& path)
 {
     if (path.empty()) {
         NAU_LOG_ERROR("Failed to create an audio container from blk: empty path");

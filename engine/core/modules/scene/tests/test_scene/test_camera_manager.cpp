@@ -1,6 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <array>
+#include <span>
+#include <utility>
+
 #include "nau/scene/camera/camera_manager.h"
 #include "nau/scene/components/camera_component.h"
 #include "scene_test_base.h"
@@ -16,7 +20,7 @@ namespace nau::test
             return getServiceProvider().get<scene::ICameraManager>();
         }
 
-        static void checkCameras(eastl::span<scene::ICameraControl*> expectedCameras)
+        static void checkCameras(std::span<scene::ICameraControl*> expectedCameras)
         {
             using namespace nau::scene;
 
@@ -238,7 +242,7 @@ namespace nau::test
         ICameraManager::CamerasSnapshot snapshot;
         ICameraManager& manager = getCameraManager();
 
-        const auto syncCameras = [&snapshot, &manager]() -> eastl::pair<size_t, size_t>
+        const auto syncCameras = [&snapshot, &manager]() -> std::pair<size_t, size_t>
         {
             size_t addedCount = 0;
             size_t removedCount = 0;
@@ -264,7 +268,7 @@ namespace nau::test
             ASSERT_EQ(removedCount, 0);
             ASSERT_EQ(snapshot.getWorldAllCameras().size(), 3);
 
-            eastl::array cameras{camera_0.get(), camera_1.get(), camera_2.get()};
+            std::array cameras{camera_0.get(), camera_1.get(), camera_2.get()};
             EXPECT_NO_FATAL_FAILURE(checkCameras(cameras));
         }
 
@@ -278,7 +282,7 @@ namespace nau::test
             ASSERT_EQ(removedCount, 1);
             ASSERT_EQ(snapshot.getWorldAllCameras().size(), 3);
 
-            eastl::array cameras{camera_0.get(), camera_1.get(), camera_2.get()};
+            std::array cameras{camera_0.get(), camera_1.get(), camera_2.get()};
             EXPECT_NO_FATAL_FAILURE(checkCameras(cameras));
         }
 
@@ -290,7 +294,7 @@ namespace nau::test
             ASSERT_EQ(removedCount, 2);
             ASSERT_EQ(snapshot.getWorldAllCameras().size(), 1);
 
-            eastl::array cameras{camera_1.get()};
+            std::array cameras{camera_1.get()};
             EXPECT_NO_FATAL_FAILURE(checkCameras(cameras));
         }
     }

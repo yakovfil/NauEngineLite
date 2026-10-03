@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include <EASTL/span.h>
+#include <span>
 
 #include "nau/async/task.h"
 #include "nau/rtti/rtti_object.h"
@@ -18,12 +18,12 @@ namespace nau::scene
     {
         NAU_TYPEID(nau::scene::IComponentsActivator)
 
-        virtual Result<> activateComponents(Uid worldUid, eastl::span<Component*> components)
+        virtual Result<> activateComponents(Uid worldUid, std::span<Component*> components)
         {
             return ResultSuccess;
         }
 
-        virtual void deactivateComponents(Uid worldUid, eastl::span<Component*> components)
+        virtual void deactivateComponents(Uid worldUid, std::span<Component*> components)
         {
         }
     };
@@ -58,7 +58,7 @@ namespace nau::scene
          * @param [in] barrier
          * @return                  Task object providing status of the operation.
          */
-        virtual async::Task<> activateComponentsAsync(Uid worldUid, eastl::span<const Component*> components, async::Task<> barrier)
+        virtual async::Task<> activateComponentsAsync(Uid worldUid, std::span<const Component*> components, async::Task<> barrier)
         {
             return async::makeResolvedTask();
         }
@@ -69,7 +69,7 @@ namespace nau::scene
          * @param [in] components   A collection of components to deactivate.
          * @return                  Task object providing status of the operation.
          */
-        virtual async::Task<> deactivateComponentsAsync(Uid worldUid, eastl::span<const DeactivatedComponentData> components)
+        virtual async::Task<> deactivateComponentsAsync(Uid worldUid, std::span<const DeactivatedComponentData> components)
         {
             return async::makeResolvedTask();
         }
@@ -87,7 +87,7 @@ namespace nau::scene
     /**
      */
     template <std::derived_from<Component> T, std::derived_from<Component>... U>
-    inline bool hasAcceptableComponent(eastl::span<const Component*> components)
+    inline bool hasAcceptableComponent(std::span<const Component*> components)
     {
         for (const Component* const comp : components)
         {
@@ -103,7 +103,7 @@ namespace nau::scene
     /**
      */
     template <std::derived_from<Component> T, std::derived_from<Component>... U>
-    inline bool hasAcceptableComponent(eastl::span<Component*> components)
+    inline bool hasAcceptableComponent(std::span<Component*> components)
     {
         for (const Component* const comp : components)
         {

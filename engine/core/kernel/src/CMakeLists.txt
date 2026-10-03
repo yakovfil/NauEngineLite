@@ -59,7 +59,6 @@ if (Compiler_Cl)
   target_sources(${TargetName} PRIVATE
     ${moduleRoot}/extras/Visualizers/nau_kernel.natjmc
     ${moduleRoot}/extras/Visualizers/nau_kernel.natvis
-    ${moduleRoot}/extras/Visualizers/third_party_libs.natjmc
   )
 endif()
 
@@ -100,7 +99,6 @@ if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
   target_link_libraries(${TargetName} PUBLIC ${NAU_MINIMAL_DEPENDENCY_TARGETS})
 else()
 target_link_libraries(${TargetName} PUBLIC
-  EASTL
   tinyutf8
   fmt
   utf8cpp

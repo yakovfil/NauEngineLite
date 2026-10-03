@@ -2,8 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <cstring>
+#include <string>
 
-#include "EASTL/internal/char_traits.h"
 #include "blk_shared.h"
 #include "nau/diag/assertion.h"
 #include "nau/diag/logging.h"
@@ -34,9 +34,9 @@ namespace nau
 #define issue_error(robust_load, do_fatal, line, ...)                                                                          \
     do                                                                                                                         \
     {                                                                                                                          \
-        if(!robust_load || tls_reporter) [[unlikely]]                                                                          \
+        if (!robust_load || tls_reporter) [[unlikely]]                                                                         \
             issue_error_unhappy_path(do_fatal, line, reinterpret_cast<const char*>(nau::string::format(__VA_ARGS__).c_str())); \
-    } while(0)
+    } while (0)
 
     void DataBlock::issue_error_missing_param(const char* pname, int type) const
     {
@@ -50,7 +50,7 @@ namespace nau
     }
     void DataBlock::issue_error_load_failed(const char* fname, const char* desc) const
     {
-        if(desc)
+        if (desc)
             issue_error(false, !shared->blkRobustLoad() && fatalOnMissingFile, __LINE__, "{}, '{}'", desc, fname);
         else
             issue_error(shared->blkRobustLoad(), fatalOnMissingFile, __LINE__, "{}, '{}'", "BLK read error", fname);
@@ -82,7 +82,7 @@ namespace nau
     }
     void DataBlock::issue_error_bad_type_get(int bnid, int pnid, int type_get, int type_data) const
     {
-        if(type_get == TYPE_INT && type_data == TYPE_INT64)
+        if (type_get == TYPE_INT && type_data == TYPE_INT64)
         {
             int64_t v = getInt64ByNameId(pnid, 0);
             issue_error(shared->blkRobustOps(), false, __LINE__, "BLK getInt() for int64={:#}: block='{}', param='{}'\nin file '{}'",
@@ -97,7 +97,7 @@ namespace nau
     }
     void DataBlock::issue_deprecated_type_change(int pnid, int type_new, int type_prev) const
     {
-        if(allowVarTypeChange || (type_prev == TYPE_INT && type_new == TYPE_INT64) || (type_prev == TYPE_INT64 && type_new == TYPE_INT))
+        if (allowVarTypeChange || (type_prev == TYPE_INT && type_new == TYPE_INT64) || (type_prev == TYPE_INT64 && type_new == TYPE_INT))
             issue_error(shared->blkRobustOps(), false, __LINE__,
                         "BLK deprecated type change for param '{}' from {} to {} (even if allowVarTypeChange=true) in block '{}'\n in file '{}'",
                         getName(pnid), dblk::resolve_type(type_prev), dblk::resolve_type(type_new), getBlockName(), resolveFilename());
@@ -107,8 +107,8 @@ namespace nau
 
     void DataBlock::issue_warning_huge_string(const char* pname, const char* value, const char* fname, int line) const
     {
-        if(!shared->blkRobustLoad())
-            NAU_LOG_WARNING("BLK parsed string for param '{}' is really long ({] bytes) in line {} of '{}': '{}'", pname, eastl::CharStrlen(value), line, fname,
+        if (!shared->blkRobustLoad())
+            NAU_LOG_WARNING("BLK parsed string for param '{}' is really long ({] bytes) in line {} of '{}': '{}'", pname, std::char_traits<char>::length(value), line, fname,
                             value);
         G_UNUSED(pname);
         G_UNUSED(value);
@@ -118,9 +118,9 @@ namespace nau
 
     static void issue_error_unhappy_path(bool do_fatal, int line, const char* errText)
     {
-        if(tls_reporter)
+        if (tls_reporter)
             return tls_reporter->reportError(errText, do_fatal);
-        if(do_fatal)
+        if (do_fatal)
         {
             NAU_FAILURE(errText);
         }
@@ -133,7 +133,7 @@ namespace nau
     DataBlock::InstallReporterRAII::InstallReporterRAII(DataBlock::IErrorReporterPipe* rep)
     {
         prev = tls_reporter;
-        if(rep)
+        if (rep)
             tls_reporter = rep;
     }
     DataBlock::InstallReporterRAII::~InstallReporterRAII()
@@ -145,7 +145,7 @@ namespace nau
     {
         const char* s = reinterpret_cast<const char*>(shared->getSrc());
 #if DAGOR_DBGLEVEL > 0
-        if(file_only && s && strncmp(s, "BLK\n", 4) == 0)
+        if (file_only && s && strncmp(s, "BLK\n", 4) == 0)
             return "unknown";
 #endif
         G_UNUSED(file_only);

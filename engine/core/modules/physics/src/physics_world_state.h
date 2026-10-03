@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "nau/memory/eastl_aliases.h"
+#include <span>
+
+#include "nau/memory/standard_aliases.h"
 #include "nau/physics/components/rigid_body_component.h"
 #include "nau/physics/physics_body.h"
 #include "nau/physics/physics_world.h"
@@ -48,9 +50,9 @@ namespace nau::physics
 
         void tick(float secondsDt);
 
-        async::Task<> activateComponents(eastl::span<const scene::Component*> components);
+        async::Task<> activateComponents(std::span<const scene::Component*> components);
 
-        void deactivateComponents(eastl::span<const scene::DeactivatedComponentData> components);
+        void deactivateComponents(std::span<const scene::DeactivatedComponentData> components);
 
         bool syncSceneState(scene::ISceneManager& sceneManager);
 

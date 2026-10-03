@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "shader_pack.h"
+
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/io/nau_container.h"
 #include "nau/io/stream.h"
@@ -20,7 +24,7 @@ namespace nau
         RuntimeValue::assign(makeValueRef(m_shadersPackData), packHeader).ignore();
     }
 
-    Result<Shader> ShaderPack::getShader(eastl::string_view name)
+    Result<Shader> ShaderPack::getShader(std::string_view name)
     {
         Shader* shader = findShader(name);
 
@@ -29,9 +33,9 @@ namespace nau
             : NauMakeError("Shader not found");
     }
 
-    Result<eastl::vector<Shader>> ShaderPack::getShaders(const eastl::vector<eastl::string>& names)
+    Result<std::vector<Shader>> ShaderPack::getShaders(const std::vector<std::string>& names)
     {
-        eastl::vector<Shader> shaders;
+        std::vector<Shader> shaders;
         shaders.reserve(names.size());
 
         for (const auto& name : names)
@@ -48,7 +52,7 @@ namespace nau
         return {std::move(shaders)};
     }
 
-    Shader* ShaderPack::findShader(eastl::string_view shaderName)
+    Shader* ShaderPack::findShader(std::string_view shaderName)
     {
         auto& shaders = m_shadersPackData.shaders;
 
@@ -63,7 +67,7 @@ namespace nau
             return !shaders.empty() ? &shaders.front() : nullptr;
         }
 
-        auto iter = eastl::find_if(shaders.begin(), shaders.end(), [shaderName](const nau::Shader& shader)
+        auto iter = std::find_if(shaders.begin(), shaders.end(), [shaderName](const nau::Shader& shader)
         {
             return shader.name == shaderName;
         });

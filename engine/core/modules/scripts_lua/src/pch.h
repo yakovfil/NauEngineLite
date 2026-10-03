@@ -10,12 +10,11 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
-
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "lua_toolkit/lua_headers.h"
 #include "nau/rtti/ptr.h"

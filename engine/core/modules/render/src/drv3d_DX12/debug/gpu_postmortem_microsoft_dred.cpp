@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <span>
+
 #include "drv3d_DX12/device.h"
 
 using namespace drv3d_dx12;
@@ -158,19 +160,20 @@ void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::endCommandBuff
   commandListTable.endList(cmd);
 }
 
-void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::beginEvent(ID3D12GraphicsCommandList *cmd,
-  eastl::span<const char> text, eastl::span<const char> full_path)
+void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::beginEvent(ID3D12GraphicsCommandList* cmd,
+                                                                             std::span<const char> text,
+                                                                             std::span<const char> full_path)
 {
   commandListTable.getList(cmd).beginEvent({}, text, full_path);
 }
 
-void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::endEvent(ID3D12GraphicsCommandList *cmd,
-  eastl::span<const char> full_path)
+void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::endEvent(ID3D12GraphicsCommandList* cmd,
+                                                                           std::span<const char> full_path)
 {
   commandListTable.getList(cmd).endEvent({}, full_path);
 }
 
-void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_postmortem::microsoft::DeviceRemovedExtendedData::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   commandListTable.getList(cmd).marker({}, text);
 }

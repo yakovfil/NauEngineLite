@@ -3,17 +3,21 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <type_traits>
 
+#include "nau/utils/enum_utils.h"
 
 template <class EnumType>
 class IdExtentsFinder
 {
-  using Underlying = eastl::underlying_type_t<EnumType>;
+    using Underlying = std::underlying_type_t<EnumType>;
 
 public:
-  void update(EnumType value) { currentMax_ = eastl::max(currentMax_, eastl::to_underlying(value)); }
+    void update(EnumType value)
+    {
+        currentMax_ = std::max(currentMax_, nau::to_underlying(value));
+    }
 
   Underlying get() const { return currentMax_ + 1; }
 

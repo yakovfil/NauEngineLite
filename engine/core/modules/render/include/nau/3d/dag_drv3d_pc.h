@@ -7,8 +7,9 @@
   !error: must not be included for non-PC target!
 #endif
 
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
-#include <EASTL/vector.h>
 //#include <generic/dag_tabFwd.h>
 
 
@@ -18,8 +19,8 @@
   VPROG create_vertex_shader_hlsl(const char *hlsl_text, unsigned len, const char *entry, const char *profile, nau::string *out_err = NULL);
   FSHADER create_pixel_shader_hlsl(const char *hlsl_text, unsigned len, const char *entry, const char *profile,
     nau::string *out_err = NULL);
-  bool compile_compute_shader_hlsl(const char *hlsl_text, unsigned len, const char *entry, const char *profile,
-    eastl::vector<uint32_t>& shader_bin, nau::string &out_err);
+  bool compile_compute_shader_hlsl(const char* hlsl_text, unsigned len, const char* entry, const char* profile,
+                                   std::vector<uint32_t>& shader_bin, nau::string& out_err);
 #endif
 
 #if !_TARGET_D3D_MULTI
@@ -59,6 +60,6 @@
   //! enables or disables strong VSYNC (flips only on VBLANK); returns true on success
   bool enable_vsync(bool enable);
   //! retrieve list of available display modes
-  void get_video_modes_list(eastl::vector<nau::string>& list);
+  void get_video_modes_list(std::vector<nau::string> & list);
 #endif
   }; // namespace d3d

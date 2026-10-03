@@ -23,11 +23,11 @@
 
 #include "nau/dag_ioSys/dag_memIo.h"
 //#include <memory/dag_framemem.h>
-#include <EASTL/algorithm.h>
-#include "nau/string/string.h"
+#include <algorithm>
+
 #include "nau/diag/logging.h"
 #include "nau/startup/dag_globalSettings.h"
-
+#include "nau/string/string.h"
 
 bool get_settings_resolution(int &width, int &height, bool &is_retina, int def_width, int def_height, bool &out_is_auto)
 {

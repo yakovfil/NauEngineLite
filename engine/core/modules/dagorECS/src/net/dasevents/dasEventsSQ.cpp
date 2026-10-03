@@ -1,17 +1,20 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/dasEvents.h>
-#include <quirrel/sqModules/sqModules.h>
-#include <memory/dag_framemem.h>
-#include <daECS/net/netbase.h>
 #include <daECS/core/entityManager.h>
+#include <daECS/net/dasEvents.h>
+#include <daECS/net/netbase.h>
+#include <memory/dag_framemem.h>
+#include <quirrel/sqModules/sqModules.h>
 
-static eastl::optional<Tab<net::IConnection *>> get_recipients_optional_arg(HSQUIRRELVM vm, int argNum)
+#include <optional>
+#include <string>
+
+static std::optional<Tab<net::IConnection*>> get_recipients_optional_arg(HSQUIRRELVM vm, int argNum)
 {
   if (sq_gettop(vm) < argNum || sq_gettype(vm, argNum) == OT_NULL)
-    return eastl::nullopt;
+      return std::nullopt;
 
   Sqrat::Var<Sqrat::Array> recipientsVar{vm, argNum};
-  eastl::optional<Tab<net::IConnection *>> recipients{framemem_ptr()};
+  std::optional<Tab<net::IConnection*>> recipients{framemem_ptr()};
 
   recipients->resize(recipientsVar.value.GetSize());
   for (int i = 0; i < recipients->size(); i++)
@@ -30,14 +33,17 @@ static SQRESULT sq_send_net_event(HSQUIRRELVM vm)
 
   Sqrat::Var<int32_t> eid(vm, 2);
   Sqrat::Var<bind_dascript::DasEvent *> event(vm, 3);
-  eastl::optional<Tab<net::IConnection *>> recipients = get_recipients_optional_arg(vm, 4);
+  std::optional<Tab<net::IConnection*>> recipients = get_recipients_optional_arg(vm, 4);
 
-  eastl::optional<nau::ConstSpan<net::IConnection *>> recipientsSlice = eastl::nullopt;
+  std::optional<nau::ConstSpan<net::IConnection*>> recipientsSlice = std::nullopt;
   if (recipients)
     recipientsSlice = make_span_const(*recipients);
 
   net::send_dasevent(g_entity_mgr, /*bcast*/ false, ecs::EntityId((ecs::entity_id_t)eid.value), event.value, nullptr,
-    /*explicitConnections*/ recipientsSlice, []() { return eastl::string{}; });
+                     /*explicitConnections*/ recipientsSlice, []()
+  {
+      return std::string{};
+  });
   return 0;
 }
 
@@ -47,14 +53,17 @@ static SQRESULT sq_broadcast_net_event(HSQUIRRELVM vm)
     return SQ_ERROR;
 
   Sqrat::Var<bind_dascript::DasEvent *> event(vm, 2);
-  eastl::optional<Tab<net::IConnection *>> recipients = get_recipients_optional_arg(vm, 3);
+  std::optional<Tab<net::IConnection*>> recipients = get_recipients_optional_arg(vm, 3);
 
-  eastl::optional<nau::ConstSpan<net::IConnection *>> recipientsSlice = eastl::nullopt;
+  std::optional<nau::ConstSpan<net::IConnection*>> recipientsSlice = std::nullopt;
   if (recipients)
     recipientsSlice = make_span_const(*recipients);
 
   net::send_dasevent(g_entity_mgr, /*bcast*/ true, ecs::INVALID_ENTITY_ID, event.value, nullptr,
-    /*explicitConnections*/ recipientsSlice, []() { return eastl::string{}; });
+                     /*explicitConnections*/ recipientsSlice, []()
+  {
+      return std::string{};
+  });
   return 0;
 }
 

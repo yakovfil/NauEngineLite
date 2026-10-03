@@ -1,8 +1,15 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "shader_cache_from_asset.h"
+
+#include <windows.h>
+
+#include <codecvt>
+#include <fstream>
+#include <locale>
+#include <string>
+#include <vector>
 
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/io/file_system.h"
@@ -11,12 +18,6 @@
 #include "nau/platform/windows/utils/uid.h"
 #include "nau/serialization/runtime_value_builder.h"
 #include "nau/usd_meta_tools/usd_meta_manager.h"
-
-#include <windows.h>
-
-#include <fstream>
-#include <locale>
-#include <codecvt>
 
 namespace nau
 {
@@ -52,7 +53,7 @@ namespace nau
 
         struct ShaderBytecodeEntry
         {
-            eastl::string shaderName;
+            std::string shaderName;
             size_t blobOffset;
             size_t blobSize;
 
@@ -294,7 +295,7 @@ namespace nau
             auto layoutIt = meta.layouts.find(layout);
             if (layoutIt != meta.layouts.end())
             {
-                eastl::vector<VertexShaderDeclaration> vsd;
+                std::vector<VertexShaderDeclaration> vsd;
                 vsd.resize(layoutIt->second.items.size());
 
                 for (int i = 0; auto layoutItem : layoutIt->second.items)

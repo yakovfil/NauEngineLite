@@ -1,8 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "script_manager_impl.h"
+
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "lua_toolkit/lua_interop.h"
 #include "lua_toolkit/lua_utils.h"
@@ -46,7 +51,7 @@ namespace nau::scripts
 
         struct ScriptsGlobalConfig
         {
-            eastl::vector<io::FsPath> searchPaths;
+            std::vector<io::FsPath> searchPaths;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(searchPaths))
@@ -57,7 +62,7 @@ namespace nau::scripts
             NAU_CLASS_(InplaceBufferReader, io::IStreamReader)
 
         public:
-            InplaceBufferReader(eastl::span<const std::byte> buffer) :
+            InplaceBufferReader(std::span<const std::byte> buffer) :
                 m_buffer(buffer)
             {
             }
@@ -87,7 +92,7 @@ namespace nau::scripts
             }
 
         private:
-            eastl::span<const std::byte> m_buffer;
+            std::span<const std::byte> m_buffer;
             size_t m_readOffset = 0;
         };
 
@@ -144,7 +149,7 @@ namespace nau::scripts
             return memPtr;
         };
 
-        if (eastl::optional<ScriptsGlobalConfig> config = getServiceProvider().get<GlobalProperties>().getValue<ScriptsGlobalConfig>("/scripts"))
+        if (std::optional<ScriptsGlobalConfig> config = getServiceProvider().get<GlobalProperties>().getValue<ScriptsGlobalConfig>("/scripts"))
         {
             for (auto& path : config->searchPaths)
             {
@@ -171,7 +176,7 @@ namespace nau::scripts
         }
     }
 
-    Result<Ptr<>> ScriptManagerImpl::executeScriptFromBytes(const char* scriptName, eastl::span<const std::byte> scriptCode)
+    Result<Ptr<>> ScriptManagerImpl::executeScriptFromBytes(const char* scriptName, std::span<const std::byte> scriptCode)
     {
         // TODO: actually reader must be created through rtti::createInstance
         InplaceBufferReader reader(scriptCode);
@@ -267,7 +272,7 @@ namespace nau::scripts
         lua::initializeClass(getLua(), std::move(classDescriptor), false).ignore();
     }
 
-    Result<Ptr<IDispatch>> ScriptManagerImpl::createScriptInstance(eastl::string_view scriptClass)
+    Result<Ptr<IDispatch>> ScriptManagerImpl::createScriptInstance(std::string_view scriptClass)
     {
         NAU_FATAL(m_luaState);
         NAU_FAILURE("ScriptManager::createScriptInstance not implemented (under development)");
@@ -280,17 +285,17 @@ namespace nau::scripts
         m_searchPaths.emplace_back(std::move(path));
     }
 
-    void ScriptManagerImpl::addScriptFileExtension(eastl::string_view ext)
+    void ScriptManagerImpl::addScriptFileExtension(std::string_view ext)
     {
         m_scriptFileExtension = ext;
     }
 
-    Result<> ScriptManagerImpl::invokeGlobal(eastl::string_view method, DispatchArguments args, Functor<void(const nau::Ptr<>& result)> resultCallback)
+    Result<> ScriptManagerImpl::invokeGlobal(std::string_view method, DispatchArguments args, Functor<void(const nau::Ptr<>& result)> resultCallback)
     {
         auto* const luaState = getLua();
         const lua::StackGuard lstackGuard{luaState};
 
-        const int type = lua_getglobal(m_luaState, eastl::string{method}.c_str());
+        const int type = lua_getglobal(m_luaState, std::string{method}.c_str());
         NAU_ASSERT(type == LUA_TFUNCTION);
         if (type != LUA_TFUNCTION)
         {

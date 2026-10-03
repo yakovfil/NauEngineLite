@@ -3,9 +3,8 @@
 
 
 #pragma once
-#include <EASTL/string.h>
-
 #include <concepts>
+#include <string>
 
 #include "nau/assets/asset_path.h"
 #include "nau/assets/asset_view.h"

@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <nau/string/string.h>
+
+#include <memory>
+#include <string_view>
 
 #include "nau/diag/log_subscribers.h"
 #include "nau/diag/logging.h"
@@ -20,25 +22,25 @@ namespace nau::diag
         }
 
     private:
-        static eastl::basic_string_view<char8_t> levelToStr(LogLevel level)
+        static std::basic_string_view<char8_t> levelToStr(LogLevel level)
         {
-            if(level == LogLevel::Debug)
+            if (level == LogLevel::Debug)
             {
                 return u8"[D]";
             }
-            else if(level == LogLevel::Info)
+            else if (level == LogLevel::Info)
             {
                 return u8"[I]";
             }
-            else if(level == LogLevel::Warning)
+            else if (level == LogLevel::Warning)
             {
                 return u8"[W]";
             }
-            else if(level == LogLevel::Error)
+            else if (level == LogLevel::Error)
             {
                 return u8"[E]";
             }
-            else if(level == LogLevel::Critical)
+            else if (level == LogLevel::Critical)
             {
                 return u8"[C]";
             }
@@ -59,7 +61,7 @@ namespace nau::diag
 
     void WindowsDebugLogSubscriber::processMessage(const LoggerMessage& data)
     {
-        if(!::IsDebuggerPresent())
+        if (!::IsDebuggerPresent())
         {
             return;
         }
@@ -79,6 +81,6 @@ namespace nau::diag
 
     ILogSubscriber::Ptr createDebugOutputLogSubscriber()
     {
-        return eastl::make_unique<WindowsDebugLogSubscriber>();
+        return std::make_unique<WindowsDebugLogSubscriber>();
     }
 }  // namespace nau::diag

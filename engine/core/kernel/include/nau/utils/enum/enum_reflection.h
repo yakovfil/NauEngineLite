@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <span>
 #include <string_view>
 #include <type_traits>
 
-#include "EASTL/string_view.h"
 #include "nau/kernel/kernel_config.h"
 #include "nau/rtti/type_info.h"
 #include "nau/string/string.h"
@@ -31,7 +31,7 @@
 #define __ENUM_TO_STR_FUNC(Enum, ...)                               \
     inline constexpr const char* enum_to_str(Enum eval)             \
     {                                                               \
-        switch(eval)                                                \
+        switch (eval)                                               \
         {                                                           \
             NAU_FOR_EACH_WITH_ARG(__ENUM_TO_STR, Enum, __VA_ARGS__) \
             default:                                                \
@@ -39,33 +39,33 @@
         }                                                           \
     }
 
-#define __STR_TO_ENUM_FUNC(Enum, ...)                                      \
-    inline bool str_to_enum(const eastl::string_view& str, Enum& retval)   \
-    {                                                                      \
-        switch(mem_hash_fnv1(str.data(), str.size()))                      \
-        {                                                                  \
-            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)        \
-            default:                                                       \
-                return false;                                              \
-        }                                                                  \
-    }                                                                      \
-    inline bool str_to_enum(const eastl::u8string_view& str, Enum& retval) \
-    {                                                                      \
-        switch(mem_hash_fnv1(str.data(), str.size()))                      \
-        {                                                                  \
-            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)        \
-            default:                                                       \
-                return false;                                              \
-        }                                                                  \
-    }                                                                      \
-    inline bool str_to_enum(const nau::string_view& str, Enum& retval)     \
-    {                                                                      \
-        switch(mem_hash_fnv1(str.data(), str.size()))                      \
-        {                                                                  \
-            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)        \
-            default:                                                       \
-                return false;                                              \
-        }                                                                  \
+#define __STR_TO_ENUM_FUNC(Enum, ...)                                    \
+    inline bool str_to_enum(const std::string_view& str, Enum& retval)   \
+    {                                                                    \
+        switch (mem_hash_fnv1(str.data(), str.size()))                   \
+        {                                                                \
+            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)      \
+            default:                                                     \
+                return false;                                            \
+        }                                                                \
+    }                                                                    \
+    inline bool str_to_enum(const std::u8string_view& str, Enum& retval) \
+    {                                                                    \
+        switch (mem_hash_fnv1(str.data(), str.size()))                   \
+        {                                                                \
+            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)      \
+            default:                                                     \
+                return false;                                            \
+        }                                                                \
+    }                                                                    \
+    inline bool str_to_enum(const nau::string_view& str, Enum& retval)   \
+    {                                                                    \
+        switch (mem_hash_fnv1(str.data(), str.size()))                   \
+        {                                                                \
+            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)      \
+            default:                                                     \
+                return false;                                            \
+        }                                                                \
     }
 
 // names of registered enum values
@@ -94,20 +94,20 @@ inline nau::ConstSpan<const char*> get_enum_names();
     inline int find_enum_index(Enum value)                                               \
     {                                                                                    \
         static Enum values[] = {NAU_FOR_EACH_WITH_ARG(__ENUM_VALUE, Enum, __VA_ARGS__)}; \
-        for(int i = 0, n = sizeof(values) / sizeof(values[0]); i < n; i++)               \
-            if(values[i] == value)                                                       \
+        for (int i = 0, n = sizeof(values) / sizeof(values[0]); i < n; i++)              \
+            if (values[i] == value)                                                      \
                 return i;                                                                \
         return -1;                                                                       \
     }
 
-#define __ENUM_TO_STR_FORMATTER(Enum, ...)                                               \
-    template <>                                                                          \
-    struct fmt::formatter<Enum> : fmt::formatter<const char*>          \
-    {                                                                                    \
-        auto format(Enum type, fmt::format_context& ctx) const                \
-        {                                                                                \
+#define __ENUM_TO_STR_FORMATTER(Enum, ...)                                      \
+    template <>                                                                 \
+    struct fmt::formatter<Enum> : fmt::formatter<const char*>                   \
+    {                                                                           \
+        auto format(Enum type, fmt::format_context& ctx) const                  \
+        {                                                                       \
             return fmt::formatter<const char*>::format(enum_to_str(type), ctx); \
-        }                                                                                \
+        }                                                                       \
     };
 
 #define NAU_DECLARE_ENUM(etype, ...)            \
@@ -131,13 +131,13 @@ namespace nau
     {
         virtual ~IEnumRuntimeInfo() = default;
 
-        virtual eastl::string_view getName() const = 0;
+        virtual std::string_view getName() const = 0;
 
         virtual size_t getCount() const = 0;
 
-        virtual eastl::span<const int> getIntValues() const = 0;
+        virtual std::span<const int> getIntValues() const = 0;
 
-        virtual eastl::span<const std::string_view> getStringValues() const = 0;
+        virtual std::span<const std::string_view> getStringValues() const = 0;
     };
 
 }  // namespace nau
@@ -159,7 +159,7 @@ namespace nau::nau_detail
         {
         }
 
-        eastl::string_view getName() const override
+        std::string_view getName() const override
         {
             return typeName;
         }
@@ -169,12 +169,12 @@ namespace nau::nau_detail
             return itemCount;
         }
 
-        eastl::span<const int> getIntValues() const override
+        std::span<const int> getIntValues() const override
         {
             return {intValues, itemCount};
         }
 
-        eastl::span<const std::string_view> getStringValues() const override
+        std::span<const std::string_view> getStringValues() const override
         {
             return {strValues, itemCount};
         }
@@ -233,7 +233,7 @@ namespace nau::nau_detail
         static void parseEnumDefinition(std::string_view enumDefinitionString, size_t itemCount, std::string_view* result);
 
         /**
-        */
+         */
         static std::string_view toString(IEnumRuntimeInfo& enumInfo, int value);
 
         static Result<int> parse(IEnumRuntimeInfo& enumInfo, std::string_view str);
@@ -242,7 +242,7 @@ namespace nau::nau_detail
         static auto makeIntValues(const std::array<T, N>& values)
         {
             std::array<int, N> intValues;
-            for(size_t i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 intValues[i] = static_cast<int>(values[i]);
             }
@@ -261,7 +261,7 @@ namespace nau::nau_detail
         static auto makeStrValues(std::string_view (&valueDefString)[N])
         {
             std::array<std::string_view, N> result;
-            for(size_t i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 result[i] = parseSingleEnumEntry(valueDefString[i]);
             }
@@ -283,13 +283,13 @@ namespace nau
             return getEnumInternalInfo(EnumType{});
         }
 
-        static eastl::span<const EnumType> getValues()
+        static std::span<const EnumType> getValues()
         {
             decltype(auto) intern = getEnumInternalInfo(EnumType{});
             return {intern.enumValues, intern.itemCount};
         }
 
-        static eastl::span<const std::string_view> getStrValues()
+        static std::span<const std::string_view> getStrValues()
         {
             decltype(auto) intern = getEnumInternalInfo(EnumType{});
             return {intern.strValues, intern.itemCount};

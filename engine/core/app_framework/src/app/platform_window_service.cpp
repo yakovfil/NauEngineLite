@@ -3,6 +3,8 @@
 
 #include "./platform_window_service.h"
 
+#include <memory>
+
 #include "nau/app/app_messages.h"
 #include "nau/app/application.h"
 #include "nau/app/application_services.h"
@@ -127,9 +129,9 @@ namespace nau
         }
     }
 
-    eastl::unique_ptr<IRttiObject> createPlatformWindowService()
+    std::unique_ptr<IRttiObject> createPlatformWindowService()
     {
-        return eastl::make_unique<PlatformWindowService>();
+        return std::make_unique<PlatformWindowService>();
     }
 
 }  // namespace nau

@@ -3,9 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/bitvector.h>
-#include <EASTL/optional.h>
-#include <eastl/vector.h>
+#include <algorithm>
+#include <array>
+#include <iterator>
+#include <optional>
+#include <span>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "nau/utils/dynamic_bit_vector.h"
 //#include <debug/dag_log.h>
 #include "nau/3d/dag_drv3dConsts.h"
 
@@ -579,7 +586,7 @@ inline char *make_resource_barrier_string_from_state(char *str, size_t len, D3D1
     if ((len - ofs - 1) < space)
       return ofs;
 
-    eastl::copy(src, src + space, buf + ofs);
+    std::copy(src, src + space, buf + ofs);
     return ofs + space;
   };
   size_t strOffset = 0;
@@ -1035,7 +1042,7 @@ template <typename T, typename I>
 class ResourceStateSetBase
 {
 protected:
-  eastl::vector<T> dataSet;
+    std::vector<T> dataSet;
 
 public:
   T &operator[](I id)
@@ -1072,7 +1079,7 @@ public:
   void import(const ResourceStateSetBase &other)
   {
     dataSet.resize(other.dataSet.size());
-    eastl::copy(begin(other.dataSet), end(other.dataSet), begin(dataSet));
+    std::copy(begin(other.dataSet), end(other.dataSet), begin(dataSet));
   }
 };
 
@@ -1131,7 +1138,7 @@ inline void print_barrier(const D3D12_RESOURCE_BARRIER &barrier)
 
 class BarrierBatcher
 {
-  eastl::vector<D3D12_RESOURCE_BARRIER> dataSet;
+    std::vector<D3D12_RESOURCE_BARRIER> dataSet;
 
 public:
   size_t batchSize() const { return dataSet.size(); }
@@ -1177,27 +1184,27 @@ public:
 
   bool tryEraseTransition(ID3D12Resource *res, SubresourceIndex sub_res, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to)
   {
-    auto ref = eastl::find_if(begin(dataSet), end(dataSet),
-      [res, sub_res, from, to](const auto &barrier) //
+      auto ref = std::find_if(begin(dataSet), end(dataSet),
+                              [res, sub_res, from, to](const auto& barrier)  //
       {
-        if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
-        {
-          return false;
-        }
-        if (res != barrier.Transition.pResource)
-        {
-          return false;
-        }
-        if (sub_res.index() != barrier.Transition.Subresource)
-        {
-          return false;
-        }
-        return from == barrier.Transition.StateBefore && to == barrier.Transition.StateAfter;
+          if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
+          {
+              return false;
+          }
+          if (res != barrier.Transition.pResource)
+          {
+              return false;
+          }
+          if (sub_res.index() != barrier.Transition.Subresource)
+          {
+              return false;
+          }
+          return from == barrier.Transition.StateBefore && to == barrier.Transition.StateAfter;
       });
-    if (end(dataSet) == ref)
-    {
-      return false;
-    }
+      if (end(dataSet) == ref)
+      {
+          return false;
+      }
 
     dataSet.erase(ref);
     return true;
@@ -1205,20 +1212,20 @@ public:
 
   bool tryUpdateTransition(ID3D12Resource *res, SubresourceIndex sub_res, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to)
   {
-    auto ref = eastl::find_if(rbegin(dataSet), rend(dataSet),
-      [res, sub_res](const auto &barrier) //
+      auto ref = std::find_if(rbegin(dataSet), rend(dataSet),
+                              [res, sub_res](const auto& barrier)  //
       {
-        if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
-        {
-          return false;
-        }
-        return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
+          if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
+          {
+              return false;
+          }
+          return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
       });
 
-    if (rend(dataSet) == ref)
-    {
-      return false;
-    }
+      if (rend(dataSet) == ref)
+      {
+          return false;
+      }
 
     G_UNUSED(from);
     if (ref->Transition.StateAfter != from)
@@ -1256,8 +1263,8 @@ public:
     // we have to delete it
     if (ref->Transition.StateBefore == to)
     {
-      dataSet.erase(ref);
-      return true;
+        dataSet.erase(std::next(ref).base());
+        return true;
     }
 
     ref->Transition.StateAfter = to;
@@ -1267,23 +1274,23 @@ public:
 
   bool tryFixMissingEndTransition(ID3D12Resource *res, SubresourceIndex sub_res, D3D12_RESOURCE_STATES to)
   {
-    auto ref = eastl::find_if(begin(dataSet), end(dataSet),
-      [res, sub_res](const auto &barrier) //
+      auto ref = std::find_if(begin(dataSet), end(dataSet),
+                              [res, sub_res](const auto& barrier)  //
       {
-        if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
-        {
-          return false;
-        }
-        if (D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY != barrier.Flags)
-        {
-          return false;
-        }
-        return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
+          if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
+          {
+              return false;
+          }
+          if (D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY != barrier.Flags)
+          {
+              return false;
+          }
+          return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
       });
-    if (end(dataSet) == ref)
-    {
-      return false;
-    }
+      if (end(dataSet) == ref)
+      {
+          return false;
+      }
 
     ref->Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     ref->Transition.StateAfter = to;
@@ -1292,23 +1299,23 @@ public:
 
   bool tryFuseBeginEndTransition(ID3D12Resource *res, SubresourceIndex sub_res, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to)
   {
-    auto ref = eastl::find_if(begin(dataSet), end(dataSet),
-      [res, sub_res](const auto &barrier) //
+      auto ref = std::find_if(begin(dataSet), end(dataSet),
+                              [res, sub_res](const auto& barrier)  //
       {
-        if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
-        {
-          return false;
-        }
-        if (D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY != barrier.Flags)
-        {
-          return false;
-        }
-        return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
+          if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
+          {
+              return false;
+          }
+          if (D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY != barrier.Flags)
+          {
+              return false;
+          }
+          return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
       });
-    if (end(dataSet) == ref)
-    {
-      return false;
-    }
+      if (end(dataSet) == ref)
+      {
+          return false;
+      }
 
     ref->Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     G_UNUSED(from);
@@ -1320,17 +1327,17 @@ public:
 
   bool hasTranistionFor(ID3D12Resource *res, SubresourceIndex sub_res)
   {
-    auto ref = eastl::find_if(begin(dataSet), end(dataSet),
-      [res, sub_res](const auto &barrier) //
+      auto ref = std::find_if(begin(dataSet), end(dataSet),
+                              [res, sub_res](const auto& barrier)  //
       {
-        if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
-        {
-          return false;
-        }
-        return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
+          if (D3D12_RESOURCE_BARRIER_TYPE_TRANSITION != barrier.Type)
+          {
+              return false;
+          }
+          return res == barrier.Transition.pResource && sub_res.index() == barrier.Transition.Subresource;
       });
 
-    return end(dataSet) != ref;
+      return end(dataSet) != ref;
   }
 
   void flushUAV(ID3D12Resource *res)
@@ -1372,68 +1379,76 @@ public:
 #if DX12_ALLOW_SPLIT_BARRIERS
 class SplitTransitionTracker
 {
-  eastl::vector<eastl::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> dataSet;
+    std::vector<std::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> dataSet;
 
 public:
   bool beginTransition(ImageGlobalSubresouceId global_id, D3D12_RESOURCE_STATES state)
   {
-    eastl::pair value(global_id, state);
-    auto ref = eastl::lower_bound(begin(dataSet), end(dataSet), value,
-      [](auto l, auto r) //
-      { return l.first < r.first; });
-    dataSet.insert(ref, value);
-    return true;
+      std::pair value(global_id, state);
+      auto ref = std::lower_bound(begin(dataSet), end(dataSet), value,
+                                  [](auto l, auto r)  //
+      {
+          return l.first < r.first;
+      });
+      dataSet.insert(ref, value);
+      return true;
   }
 
-  eastl::optional<D3D12_RESOURCE_STATES> checkPendingTransition(ImageGlobalSubresouceId global_id) const
+  std::optional<D3D12_RESOURCE_STATES> checkPendingTransition(ImageGlobalSubresouceId global_id) const
   {
-    auto ref = eastl::lower_bound(begin(dataSet), end(dataSet), eastl::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
-      [](auto l, auto r) //
-      { return l.first < r.first; });
-    if (end(dataSet) == ref)
-    {
-      return eastl::nullopt;
-    }
+      auto ref = std::lower_bound(begin(dataSet), end(dataSet), std::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
+                                  [](auto l, auto r)  //
+      {
+          return l.first < r.first;
+      });
+      if (end(dataSet) == ref)
+      {
+          return std::nullopt;
+      }
     if (ref->first != global_id)
     {
-      return eastl::nullopt;
+        return std::nullopt;
     }
     return ref->second;
   }
 
-  eastl::optional<D3D12_RESOURCE_STATES> endTransition(ImageGlobalSubresouceId global_id)
+  std::optional<D3D12_RESOURCE_STATES> endTransition(ImageGlobalSubresouceId global_id)
   {
-    auto ref = eastl::lower_bound(begin(dataSet), end(dataSet), eastl::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
-      [](auto l, auto r) //
-      { return l.first < r.first; });
-    if (end(dataSet) == ref)
-    {
-      return eastl::nullopt;
-    }
+      auto ref = std::lower_bound(begin(dataSet), end(dataSet), std::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
+                                  [](auto l, auto r)  //
+      {
+          return l.first < r.first;
+      });
+      if (end(dataSet) == ref)
+      {
+          return std::nullopt;
+      }
     if (ref->first != global_id)
     {
-      return eastl::nullopt;
+        return std::nullopt;
     }
     auto value = ref->second;
     dataSet.erase(ref);
     return value;
   }
 
-  eastl::optional<eastl::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> endTransitionInRange(ImageGlobalSubresouceId global_id,
-    uint32_t count)
+  std::optional<std::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> endTransitionInRange(ImageGlobalSubresouceId global_id,
+                                                                                                uint32_t count)
   {
-    auto ref = eastl::lower_bound(begin(dataSet), end(dataSet), eastl::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
-      [](auto l, auto r) //
-      { return l.first < r.first; });
+      auto ref = std::lower_bound(begin(dataSet), end(dataSet), std::pair(global_id, D3D12_RESOURCE_STATE_COMMON),
+                                  [](auto l, auto r)  //
+      {
+          return l.first < r.first;
+      });
 
-    if (end(dataSet) == ref)
-    {
-      return eastl::nullopt;
-    }
+      if (end(dataSet) == ref)
+      {
+          return std::nullopt;
+      }
 
     if (ref->first >= global_id + count)
     {
-      return eastl::nullopt;
+        return std::nullopt;
     }
 
     auto value = *ref;
@@ -1447,13 +1462,19 @@ class SplitTransitionTracker
 public:
   constexpr bool beginTransition(ImageGlobalSubresouceId, D3D12_RESOURCE_STATES) const { return false; }
 
-  eastl::optional<D3D12_RESOURCE_STATES> checkPendingTransition(ImageGlobalSubresouceId) const { return eastl::nullopt; }
-
-  eastl::optional<D3D12_RESOURCE_STATES> endTransition(ImageGlobalSubresouceId) { return eastl::nullopt; }
-
-  eastl::optional<eastl::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> endTransitionInRange(ImageGlobalSubresouceId, uint32_t)
+  std::optional<D3D12_RESOURCE_STATES> checkPendingTransition(ImageGlobalSubresouceId) const
   {
-    return eastl::nullopt;
+      return std::nullopt;
+  }
+
+  std::optional<D3D12_RESOURCE_STATES> endTransition(ImageGlobalSubresouceId)
+  {
+      return std::nullopt;
+  }
+
+  std::optional<std::pair<ImageGlobalSubresouceId, D3D12_RESOURCE_STATES>> endTransitionInRange(ImageGlobalSubresouceId, uint32_t)
+  {
+      return std::nullopt;
   }
 };
 #endif
@@ -1462,21 +1483,21 @@ class UnorderedAccessTracker
 {
   // list of resources that will be used after the next flush as uav resource
   // should one be in the incoming list and outgoing list then it needs a uav barrier
-  eastl::vector<ID3D12Resource *> incomingUAVResources;
+  std::vector<ID3D12Resource*> incomingUAVResources;
   // list of resources that where previously accessed as uav resource and need
   // a uav barrier before they can be accessed again as uav resource to avoid race over its data
-  eastl::vector<ID3D12Resource *> outgoingUAVResources;
-  eastl::vector<ID3D12Resource *> userUavResources;
-  eastl::vector<ID3D12Resource *> userSkippedUavSync;
+  std::vector<ID3D12Resource*> outgoingUAVResources;
+  std::vector<ID3D12Resource*> userUavResources;
+  std::vector<ID3D12Resource*> userSkippedUavSync;
 
-public:
+  public:
   bool flushAccess(ID3D12Resource *res)
   {
-    auto ref = eastl::lower_bound(begin(outgoingUAVResources), end(outgoingUAVResources), res);
-    if (ref == end(outgoingUAVResources))
-    {
-      return false;
-    }
+      auto ref = std::lower_bound(begin(outgoingUAVResources), end(outgoingUAVResources), res);
+      if (ref == end(outgoingUAVResources))
+      {
+          return false;
+      }
     if (*ref != res)
     {
       return false;
@@ -1488,7 +1509,7 @@ public:
   void ignoreNextDepenecy(ID3D12Resource *res)
   {
     NAU_ASSERT(res != nullptr, "DX12: Can not turn off null resource uav flush");
-    auto ref = eastl::find(begin(userSkippedUavSync), end(userSkippedUavSync), res);
+    auto ref = std::find(begin(userSkippedUavSync), end(userSkippedUavSync), res);
     if (ref == end(userSkippedUavSync))
     {
       userSkippedUavSync.push_back(res);
@@ -1505,30 +1526,30 @@ public:
 
   bool explicitAccess(ID3D12Resource *res)
   {
-    auto ref = eastl::find(begin(userUavResources), end(userUavResources), res);
-    if (ref == end(userUavResources))
-    {
-      userUavResources.push_back(res);
+      auto ref = std::find(begin(userUavResources), end(userUavResources), res);
+      if (ref == end(userUavResources))
+      {
+          userUavResources.push_back(res);
 
-      auto autoEnd = eastl::lower_bound(begin(incomingUAVResources), end(incomingUAVResources), res);
-      if (autoEnd != end(incomingUAVResources) && *autoEnd == res)
-        incomingUAVResources.erase(autoEnd);
-      autoEnd = eastl::lower_bound(begin(outgoingUAVResources), end(outgoingUAVResources), res);
-      if (autoEnd != end(outgoingUAVResources) && *autoEnd == res)
-        outgoingUAVResources.erase(autoEnd);
-      return true;
-    }
+          auto autoEnd = std::lower_bound(begin(incomingUAVResources), end(incomingUAVResources), res);
+          if (autoEnd != end(incomingUAVResources) && *autoEnd == res)
+              incomingUAVResources.erase(autoEnd);
+          autoEnd = std::lower_bound(begin(outgoingUAVResources), end(outgoingUAVResources), res);
+          if (autoEnd != end(outgoingUAVResources) && *autoEnd == res)
+              outgoingUAVResources.erase(autoEnd);
+          return true;
+      }
     return false;
   }
 
   bool beginImplicitAccess(ID3D12Resource *res)
   {
-    auto ref = eastl::lower_bound(begin(incomingUAVResources), end(incomingUAVResources), res);
-    if (ref == end(incomingUAVResources) || *ref != res)
-    {
-      incomingUAVResources.insert(ref, res);
-      return true;
-    }
+      auto ref = std::lower_bound(begin(incomingUAVResources), end(incomingUAVResources), res);
+      if (ref == end(incomingUAVResources) || *ref != res)
+      {
+          incomingUAVResources.insert(ref, res);
+          return true;
+      }
     return false;
   }
 
@@ -1570,14 +1591,14 @@ public:
     {
       if (*inPos != *outPos)
       {
-        outPos = eastl::lower_bound(outPos, end(outgoingUAVResources), *inPos);
-        if (outPos == end(outgoingUAVResources))
-          break;
+          outPos = std::lower_bound(outPos, end(outgoingUAVResources), *inPos);
+          if (outPos == end(outgoingUAVResources))
+              break;
       }
       if (*inPos == *outPos)
       {
-        if (end(userSkippedUavSync) == eastl::find(begin(userSkippedUavSync), end(userSkippedUavSync), *inPos))
-        {
+          if (end(userSkippedUavSync) == std::find(begin(userSkippedUavSync), end(userSkippedUavSync), *inPos))
+          {
 #if DX12_VALIDATE_USER_BARRIERS
           if (report_user_barriers)
           {
@@ -2319,13 +2340,13 @@ public:
     {
       auto resBase = global_base + res_base;
       auto optionalEnd = stt.endTransitionInRange(resBase, count);
-      auto planeIndex = eastl::begin(plane_count);
+      auto planeIndex = std::begin(plane_count);
       auto planeOffset = SubresourceIndex::make(0);
       while (!optionalEnd)
       {
         planeOffset += plane_width;
         ++planeIndex;
-        if (planeIndex == eastl::end(plane_count))
+        if (planeIndex == std::end(plane_count))
         {
           break;
         }
@@ -3236,11 +3257,11 @@ private:
     size_t nextEntry = 0;
   };
 
-  eastl::vector<nau::string> segments;
+  std::vector<nau::string> segments;
   // have to store the resource name separate for later use, when resources may no longer be valid
-  eastl::vector<nau::string> resourceNames;
-  eastl::vector<TextureUsageEntry> textureUsageEntries;
-  eastl::vector<BufferUsageEntry> bufferUsageEntries;
+  std::vector<nau::string> resourceNames;
+  std::vector<TextureUsageEntry> textureUsageEntries;
+  std::vector<BufferUsageEntry> bufferUsageEntries;
 
   static bool is_automatic_transition(UsageEntryType type)
   {
@@ -3464,12 +3485,13 @@ private:
   {
     // for what ever reason, the compiler fails to see the conversion operator to string view and
     // complains on simple find. So have to resort to find_if with a lambda that make this explicit.
-    auto ref = eastl::find_if(begin(resourceNames), end(resourceNames),
-      [name](auto &s) //
-      { return nau::string(name) == s; });
+    auto ref = std::find_if(begin(resourceNames), end(resourceNames),
+                            [name](auto& s)  //
+    { return nau::string(name) == s;
+    });
     if (ref != end(resourceNames))
     {
-      return static_cast<size_t>(eastl::distance(eastl::begin(resourceNames), ref));
+        return static_cast<size_t>(std::distance(std::begin(resourceNames), ref));
     }
 
     resourceNames.emplace_back(name);
@@ -3486,22 +3508,24 @@ public:
   void recordTexture(Image *texture, SubresourceIndex sub_res, D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state,
     UsageEntryType what)
   {
-    auto ref = eastl::find_if(rbegin(textureUsageEntries), rend(textureUsageEntries),
-      [=](const TextureUsageEntry &e) //
-      { return texture == e.texture && sub_res == e.subRes; });
-
-    auto currentSegmentIndex = segments.size() - 1;
-    size_t nameIndex;
-    if (ref != rend(textureUsageEntries))
-    {
-      // don't record the same thing multiple times
-      if (is_mergable(what) && ref->what == what && ref->segmentIndex == currentSegmentIndex && ref->expectedState == expected_state)
+      auto ref = std::find_if(rbegin(textureUsageEntries), rend(textureUsageEntries),
+                              [=](const TextureUsageEntry& e)  //
       {
-        return;
+          return texture == e.texture && sub_res == e.subRes;
+      });
+
+      auto currentSegmentIndex = segments.size() - 1;
+      size_t nameIndex;
+      if (ref != rend(textureUsageEntries))
+      {
+          // don't record the same thing multiple times
+          if (is_mergable(what) && ref->what == what && ref->segmentIndex == currentSegmentIndex && ref->expectedState == expected_state)
+          {
+              return;
+          }
+          ref->nextEntry = textureUsageEntries.size();
+          nameIndex = ref->nameIndex;
       }
-      ref->nextEntry = textureUsageEntries.size();
-      nameIndex = ref->nameIndex;
-    }
     else
     {
       texture->getDebugName([this, &nameIndex](auto &name) { nameIndex = addResourceName(name); });
@@ -3522,21 +3546,24 @@ public:
   void recordBuffer(BufferResourceReference buffer, D3D12_RESOURCE_STATES current_state, ResourceBarrier expected_state,
     UsageEntryType what)
   {
-    auto ref = eastl::find_if(rbegin(bufferUsageEntries), rend(bufferUsageEntries),
-      [buffer](const BufferUsageEntry &e) { return buffer == e.buffer; });
-
-    auto currentSegmentIndex = segments.size() - 1;
-    size_t nameIndex;
-    if (ref != rend(bufferUsageEntries))
-    {
-      // don't record the same thing multiple times
-      if (is_mergable(what) && ref->what == what && ref->segmentIndex == currentSegmentIndex && ref->expectedState == expected_state)
+      auto ref = std::find_if(rbegin(bufferUsageEntries), rend(bufferUsageEntries),
+                              [buffer](const BufferUsageEntry& e)
       {
-        return;
+          return buffer == e.buffer;
+      });
+
+      auto currentSegmentIndex = segments.size() - 1;
+      size_t nameIndex;
+      if (ref != rend(bufferUsageEntries))
+      {
+          // don't record the same thing multiple times
+          if (is_mergable(what) && ref->what == what && ref->segmentIndex == currentSegmentIndex && ref->expectedState == expected_state)
+          {
+              return;
+          }
+          ref->nextEntry = bufferUsageEntries.size();
+          nameIndex = ref->nameIndex;
       }
-      ref->nextEntry = bufferUsageEntries.size();
-      nameIndex = ref->nameIndex;
-    }
     else
     {
       char buf[MAX_OBJECT_NAME_LENGTH];
@@ -3553,24 +3580,24 @@ public:
     bufferUsageEntries.push_back(e);
   }
 
-  void beginEvent(eastl::span<const char> name)
+  void beginEvent(std::span<const char> name)
   {
     if (segments.empty())
     {
-        eastl::string tempStr = {begin(name), end(name) - 1};
-      segments.emplace_back(tempStr.c_str());
+        std::string tempStr = {name.data(), name.size() - 1};
+        segments.emplace_back(tempStr.c_str());
     }
     else
     {
-      auto place = segments.push_back_uninitialized();
-      auto &last = *(segments.crbegin() + 1);
-      auto &s = *::new (place) nau::string(last.size() + name.size());//nau::string(nau::string::CtorDoNotInitialize{}, last.size() + name.size());
-      s.append(last);
-      s.push_back('/');
+        auto previous = segments.back();
+        auto& s = segments.emplace_back(previous.size() + name.size());
+        auto& last = previous;  // nau::string(nau::string::CtorDoNotInitialize{}, last.size() + name.size());
+        s.append(last);
+        s.push_back('/');
 
-      eastl::string tempUglyString = eastl::string(begin(name), end(name) - 1);
+        std::string tempUglyString = std::string(name.data(), name.size() - 1);
 
-      s.append( tempUglyString.c_str() );
+        s.append(tempUglyString.c_str());
     }
   }
 
@@ -3580,21 +3607,23 @@ public:
     {
       return;
     }
-    auto place = segments.push_back_uninitialized();
-    auto &last = *(segments.crbegin() + 1);
-    //TODO: fix it
-    //if(auto at = eastl::find_last_of(last.begin(), last.end(), '/'); at != nau::string::npos)
+
+    // TODO: fix it
+    // if(auto at = eastl::find_last_of(last.begin(), last.end(), '/'); at != nau::string::npos)
     //{
-    //  ::new (place) nau::string(last, 0, at);
-    //}
-    //else
+    //   ::new (place) nau::string(last, 0, at);
+    // }
+    // else
     //{
-    //  ::new (place) nau::string();
-    //}
-    ::new (place) nau::string();
+    //   segments.emplace_back();
+    // }
+    segments.emplace_back();
   }
 
-  void marker(eastl::span<const char> name) { G_UNUSED(name); }
+  void marker(std::span<const char> name)
+  {
+      G_UNUSED(name);
+  }
 
   void clear()
   {
@@ -3738,7 +3767,7 @@ class ResourceUsageHistoryDataSetDebugger
 
   struct FrameDataSet
   {
-    eastl::vector<ResourceUsageHistoryDataSet> dataSet;
+      std::vector<ResourceUsageHistoryDataSet> dataSet;
   };
 
   struct TextureInfo
@@ -3787,11 +3816,11 @@ class ResourceUsageHistoryDataSetDebugger
   };
 
   dag::CriticalSection mutex;
-  eastl::vector<FrameDataSet> dataSets;
-  eastl::vector<TextureInfo> textures;
-  eastl::vector<BufferInfo> buffers;
-  eastl::vector<AnalyzedEntry> analyzedTextureEntries;
-  eastl::vector<AnalyzedEntry> analyzedBufferEntries;
+  std::vector<FrameDataSet> dataSets;
+  std::vector<TextureInfo> textures;
+  std::vector<BufferInfo> buffers;
+  std::vector<AnalyzedEntry> analyzedTextureEntries;
+  std::vector<AnalyzedEntry> analyzedBufferEntries;
   FrameDataSet currentFrameDataSet;
   AnalyzerMode inspectinTextureMode = AnalyzerMode::UNIQUE_MISSING_BARRIERS;
   AnalyzerMode inspectinBufferMode = AnalyzerMode::UNIQUE_MISSING_BARRIERS;
@@ -3850,7 +3879,7 @@ public:
       return;
     }
     dag::CSAutoLock lock{mutex};
-    dataSets.push_back(eastl::move(currentFrameDataSet));
+    dataSets.push_back(std::move(currentFrameDataSet));
     if (framesToRecord > 0)
     {
       --framesToRecord;
@@ -4775,7 +4804,7 @@ public:
     BaseType::finishWorkItem(initial_state);
   }
 
-  void beginEvent(eastl::span<const char> name)
+  void beginEvent(std::span<const char> name)
   {
     if (!recordData)
     {
@@ -4793,7 +4822,7 @@ public:
     historicalData.endEvent();
   }
 
-  void marker(eastl::span<const char> name)
+  void marker(std::span<const char> name)
   {
     if (!recordData)
     {
@@ -4869,11 +4898,15 @@ class ResourceUsageManagerWithHistory : public ResourceUsageManager
 public:
   void onFlush(InititalResourceStateSet &initial_state) { BaseType::finishWorkItem(initial_state); }
 
-  void beginEvent(eastl::span<const char>) {}
+  void beginEvent(std::span<const char>)
+  {
+  }
 
   void endEvent() {}
 
-  void marker(eastl::span<const char>) {}
+  void marker(std::span<const char>)
+  {
+  }
 
   void setRecordingState(bool) {}
 
@@ -4889,9 +4922,9 @@ class ResourceActivationTracker
     ResourceMemory memory;
   };
 
-  eastl::vector<ResourceDeactivation> deactivations;
+  std::vector<ResourceDeactivation> deactivations;
 
-public:
+  public:
   void deactivateBuffer(BufferResourceReferenceAndAddressRange buffer, const ResourceMemory &memory)
   {
     ResourceDeactivation rd;
@@ -4934,12 +4967,12 @@ public:
 
     for (auto at = begin(deactivations);;)
     {
-      at = eastl::find_if(at, end(deactivations), finder);
-      if (at == end(deactivations))
-        break;
-      bb.flushAlias(at->res, buffer.buffer);
-      eastl::swap(*at, deactivations.back());
-      deactivations.pop_back();
+        at = std::find_if(at, end(deactivations), finder);
+        if (at == end(deactivations))
+            break;
+        bb.flushAlias(at->res, buffer.buffer);
+        std::swap(*at, deactivations.back());
+        deactivations.pop_back();
     }
 
     switch (action)
@@ -5013,12 +5046,12 @@ public:
 
       for (auto at = begin(deactivations);;)
       {
-        at = eastl::find_if(at, end(deactivations), finder);
-        if (at == end(deactivations))
-          break;
-        bb.flushAlias(at->res, tex->getHandle());
-        eastl::swap(*at, deactivations.back());
-        deactivations.pop_back();
+          at = std::find_if(at, end(deactivations), finder);
+          if (at == end(deactivations))
+              break;
+          bb.flushAlias(at->res, tex->getHandle());
+          std::swap(*at, deactivations.back());
+          deactivations.pop_back();
       }
 
       switch (action)
@@ -5145,35 +5178,46 @@ public:
 
 class BufferAccessTracker
 {
-  class CacheLineAllocator
-  {
-  public:
-    EASTL_ALLOCATOR_EXPLICIT CacheLineAllocator(const char * = nullptr) {}
-    CacheLineAllocator(const CacheLineAllocator &) = default;
-    CacheLineAllocator(const CacheLineAllocator &, const char *) {}
-
-    CacheLineAllocator &operator=(const CacheLineAllocator &) = default;
-
-    void *allocate(size_t n, int = 0) { return ::operator new[](n, std::align_val_t{std::hardware_constructive_interference_size}); }
-    void *allocate(size_t, size_t, size_t, int = 0) { return nullptr; }
-    void deallocate(void *p, size_t) { ::operator delete[](p, std::align_val_t{std::hardware_constructive_interference_size}); }
-
-    const char *get_name() const { return ""; }
-    void set_name(const char *) {}
-
-    bool operator==(const CacheLineAllocator &) { return true; }
-    bool operator!=(const CacheLineAllocator &) { return false; }
+    template <typename T>
+    class CacheLineAllocator
+    {
+    public:
+        using value_type = T;
+        using is_always_equal = std::true_type;
+        CacheLineAllocator() = default;
+        template <typename U>
+        CacheLineAllocator(const CacheLineAllocator<U>&)
+        {
+        }
+        static constexpr size_t alignment = std::max(alignof(T), std::hardware_constructive_interference_size);
+        T* allocate(size_t count)
+        {
+            if (count > std::numeric_limits<size_t>::max() / sizeof(T))
+            {
+                std::fputs("Nau cache-line allocation size overflow\n", stderr);
+                std::abort();
+            }
+            return static_cast<T*>(::operator new[](count * sizeof(T), std::align_val_t{alignment}));
+        }
+        void deallocate(T* pointer, size_t)
+        {
+            ::operator delete[](pointer, std::align_val_t{alignment});
+        }
+        template <typename U>
+        bool operator==(const CacheLineAllocator<U>&) const
+        {
+            return true;
+        }
   };
 
-  eastl::array<eastl::bitvector<CacheLineAllocator>, FRAME_FRAME_BACKLOG_LENGTH> frame_accesses;
+  std::array<nau::DynamicBitVector<CacheLineAllocator<nau::BitVectorWord>>, FRAME_FRAME_BACKLOG_LENGTH> frame_accesses;
   uint8_t current_frame = 0;
 
 public:
   BufferAccessTracker()
   {
     for (auto &frame_access : frame_accesses)
-      frame_access.reserve(std::hardware_constructive_interference_size / sizeof(eastl::BitvectorWordType)); // reserve a full
-                                                                                                             // cacheline
+        frame_access.reserve(std::hardware_constructive_interference_size / sizeof(nau::BitVectorWord));
   }
 
   void updateLastFrameAccess(BufferGlobalId resourceId)
@@ -5196,4 +5240,4 @@ public:
     frame_accesses[current_frame].clear();
   }
 };
-} // namespace drv3d_dx12
+}  // namespace drv3d_dx12

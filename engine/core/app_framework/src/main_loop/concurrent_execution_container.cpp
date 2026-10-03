@@ -3,6 +3,9 @@
 
 #include "concurrent_execution_container.h"
 
+#include <chrono>
+#include <memory>
+
 #include "nau/app/application.h"
 #include "nau/app/main_loop/game_system.h"
 #include "nau/service/internal/service_provider_initialization.h"
@@ -58,7 +61,7 @@ namespace nau
             NAU_FATAL(m_gameSystemInstance);
             NAU_FATAL(m_gameSystemInstance->is<IGameSceneUpdate>());
 
-            getServiceProvider().addService(eastl::unique_ptr<IRttiObject>{m_gameSystemInstance});
+            getServiceProvider().addService(std::unique_ptr<IRttiObject>{m_gameSystemInstance});
 
             // If game system requires fixed time step update then WorkQueue::poll() will use blocking mode:
             // to maintain the required refresh rate, it may be necessary to skip some time - in this case,
@@ -66,8 +69,8 @@ namespace nau
             //
             // If a fixed update frequency is not required, then the poll will work without thread blocking and time gaps,
             // ensuring the maximum speed of calling the game system update
-            const std::optional<eastl::chrono::milliseconds> BlockingTimeout = std::nullopt;
-            const std::optional<eastl::chrono::milliseconds> NonBlockingTimeout = eastl::chrono::milliseconds(0);
+            const std::optional<std::chrono::milliseconds> BlockingTimeout = std::nullopt;
+            const std::optional<std::chrono::milliseconds> NonBlockingTimeout = std::chrono::milliseconds(0);
 
             for (m_executionTask = executeGameSystem(); !m_executionTask.isReady();)
             {
@@ -197,9 +200,9 @@ namespace nau
                     const auto sleepTime = *fixedTimeStep - updateDuration;
 
                     // TODO: add async delay(timeout) -> Task<>.
-                    // Or revise the implementation of the timer manager so as not to terminate the current coroutine with an error, 
+                    // Or revise the implementation of the timer manager so as not to terminate the current coroutine with an error,
                     // but to immediately complete the co_await without waiting.
-                    // 
+                    //
                     // Currently co_await timeout will automatically completed current coroutine.
                     // But to complete gracefully, the game system expects gameSceneUpdate to always be called
                     // otherwise it will never complete its execution: executeGameSystem will only stops after gameSceneUpdate.update() returns false.

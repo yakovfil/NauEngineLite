@@ -2,14 +2,16 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <xxHash/xxh3.h>
+
+#include <optional>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <vector>
+
+#include "nau/diag/logging.h"
 #include "nau/shaders/dag_overrideStates.h"
 #include "nau/util/dag_generationReferencedData.h"
-#include <EASTL/optional.h>
-#include <EASTL/vector_map.h>
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include <xxHash/xxh3.h>
-#include "nau/diag/logging.h"
-
+#include "nau/utils/sorted_vector.h"
 
 //#if 1
 namespace shaders
@@ -32,7 +34,7 @@ static ska::flat_hash_map</*hash*/ uint64_t, OverrideStateId, ska::power_of_two_
 
 static GenerationReferencedData<OverrideStateId, OverrideStateRefCounted> overrideStates;
 
-static eastl::optional<OverrideState> overrideMaster;
+static std::optional<OverrideState> overrideMaster;
 
 OverrideState get(OverrideStateId override_id)
 {
@@ -145,7 +147,7 @@ OverrideStateId add_master_override(OverrideStateId override_id)
   return overriddenId;
 }
 
-static eastl::vector_map<OverrideStateId, OverrideStateId> masterToCurrent;
+static nau::SortedVectorMap<OverrideStateId, OverrideStateId> masterToCurrent;
 
 void set_master_state(const OverrideState &s_)
 {
@@ -184,7 +186,7 @@ OverrideStateId get_current_with_master()
 //- compatibility layer
 
 /*
-static eastl::vector<OverrideStateId> current_override;
+static std::vector<OverrideStateId> current_override;
 bool set(OverrideStateId override_id)
 {
   if (override_id)

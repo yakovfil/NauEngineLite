@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/service/string.h
 
-
 #pragma once
-/* Prototype header for string type. Currently just EASTL.
+/* UTF-8 string backed by tiny_utf8.
  *
  * Defines nau::string, nau::string_view, nau::format
  *
  * */
 
-#include <EASTL/string.h>
 #include <fcntl.h>
+
+#include <algorithm>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 #ifdef _WIN32
     #include <io.h>
 #endif
@@ -73,14 +76,17 @@ namespace nau
         using raw_reverse_iterator = container_type::raw_reverse_iterator;
         using raw_const_reverse_iterator = container_type::raw_const_reverse_iterator;
         using indicator_type = container_type::indicator_type;
-        enum : size_type{													npos = (size_type)-1 };
+        enum : size_type
+        {
+            npos = (size_type)-1
+        };
 
         container_type m_data;
 
 #pragma region default_constructors
     private:
         template <class T>
-            requires std::is_same_v<std::remove_cvref_t<T>, container_type>
+        requires std::is_same_v<std::remove_cvref_t<T>, container_type>
         string(T&& m_data) :
             m_data(std::forward<T>(m_data)){};
 
@@ -93,133 +99,79 @@ namespace nau
         string& operator=(string&&) = default;
 
         string(size_t n) :
-            m_data(n, u8'\0'){};
+            m_data(n, u8'\0') {};
 
 #pragma endregion
 
-#pragma region locale_string_constructors
-        template <class S>
-        requires std::is_constructible_v<eastl::string_view, S>
-        string(S&& s)  // TODO locale
-        {
-            auto sPtr = eastl::string_view(s).data();
-            if (!sPtr)
-            {
-                m_data = u8"";
-                return;
-            }
-            if (nau_utf8::is_valid((const char8_t*)sPtr))
-            {
-                m_data = (const char8_t*)sPtr;
-            }
-            else
-            {
-                NAU_FAILURE(u8"Invalid input string.");
-                m_data.clear();
-            }
-        }
-
-        template <class S>
-        requires(!std::is_constructible_v<eastl::string_view, S>) &&
-                std::is_constructible_v<std::string_view, S>
-        string(S&& s)  // TODO locale
-        {
-            auto sPtr = std::string_view(s).data();
-            if (!sPtr)
-            {
-                m_data = u8"";
-                return;
-            }
-            if (nau_utf8::is_valid((const char8_t*)sPtr))
-            {
-                m_data = (const char8_t*)sPtr;
-            }
-            else
-            {
-                NAU_FAILURE(u8"Invalid input string.");
-                m_data.clear();
-            }
-        }
-
-        template <class S>
-        requires std::is_constructible_v<eastl::wstring_view, S>
-        string(S&& s)
-        {
-            auto sView = eastl::wstring_view(s);
-            if (!sView.data())
-            {
-                m_data = u8"";
-                return;
-            }
-            nau_utf8::utf16to32(sView.begin(), sView.end(), std::back_inserter(m_data));
-
-            if (!nau_utf8::is_valid(m_data.c_str()))
-            {
-                NAU_FAILURE(u8"Invalid input string.");
-                m_data.clear();
-            }
-        }
-
-        template <class S>
-        requires(!std::is_constructible_v<eastl::wstring_view, S>) &&
-                std::is_constructible_v<std::wstring_view, S>
-        string(S&& s)
-        {
-            auto sView = std::wstring_view(s);
-            nau_utf8::utf16to32(sView.begin(), sView.end(), std::back_inserter(m_data));  // TODO locale
-        }
-
-#pragma endregion
 #pragma region string_constructors
-
         template <class S>
-        requires std::is_constructible_v<eastl::u8string_view, S>
-        string(S&& s) :
-            m_data(eastl::u8string_view(s).data())
-        {
-        }
-
-        template <class S>
-        requires std::is_constructible_v<eastl::u16string_view, S>
+        requires std::is_constructible_v<std::string_view, S>
         string(S&& s)
         {
-            auto sView = eastl::u16string_view(s);
-            nau_utf8::utf16to32(sView.begin(), sView.end(), std::back_inserter(m_data));
-        }
-
-        template <class S>
-        requires std::is_constructible_v<eastl::u32string_view, S>
-        string(S&& s)
-        {
-            auto sView = eastl::u32string_view(s);
-            for (size_t i = 0; i < sView.size(); i++)
+            // Nullable C strings historically represent an empty Nau string.
+            if constexpr (std::is_pointer_v<std::remove_reference_t<S>>)
+                if (s == nullptr)
+                    return;
+            const auto view = std::string_view(std::forward<S>(s));
+            if (view.empty())
+                return;
+            if (!utf8::is_valid(view.begin(), view.end()))
             {
-                m_data.push_back(sView[i]);
+                NAU_FAILURE_ALWAYS("Invalid input string.");
+                return;
             }
+            nau_utf8::utf8to32(view.begin(), view.end(), std::back_inserter(m_data));
         }
 
         template <class S>
-        requires(!std::is_constructible_v<eastl::u8string_view, S>) &&
-                std::is_constructible_v<std::u8string_view, S>
-        string(S&& s) :
-            string(std::u8string_view(s).data())
+        requires std::is_constructible_v<std::u8string_view, S>
+        string(S&& s)
         {
+            // Nullable C strings historically represent an empty Nau string.
+            if constexpr (std::is_pointer_v<std::remove_reference_t<S>>)
+                if (s == nullptr)
+                    return;
+            const auto view = std::u8string_view(std::forward<S>(s));
+            if (view.empty())
+                return;
+            nau_utf8::utf8to32(view.begin(), view.end(), std::back_inserter(m_data));
         }
 
         template <class S>
-        requires(!std::is_constructible_v<eastl::u16string_view, S>) &&
-                std::is_constructible_v<std::u16string_view, S>
-        string(S&& s) :
-            string(std::u16string_view(s).data())
+        requires std::is_constructible_v<std::wstring_view, S>
+        string(S&& s)
         {
+            // Nullable C strings historically represent an empty Nau string.
+            if constexpr (std::is_pointer_v<std::remove_reference_t<S>>)
+                if (s == nullptr)
+                    return;
+            const auto view = std::wstring_view(std::forward<S>(s));
+            nau_utf8::utf16to32(view.begin(), view.end(), std::back_inserter(m_data));
         }
 
         template <class S>
-        requires(!std::is_constructible_v<eastl::u32string_view, S>) &&
-                std::is_constructible_v<std::u32string_view, S>
-        string(S&& s) :
-            string(std::u32string_view(s).data())
+        requires std::is_constructible_v<std::u16string_view, S>
+        string(S&& s)
         {
+            // Nullable C strings historically represent an empty Nau string.
+            if constexpr (std::is_pointer_v<std::remove_reference_t<S>>)
+                if (s == nullptr)
+                    return;
+            const auto view = std::u16string_view(std::forward<S>(s));
+            nau_utf8::utf16to32(view.begin(), view.end(), std::back_inserter(m_data));
+        }
+
+        template <class S>
+        requires std::is_constructible_v<std::u32string_view, S>
+        string(S&& s)
+        {
+            // Nullable C strings historically represent an empty Nau string.
+            if constexpr (std::is_pointer_v<std::remove_reference_t<S>>)
+                if (s == nullptr)
+                    return;
+            const auto view = std::u32string_view(std::forward<S>(s));
+            for (char32_t cp : view)
+                m_data.push_back(cp);
         }
 
         string(string_view strView);
@@ -227,26 +179,26 @@ namespace nau
 #pragma endregion
 
 #pragma region conversions
-        eastl::string tostring() const
+        std::string tostring() const
         {
-            return eastl::string((const char*)m_data.c_str());
+            return std::string((const char*)m_data.c_str(), m_data.size());
         }
 
-        eastl::u8string tou8string() const
+        std::u8string tou8string() const
         {
-            return eastl::u8string(m_data.c_str());
+            return std::u8string(m_data.c_str(), m_data.size());
         }
 
-        eastl::u16string tou16string() const
+        std::u16string tou16string() const
         {
-            eastl::u16string output;
+            std::u16string output;
             nau_utf8::utf8to16(m_data.c_str(), m_data.c_str() + m_data.size(), std::back_inserter(output));
             return output;
         }
 
-        eastl::u32string tou32string() const
+        std::u32string tou32string() const
         {
-            eastl::u32string output;
+            std::u32string output;
             nau_utf8::utf8to32(m_data.c_str(), m_data.c_str() + m_data.size(), std::back_inserter(output));
             return output;
         }
@@ -300,37 +252,37 @@ namespace nau
         inline bool operator>=(const string&) const = default;
 
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator==(S&& rhs) const
         {
             return *this == string(rhs);
         };
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator!=(S&& rhs) const
         {
             return *this != string(rhs);
         };
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator<(S&& rhs) const
         {
             return *this < string(rhs);
         };
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator>(S&& rhs) const
         {
             return *this > string(rhs);
         };
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator<=(S&& rhs) const
         {
             return *this <= string(rhs);
         };
         template <class S>
-            requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
+        requires(std::is_constructible_v<string, S>) && (!std::is_same_v<string, std::remove_cvref_t<S>>)
         inline bool operator>=(S&& rhs) const
         {
             return *this >= string(rhs);
@@ -372,22 +324,17 @@ namespace nau
 
         inline void erase(size_type at, size_type count) noexcept
         {
-          m_data.erase(at, count);
+            m_data.erase(at, count);
         }
 
         inline void erase(size_type at) noexcept
         {
-          m_data.erase(at);
+            m_data.erase(at);
         }
 
-        inline void insert(size_type at, const eastl::string& str)
+        inline void insert(size_type at, const std::string& str)
         {
             m_data.insert(at, string{str}.m_data);
-        }
-
-        inline operator eastl::u8string_view() const
-        {
-            return {c_str(), size()};
         }
 
         inline operator std::u8string_view() const
@@ -459,7 +406,7 @@ namespace nau
         }
 
     public:
-        string& append(const string& appendix) noexcept(TINY_UTF8_NOEXCEPT) 
+        string& append(const string& appendix) noexcept(TINY_UTF8_NOEXCEPT)
         {
             m_data.append(appendix.m_data);
             return *this;
@@ -503,28 +450,27 @@ namespace nau
 #pragma region format_functions
     public:
         template <class S, typename... Args>
-            requires std::is_constructible_v<nau::string, S>
+        requires std::is_constructible_v<nau::string, S>
         static inline string format(S&& formatString, Args&&... args)
         {
-            return nau::utils::format(nau::string(formatString).c_str(), std::forward<Args>(args)...);
+            return nau::utils::format(nau::string(formatString), std::forward<Args>(args)...);
         }
 
         template <class S, typename... Args>
-            requires std::is_same_v<std::remove_cvref_t<S>, string>
+        requires std::is_same_v<std::remove_cvref_t<S>, string>
         static inline string format_to(string& out, S&& formatString, Args&&... args)
         {
-            out = nau::utils::format(nau::string(formatString).c_str(), std::forward<Args>(args)...);
+            out = nau::utils::format(nau::string(formatString), std::forward<Args>(args)...);
         }
 
-        template <class S, typename = eastl::enable_if_t<std::is_constructible_v<eastl::u8string_view, S>>, typename... Args>
+        template <class S, typename = std::enable_if_t<std::is_constructible_v<std::u8string_view, S>>, typename... Args>
         static inline void format_to(string& out, S&& formatString, Args&&... args)
         {
-            out = nau::utils::format(nau::string(formatString).c_str(), std::forward<Args>(args)...);
+            out = nau::utils::format(nau::string(formatString), std::forward<Args>(args)...);
         }
 
-        
-        template <class S, typename = eastl::enable_if_t<std::is_constructible_v<string, S>>, typename... Args>
-            requires (sizeof...(Args)>0)
+        template <class S, typename = std::enable_if_t<std::is_constructible_v<string, S>>, typename... Args>
+        requires(sizeof...(Args) > 0)
         string(S&& s, Args&&... args)
         {
             *this = string::format(nau::string{s}, std::forward<Args>(args)...);
@@ -543,7 +489,7 @@ namespace nau
         }
 
         template <typename S, typename... Args>
-            requires std::is_constructible_v<nau::string, S>
+        requires std::is_constructible_v<nau::string, S>
         inline void append_format(S&& formatString, Args&&... args)
         {
             auto fomatrRes = string::format(formatString, std::forward<Args>(args)...);
@@ -784,9 +730,9 @@ namespace nau
         // 21.4.2.5, modifiers
         void swap(string_view& v)
         {
-            eastl::swap(m_data, v.m_data);
-            eastl::swap(m_count, v.m_count);
-            eastl::swap(m_shift, v.m_shift);
+            std::swap(m_data, v.m_data);
+            std::swap(m_count, v.m_count);
+            std::swap(m_shift, v.m_shift);
         }
 
         void remove_prefix(size_type n)
@@ -806,9 +752,9 @@ namespace nau
         {
             NAU_ASSERT(pos < m_count, u8"nau_string_view::copy {} out of range.", pos);
 
-            count = eastl::min<size_type>(count, m_count - pos);
+            count = std::min<size_type>(count, m_count - pos);
 
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 pDestination[i] = (*m_data)[m_shift + pos + i];
             }
@@ -825,7 +771,7 @@ namespace nau
         {
             NAU_ASSERT(pos < m_count, u8"nau_string_view::substr {} out of range.", count);
 
-            count = eastl::min<size_type>(count, m_count - pos);
+            count = std::min<size_type>(count, m_count - pos);
             return string_view(m_data, count, m_shift + pos);
         }
 
@@ -1109,23 +1055,11 @@ namespace nau
 }  // namespace nau
 
 template <>
-struct fmt::formatter<nau::string, char8_t> : fmt::formatter<const char8_t*, char8_t>
+struct fmt::formatter<nau::string, char8_t> : fmt::formatter<fmt::basic_string_view<char8_t>, char8_t>
 {
-    auto format(nau::string a, fmt::buffered_context<char8_t>& ctx) const
+    auto format(const nau::string& a, fmt::buffered_context<char8_t>& ctx) const
     {
-        return formatter<const char8_t*, char8_t>::format(a.c_str(), ctx);
-    }
-};
-
-template <>
-struct eastl::hash<nau::string> : eastl::hash<const char8_t*>
-{
-    size_t operator()(const nau::string& s) const
-    {
-        using Base = eastl::hash<const char8_t*>;
-
-        const auto& base = static_cast<const Base&>(*this);
-        return base(s.c_str());
+        return formatter<fmt::basic_string_view<char8_t>, char8_t>::format({a.c_str(), a.size()}, ctx);
     }
 };
 
@@ -1137,6 +1071,6 @@ struct std::hash<nau::string> : std::hash<std::basic_string_view<char8_t>>
         using Base = std::hash<std::basic_string_view<char8_t>>;
 
         const auto& base = static_cast<const Base&>(*this);
-        return base(s.c_str());
+        return base(std::u8string_view{s.c_str(), s.size()});
     }
 };

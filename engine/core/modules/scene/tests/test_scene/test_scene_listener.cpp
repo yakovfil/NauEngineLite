@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <span>
+#include <vector>
 
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/internal/scene_listener.h"
@@ -62,7 +64,7 @@ namespace nau::test
                 ++m_sceneEndCounter;
             }
 
-            void onAfterActivatingObjects(eastl::span<const scene::SceneObject*> objects) override
+            void onAfterActivatingObjects(std::span<const scene::SceneObject*> objects) override
             {
                 for (auto obj : objects)
                 {
@@ -70,12 +72,12 @@ namespace nau::test
                 }
             }
 
-            void onBeforeDeletingObjects(eastl::span<const scene::SceneObject*> objects) override
+            void onBeforeDeletingObjects(std::span<const scene::SceneObject*> objects) override
             {
                 m_deletedObjectCounter += objects.size();
             }
 
-            void onAfterActivatingComponents(eastl::span<const scene::Component*> components) override
+            void onAfterActivatingComponents(std::span<const scene::Component*> components) override
             {
                 for (auto comp : components)
                 {
@@ -83,12 +85,12 @@ namespace nau::test
                 }
             }
 
-            void onBeforeDeletingComponents(eastl::span<const scene::Component*> components) override
+            void onBeforeDeletingComponents(std::span<const scene::Component*> components) override
             {
                 m_deletedComponentCounter = +components.size();
             }
 
-            void onComponentsChange(eastl::span<const scene::Component*> components) override
+            void onComponentsChange(std::span<const scene::Component*> components) override
             {
             }
 
@@ -96,8 +98,8 @@ namespace nau::test
             size_t m_sceneEndCounter = 0;
             size_t m_deletedObjectCounter = 0;
             size_t m_deletedComponentCounter = 0;
-            eastl::vector<const scene::SceneObject*> m_activatedObjects;
-            eastl::vector<const scene::Component*> m_activatedComponents;
+            std::vector<const scene::SceneObject*> m_activatedObjects;
+            std::vector<const scene::Component*> m_activatedComponents;
         };
 
         void initializeApp() override

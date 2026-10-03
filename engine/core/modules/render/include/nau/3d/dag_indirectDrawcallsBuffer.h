@@ -3,10 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
+#include <utility>
 
-#include "nau/3d/dag_resPtr.h"
 #include "nau/3d/dag_lockSbuffer.h"
+#include "nau/3d/dag_resPtr.h"
 //#include <generic/dag_span.h>
 
 enum class FillOnGPU
@@ -20,7 +21,7 @@ class IndirectDrawcallsBuffer
 {
   UniqueBuf buffer;
   uint32_t allocatedDrawcallsInBuffer = 0;
-  eastl::string bufferName;
+  std::string bufferName;
 
   static bool usesPackedDrawCallID() { return d3d::get_driver_code().is(d3d::dx12); }
 
@@ -43,7 +44,10 @@ class IndirectDrawcallsBuffer
 
 public:
   IndirectDrawcallsBuffer() = default;
-  IndirectDrawcallsBuffer(eastl::string name) : bufferName(eastl::move(name)) {}
+  IndirectDrawcallsBuffer(std::string name) :
+      bufferName(std::move(name))
+  {
+  }
   IndirectDrawcallsBuffer(IndirectDrawcallsBuffer &&) = default;
   IndirectDrawcallsBuffer &operator=(IndirectDrawcallsBuffer &&) = default;
   IndirectDrawcallsBuffer(IndirectDrawcallsBuffer &) = delete;

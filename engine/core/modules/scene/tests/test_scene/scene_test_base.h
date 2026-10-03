@@ -3,6 +3,10 @@
 
 
 #pragma once
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "nau/assets/asset_container.h"
 #include "nau/assets/asset_container_builder.h"
 #include "nau/io/memory_stream.h"
@@ -74,10 +78,10 @@ namespace nau::test
             return std::string{reinterpret_cast<const char*>(buffer.data()), buffer.size()};
         }
 
-        static IAssetContainer::Ptr loadSceneAssetContainerFromStream(io::IStreamReader& stream, eastl::string assetKind = "nscene");
+        static IAssetContainer::Ptr loadSceneAssetContainerFromStream(io::IStreamReader& stream, std::string assetKind = "nscene");
 
         template <std::derived_from<scene::SceneComponent> ComponentType = scene::SceneComponent>
-        static scene::SceneObject::Ptr createObject(eastl::string name = "")
+        static scene::SceneObject::Ptr createObject(std::string name = "")
         {
             scene::SceneObject::Ptr newObject = getSceneFactory().createSceneObject<ComponentType>();
             NAU_FATAL(newObject);
@@ -119,9 +123,9 @@ namespace nau::test
             async::TaskSource<> signal;
         };
 
-        eastl::unique_ptr<Application> m_app;
+        std::unique_ptr<Application> m_app;
         unsigned m_stepCounter = 0;
-        eastl::vector<SkipFrameAwaiter> m_frameSkipAwaiters;
+        std::vector<SkipFrameAwaiter> m_frameSkipAwaiters;
     };
 }  // namespace nau::test
 

@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#pragma once 
+#pragma once
 #include <functional>
+#include <memory>
+
 #include "nau/memory/mem_allocator.h"
 
 namespace nau
@@ -40,13 +42,13 @@ namespace nau
         }
     };
 
-        /**
+    /**
      * @brief A unique pointer type for objects allocated using the NAU allocator.
      *
      * @tparam T The type of the object.
      */
     template <class T>
-    using alloc_unique_ptr = eastl::unique_ptr<T, std::function<void(T*)>>;
+    using alloc_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 
     /**
      * @brief Functor to create unique pointers with custom deallocation.

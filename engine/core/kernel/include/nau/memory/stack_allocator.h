@@ -1,16 +1,17 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
+#include <string>
+
+#include "nau/memory/aligned_allocator_debug.h"
+#include "nau/memory/heap_allocator.h"
 #include "nau/memory/mem_allocator.h"
 #include "nau/memory/mem_section_ptr.h"
-#include "nau/memory/heap_allocator.h"
-#include "nau/memory/aligned_allocator_debug.h"
+#include "nau/rtti/rtti_impl.h"
 #include "nau/threading/thread_local_value.h"
 #include "nau/utils/preprocessor.h"
-#include "nau/rtti/rtti_impl.h"
 
 namespace nau
 {
@@ -18,38 +19,40 @@ namespace nau
 
     /**
      * @brief Interface for stack-based memory allocators.
-     * 
+     *
      * This interface defines methods for allocating, reallocating, deallocating,
      * and checking the state of memory allocations within a stack allocator.
      */
     class NAU_KERNEL_EXPORT IStackAllocator : public IAlignedAllocatorDebug
     {
     public:
-        virtual ~IStackAllocator() {}
+        virtual ~IStackAllocator()
+        {
+        }
         /**
          * @brief Checks if the stack allocator is clear (no active allocations).
-         * 
+         *
          * @return true if the allocator is clear, false otherwise.
          */
         [[nodiscard]] virtual bool isClear() const = 0;
 
         /**
          * @brief Sets the thread-local stack allocator instance.
-         * 
+         *
          * @param allocator Pointer to the stack allocator instance.
          */
         static void setStackAllocator(IStackAllocator* allocator);
 
         /**
          * @brief Retrieves the thread-local stack allocator instance.
-         * 
+         *
          * @return Pointer to the thread-local stack allocator instance.
          */
         [[nodiscard]] static IStackAllocator* getStackAllocator();
 
         /**
          * @brief Releases the thread-local stack allocator instance.
-         * 
+         *
          * This method releases the current thread's association with the
          * stack allocator instance.
          */
@@ -62,48 +65,57 @@ namespace nau
     /**
      * @brief StackAllocator class template for allocating fixed-size memory from a stack. Optimized for thread-local usage.
      * Each thread manages its own stack allocator instance, ensuring thread safety without explicit synchronization.
-     * 
+     *
      * @tparam Tsize Maximum size of memory that can be allocated at stack by this allocator.
      */
-    template<size_t Tsize>
+    template <size_t Tsize>
     class StackAllocator final : public IStackAllocator
     {
     public:
         /**
          * @brief Constructs a StackAllocator instance.
-         * 
+         *
          * Initializes the allocator with necessary data structures.
          */
-        StackAllocator():
-            m_memSection([](MemSectionPtr& value){value = HeapAllocator::instance().getSection("StackAllocator:" + eastl::to_string((size_t)&value));}),
-            m_numAllocs([](int& value){value = 0;}),
-            m_motherThread([](bool& value){value = false;})
+        StackAllocator() :
+            m_memSection([](MemSectionPtr& value)
+        {
+            value = HeapAllocator::instance().getSection("StackAllocator:" + std::to_string((size_t)&value));
+        }),
+            m_numAllocs([](int& value)
+        {
+            value = 0;
+        }),
+            m_motherThread([](bool& value)
+        {
+            value = false;
+        })
         {
             m_motherThread.value() = true;
         }
 
         /**
          * @brief Destructor for StackAllocator.
-         * 
+         *
          * Asserts that all allocations have been deallocated upon destruction.
          */
         ~StackAllocator()
         {
             NAU_ASSERT(isClear(), "StackAllocator not all allocations has been deallocated");
-        }       
+        }
 
         /**
          * @brief Checks if the stack allocator is clear (no active allocations).
-         * 
+         *
          * @return true if the allocator is clear, false otherwise.
          */
         [[nodiscard]] bool isClear() const override
         {
             int total = 0;
             m_numAllocs.visitAll([&total](const int& num)
-                {
-                    total += num;
-                });
+            {
+                total += num;
+            });
             return total == 0;
         }
 
@@ -114,7 +126,7 @@ namespace nau
 
         /**
          * @brief Allocates memory from the stack allocator.
-         * 
+         *
          * @param size Size of memory to allocate.
          * @return Pointer to the allocated memory block.
          */
@@ -123,7 +135,7 @@ namespace nau
             ++m_numAllocs.value();
 
             auto realSize = size + sizeof(size_t);
-            if(m_motherThread.value() && (m_offset + realSize) < Tsize)
+            if (m_motherThread.value() && (m_offset + realSize) < Tsize)
             {
                 void* ptr = m_data + m_offset;
                 m_offset += realSize;
@@ -136,7 +148,7 @@ namespace nau
 
         /**
          * @brief Reallocates memory from the stack allocator.
-         * 
+         *
          * @param ptr Pointer to the previously allocated memory block.
          * @param size New size of memory to allocate.
          * @return Pointer to the reallocated memory block.
@@ -159,7 +171,7 @@ namespace nau
 
         /**
          * @brief Deallocates memory from the stack allocator.
-         * 
+         *
          * @param ptr Pointer to the memory block to deallocate.
          */
         void deallocate(void* ptr) override
@@ -170,7 +182,7 @@ namespace nau
 
         /**
          * @brief Retrieves the size of a previously allocated memory block.
-         * 
+         *
          * @param ptr Pointer to the memory block.
          * @return Size of the memory block.
          */
@@ -186,7 +198,6 @@ namespace nau
         size_t m_offset = 0;
         char m_data[Tsize];
 
-
         ThreadLocalValue<MemSectionPtr> m_memSection;
         ThreadLocalValue<int> m_numAllocs;
         ThreadLocalValue<bool> m_motherThread;
@@ -194,7 +205,7 @@ namespace nau
 
     /**
      * @brief Concept to check if a type derives from IStackAllocator.
-     * 
+     *
      * Used for template constraints.
      */
     template <class Derived>
@@ -202,20 +213,20 @@ namespace nau
 
     /**
      * @brief RAII wrapper for setting and releasing a thread-local stack allocator.
-     * 
+     *
      * Automatically sets the provided stack allocator as the thread-local allocator
      * upon construction and releases it upon destruction.
-     * 
+     *
      * @tparam TAllocator Type of the stack allocator.
      */
-    template<class TAllocator = StackAllocator<64 * 1024>>
+    template <class TAllocator = StackAllocator<64 * 1024>>
     requires IsStackAllocator<TAllocator>
     class LocalStackAllocator
     {
     public:
         /**
          * @brief Constructs the LocalStackAllocator.
-         * 
+         *
          * Sets the provided allocator as the thread-local stack allocator.
          */
         LocalStackAllocator()
@@ -225,7 +236,7 @@ namespace nau
 
         /**
          * @brief Destroys the LocalStackAllocator.
-         * 
+         *
          * Releases the thread-local association with the stack allocator.
          */
         ~LocalStackAllocator()
@@ -235,17 +246,17 @@ namespace nau
 
         /**
          * @brief Accesses the underlying stack allocator instance.
-         * 
+         *
          * @return Pointer to the stack allocator instance.
          */
         TAllocator* operator->()
         {
-            return &m_allocator; 
+            return &m_allocator;
         }
 
         /**
          * @brief Retrieves a reference to the underlying stack allocator instance.
-         * 
+         *
          * @return Reference to the stack allocator instance.
          */
         TAllocator& get()
@@ -259,34 +270,33 @@ namespace nau
 
     /**
      * @brief RAII guard for setting and releasing a thread-local stack allocator.
-     * 
+     *
      * Similar to LocalStackAllocator but takes an external stack allocator instance
      * as a constructor parameter instead of creating one internally.
-     * 
+     *
      * @tparam TAllocator Type of the stack allocator.
      */
-    template<class TAllocator>
+    template <class TAllocator>
     requires IsStackAllocator<TAllocator>
     class StackAllocatorGuard
     {
     public:
-
         /**
          * @brief Constructs the StackAllocatorGuard with the provided allocator.
-         * 
+         *
          * Sets the provided allocator as the thread-local stack allocator.
-         * 
+         *
          * @param allocator Reference to the stack allocator instance.
          */
-        StackAllocatorGuard(TAllocator& allocator)
-            : m_allocator(allocator)
+        StackAllocatorGuard(TAllocator& allocator) :
+            m_allocator(allocator)
         {
             IStackAllocator::setStackAllocator(&m_allocator);
         }
 
         /**
          * @brief Destroys the StackAllocatorGuard.
-         * 
+         *
          * Releases the thread-local association with the stack allocator.
          */
         ~StackAllocatorGuard()
@@ -296,7 +306,7 @@ namespace nau
 
         /**
          * @brief Accesses the underlying stack allocator instance.
-         * 
+         *
          * @return Pointer to the stack allocator instance.
          */
         TAllocator* operator->() const
@@ -307,16 +317,16 @@ namespace nau
     private:
         TAllocator& m_allocator;
     };
-    
-}
+
+}  // namespace nau
 
 /**
- * @brief Macro creates an anonymous local stack allocator instance that 
+ * @brief Macro creates an anonymous local stack allocator instance that
  * can be used for allocating memory within a specific scope.
  */
 #define StackAllocatorUnnamed nau::LocalStackAllocator ANONYMOUS_VAR(stack_allocator)
 /**
- * @brief Macro creates a guard that sets the current stack allocator to a 
+ * @brief Macro creates a guard that sets the current stack allocator to a
  * specified instance for the duration of its scope.
  */
 #define StackAllocatorInherit(...) nau::StackAllocatorGuard ANONYMOUS_VAR(guard)(__VA_ARGS__)
@@ -329,8 +339,8 @@ namespace nau
  * @brief Macro for capture parent stack allocator in lambda capture list
  */
 #define ParentStackAllocator parentStackAllocator = IStackAllocator::getStackAllocator()
- /**
-  * @brief Macro creates a guard that sets the parent stack allocator to a
-  * specified instance for the duration of its scope.
-  */
+/**
+ * @brief Macro creates a guard that sets the parent stack allocator to a
+ * specified instance for the duration of its scope.
+ */
 #define StackAllocatorInheritParent StackAllocatorInherit(*parentStackAllocator);

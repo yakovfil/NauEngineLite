@@ -3,8 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "nameResolver.h"
-#include "nau/memory/eastl_aliases.h"
 
+#include <span>
+#include <type_traits>
+
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/memory/standard_aliases.h"
+#include "nau/utils/dynamic_bit_vector.h"
 
 namespace dabfg
 {
@@ -20,8 +25,8 @@ void NameResolver::updateMapping()
   // This validity info simply tells us whether an entity was created
   // from a user's point of view and is only used for the purposes of
   // name lookup.
-  IdIndexedFlags<ResNameId, nau::EastlFrameAllocator> resourceValid(registry.knownNames.nameCount<ResNameId>(), false);
-  IdIndexedFlags<NodeNameId, nau::EastlFrameAllocator> nodeValid(registry.knownNames.nameCount<NodeNameId>(), false);
+  IdIndexedFlags<ResNameId, nau::FrameStdAllocator<nau::BitVectorWord>> resourceValid(registry.knownNames.nameCount<ResNameId>(), false);
+  IdIndexedFlags<NodeNameId, nau::FrameStdAllocator<nau::BitVectorWord>> nodeValid(registry.knownNames.nameCount<NodeNameId>(), false);
   for (auto [nodeId, nodeData] : registry.nodes.enumerate())
   {
     if (!nodeData.declare)
@@ -36,7 +41,7 @@ void NameResolver::updateMapping()
     if (data.has_value())
       resourceValid[resId] = true;
 
-  IdIndexedFlags<AutoResTypeNameId, nau::EastlFrameAllocator> autoResTypeValid(registry.knownNames.nameCount<AutoResTypeNameId>(), false);
+  IdIndexedFlags<AutoResTypeNameId, nau::FrameStdAllocator<nau::BitVectorWord>> autoResTypeValid(registry.knownNames.nameCount<AutoResTypeNameId>(), false);
   for (auto [autoResTypeId, data] : registry.autoResTypes.enumerate())
     if (data.staticResolution.getX() > 0 && data.staticResolution.getY() > 0 && data.dynamicResolution.getX() > 0 && data.dynamicResolution.getY() > 0)
       autoResTypeValid[autoResTypeId] = true;
@@ -71,9 +76,9 @@ T NameResolver::resolve(T name_id) const
     name_id = resolvedId;
 
   // We may want to have slots stuff other than resources in the future
-  if constexpr (eastl::is_same_v<T, ResNameId>)
-    if (const auto &slotData = registry.resourceSlots[name_id]; slotData.has_value())
-      name_id = slotData->contents;
+  if constexpr (std::is_same_v<T, ResNameId>)
+      if (const auto& slotData = registry.resourceSlots[name_id]; slotData.has_value())
+          name_id = slotData->contents;
 
   return name_id;
 }
@@ -82,10 +87,10 @@ template ResNameId NameResolver::resolve(ResNameId res_name_id) const;
 template NodeNameId NameResolver::resolve(NodeNameId res_name_id) const;
 template AutoResTypeNameId NameResolver::resolve(AutoResTypeNameId res_name_id) const;
 
-eastl::span<ResNameId const> NameResolver::unresolve(NodeNameId nodeId, ResNameId resId) const
+std::span<ResNameId const> NameResolver::unresolve(NodeNameId nodeId, ResNameId resId) const
 {
   const auto it = inverseMapping[nodeId].find(resId);
-  return it != inverseMapping[nodeId].end() ? it->second : eastl::span<ResNameId const>{};
+  return it != inverseMapping[nodeId].end() ? it->second : std::span<ResNameId const>{};
 }
 
 } // namespace dabfg

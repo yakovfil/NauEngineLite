@@ -2,8 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <memory>
+#include <utility>
+#include <vector>
 #ifndef RESTRICT_FUN
 #ifdef _MSC_VER
 #define RESTRICT_FUN __declspec(restrict)
@@ -35,32 +36,32 @@ struct StackAllocator
   }; // pow-of-two size
   struct Chunk
   {
-    eastl::unique_ptr<uint8_t[]> data = eastl::make_unique<uint8_t[]>(CHUNK_SIZE);
-    size_t allocated = 0;
+      std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(CHUNK_SIZE);
+      size_t allocated = 0;
   };
   Chunk activeChunk;
-  eastl::vector<Chunk> chunks;
+  std::vector<Chunk> chunks;
 
   NAU_NOINLINE
   void pushChunk()
   {
-    eastl::swap(activeChunk, chunks.emplace_back());
-    if (ALIGN_TO > 16)
-      activeChunk.allocated += (ALIGN_TO - (uintptr_t(activeChunk.data.get()) & ALIGN_TO_MASK)) & ALIGN_TO_MASK;
+      std::swap(activeChunk, chunks.emplace_back());
+      if (ALIGN_TO > 16)
+          activeChunk.allocated += (ALIGN_TO - (uintptr_t(activeChunk.data.get()) & ALIGN_TO_MASK)) & ALIGN_TO_MASK;
   }
   NAU_NOINLINE
   void popChunk()
   {
-    eastl::swap(activeChunk, chunks.back());
-    chunks.pop_back();
+      std::swap(activeChunk, chunks.back());
+      chunks.pop_back();
   }
   StackAllocator() {}
 
   RESTRICT_FUN uint8_t *__restrict allignedAllocate(uint32_t size)
   {
     NAU_FAST_ASSERT((size & ALIGN_TO_MASK) == 0);
-    if (EASTL_UNLIKELY(activeChunk.allocated + size > CHUNK_SIZE))
-      pushChunk();
+    if (NAU_UNLIKELY(activeChunk.allocated + size > CHUNK_SIZE))
+        pushChunk();
     uint8_t *data = activeChunk.data.get() + activeChunk.allocated;
     activeChunk.allocated += size;
     return data;
@@ -76,8 +77,8 @@ struct StackAllocator
     NAU_UNUSED(data);
     NAU_ASSERT(data >= activeChunk.data.get() && data - activeChunk.data.get() + size == activeChunk.allocated);
     activeChunk.allocated -= size;
-    if (EASTL_UNLIKELY(activeChunk.allocated <= ALIGN_TO_MASK && !chunks.empty()))
-      popChunk();
+    if (NAU_UNLIKELY(activeChunk.allocated <= ALIGN_TO_MASK && !chunks.empty()))
+        popChunk();
   }
 
   size_t calcMemAllocated() const // for debug/inspection

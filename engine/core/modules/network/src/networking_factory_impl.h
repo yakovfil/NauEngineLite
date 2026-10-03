@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <EASTL/map.h>
-#include <EASTL/string.h>
+#include <map>
+#include <memory>
+#include <string>
 
 #include "nau/network/napi/networking_factory.h"
 #include "nau/rtti/rtti_impl.h"
@@ -26,15 +27,15 @@ namespace nau
         virtual async::Task<> preInitService() override;
         virtual async::Task<> initService() override;
 
-        virtual eastl::unique_ptr<INetworking> create(const eastl::string& name) override;
+        virtual std::unique_ptr<INetworking> create(const std::string& name) override;
 
-        using TCreateMethod = eastl::unique_ptr<INetworking> (*)();
+        using TCreateMethod = std::unique_ptr<INetworking> (*)();
         TCreateMethod m_CreateFunc;
 
         /**
         @brief Singleton, register
         */
-        static bool Register(const eastl::string name, TCreateMethod createFunc)
+        static bool Register(const std::string name, TCreateMethod createFunc)
         {
             if (auto it = s_methods.find(name); it == s_methods.end())
             {
@@ -47,7 +48,7 @@ namespace nau
         /**
         @brief Singleton, create
         */
-        static eastl::unique_ptr<INetworking> Create(const eastl::string& name)
+        static std::unique_ptr<INetworking> Create(const std::string& name)
         {
             if (auto it = s_methods.find(name); it != s_methods.end())
                 return it->second();
@@ -56,6 +57,6 @@ namespace nau
         }
 
     private:
-        static eastl::map<eastl::string, TCreateMethod> s_methods;
+        static std::map<std::string, TCreateMethod> s_methods;
     };
 }  // namespace nau

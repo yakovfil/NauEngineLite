@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <span>
+
 #include "nau/assets/texture_asset_accessor.h"
 #include "nau/io/stream.h"
 #include "nau/serialization/runtime_value.h"
@@ -50,7 +52,7 @@ namespace nau
         bool isCompressed() const;
         TinyImageFormat getFormat() const;
 
-        void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination);
+        void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination);
 
     private:
         DDSSourceData(io::IStreamReader::Ptr stream);

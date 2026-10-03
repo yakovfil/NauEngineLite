@@ -2,9 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include "nau/3d/dag_drv3d.h"
-#include <EASTL/vector.h>
+#include <vector>
 
+#include "nau/3d/dag_drv3d.h"
 
 namespace render_pass_generic
 {
@@ -13,8 +13,8 @@ struct RenderPass
 #if DAGOR_DBGLEVEL > 0
   String dbgName;
 #endif
-  eastl::vector<RenderPassBind> actions;
-  eastl::vector<uint32_t> sequence;
+  std::vector<RenderPassBind> actions;
+  std::vector<uint32_t> sequence;
   int32_t subpassCnt;
   int32_t targetCnt;
   int32_t bindingOffset;

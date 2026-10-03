@@ -3,6 +3,9 @@
 
 #include "nau/assets/asset_ref.h"
 
+#include <string>
+#include <string_view>
+
 #include "nau/assets/asset_manager.h"
 #include "nau/service/service_provider.h"
 #include "nau/string/string_conv.h"
@@ -27,7 +30,7 @@ namespace nau
         }
     }
 
-    AssetRefBase::AssetRefBase(eastl::string_view assetPathStr, bool loadOnDemand) noexcept
+    AssetRefBase::AssetRefBase(std::string_view assetPathStr, bool loadOnDemand) noexcept
         :
         AssetRefBase(AssetPath{assetPathStr}, loadOnDemand)
     {
@@ -94,7 +97,7 @@ namespace nau
         if (assetRef.m_assetDescriptor)
         {
             const AssetPath assetPath = assetRef.m_assetDescriptor->getAssetPath();
-            const eastl::string pathStr = assetPath.toString();
+            const std::string pathStr = assetPath.toString();
             return std::string{pathStr.data(), pathStr.size()};
         }
 

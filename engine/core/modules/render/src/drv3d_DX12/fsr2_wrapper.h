@@ -3,10 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
-#include "nau/3d/dag_drv3dConsts.h"
+#include <memory>
+#include <vector>
 
+#include "nau/3d/dag_drv3dConsts.h"
 
 struct FfxFsr2ContextDescription;
 struct FfxFsr2Context;
@@ -47,10 +47,10 @@ public:
   ~Fsr2Wrapper();
 
 private:
-  eastl::vector<unsigned char> scratchBuffer;
-  eastl::unique_ptr<FfxFsr2ContextDescription> contextDescr;
-  eastl::unique_ptr<FfxFsr2Context> context;
-  Fsr2State state = Fsr2State::NOT_CHECKED;
-  int renderWidth = 0, renderHeight = 0;
+    std::vector<unsigned char> scratchBuffer;
+    std::unique_ptr<FfxFsr2ContextDescription> contextDescr;
+    std::unique_ptr<FfxFsr2Context> context;
+    Fsr2State state = Fsr2State::NOT_CHECKED;
+    int renderWidth = 0, renderHeight = 0;
 };
 } // namespace drv3d_dx12

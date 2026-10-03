@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/functional.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-
 #include <compare>
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -19,68 +16,60 @@ namespace nau
     class NAU_COREASSETS_EXPORT AssetPath
     {
     public:
-        static bool isValid(eastl::string_view fullAssetPath);
+        static bool isValid(std::string_view fullAssetPath);
 
         AssetPath();
         AssetPath(const AssetPath&);
         AssetPath(AssetPath&&);
-        AssetPath(eastl::string_view fullAssetPath);
-        AssetPath(eastl::string_view scheme, eastl::string_view assetContainerPath, eastl::string_view assetInnerPath = {});
+        AssetPath(std::string_view fullAssetPath);
+        AssetPath(std::string_view scheme, std::string_view assetContainerPath, std::string_view assetInnerPath = {});
 
         AssetPath& operator=(const AssetPath&);
         AssetPath& operator=(AssetPath&&);
 
-        eastl::string_view getScheme() const;
-        eastl::string_view getContainerPath() const;
-        eastl::string_view getSchemeAndContainerPath() const;
-        eastl::string_view getAssetInnerPath() const;
+        std::string_view getScheme() const;
+        std::string_view getContainerPath() const;
+        std::string_view getSchemeAndContainerPath() const;
+        std::string_view getAssetInnerPath() const;
 
-        AssetPath& setScheme(eastl::string_view);
-        AssetPath& setContainerPath(eastl::string_view);
-        AssetPath& setAssetInnerPath(eastl::string_view);
+        AssetPath& setScheme(std::string_view);
+        AssetPath& setContainerPath(std::string_view);
+        AssetPath& setAssetInnerPath(std::string_view);
 
         bool isEmpty() const;
-        bool hasScheme(eastl::string_view scheme) const;
-        eastl::string toString() const;
+        bool hasScheme(std::string_view scheme) const;
+        std::string toString() const;
         Result<AssetPath> resolve() const;
 
         explicit operator bool() const;
         std::strong_ordering operator<=>(const AssetPath& other) const;
         bool operator==(const AssetPath& other) const;
-        bool operator==(eastl::string_view right) const;
+        bool operator==(std::string_view right) const;
 
     private:
         size_t getHashCode() const
         {
-            return eastl::hash<eastl::string>()(m_assetFullPath);
+            return std::hash<std::string>()(m_assetFullPath);
         }
 
-        eastl::string m_assetFullPath;
+        std::string m_assetFullPath;
 
         NAU_COREASSETS_EXPORT friend Result<> parse(std::string_view str, AssetPath& assetPath);
         NAU_COREASSETS_EXPORT friend std::string toString(const AssetPath& assetPath);
 
         template <typename>
         friend struct ::std::hash;
-
-        template <typename>
-        friend struct ::eastl::hash;
     };
 }  // namespace nau
 
 template <>
 struct std::hash<::nau::AssetPath>
 {
-    [[nodiscard]]
-    size_t operator()(const ::nau::AssetPath& val) const
+    using is_transparent = void;
+    size_t operator()(std::string_view val) const
     {
-        return val.getHashCode();
+        return std::hash<std::string_view>{}(val);
     }
-};
-
-template <>
-struct eastl::hash<::nau::AssetPath>
-{
     [[nodiscard]]
     size_t operator()(const ::nau::AssetPath& val) const
     {

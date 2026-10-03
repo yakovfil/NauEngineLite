@@ -35,7 +35,7 @@ target_include_directories(timesync PUBLIC
 
 )
 
-target_link_libraries(timesync eastl NAU::dagorInclude) 
+target_link_libraries(timesync  NAU::dagorInclude)
 
 target_include_directories(timesync PUBLIC 
 	$<BUILD_INTERFACE:${NAU_ENGINE_ROOT}/prog/engine/dagorInclude>

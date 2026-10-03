@@ -4,8 +4,8 @@
 #pragma once
 
 #include <windows.h>
-#include <EASTL/unique_ptr.h>
 
+#include <memory>
 
 struct UnloadLibHandler
 {
@@ -19,7 +19,7 @@ struct UnloadLibHandler
   }
 };
 
-using LibPointer = eastl::unique_ptr<HMODULE, UnloadLibHandler>;
+using LibPointer = std::unique_ptr<HMODULE, UnloadLibHandler>;
 
 struct GenericHandleHandler
 {
@@ -31,8 +31,8 @@ struct GenericHandleHandler
   }
 };
 
-using HandlePointer = eastl::unique_ptr<HANDLE, GenericHandleHandler>;
-using EventPointer = eastl::unique_ptr<HANDLE, GenericHandleHandler>;
+using HandlePointer = std::unique_ptr<HANDLE, GenericHandleHandler>;
+using EventPointer = std::unique_ptr<HANDLE, GenericHandleHandler>;
 
 struct VirtaulAllocMemoryHandler
 {
@@ -40,4 +40,4 @@ struct VirtaulAllocMemoryHandler
 };
 
 template <typename T>
-using VirtualAllocPtr = eastl::unique_ptr<T, VirtaulAllocMemoryHandler>;
+using VirtualAllocPtr = std::unique_ptr<T, VirtaulAllocMemoryHandler>;

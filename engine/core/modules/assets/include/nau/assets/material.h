@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <EASTL/unordered_map.h>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "nau/memory/bytes_buffer.h"
 #include "nau/serialization/runtime_value.h"
 #include "nau/utils/enum/enum_reflection.h"
-
 #include "shader.h"
 
 namespace nau
@@ -67,18 +68,18 @@ namespace nau
         /**
          * @brief A collection of all shader inputs (i.e. constants, textures, buffers, etc.).
          */
-        eastl::unordered_map<eastl::string, RuntimeValue::Ptr> properties;
+        std::unordered_map<std::string, RuntimeValue::Ptr> properties;
 
         /**
          * @brief A collection of handles to the compiled shaders.
          */
-        eastl::vector<eastl::string> shaders;
+        std::vector<std::string> shaders;
 
-        eastl::optional<CullMode> cullMode;
-        eastl::optional<DepthMode> depthMode;
-        eastl::optional<BlendMode> blendMode;
-        eastl::optional<bool> isScissorsEnabled;
-        eastl::optional<ComparisonFunc> stencilCmpFunc;
+        std::optional<CullMode> cullMode;
+        std::optional<DepthMode> depthMode;
+        std::optional<BlendMode> blendMode;
+        std::optional<bool> isScissorsEnabled;
+        std::optional<ComparisonFunc> stencilCmpFunc;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(properties),
@@ -98,19 +99,19 @@ namespace nau
      */
     struct Material
     {
-        eastl::string name;
+        std::string name;
 
         /**
          * @brief A handle to the master material.
          * 
          * It is not set if the material itself is master. 
          */
-        eastl::optional<eastl::string> master;
+        std::optional<std::string> master;
 
         /**
          * @brief A collection of named pipelines to switch between.
          */
-        eastl::unordered_map<eastl::string, MaterialPipeline> pipelines;
+        std::unordered_map<std::string, MaterialPipeline> pipelines;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(name),

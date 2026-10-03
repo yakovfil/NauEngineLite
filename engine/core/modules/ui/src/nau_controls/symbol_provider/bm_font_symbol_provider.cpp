@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include "bm_font_symbol_provider.h"
-#include "nau/ui/label.h"
 
 #include <2d/CCFontAtlasCache.h>
+
+#include <string>
+
 #include "2d/CCFontAtlas.h"
 #include "2d/CCFontFNT.h"
-
+#include "nau/ui/label.h"
 
 BMFontSymbolProvider::BMFontSymbolProvider(const std::string& fontFileName)
 {
@@ -20,7 +22,7 @@ BMFontSymbolProvider::~BMFontSymbolProvider()
     CC_SAFE_RELEASE(m_fontAtlas);
 }
 
-int* BMFontSymbolProvider::getHorizontalKerning(const eastl::u32string& text, int& outNumLetters) const
+int* BMFontSymbolProvider::getHorizontalKerning(const std::u32string& text, int& outNumLetters) const
 {
     const cocos2d::FontFNT* bmFont = (cocos2d::FontFNT*) m_fontAtlas->getFont();
     if (!bmFont)
@@ -108,7 +110,7 @@ bool BMFontSymbolProvider::hasSymbol(char32_t utf32Code) const
     return false;
 }
 
-bool BMFontSymbolProvider::warmUpSymbosCache(const eastl::u32string& text) const
+bool BMFontSymbolProvider::warmUpSymbosCache(const std::u32string& text) const
 {
     return true;
 }

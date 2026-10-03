@@ -3,11 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "modfx_sim.h"
 
+#include <algorithm>
+
+#include "modfx_color.h"
 #include "modfx_life.h"
 #include "modfx_radius.h"
-#include "modfx_velocity.h"
-#include "modfx_color.h"
 #include "modfx_texture.h"
+#include "modfx_velocity.h"
 
 namespace nau::vfx::modfx
 {
@@ -17,7 +19,7 @@ namespace nau::vfx::modfx
         life::modfx_life_sim(sdata.rnd_seed, lifeTimeRCP, dt, life, sdata.life_norm);
 
         bool dead = sdata.life_norm >= 1.0f;
-        sdata.life_norm = eastl::clamp(sdata.life_norm, 0.0f, 1.0f);
+        sdata.life_norm = std::clamp(sdata.life_norm, 0.0f, 1.0f);
 
         if (radius.enabled)
         {

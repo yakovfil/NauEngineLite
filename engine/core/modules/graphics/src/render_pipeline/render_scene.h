@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "render_manager.h"
-#include "render_view.h"
+#include <memory>
+#include <vector>
+
 #include "billboards_manager.h"
-
-
 #include "nau/math/math.h"
 #include "nau/render/cascadeShadows.h"
-
+#include "render_manager.h"
+#include "render_view.h"
 
 namespace nau
 {
@@ -27,10 +27,10 @@ namespace nau
 
         async::Task<> initialize();
 
-        eastl::shared_ptr<RenderList> collectRenderLists();
-        eastl::vector<eastl::shared_ptr<RenderView>>& getViews();
+        std::shared_ptr<RenderList> collectRenderLists();
+        std::vector<std::shared_ptr<RenderView>>& getViews();
 
-        void addView(eastl::shared_ptr<RenderView> view);
+        void addView(std::shared_ptr<RenderView> view);
         void addManager(nau::Ptr<IRenderManager> manager);
 
         template<class T>
@@ -67,8 +67,8 @@ namespace nau
         };
 
     private:
-        eastl::vector<nau::Ptr<IRenderManager>> m_managers;
-        eastl::vector<eastl::shared_ptr<RenderView>> m_views;
+        std::vector<nau::Ptr<IRenderManager>> m_managers;
+        std::vector<std::shared_ptr<RenderView>> m_views;
 
         nau::Ptr<BillboardsManager> m_billboardsManager;
 

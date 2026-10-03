@@ -4,8 +4,10 @@
 
 #include "nau/render/omniLightsManager.h"
 
-#include <EASTL/algorithm.h>
-#include <EASTL/unique_ptr.h>
+#include <algorithm>
+#include <bitset>
+#include <memory>
+#include <vector>
 
 #include "lights_common.h"
 #include "nau/debugRenderer/debug_render_system.h"
@@ -45,8 +47,8 @@ namespace nau::render
     }
 
     void OmniLightsManager::prepare(const nau::math::NauFrustum& frustum,
-                                    eastl::vector<uint16_t>& lights_with_camera_inside,
-                                    eastl::vector<uint16_t>& lights_with_camera_outside,
+                                    std::vector<uint16_t>& lights_with_camera_inside,
+                                    std::vector<uint16_t>& lights_with_camera_outside,
                                     Occlusion* occlusion,
                                     nau::math::BBox3& inside_box,
                                     nau::math::BBox3& outside_box,
@@ -69,8 +71,8 @@ namespace nau::render
     }
 
     void OmniLightsManager::prepare(const nau::math::NauFrustum& frustum,
-                                    eastl::vector<uint16_t>& lightsInside,
-                                    eastl::vector<uint16_t>& lightsOutside,
+                                    std::vector<uint16_t>& lightsInside,
+                                    std::vector<uint16_t>& lightsOutside,
                                     Occlusion* occlusion,
                                     nau::math::BBox3& inside_box,
                                     nau::math::BBox3& outside_box,
@@ -97,9 +99,9 @@ namespace nau::render
     typedef uint16_t shadow_index_t;
 
     void OmniLightsManager::prepare(const nau::math::NauFrustum& frustum,
-                                    eastl::vector<uint16_t>& lightsInside,
-                                    eastl::vector<uint16_t>& lightsOutside,
-                                    eastl::bitset<MAX_LIGHTS>* visibleIdBitset,
+                                    std::vector<uint16_t>& lightsInside,
+                                    std::vector<uint16_t>& lightsOutside,
+                                    std::bitset<MAX_LIGHTS>* visibleIdBitset,
                                     Occlusion* occlusion,
                                     nau::math::BBox3& inside_box,
                                     nau::math::BBox3& outside_box,

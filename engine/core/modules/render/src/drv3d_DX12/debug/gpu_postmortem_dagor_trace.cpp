@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <span>
+
 #include "drv3d_DX12/device.h"
 
 using namespace drv3d_dx12;
@@ -104,20 +106,19 @@ void debug::gpu_postmortem::dagor::Trace::beginCommandBuffer(ID3D12Device3 *devi
 
 void debug::gpu_postmortem::dagor::Trace::endCommandBuffer(ID3D12GraphicsCommandList *cmd) { commandListTable.endList(cmd); }
 
-void debug::gpu_postmortem::dagor::Trace::beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text,
-  eastl::span<const char> full_path)
+void debug::gpu_postmortem::dagor::Trace::beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text, std::span<const char> full_path)
 {
   auto &list = commandListTable.getList(cmd);
   list.traceList.beginEvent({}, text, full_path);
 }
 
-void debug::gpu_postmortem::dagor::Trace::endEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> full_path)
+void debug::gpu_postmortem::dagor::Trace::endEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> full_path)
 {
   auto &list = commandListTable.getList(cmd);
   list.traceList.endEvent({}, full_path);
 }
 
-void debug::gpu_postmortem::dagor::Trace::marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+void debug::gpu_postmortem::dagor::Trace::marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
 {
   auto &list = commandListTable.getList(cmd);
   list.traceList.marker({}, text);

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "nau/animation/playback/animation_impl.h"
-#include "nau/animation/controller/animation_controller.h"
+#include <string>
 
-#include <EASTL/string.h>
+#include "nau/animation/controller/animation_controller.h"
+#include "nau/animation/playback/animation_impl.h"
 
 namespace nau
 {
@@ -25,9 +25,9 @@ namespace nau::animation
 
     struct AnimationHelper final
     {
-        static void broadcastFrameEvent(scene::SceneObject* owner, AnimationInstance* trackPlayer, const eastl::string& message);
+        static void broadcastFrameEvent(scene::SceneObject* owner, AnimationInstance* trackPlayer, const std::string& message);
 
-        static nau::Ptr<AnimationController> createAnimationController(const eastl::string& className);
+        static nau::Ptr<AnimationController> createAnimationController(const std::string& className);
     };
 
     template <class TValue, class TKeyFrame>

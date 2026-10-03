@@ -3,6 +3,9 @@
 
 #include "nau/network/asio/networking_asio.h"
 
+#include <memory>
+#include <string>
+
 #include "nau/diag/logging.h"
 #include "nau/network/asio/networking_connection_asio.h"
 #include "nau/network/asio/networking_identity_asio.h"
@@ -14,7 +17,7 @@ namespace nau
     }
     NetworkingASIO::~NetworkingASIO() = default;
 
-    bool NetworkingASIO::applyConfig(const eastl::string& data)
+    bool NetworkingASIO::applyConfig(const std::string& data)
     {
         return true;
     }
@@ -39,15 +42,15 @@ namespace nau
         static NetworkingIdentityASIO id("ASIO");
         return id;
     }
-    eastl::shared_ptr<INetworkingListener> NetworkingASIO::createListener()
+    std::shared_ptr<INetworkingListener> NetworkingASIO::createListener()
     {
-        auto listener = eastl::make_shared<NetworkingListenerASIO>(m_io_context);
+        auto listener = std::make_shared<NetworkingListenerASIO>(m_io_context);
         m_listeners.push_back(listener);
         return listener;
     }
-    eastl::shared_ptr<INetworkingConnector> NetworkingASIO::createConnector()
+    std::shared_ptr<INetworkingConnector> NetworkingASIO::createConnector()
     {
-        auto connector = eastl::make_shared<NetworkingConnectorASIO>(m_io_context);
+        auto connector = std::make_shared<NetworkingConnectorASIO>(m_io_context);
         m_connectors.push_back(connector);
         return connector;
     }

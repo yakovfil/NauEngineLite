@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/diag/assertion.h"
+
+#include <memory>
+#include <string_view>
 
 #include "nau/debug/debugger.h"
 #include "nau/diag/device_error.h"
@@ -17,7 +19,7 @@ namespace nau::diag
 
         IDeviceError::Ptr& getDeviceErrorRef()
         {
-            static IDeviceError::Ptr s_deviceError;  //= eastl::make_unique<DefaultDeviceErrorImpl>();
+            static IDeviceError::Ptr s_deviceError;  //= std::make_unique<DefaultDeviceErrorImpl>();
             return (s_deviceError);
         }
 
@@ -25,7 +27,7 @@ namespace nau::diag
 
     void setDeviceError(IDeviceError::Ptr newDeviceError, IDeviceError::Ptr* prevDeviceError)
     {
-        if(prevDeviceError)
+        if (prevDeviceError)
         {
             *prevDeviceError = std::move(getDeviceErrorRef());
         }
@@ -42,13 +44,13 @@ namespace nau::diag
 
 namespace nau::diag_detail
 {
-    diag::FailureActionFlag raiseFailure(uint32_t error, diag::AssertionKind kind, diag::SourceInfo source, eastl::string_view condition, eastl::string_view message)
+    diag::FailureActionFlag raiseFailure(uint32_t error, diag::AssertionKind kind, diag::SourceInfo source, std::string_view condition, std::string_view message)
     {
         using namespace nau::diag;
 
         static thread_local unsigned threadRaiseFailureCounter = 0;
 
-        if(threadRaiseFailureCounter > 0)
+        if (threadRaiseFailureCounter > 0)
         {
             NAU_PLATFORM_BREAK;
             NAU_PLATFORM_ABORT;
@@ -61,7 +63,7 @@ namespace nau::diag_detail
             --threadRaiseFailureCounter;
         };
 
-        if(auto& customDeviceError = diag::getDeviceErrorRef(); customDeviceError)
+        if (auto& customDeviceError = diag::getDeviceErrorRef(); customDeviceError)
         {
             const FailureData failureData{
                 error,

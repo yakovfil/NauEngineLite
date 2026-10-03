@@ -3,17 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
 #include <stdint.h>
 
-
+#include <type_traits>
 
 namespace dabfg
 {
 
 enum class AutoResTypeNameId : uint16_t
 {
-  Invalid = static_cast<eastl::underlying_type_t<AutoResTypeNameId>>(-1)
+    Invalid = static_cast<std::underlying_type_t<AutoResTypeNameId>>(-1)
 };
 
 

@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "render/daBfg/virtualResourceRequest.h"
+#include <memory>
 
+#include "render/daBfg/virtualResourceRequest.h"
 
 namespace dabfg
 {
@@ -129,12 +130,18 @@ public:
   template <class T>
   VirtualResourceRequest<T, RRP::None> blob() &&
   {
-    Base::blob(BlobDescription{tag_for<T>(), sizeof(T), alignof(T),
-      // IMPORTANT: {} zero-initializes structs
-      +[](void *ptr) { new (ptr) T{}; }, //
-      +[](void *ptr) { eastl::destroy_at<T>(reinterpret_cast<T *>(ptr)); }});
+      Base::blob(BlobDescription{tag_for<T>(), sizeof(T), alignof(T),
+                                 // IMPORTANT: {} zero-initializes structs
+                                 +[](void* ptr)
+      {
+          new(ptr) T{};
+      },  //
+                                 +[](void* ptr)
+      {
+          std::destroy_at<T>(reinterpret_cast<T*>(ptr));
+      }});
 
-    return {resUid, nodeId, registry};
+      return {resUid, nodeId, registry};
   }
 };
 

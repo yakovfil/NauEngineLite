@@ -2,10 +2,11 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "graphics_assets/material_asset.h"
-#include "nau/graphics/core_graphics.h"
+#include <string_view>
 
+#include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
+#include "nau/graphics/core_graphics.h"
 #include "nau/render/dag_postFxRenderer.h"
 #include "nau/shaders/dag_shaderCommon.h"
 
@@ -23,7 +24,7 @@ namespace nau::render
     {
     }
 
-    void PostFxRenderer::drawInternal(eastl::string_view pipeline) const
+    void PostFxRenderer::drawInternal(std::string_view pipeline) const
     {
         NAU_ASSERT(getServiceProvider().has<nau::ICoreGraphics>());
 
@@ -47,7 +48,7 @@ namespace nau::render
         drawInternal("");
     }
 
-    void PostFxRenderer::render(eastl::string_view pipeline) const
+    void PostFxRenderer::render(std::string_view pipeline) const
     {
         drawInternal(pipeline);
     }

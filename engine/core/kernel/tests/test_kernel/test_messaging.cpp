@@ -1,7 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
+#include <string>
 
 #include "nau/messaging/messaging.h"
 #include "nau/runtime/internal/runtime_state.h"
@@ -16,8 +16,7 @@ namespace nau::test
             NAU_TYPEID(nau::test::MessageData)
 
             NAU_CLASS_FIELDS(
-                CLASS_FIELD(id)
-            )
+                CLASS_FIELD(id))
 
             unsigned id;
         };
@@ -41,7 +40,7 @@ namespace nau::test
 
             ~Destructible()
             {
-                if(destructorCallback)
+                if (destructorCallback)
                 {
                     destructorCallback();
                 }
@@ -52,7 +51,7 @@ namespace nau::test
     class Test_Messaging : public ::testing::Test
     {
     protected:
-        static inline const eastl::string TestStream1Name = "test.stream_1";
+        static inline const std::string TestStream1Name = "test.stream_1";
 
         ~Test_Messaging()
         {
@@ -64,7 +63,7 @@ namespace nau::test
         {
             auto shutdown = m_runtime->shutdown(false);
 
-            while(shutdown())
+            while (shutdown())
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
@@ -92,9 +91,8 @@ namespace nau::test
     {
         auto subscription = TestMessage.subscribe(
             broadcaster(), []
-            {
-            },
-            async::Executor::getDefault());
+        {
+        }, async::Executor::getDefault());
     }
 
     TEST_F(Test_Messaging, HandlerDestruction)
@@ -103,16 +101,15 @@ namespace nau::test
         std::atomic_bool handlerCalled = false;
 
         Destructible destructible([&destructed]
-                                  {
-                                      destructed = true;
-                                  });
+        {
+            destructed = true;
+        });
 
         auto subscription = TestMessage.subscribe(
             broadcaster(), [&handlerCalled, destructible = std::move(destructible)]
-            {
-                handlerCalled = true;
-            },
-            async::Executor::getDefault());
+        {
+            handlerCalled = true;
+        }, async::Executor::getDefault());
 
         shutdownRuntime();
 

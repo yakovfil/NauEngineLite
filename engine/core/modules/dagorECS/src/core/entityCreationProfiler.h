@@ -2,7 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 // That's explicitly dev build only. Profiler is enabled in release buil cfg (on PC), and it is probably too expensive to collect all
 // that info in release
@@ -35,7 +37,7 @@ struct EntityCreationProfiler
   const ecs::EntityManager &manager;
   uint64_t reft;
   ecs::template_t templ;
-  eastl::vector<eastl::pair<ecs::component_index_t, uint64_t>> compTimes;
+  std::vector<std::pair<ecs::component_index_t, uint64_t>> compTimes;
 
   EntityCreationProfiler(ecs::template_t t, const ecs::EntityManager &manager) :
     manager(manager), templ(t), reft((da_profiler::get_active_mode() & da_profiler::EVENTS) ? profile_ref_ticks() : 0)
@@ -81,24 +83,27 @@ struct EntityCreationProfiler
 #undef _X
     if ((constructorsD + tracked_constructorsD) > SKIP_TIME_THRESHOLD_US)
     {
-      eastl::sort(compTimes.begin(), compTimes.end(), [](auto &a, auto &b) { return a.second > b.second; });
-      uint64_t total = 0, cur = 0;
-      for (auto &c : compTimes)
-        total += c.second;
-      uint64_t sumThreshold = total - total / 20; // top 95%
-      int i = 0;
-      NAU_CORE_DEBUG_LF("  %2s %40s %55s %6s {}", "#N", "comp_name", "comp_type_name", "usec", "usec_percent");
-      for (auto &c : compTimes)
-      {
-        auto usec = profile_usec_from_ticks_delta(c.second);
-        auto tpIndex = manager.getDataComponents().getComponentById(c.first).componentType;
-        const char *cName = manager.getDataComponents().getComponentNameById(c.first);
-        const char *tpName = manager.getComponentTypes().getTypeNameById(tpIndex);
-        NAU_CORE_DEBUG_LF("  %2d %40s %55s %6d %2.3f", ++i, cName, tpName, usec, usec * pctK);
-        cur += c.second;
-        if (usec < SKIP_TIME_THRESHOLD_US || cur > sumThreshold)
-          break;
-      }
+        std::sort(compTimes.begin(), compTimes.end(), [](auto& a, auto& b)
+        {
+            return a.second > b.second;
+        });
+        uint64_t total = 0, cur = 0;
+        for (auto& c : compTimes)
+            total += c.second;
+        uint64_t sumThreshold = total - total / 20;  // top 95%
+        int i = 0;
+        NAU_CORE_DEBUG_LF("  %2s %40s %55s %6s {}", "#N", "comp_name", "comp_type_name", "usec", "usec_percent");
+        for (auto& c : compTimes)
+        {
+            auto usec = profile_usec_from_ticks_delta(c.second);
+            auto tpIndex = manager.getDataComponents().getComponentById(c.first).componentType;
+            const char* cName = manager.getDataComponents().getComponentNameById(c.first);
+            const char* tpName = manager.getComponentTypes().getTypeNameById(tpIndex);
+            NAU_CORE_DEBUG_LF("  %2d %40s %55s %6d %2.3f", ++i, cName, tpName, usec, usec * pctK);
+            cur += c.second;
+            if (usec < SKIP_TIME_THRESHOLD_US || cur > sumThreshold)
+                break;
+        }
     }
   }
 

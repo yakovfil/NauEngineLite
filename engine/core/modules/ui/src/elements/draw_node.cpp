@@ -1,10 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/elements/draw_node.h"
+
+#include <vector>
+
 #include "2d/CCDrawNode.h"
-#include "EASTL/vector.h"
 #include "ccTypes.h"
 #include "math/Vec2.h"
 
@@ -31,7 +32,7 @@ void DrawNode::drawPoint(const math::vec2& point, const float pointSize, const m
 
 void DrawNode::drawPoints(const math::vec2 *position, unsigned int numberOfPoints, const math::Color4 &color)
 {
-    eastl::vector<cocos2d::Vec2> cocosPosition(numberOfPoints);
+    std::vector<cocos2d::Vec2> cocosPosition(numberOfPoints);
     for (int i = 0; i < numberOfPoints; ++i)
     {
         cocosPosition[i] = position[i];
@@ -42,7 +43,7 @@ void DrawNode::drawPoints(const math::vec2 *position, unsigned int numberOfPoint
 
 void DrawNode::drawPoints(const math::vec2 *position, unsigned int numberOfPoints, const float pointSize, const math::Color4 &color)
 {
-    eastl::vector<cocos2d::Vec2> cocosPosition(numberOfPoints);
+    std::vector<cocos2d::Vec2> cocosPosition(numberOfPoints);
     for (int i = 0; i < numberOfPoints; ++i)
     {
         cocosPosition[i] = position[i];
@@ -63,7 +64,7 @@ void DrawNode::drawRect(const math::vec2 &origin, const math::vec2 &destination,
 
 void DrawNode::drawPoly(const math::vec2 *poli, unsigned int numberOfPoints, bool closePolygon, const math::Color4 &color)
 {
-    eastl::vector<cocos2d::Vec2> cocosPoli(numberOfPoints);
+    std::vector<cocos2d::Vec2> cocosPoli(numberOfPoints);
     for(int i = 0; i < numberOfPoints; ++i)
     {
         cocosPoli[i] = poli[i];
@@ -109,7 +110,7 @@ void DrawNode::drawSolidRect(const math::vec2 &origin, const math::vec2 &destina
 
 void DrawNode::drawSolidPoly(const math::vec2 *poli, unsigned int numberOfPoints, const math::Color4 &color)
 {
-    eastl::vector<cocos2d::Vec2> cocosPoli(numberOfPoints);
+    std::vector<cocos2d::Vec2> cocosPoli(numberOfPoints);
     for(int i = 0; i < numberOfPoints; ++i)
     {
         cocosPoli[i] = poli[i];
@@ -134,7 +135,7 @@ void DrawNode::drawSegment(const math::vec2 &from, const math::vec2 &to, float r
 
 void DrawNode::drawPolygon(const math::vec2 *verts, int count, const math::Color4 &fillColor, float borderWidth, const math::Color4 &borderColor)
 {
-    eastl::vector<cocos2d::Vec2> cocosVerts(count);
+    std::vector<cocos2d::Vec2> cocosVerts(count);
     for(int i = 0; i < count; ++i)
     {
         cocosVerts[i] = verts[i];

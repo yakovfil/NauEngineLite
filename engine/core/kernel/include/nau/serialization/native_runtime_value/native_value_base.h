@@ -3,7 +3,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <concepts>
+#include <tuple>
+#include <vector>
 
 #include "nau/diag/assertion.h"
 #include "nau/rtti/weak_ptr.h"
@@ -34,7 +37,7 @@ namespace nau::ser_detail
 #endif
 
             const auto& entry = m_changeHandlers.emplace_back(std::move(handler), ++m_id);
-            return SubscriptionHandle{this, eastl::get<1>(entry)};
+            return SubscriptionHandle{this, std::get<1>(entry)};
         }
 
         template <std::invocable<const RuntimeValue&, std::string_view> F>
@@ -42,7 +45,6 @@ namespace nau::ser_detail
         {
             return IRuntimeValueEvents::subscribeOnChanges(std::forward<F>(functorHandler));
         }
-
 
     protected:
         void notifyChanged(const RuntimeValue* source = nullptr) final
@@ -52,9 +54,9 @@ namespace nau::ser_detail
 
             notifyHandlers(thisAsRuntimeValue, fieldName);
 
-            if(auto parent = getParent())
+            if (auto parent = getParent())
             {
-                if(auto* const parentEvents = parent->as<IRuntimeValueEventsSource*>())
+                if (auto* const parentEvents = parent->as<IRuntimeValueEventsSource*>())
                 {
                     parentEvents->notifyChanged(&thisAsRuntimeValue);
                 }
@@ -72,10 +74,11 @@ namespace nau::ser_detail
         }
 
         virtual void onThisValueChanged(std::string_view key)
-        {}
+        {
+        }
 
     private:
-        using ChangesHandlerEntry = eastl::tuple<nau::Ptr<IRuntimeValueChangesHandler>, uint32_t>;
+        using ChangesHandlerEntry = std::tuple<nau::Ptr<IRuntimeValueChangesHandler>, uint32_t>;
 
         void notifyHandlers(const RuntimeValue& thisAsRuntimeValue, std::string_view childKey)
         {
@@ -89,9 +92,9 @@ namespace nau::ser_detail
 
             onThisValueChanged(childKey);
 
-            for(auto& handlerEntry : m_changeHandlers)
+            for (auto& handlerEntry : m_changeHandlers)
             {
-                auto& handler = eastl::get<0>(handlerEntry);
+                auto& handler = std::get<0>(handlerEntry);
                 handler->onValueChanged(thisAsRuntimeValue, childKey);
             }
         }
@@ -105,18 +108,18 @@ namespace nau::ser_detail
                 m_concurrentCheckFlag.store(false, std::memory_order_release);
             };
 #endif
-            auto entry = eastl::find_if(m_changeHandlers.begin(), m_changeHandlers.end(), [id](const ChangesHandlerEntry& entry)
+            auto entry = std::find_if(m_changeHandlers.begin(), m_changeHandlers.end(), [id](const ChangesHandlerEntry& entry)
             {
-                return eastl::get<1>(entry) == id;
+                return std::get<1>(entry) == id;
             });
 
-            if(entry != m_changeHandlers.end())
+            if (entry != m_changeHandlers.end())
             {
                 m_changeHandlers.erase(entry);
             }
         }
 
-        eastl::vector<ChangesHandlerEntry> m_changeHandlers;
+        std::vector<ChangesHandlerEntry> m_changeHandlers;
         uint32_t m_id = 0;
 
 #ifdef NAU_ASSERT_ENABLED
@@ -142,7 +145,7 @@ namespace nau::ser_detail
         {
         }
 
-     private:
+    private:
         const RuntimeValue::Ptr m_parent;
     };
 
@@ -231,23 +234,23 @@ namespace nau::ser_detail
         void setThisAsParent(nau::Ptr<U>& value) const
         {
             NAU_ASSERT(value);
-            if(NativeChildValue* const childValue = value->template as<NativeChildValue*>())
+            if (NativeChildValue* const childValue = value->template as<NativeChildValue*>())
             {
                 childValue->setParent(getThisMutabilityGuard());
             }
         }
 
-         //template<typename U>
-         //decltype(auto) getMutableThis(const U* self)
-         //{
-         //    if constexpr (!U::IsMutable && !U::IsReference)
-         //    {
-         //        using MutableThis = std::remove_const_t<U>;
-         //        return const_cast<MutableThis>(self);
-         //    }
+        // template<typename U>
+        // decltype(auto) getMutableThis(const U* self)
+        //{
+        //     if constexpr (!U::IsMutable && !U::IsReference)
+        //     {
+        //         using MutableThis = std::remove_const_t<U>;
+        //         return const_cast<MutableThis>(self);
+        //     }
 
-         //    return self;
-         //}
+        //    return self;
+        //}
 
     private:
         RuntimeValue* getParent() const final
@@ -258,7 +261,7 @@ namespace nau::ser_detail
         nau::Ptr<ParentMutabilityGuard> getThisMutabilityGuard() const final
         {
             auto guard = m_mutabilityGuardRef.lock();
-            if(!guard)
+            if (!guard)
             {
                 RuntimeValue::Ptr mutableThis = const_cast<NativeRuntimeValueBase<T>*>(this);
                 m_mutabilityGuardRef.reset();

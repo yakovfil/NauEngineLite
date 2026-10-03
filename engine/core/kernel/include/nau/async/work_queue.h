@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-
+#include <chrono>
 #include <optional>
 
-#include "EASTL/chrono.h"
 #include "nau/async/executor.h"
 #include "nau/async/task.h"
 #include "nau/kernel/kernel_config.h"
@@ -25,7 +24,7 @@ namespace nau
 
         virtual async::Task<> waitForWork() = 0;
 
-        virtual void poll(std::optional<eastl::chrono::milliseconds> time = eastl::chrono::milliseconds{0}) = 0;
+        virtual void poll(std::optional<std::chrono::milliseconds> time = std::chrono::milliseconds{0}) = 0;
 
         virtual void notify() = 0;
 

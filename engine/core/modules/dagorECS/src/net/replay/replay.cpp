@@ -1,20 +1,26 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/netbase.h>
 #include <daECS/net/connection.h>
 #include <daECS/net/message.h>
-#include <daECS/net/replayEvents.h>
+#include <daECS/net/netbase.h>
 #include <daECS/net/replay.h>
-#include <EASTL/unique_ptr.h>
+#include <daECS/net/replayEvents.h>
+#include <daNet/bitStream.h>
+#include <daNet/getTime.h>
+#include <daNet/messageIdentifiers.h>
+#include <ioSys/dag_asyncWrite.h>
+#include <memory/dag_framemem.h>
+#include <osApiWrappers/dag_files.h>
+#include <stdlib.h>  // alloca
+#include <string.h>
 #include <util/dag_baseDef.h>
 #include <util/dag_strUtil.h>
-#include <daNet/getTime.h>
-#include <ioSys/dag_asyncWrite.h>
-#include <osApiWrappers/dag_files.h>
-#include <daNet/bitStream.h>
-#include <daNet/messageIdentifiers.h>
-#include <string.h>
-#include <stdlib.h> // alloca
-#include <memory/dag_framemem.h>
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #define NET_REPLAY_ECS_EVENT ECS_REGISTER_EVENT
 NET_REPLAY_ECS_EVENTS
@@ -63,13 +69,16 @@ struct ReplayRecordHdr
 
 struct ReplayWriter
 {
-  eastl::unique_ptr<IGenSave> wstream;
-  ReplayHdr hdr;
-  int lastWriteTime = 0;
-  eastl::vector<KeyFrameInfo> keyFrameTable;
-  net::get_replay_footer_data_cb_t getFooterCb;
+    std::unique_ptr<IGenSave> wstream;
+    ReplayHdr hdr;
+    int lastWriteTime = 0;
+    std::vector<KeyFrameInfo> keyFrameTable;
+    net::get_replay_footer_data_cb_t getFooterCb;
 
-  ReplayWriter(net::get_replay_footer_data_cb_t get_footer_cb) : getFooterCb(get_footer_cb) {} //-V730
+    ReplayWriter(net::get_replay_footer_data_cb_t get_footer_cb) :
+        getFooterCb(get_footer_cb)
+    {
+    }  //-V730
   ReplayWriter(ReplayWriter &&) = default;
 
   ~ReplayWriter()
@@ -158,12 +167,13 @@ private:
   net::dump_replay_key_frame_cb_t dump_replay_key_frame_cb;
 
 public:
-  ReplayWriterConnection(net::ConnectionId id_, net::get_replay_footer_data_cb_t get_footer_cb, net::scope_query_cb_t &&scope_query_,
-    net::dump_replay_key_frame_cb_t dump_replay_key_frame_cb) :
-    net::Connection(id_, eastl::move(scope_query_)), ReplayWriter(get_footer_cb), dump_replay_key_frame_cb(dump_replay_key_frame_cb)
-  {
-    net::Connection::isFiltering = false;
-  }
+    ReplayWriterConnection(net::ConnectionId id_, net::get_replay_footer_data_cb_t get_footer_cb, net::scope_query_cb_t&& scope_query_, net::dump_replay_key_frame_cb_t dump_replay_key_frame_cb) :
+        net::Connection(id_, std::move(scope_query_)),
+        ReplayWriter(get_footer_cb),
+        dump_replay_key_frame_cb(dump_replay_key_frame_cb)
+    {
+        net::Connection::isFiltering = false;
+    }
 
   virtual bool isBlackHole() const override { return true; }
   virtual void sendEcho(const char *, uint32_t) override { NAU_ASSERT(0, "Echo unsupported for ReplayWriterConnection"); }
@@ -194,7 +204,7 @@ struct ReplayFileReader
   static constexpr int BLOCK_SIZE = 1024 * 1024 * 1; // 1mb
   file_ptr_t fp = nullptr;
   int bodyLen = 0, bodyOffset = 0, blocklen = 0, blockoffset = 0;
-  eastl::vector<KeyFrameInfo> keyFrameTable;
+  std::vector<KeyFrameInfo> keyFrameTable;
   uint8_t buf[BLOCK_SIZE];
 
   ReplayFileReader() {} // -V730
@@ -324,17 +334,20 @@ public:
   virtual void *getControlIface() const override { return NULL; }
   bool rewind(int rewind_time)
   {
-    auto it = eastl::lower_bound(keyFrameTable.begin(), keyFrameTable.end(), rewind_time,
-      [](const auto &a, const auto &b) { return a.ts <= b; });
-    if (it == keyFrameTable.end() || it == keyFrameTable.begin())
-      return true;
+      auto it = std::lower_bound(keyFrameTable.begin(), keyFrameTable.end(), rewind_time,
+                                 [](const auto& a, const auto& b)
+      {
+          return a.ts <= b;
+      });
+      if (it == keyFrameTable.end() || it == keyFrameTable.begin())
+          return true;
 
-    ReplayRecordHdr hdr{};
-    if (df_seek_to(fp, (it - 1)->offset) == -1 || df_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr) || !hdr.isKeyFrame)
-    {
-      NAU_ASSERT(hdr.isKeyFrame, "[Replay] Not a key frame at offset %i", it->offset);
-      return false;
-    }
+      ReplayRecordHdr hdr{};
+      if (df_seek_to(fp, (it - 1)->offset) == -1 || df_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr) || !hdr.isKeyFrame)
+      {
+          NAU_ASSERT(hdr.isKeyFrame, "[Replay] Not a key frame at offset %i", it->offset);
+          return false;
+      }
 
     const int lenWithAlign = (hdr.size + REC_ALIGN - 1) & ~(REC_ALIGN - 1);
     const bool needAlloc = lenWithAlign > BLOCK_SIZE;
@@ -376,8 +389,8 @@ public:
     };
 
     int offsetDelta = sizeof(ReplayRecordHdr);
-    if (EASTL_UNLIKELY(blockoffset + offsetDelta > blocklen && !readNextBlock()))
-      return connectionLost();
+    if (NAU_UNLIKELY(blockoffset + offsetDelta > blocklen && !readNextBlock()))
+        return connectionLost();
 
     const ReplayRecordHdr *hdr = (ReplayRecordHdr *)(buf + blockoffset);
     if (cur_time_ms < hdr->ts) // too early
@@ -395,8 +408,8 @@ public:
 
     NAU_ASSERT_RETURN(lenWithAlign <= BLOCK_SIZE, connectionLost(), "[Replay] packet is to big %i vs %i", lenWithAlign, BLOCK_SIZE);
     offsetDelta += lenWithAlign;
-    if (EASTL_UNLIKELY(blockoffset + offsetDelta > blocklen && !readNextBlock()))
-      return connectionLost();
+    if (NAU_UNLIKELY(blockoffset + offsetDelta > blocklen && !readNextBlock()))
+        return connectionLost();
 
     blockoffset += sizeof(*hdr);
     if (bodyOffset + blockoffset + pkt.length <= bodyLen)
@@ -422,16 +435,21 @@ public:
 class ReplayClientDriver : public net::INetDriver, public ReplayWriter
 {
 public:
-  eastl::unique_ptr<INetDriver, DestroyDeleter<INetDriver>> drv;
+    std::unique_ptr<INetDriver, DestroyDeleter<INetDriver>> drv;
 
-  ReplayClientDriver(net::INetDriver *drv_, ReplayWriter &&rw) : ReplayWriter(eastl::move(rw)), drv(drv_)
-  {
-    NAU_ASSERT(drv);
-    NAU_ASSERT(ReplayWriter::wstream);
-  }
+    ReplayClientDriver(net::INetDriver* drv_, ReplayWriter&& rw) :
+        ReplayWriter(std::move(rw)),
+        drv(drv_)
+    {
+        NAU_ASSERT(drv);
+        NAU_ASSERT(ReplayWriter::wstream);
+    }
 
   virtual void *getControlIface() const override { return drv->getControlIface(); }
-  virtual eastl::optional<danet::EchoResponse> receiveEchoResponse() override { return drv->receiveEchoResponse(); }
+  virtual std::optional<danet::EchoResponse> receiveEchoResponse() override
+  {
+      return drv->receiveEchoResponse();
+  }
   virtual Packet *receive(int cur_time_ms) override
   {
     Packet *pkt = drv->receive(cur_time_ms);
@@ -451,46 +469,44 @@ namespace net
 Connection *create_replay_connection(ConnectionId id, char *write_fname, uint16_t version, get_replay_footer_data_cb_t get_footer_cb,
   scope_query_cb_t &&scope_query, dump_replay_key_frame_cb_t dump_replay_key_frame_cb)
 {
-  auto conn = eastl::make_unique<ReplayWriterConnection>(id, get_footer_cb, eastl::move(scope_query), dump_replay_key_frame_cb);
-  return conn->openForWriteTemp(write_fname, version) ? conn.release() : NULL;
+    auto conn = std::make_unique<ReplayWriterConnection>(id, get_footer_cb, std::move(scope_query), dump_replay_key_frame_cb);
+    return conn->openForWriteTemp(write_fname, version) ? conn.release() : NULL;
 }
 
 INetDriver *create_replay_net_driver(const char *read_fname, uint16_t version, Tab<uint8_t> *out_footer_data,
   restore_replay_key_frame_cb_t restore_replay_key_frame_cb)
 {
-  auto drv = eastl::make_unique<ReplayServerDriver>(restore_replay_key_frame_cb);
-  return drv->openForRead(read_fname, version, out_footer_data) ? drv.release() : NULL;
+    auto drv = std::make_unique<ReplayServerDriver>(restore_replay_key_frame_cb);
+    return drv->openForRead(read_fname, version, out_footer_data) ? drv.release() : NULL;
 }
 
 INetDriver *create_replay_client_net_driver(INetDriver *drv, const char *write_fname, uint16_t version,
   get_replay_footer_data_cb_t get_footer_cb)
 {
   ReplayWriter rw(get_footer_cb);
-  return rw.openForWrite(write_fname, version) ? new ReplayClientDriver(drv, eastl::move(rw)) : nullptr;
+  return rw.openForWrite(write_fname, version) ? new ReplayClientDriver(drv, std::move(rw)) : nullptr;
 }
 
-
-bool load_replay_footer_data(const char *path, uint16_t version,
-  eastl::function<void(Tab<uint8_t> const &, const uint32_t)> footer_data_cb)
+bool load_replay_footer_data(const char* path, uint16_t version, std::function<void(Tab<uint8_t> const&, const uint32_t)> footer_data_cb)
 {
-  eastl::unique_ptr<void, decltype(&df_close)> fp(df_open(path, DF_READ | DF_IGNORE_MISSING), &df_close);
-  if (!fp.get())
-    return false;
+    std::unique_ptr<void, decltype(&df_close)> fp(df_open(path, DF_READ | DF_IGNORE_MISSING), &df_close);
+    if (!fp.get())
+        return false;
 
-  ReplayHdr hdr;
-  if (!ReplayFileReader::readHeader(fp.get(), hdr))
-    return false;
+    ReplayHdr hdr;
+    if (!ReplayFileReader::readHeader(fp.get(), hdr))
+        return false;
 
-  int flen = df_length(fp.get());
-  if (!ReplayFileReader::isHeaderValid(hdr, version, flen))
-    return false;
+    int flen = df_length(fp.get());
+    if (!ReplayFileReader::isHeaderValid(hdr, version, flen))
+        return false;
 
-  Tab<uint8_t> footerData;
-  if (!ReplayFileReader::readFooter(fp.get(), hdr, flen, footerData))
-    return false;
+    Tab<uint8_t> footerData;
+    if (!ReplayFileReader::readFooter(fp.get(), hdr, flen, footerData))
+        return false;
 
-  footer_data_cb(footerData, hdr.version);
-  return true;
+    footer_data_cb(footerData, hdr.version);
+    return true;
 }
 
 void replay_save_keyframe(IConnection *conn, int cur_time) { ((ReplayWriterConnection *)conn)->saveKeyFrame(cur_time); }

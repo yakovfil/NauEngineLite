@@ -2,7 +2,14 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 #include "./scene_builder.h"
 
-#include "nau/memory/eastl_aliases.h"
+#include <functional>
+#include <list>
+#include <optional>
+#include <string>
+#include <unordered_map>
+
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/scene/components/internal/missing_component.h"
 #include "nau/scene/scene_manager.h"
 #include "nau/serialization/json.h"
@@ -16,10 +23,10 @@ namespace nau::scene
         class SceneObjectsFinalizer
         {
             template <typename T>
-            using StackMap = eastl::unordered_map<Uid, T, eastl::hash<Uid>, eastl::equal_to<Uid>, EastlStackAllocator>;
+            using StackMap = std::unordered_map<Uid, T, std::hash<Uid>, std::equal_to<Uid>, StackStdAllocator<std::pair<const Uid, T>>>;
 
         public:
-            SceneObjectsFinalizer(SceneObject& root, CreateSceneOptionFlag options, const eastl::optional<Vector<ReferenceField>>& referenceInfo) :
+            SceneObjectsFinalizer(SceneObject& root, CreateSceneOptionFlag options, const std::optional<Vector<ReferenceField>>& referenceInfo) :
                 m_needRecreatedUids(options.has(CreateSceneOption::RecreateUid)),
                 m_needResolveReferenceFields(referenceInfo && !referenceInfo->empty())
             {
@@ -161,7 +168,7 @@ namespace nau::scene
             const bool m_needResolveReferenceFields;
             StackMap<SceneObject*> m_objects;
             StackMap<Component*> m_components;
-            eastl::list<IComponentEvents*, EastlStackAllocator> m_allComponentEvents;
+            std::list<IComponentEvents*, StackStdAllocator<IComponentEvents*>> m_allComponentEvents;
         };
 
     }  // namespace
@@ -273,7 +280,7 @@ namespace nau::scene
         if (componentAsset.properties)
         {
 #if 0  // Debug dump component properties 
-            eastl::basic_string<char> buffer;
+            std::basic_string<char> buffer;
             io::InplaceStringWriter<char> writer{buffer};
             serialization::jsonWrite(writer, makeValueRef(componentAsset.properties, getDefaultAllocator()), serialization::JsonSettings{.pretty = true}).ignore();
             std::cout << buffer.c_str() << std::endl;

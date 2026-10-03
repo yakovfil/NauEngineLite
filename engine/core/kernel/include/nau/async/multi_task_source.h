@@ -1,9 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/vector.h>
 
 #include <type_traits>
 
@@ -63,7 +61,7 @@ namespace nau::async
         {
             lock_(m_mutex);
             NAU_ASSERT(static_cast<bool>(*this), "Invalid state");
-            if(!static_cast<bool>(*this))
+            if (!static_cast<bool>(*this))
             {
                 return false;
             }
@@ -76,7 +74,7 @@ namespace nau::async
         bool resolve(Args&&... args)
         {
             NAU_ASSERT(static_cast<bool>(*this), "Invalid state");
-            if(!static_cast<bool>(*this))
+            if (!static_cast<bool>(*this))
             {
                 return false;
             }
@@ -85,7 +83,7 @@ namespace nau::async
 
             bool resolved = false;
 
-            if constexpr(IsVoid)
+            if constexpr (IsVoid)
             {
                 resolved = getCoreTask().tryResolve();
             }
@@ -98,7 +96,7 @@ namespace nau::async
                 });
             }
 
-            if(!resolved)
+            if (!resolved)
             {
                 return false;
             }
@@ -107,36 +105,36 @@ namespace nau::async
 
             scope_on_leave
             {
-                if(m_autoResetOnReady)
+                if (m_autoResetOnReady)
                 {
                     static_cast<CoreTaskPtr&>(*this) = nullptr;
                 }
             };
 
             [[maybe_unused]] TaskClientData& data = getClientData();
-            if constexpr(IsVoid)
+            if constexpr (IsVoid)
             {
-                for(TaskSource<T>& awaiter : m_awaiters)
+                for (TaskSource<T>& awaiter : m_awaiters)
                 {
                     awaiter.resolve();
                 }
             }
             else
             {
-                if(!m_awaiters.empty())
+                if (!m_awaiters.empty())
                 {
                     // In the case when the result no longer needs to be kept inside MultiTaskSource<>, its value can be given via move.
                     // But move can be applied only for last awaiter. In cases where there is only single awaiter, the move assignment (instead copy) becomes especially relevant.
 
                     const size_t lastIndex = m_awaiters.size() - 1;
-                    for(size_t i = 0; i < lastIndex; ++i)
+                    for (size_t i = 0; i < lastIndex; ++i)
                     {
                         auto& awaiter = m_awaiters[i];
                         awaiter.resolve(*data.result);
                     }
 
                     auto& lastAwaiter = m_awaiters[lastIndex];
-                    if(m_autoResetOnReady)
+                    if (m_autoResetOnReady)
                     {
                         lastAwaiter.resolve(std::move(*data.result));
                     }
@@ -155,24 +153,24 @@ namespace nau::async
         bool reject(Error::Ptr error)
         {
             NAU_ASSERT(static_cast<bool>(*this), "Invalid state");
-            if(!static_cast<bool>(*this))
+            if (!static_cast<bool>(*this))
             {
                 return false;
             }
 
             const bool rejected = getCoreTask().tryRejectWithError(error);
-            if(rejected)
+            if (rejected)
             {
                 lock_(m_mutex);
                 scope_on_leave
                 {
-                    if(m_autoResetOnReady)
+                    if (m_autoResetOnReady)
                     {
                         static_cast<CoreTaskPtr&>(*this) = nullptr;
                     }
                 };
 
-                for(TaskSource<T>& taskSource : m_awaiters)
+                for (TaskSource<T>& taskSource : m_awaiters)
                 {
                     taskSource.reject(error);
                 }
@@ -188,12 +186,12 @@ namespace nau::async
             lock_(m_mutex);
 
             NAU_ASSERT(static_cast<bool>(*this), "Invalid state");
-            if(!static_cast<bool>(*this))
+            if (!static_cast<bool>(*this))
             {
                 return Task<T>::makeRejected(NauMakeError("Task source invalid state"));
             }
 
-            if(!getCoreTask().isReady())
+            if (!getCoreTask().isReady())
             {
                 TaskSource<T>& awaiter = m_awaiters.emplace_back();
                 return awaiter.getTask();
@@ -201,12 +199,12 @@ namespace nau::async
 
             // inner task is ready:
             // just returns result (value or error).
-            if(auto error = getCoreTask().getError())
+            if (auto error = getCoreTask().getError())
             {
                 return Task<T>::makeRejected(std::move(error));
             }
 
-            if constexpr(IsVoid)
+            if constexpr (IsVoid)
             {
                 return Task<>::makeResolved();
             }

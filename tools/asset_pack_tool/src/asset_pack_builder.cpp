@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 #include "nau/asset_pack/asset_pack_builder.h"
 
+#include <string>
+#include <tuple>
+#include <vector>
+
 #include "nau/io/asset_pack.h"
 #include "nau/io/file_system.h"
 #include "nau/io/nau_container.h"
@@ -13,7 +17,7 @@
 
 namespace nau
 {
-    Result<io::AssetPackIndexData> writeAssetPackIndexDataToStream(const eastl::vector<PackInputFileData>& content, PackBuildOptions buildOptions, const std::string& tempFilePath)
+    Result<io::AssetPackIndexData> writeAssetPackIndexDataToStream(const std::vector<PackInputFileData>& content, PackBuildOptions buildOptions, const std::string& tempFilePath)
     {
         using namespace io;
         AssetPackIndexData packData;
@@ -45,10 +49,10 @@ namespace nau
         return packData;
     }
 
-    Result<> buildAssetPackage(const eastl::vector<PackInputFileData>& content, PackBuildOptions buildOptions, io::IStreamWriter::Ptr outputStream)
+    Result<> buildAssetPackage(const std::vector<PackInputFileData>& content, PackBuildOptions buildOptions, io::IStreamWriter::Ptr outputStream)
     {
         using namespace io;
-        const eastl::u8string u8tempFilePath = getNativeTempFilePath();
+        const std::u8string u8tempFilePath = getNativeTempFilePath();
         const std::string tempFilePath(u8tempFilePath.cbegin(), u8tempFilePath.cend());
 
         AssetPackIndexData packIndexData = *writeAssetPackIndexDataToStream(content, buildOptions, tempFilePath);
@@ -64,7 +68,7 @@ namespace nau
     {
         RuntimeValue::Ptr packData;
         size_t headerDataOffset;
-        eastl::tie(packData, headerDataOffset) = *readContainerHeader(packageStream);
+        std::tie(packData, headerDataOffset) = *readContainerHeader(packageStream);
 
         io::AssetPackIndexData packIndexData;
         auto value = nau::makeValueRef(packIndexData);

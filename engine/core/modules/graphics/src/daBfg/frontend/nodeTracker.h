@@ -3,11 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <eastl/vector_set.h>
-#include "render/daBfg/detail/nodeNameId.h"
+#include <utility>
+
 #include "dabfg/common/graphDumper.h"
 #include "dabfg/id/idIndexedMapping.h"
-
+#include "nau/utils/sorted_vector.h"
+#include "render/daBfg/detail/nodeNameId.h"
 
 namespace dabfg
 {
@@ -33,7 +34,10 @@ public:
   // Lazily initializes nodes
   void updateNodeDeclarations();
 
-  bool acquireNodesChanged() { return eastl::exchange(nodesChanged, false); }
+  bool acquireNodesChanged()
+  {
+      return std::exchange(nodesChanged, false);
+  }
 
   void dumpRawUserGraph() const override;
 
@@ -48,9 +52,9 @@ private:
   InternalRegistry &registry;
   const DependencyData &depData;
 
-  eastl::vector_set<NodeNameId> deferredDeclarationQueue;
+  nau::SortedVectorSet<NodeNameId> deferredDeclarationQueue;
   IdIndexedMapping<NodeNameId, void *> nodeToContext;
-  eastl::vector_set<void *> trackedContexts;
+  nau::SortedVectorSet<void*> trackedContexts;
 
   bool nodesChanged{false};
   bool nodeChangesLocked{false};

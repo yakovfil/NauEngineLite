@@ -3,10 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "nau/render/cascadeShadows.h"
+
+#include <array>
+#include <string>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_resPtr.h"
-#include "nau/math/dag_color.h"
 #include "nau/debugRenderer/debug_render_system.h"
+#include "nau/math/dag_color.h"
 #include "nau/shaders/shader_globals.h"
 
 using namespace nau::math;
@@ -155,8 +159,7 @@ namespace nau::csm
 
         const NauFrustum& getWholeCoveredFrustum() const { return wholeCoveredSpaceFrustum; }
 
-        const eastl::string& setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h,
-            float shadow_distance, float pow_weight);
+        const std::string& setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h, float shadow_distance, float pow_weight);
 
         void debugSetParams(float shadow_depth_bias, float shadow_const_depth_bias, float shadow_depth_slope_bias);
 
@@ -205,12 +208,12 @@ namespace nau::csm
         d3d::RenderPass* mobileAreaUpdateRP;
 
         int numCascadesToRender = 0;
-        eastl::array<ShadowSplit, CascadeShadows::MAX_CASCADES> shadowSplits;
-        eastl::array<ShadowSplit, CascadeShadows::MAX_CASCADES> sparsedShadowSplits;
-        eastl::array<Color4, CascadeShadows::MAX_CASCADES * 3> shadowCascadeTm; // ???
+        std::array<ShadowSplit, CascadeShadows::MAX_CASCADES> shadowSplits;
+        std::array<ShadowSplit, CascadeShadows::MAX_CASCADES> sparsedShadowSplits;
+        std::array<Color4, CascadeShadows::MAX_CASCADES * 3> shadowCascadeTm;  // ???
 
         float csmDistance = 0.0f;
-        eastl::array<shaders::UniqueOverrideStateId, CascadeShadows::MAX_CASCADES> cascadeOverride;
+        std::array<shaders::UniqueOverrideStateId, CascadeShadows::MAX_CASCADES> cascadeOverride;
         void destroyOverrides();
         void createOverrides();
 
@@ -229,8 +232,8 @@ namespace nau::csm
         struct csmBufferData
         {
             Vector4 pcfLerp;
-            eastl::array<Color4, CascadeShadows::MAX_CASCADES * 4> transposed;
-            eastl::array<Color4, CascadeShadows::MAX_CASCADES> shadowCascadeTcMulOffset;
+            std::array<Color4, CascadeShadows::MAX_CASCADES * 4> transposed;
+            std::array<Color4, CascadeShadows::MAX_CASCADES> shadowCascadeTcMulOffset;
         };
 
         csmBufferData csmConstData;
@@ -454,7 +457,7 @@ namespace nau::csm
 
         NAU_ASSERT(modeSettings.numCascades <= settings.splitsW * settings.splitsH);
 
-        eastl::array<float, CascadeShadows::MAX_CASCADES> distances;
+        std::array<float, CascadeShadows::MAX_CASCADES> distances;
         int cascades = modeSettings.numCascades;
         float znear = scene_z_near_far.getX();
         float shadowStart = max(znear, modeSettings.shadowStart);
@@ -625,8 +628,7 @@ namespace nau::csm
         }
     }
 
-    const eastl::string& CascadeShadowsPrivate::setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w,
-        int splits_h, float shadow_distance, float pow_weight)
+    const std::string& CascadeShadowsPrivate::setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h, float shadow_distance, float pow_weight)
     {
         if (tex_size > 0 && splits_w > 0 && splits_h > 0 && splits_w * splits_h <= CascadeShadows::MAX_CASCADES && pow_weight >= 0 &&
             pow_weight <= 1 && shadow_distance > 0)
@@ -644,16 +646,16 @@ namespace nau::csm
             modeSettings.numCascades = settings.splitsW * settings.splitsH;
         }
 
-        eastl::array<float, CascadeShadows::MAX_CASCADES> distances;
+        std::array<float, CascadeShadows::MAX_CASCADES> distances;
         int cascades = settings.splitsW * settings.splitsH;
         NAU_ASSERT(cascades <= distances.size());
         calculate_cascades(modeSettings.maxDist, modeSettings.powWeight, cascades, distances.data(), scene_z_near_far.getX());
 
-        static eastl::string dbg;
-        dbg = eastl::string(eastl::string::CtorSprintf(), "%dx%d, %g weight): cascades = ", shadowCascadesTexInfo.getX(), shadowCascadesTexInfo.getY(), modeSettings.powWeight);
+        static std::string dbg;
+        dbg = nau::utils::format("{}x{}, {:g} weight): cascades = ", shadowCascadesTexInfo.getX(), shadowCascadesTexInfo.getY(), modeSettings.powWeight);
         for (unsigned int cascadeNo = 0; cascadeNo < cascades; cascadeNo++)
         {
-            dbg += eastl::string(eastl::string::CtorSprintf(), "%g%s", distances[cascadeNo], (cascadeNo == cascades - 1) ? "\n" : ", ");
+            dbg += nau::utils::format("{:g}{}", distances[cascadeNo], (cascadeNo == cascades - 1) ? "\n" : ", ");
         }
 
         return dbg;
@@ -899,7 +901,7 @@ namespace nau::csm
     {
         calcTMs();
 
-        //eastl::array<Color4, CascadeShadows::MAX_CASCADES * 4> transposed;
+        // std::array<Color4, CascadeShadows::MAX_CASCADES * 4> transposed;
         for (int i = 0; i < numCascadesToRender; ++i)
         {
             csmConstData.transposed[i * 4 + 0] = Color4(shadowCascadeTm[i * 3 + 0].r, shadowCascadeTm[i * 3 + 1].r, shadowCascadeTm[i * 3 + 2].r, 0);
@@ -1031,8 +1033,7 @@ namespace nau::csm
 
     const NauFrustum& CascadeShadows::getWholeCoveredFrustum() const { return d->getWholeCoveredFrustum(); }
 
-    const eastl::string& CascadeShadows::setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h,
-        float shadow_distance, float pow_weight)
+    const std::string& CascadeShadows::setShadowCascadeDistanceDbg(const Vector2& scene_z_near_far, int tex_size, int splits_w, int splits_h, float shadow_distance, float pow_weight)
     {
         return d->setShadowCascadeDistanceDbg(scene_z_near_far, tex_size, splits_w, splits_h, shadow_distance, pow_weight);
     }

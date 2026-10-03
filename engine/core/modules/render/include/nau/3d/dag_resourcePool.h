@@ -3,20 +3,21 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <stdio.h>  // snprintf
+
+#include <array>
+#include <functional>
+#include <memory>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <stack>
+#include <tuple>
+#include <type_traits>
+#include <variant>
+
 #include "nau/3d/dag_resPtr.h"
 #include "nau/3d/dag_resizableTex.h"
 #include "nau/generic/dag_objectPool.h"
-
-#include <ska_hash_map/flat_hash_map2.hpp>
-
-#include <EASTL/array.h>
-#include <EASTL/intrusive_ptr.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/stack.h>
-#include <EASTL/tuple.h>
-#include <EASTL/type_traits.h>
-
-#include <stdio.h> // snprintf
+#include "nau/memory/intrusive_ptr.h"
 
 enum class ResourceType
 {
@@ -36,7 +37,7 @@ namespace resource_pool_detail
 {
 
 static constexpr std::size_t MAX_RESOURCE_NAME_LENGTH = 32;
-using ResourceName = eastl::array<char, MAX_RESOURCE_NAME_LENGTH>;
+using ResourceName = std::array<char, MAX_RESOURCE_NAME_LENGTH>;
 
 unsigned getNextUniqueResourceId(ResourceType type);
 
@@ -56,7 +57,7 @@ template <typename R, typename... Args>
 struct FunctionTraits<R(Args...)>
 {
   using ReturnValue = R;
-  using Arguments = eastl::tuple<Args...>;
+  using Arguments = std::tuple<Args...>;
 };
 
 template <ResourceType>
@@ -212,20 +213,21 @@ struct TupleHash
   template <typename T>
   static void hash_combine(std::size_t &seed, const T &v)
   {
-    eastl::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+      std::hash<T> hasher;
+      seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
   }
 
   std::size_t operator()(const TupleType &tuple) const
   {
     std::size_t seed = 0;
-    eastl::apply(
-      [&seed](const auto &...v) {
+    std::apply(
+        [&seed](const auto&... v)
+    {
         // workaround to fold expression until C++17 lands...
         auto dummy = {(hash_combine(seed, v), 0)...};
         G_UNUSED(dummy);
-      },
-      tuple);
+    },
+        tuple);
     return seed;
   }
 };
@@ -239,21 +241,23 @@ class ResourcePool
   using ResourceTraitsType = resource_pool_detail::ResourceFactoryTraits<ResourceFactoryType>;
   using DescriptorType = typename ResourceTraitsType::Descriptor;
   using UniqueResType = typename ResourceTraitsType::UniqueResType;
-  using WPtr = eastl::weak_ptr<ResourcePool>;
+  using WPtr = std::weak_ptr<ResourcePool>;
 
-public:
-  using Ptr = eastl::shared_ptr<ResourcePool>;
-  using CPtr = eastl::shared_ptr<const ResourcePool>;
+  public:
+  using Ptr = std::shared_ptr<ResourcePool>;
+  using CPtr = std::shared_ptr<const ResourcePool>;
 
   class LeasedResource : public UniqueResType
   {
   public:
-    using Ptr = eastl::intrusive_ptr<LeasedResource>;
-    using CPtr = eastl::intrusive_ptr<const LeasedResource>;
+      using Ptr = nau::IntrusivePtr<LeasedResource>;
+      using CPtr = nau::IntrusivePtr<const LeasedResource>;
 
-    LeasedResource(const DescriptorType &desc, ResourcePool &owner) :
-      UniqueResType(eastl::apply(resource_pool_detail::ResourceFactory<T>::create, desc)), owner(owner)
-    {}
+      LeasedResource(const DescriptorType& desc, ResourcePool& owner) :
+          UniqueResType(std::apply(resource_pool_detail::ResourceFactory<T>::create, desc)),
+          owner(owner)
+      {
+      }
 
     ~LeasedResource() { NAU_ASSERT(!useCount); }
 
@@ -262,13 +266,16 @@ public:
     LeasedResource &operator=(LeasedResource &&) = delete;
 
   private:
-    template <typename U>
-    friend void eastl::intrusive_ptr_add_ref(U *);
-    template <typename U>
-    friend void eastl::intrusive_ptr_release(U *);
+      template <typename U>
+      friend void nau::intrusive_ptr_add_ref(U*);
+      template <typename U>
+      friend void nau::intrusive_ptr_release(U*);
 
-    // NOT thread safe
-    void AddRef() const { ++useCount; }
+      // NOT thread safe
+      void AddRef() const
+      {
+          ++useCount;
+      }
 
     void Release() const
     {
@@ -297,8 +304,8 @@ public:
     auto it = pools.find(desc);
     if (it == pools.end() || it->second.expired())
     {
-      result = eastl::make_shared<ResourcePool>(desc);
-      pools.insert(it, {desc, result});
+        result = std::make_shared<ResourcePool>(desc);
+        pools.insert(it, {desc, result});
     }
     else
     {
@@ -334,7 +341,7 @@ public:
 
 private:
   DescriptorType descriptor;
-  eastl::stack<LeasedResource *> freeList;
+  std::stack<LeasedResource*> freeList;
   ObjectPool<LeasedResource, OBJECT_POOL_DEFAULT_BLOCK_SIZE, ObjectPoolPolicyLinearAllocationAndNoFree> pool;
 };
 
@@ -344,10 +351,22 @@ using RTarget = RTargetPool::LeasedResource;
 using ResizableRTargetPool = ResourcePool<ResourceType::ResizableTexture>;
 using ResizableRTarget = ResizableRTargetPool::LeasedResource;
 
-static inline int get_width(const RTargetPool &pool) { return eastl::get<0>(pool.getDescriptor()); }
+static inline int get_width(const RTargetPool& pool)
+{
+    return std::get<0>(pool.getDescriptor());
+}
 
-static inline int get_height(const RTargetPool &pool) { return eastl::get<1>(pool.getDescriptor()); }
+static inline int get_height(const RTargetPool& pool)
+{
+    return std::get<1>(pool.getDescriptor());
+}
 
-static inline int get_width(const ResizableRTargetPool &pool) { return eastl::get<0>(pool.getDescriptor()); }
+static inline int get_width(const ResizableRTargetPool& pool)
+{
+    return std::get<0>(pool.getDescriptor());
+}
 
-static inline int get_height(const ResizableRTargetPool &pool) { return eastl::get<1>(pool.getDescriptor()); }
+static inline int get_height(const ResizableRTargetPool& pool)
+{
+    return std::get<1>(pool.getDescriptor());
+}

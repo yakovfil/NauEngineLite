@@ -5,7 +5,7 @@
 #include <nau/dag_ioSys/dag_genIo.h>
 #include <nau/kernel/kernel_config.h>
 
-#include "EASTL/span.h"
+#include <span>
 
 struct ZSTD_CCtx_s;
 struct ZSTD_DCtx_s;
@@ -19,7 +19,7 @@ namespace nau::iosys
     {
     public:
         ZstdLoadFromMemCB() = default;
-        ZstdLoadFromMemCB(eastl::span<const char> enc_data, const ZSTD_DDict_s* dict = nullptr, bool tmp = false)
+        ZstdLoadFromMemCB(std::span<const char> enc_data, const ZSTD_DDict_s* dict = nullptr, bool tmp = false)
         {
             initDecoder(enc_data, dict, tmp);
         }
@@ -28,7 +28,7 @@ namespace nau::iosys
             termDecoder();
         }
 
-        bool initDecoder(eastl::span<const char> enc_data, const ZSTD_DDict_s* dict, bool tmp = false);
+        bool initDecoder(std::span<const char> enc_data, const ZSTD_DDict_s* dict, bool tmp = false);
         void termDecoder();
 
         void read(void* ptr, int size) override;
@@ -78,7 +78,7 @@ namespace nau::iosys
 
     protected:
         ZSTD_DCtx_s* dstrm = nullptr;
-        eastl::span<const unsigned char> encDataBuf;
+        std::span<const unsigned char> encDataBuf;
         unsigned encDataPos = 0;
 
         virtual bool supplyMoreData()
@@ -225,15 +225,15 @@ namespace nau::iosys
     NAU_KERNEL_EXPORT size_t zstd_decompress_with_dict(ZSTD_DCtx_s* ctx, void* dst, size_t dstSize, const void* src, size_t srcSize, const ZSTD_DDict_s* dict);
 
     // trains dictionary buffer with sample_buf and sample_sizes and return size of used dictionary
-    NAU_KERNEL_EXPORT size_t zstd_train_dict_buffer(eastl::span<char> dict_buf, int compressionLevel, eastl::span<const char> sample_buf, eastl::span<const size_t> sample_sizes);
+    NAU_KERNEL_EXPORT size_t zstd_train_dict_buffer(std::span<char> dict_buf, int compressionLevel, std::span<const char> sample_buf, std::span<const size_t> sample_sizes);
 
     // creates dictionary from trained buffer (for compression), optionally reference dict_buf without copying
-    NAU_KERNEL_EXPORT ZSTD_CDict_s* zstd_create_cdict(eastl::span<const char> dict_buf, int compressionLevel, bool use_buf_ref = false);
+    NAU_KERNEL_EXPORT ZSTD_CDict_s* zstd_create_cdict(std::span<const char> dict_buf, int compressionLevel, bool use_buf_ref = false);
     // destroys compression dictionary
     NAU_KERNEL_EXPORT void zstd_destroy_cdict(ZSTD_CDict_s* dict);
 
     // creates dictionary from trained buffer (for decompression), optionally reference dict_buf without copying
-    NAU_KERNEL_EXPORT ZSTD_DDict_s* zstd_create_ddict(eastl::span<const char> dict_buf, bool use_buf_ref = false);
+    NAU_KERNEL_EXPORT ZSTD_DDict_s* zstd_create_ddict(std::span<const char> dict_buf, bool use_buf_ref = false);
     // destroys decompression dictionary
     NAU_KERNEL_EXPORT void zstd_destroy_ddict(ZSTD_DDict_s* dict);
 

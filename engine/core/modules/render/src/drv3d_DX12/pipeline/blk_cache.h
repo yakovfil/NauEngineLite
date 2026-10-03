@@ -3,11 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/dataBlock/dag_dataBlock.h"
+#include <utility>
 
 #include "derived_span.h"
+#include "nau/dataBlock/dag_dataBlock.h"
 #include "pipeline_cache.h"
-
 
 namespace drv3d_dx12
 {
@@ -34,8 +34,10 @@ class DataBlockDecodeEnumarator : private Decoder
 public:
   DataBlockDecodeEnumarator(const nau::DataBlock &blk, uint32_t start) : block{blk}, blockIndex{start} {}
   template <typename... Ts>
-  DataBlockDecodeEnumarator(const nau::DataBlock &blk, uint32_t start, Ts &&...ts) :
-    block{blk}, blockIndex{start}, Decoder{eastl::forward<Ts>(ts)...}
+  DataBlockDecodeEnumarator(const nau::DataBlock& blk, uint32_t start, Ts&&... ts) :
+      block{blk},
+      blockIndex{start},
+      Decoder{std::forward<Ts>(ts)...}
   {}
 
   template <typename T>
@@ -50,7 +52,7 @@ public:
     {
       return false;
     }
-    return this->Decoder::invoke(*blk, eastl::forward<T>(target));
+    return this->Decoder::invoke(*blk, std::forward<T>(target));
   }
   template <typename... Ts>
   bool decode(Ts &...targets) const
@@ -88,9 +90,12 @@ class DataBlockEncodeVisitor : Encoder
   nau::DataBlock &block;
 
 public:
-  template <typename... Ts>
-  DataBlockEncodeVisitor(nau::DataBlock &blk, Ts &&...ts) : block{blk}, Encoder{eastl::forward<Ts>(ts)...}
-  {}
+    template <typename... Ts>
+    DataBlockEncodeVisitor(nau::DataBlock& blk, Ts&&... ts) :
+        block{blk},
+        Encoder{std::forward<Ts>(ts)...}
+    {
+    }
   template <typename... Ts>
   bool encode(Ts &&...ts)
   {
@@ -101,7 +106,7 @@ public:
     {
       return false;
     }
-    if (!this->Encoder::encode(*newBlock, eastl::forward<Ts>(ts)...))
+    if (!this->Encoder::encode(*newBlock, std::forward<Ts>(ts)...))
     {
       block.removeBlock(block.blockCount() - 1);
       return true;

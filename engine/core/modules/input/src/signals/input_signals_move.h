@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <string>
+
 #include "input_signals_impl.h"
 
 namespace nau
@@ -9,7 +11,7 @@ namespace nau
     class InputSignalAxis : public InputSignalImpl
     {
     public:
-        InputSignalAxis(const eastl::string& type);
+        InputSignalAxis(const std::string& type);
 
     protected:
         virtual void update(float dt) override;

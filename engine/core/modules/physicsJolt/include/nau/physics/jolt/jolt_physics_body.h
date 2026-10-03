@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include "nau/physics/physics_body.h"
-#include "nau/scene/scene_object.h"
-#include "nau/physics/physics_defines.h"
-#include "nau/rtti/rtti_impl.h"
-
-#include <EASTL/shared_ptr.h>
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/Body.h>
+
+#include <memory>
+
+#include "nau/physics/physics_body.h"
+#include "nau/physics/physics_defines.h"
+#include "nau/rtti/rtti_impl.h"
+#include "nau/scene/scene_object.h"
 
 namespace nau::physics::jolt
 {
@@ -129,7 +130,7 @@ namespace nau::physics::jolt
         void initializeJoltBody(const PhysicsBodyCreationData& creationData);
 
     private:
-        eastl::shared_ptr<JoltCollisionShape> m_collisionShape;
+        std::shared_ptr<JoltCollisionShape> m_collisionShape;
         //nau::physics::RigidBodyComponent* m_component = nullptr;
 
         Ptr<JoltPhysicsWorld> m_physWorld;

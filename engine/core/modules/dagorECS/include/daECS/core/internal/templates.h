@@ -2,13 +2,15 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/hash_map.h>
-#include "archetypes.h"
 #include <daECS/core/component.h>
 #include <daECS/core/componentsMap.h>
+
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
+#include "archetypes.h"
+#include "nau/utils/dynamic_bit_vector.h"
 #include "typesAndLimits.h"
 
 namespace ecs
@@ -16,14 +18,16 @@ namespace ecs
 
 struct InstantiatedTemplate // it would be used for memcpy
 {
-  eastl::unique_ptr<uint8_t[]> initialData;
-  // currently initialComponentDataOffset has to be separate array, and can't be reallocated (as creatingEntities keep this as direct
-  // pointer)
-  eastl::unique_ptr<size_t[]> hasData; // bit array!
-  uint32_t alignedEntitySize = 0; // actually it is part of archetype (same for all templates of archetype). todo: move to archetype
-  archetype_t archetype = INVALID_ARCHETYPE;
-  uint16_t componentsCount = 0;
-  InstantiatedTemplate() {}
+    std::unique_ptr<uint8_t[]> initialData;
+    // currently initialComponentDataOffset has to be separate array, and can't be reallocated (as creatingEntities keep this as direct
+    // pointer)
+    std::unique_ptr<size_t[]> hasData;  // bit array!
+    uint32_t alignedEntitySize = 0;     // actually it is part of archetype (same for all templates of archetype). todo: move to archetype
+    archetype_t archetype = INVALID_ARCHETYPE;
+    uint16_t componentsCount = 0;
+    InstantiatedTemplate()
+    {
+    }
   InstantiatedTemplate(const Archetypes &archetypes, uint32_t archetype, const ChildComponent *const *initial_data,
     const DataComponents &dataComponents, ComponentTypes &componentTypes);
   void clear(const Archetypes &archetypes, const DataComponents &dataComponents, ComponentTypes &componentTypes);
@@ -71,11 +75,11 @@ protected:
   friend class EntityManager;
   InstantiatedTemplate &getTemplate(template_t t) { return templates[t]; }
   // StringTableAllocator templateNamesAllocator={10, 13};
-  eastl::vector<InstantiatedTemplate> templates;         // index for archetypes
-  eastl::vector<uint32_t> templateDbId;                  // SoA with templates
-  eastl::vector<uint32_t> templateReplData = {0};        // SoA with templates, offset in replicatedComponents. 0 if nothing
-  eastl::vector<component_index_t> replicatedComponents; // all replicated components for all templates. todo: deduplication
-  eastl::bitvector<> replicatingTemplates;             // cached COMPONENT_TYPE_REPLICATION archetypes flag
+  std::vector<InstantiatedTemplate> templates;          // index for archetypes
+  std::vector<uint32_t> templateDbId;                   // SoA with templates
+  std::vector<uint32_t> templateReplData = {0};         // SoA with templates, offset in replicatedComponents. 0 if nothing
+  std::vector<component_index_t> replicatedComponents;  // all replicated components for all templates. todo: deduplication
+  nau::DynamicBitVector<> replicatingTemplates;         // cached COMPONENT_TYPE_REPLICATION archetypes flag
 };
 
 inline const void *Templates::getTemplateData(template_t t, uint32_t ofs, uint32_t cid) const

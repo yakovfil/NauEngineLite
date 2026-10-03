@@ -2,14 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <string>
+#include <string_view>
 
-// calls Cb(eastl::string_view found_view)
+// calls Cb(std::string_view found_view)
 //  if Cb returns false, tokenize_const_string will return false
 
 template <typename Cb>
-inline bool tokenize_const_string(eastl::string_view str, const char *delim, Cb cb)
+inline bool tokenize_const_string(std::string_view str, const char* delim, Cb cb)
 {
   size_t start, end = 0;
   while (end < str.length() && str[end] != 0)
@@ -22,8 +22,8 @@ inline bool tokenize_const_string(eastl::string_view str, const char *delim, Cb 
       end++; // skip to end of word
 
     if (end - start != 0) // just ignore zero-length strings.
-      if (!cb(eastl::string_view(str.data() + start, end - start)))
-        return false;
+        if (!cb(std::string_view(str.data() + start, end - start)))
+            return false;
     ++end;
   }
   return true;

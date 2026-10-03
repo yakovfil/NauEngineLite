@@ -4,14 +4,16 @@
 
 #include "intermediateRepresentation.h"
 
-#include "nau/math/math.h"
-#include <EASTL/bitvector.h>
+#include <span>
+#include <utility>
+#include <vector>
 
-#include "dabfg/id/idRange.h"
 #include "dabfg/id/idExtentsFinder.h"
-#include "nau/memory/eastl_aliases.h"
-
-
+#include "dabfg/id/idRange.h"
+#include "nau/math/math.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/enum_utils.h"
 
 namespace dabfg
 {
@@ -19,101 +21,102 @@ namespace dabfg
 namespace intermediate
 {
 
-void Graph::choseSubgraph(eastl::span<const NodeIndex> old_to_new_index_mapping)
-{
-  NAU_ASSERT(old_to_new_index_mapping.size() == nodes.size());
-
-  // Jump through hoops in order to do this without any persistent
-  // allocations
-
-  //FRAMEMEM_VALIDATE;
-
-  size_t newNodeCount = 0;
-  for (auto [i, _] : nodes.enumerate())
-    if (old_to_new_index_mapping[i] != NODE_NOT_MAPPED)
-      ++newNodeCount;
-
-  // Sanity check: new indexing should not have gaps
-  for (auto [i, _] : nodes.enumerate())
-    if (old_to_new_index_mapping[i] != NODE_NOT_MAPPED)
-      NAU_ASSERT(old_to_new_index_mapping[i] < newNodeCount);
-
-
-  const auto choseSoa = [](auto &old_data, size_t new_count, const auto &mapping, const auto unmappedSentinel) {
-    using Mapping = std::decay_t<decltype(old_data)>;
-    IdIndexedMapping<typename Mapping::index_type, typename Mapping::value_type, nau::EastlFrameAllocator> newData;
-    newData.resize(new_count);
-    for (auto [i, data] : old_data.enumerate())
-      if (mapping[i] != unmappedSentinel)
-        newData[mapping[i]] = eastl::move(data);
-
-    old_data.resize(new_count);
-    eastl::move(newData.begin(), newData.end(), old_data.begin());
-  };
-
-  choseSoa(nodes, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
-  choseSoa(nodeStates, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
-  choseSoa(nodeNames, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
-
-  // We need to fixup all node -> node references
-  for (auto [i, node] : nodes.enumerate())
-  {
-    auto oldPreds = eastl::move(node.predecessors);
-    node.predecessors.clear();
-    for (const auto pred : oldPreds)
-      if (old_to_new_index_mapping[pred] != NODE_NOT_MAPPED)
-        node.predecessors.insert(old_to_new_index_mapping[pred]);
-  }
-
-  eastl::vector<ResourceIndex, nau::EastlFrameAllocator> resourceMapping(resources.size(), RESOURCE_NOT_MAPPED);
-
-  {
-    eastl::vector<Resource, nau::EastlFrameAllocator> newResources;
-    newResources.reserve(resources.size());
-    for (auto &node : nodes)
-      for (auto &req : node.resourceRequests)
-      {
-        if (resourceMapping[req.resource] == RESOURCE_NOT_MAPPED)
-        {
-          resourceMapping[req.resource] = static_cast<ResourceIndex>(newResources.size());
-          newResources.emplace_back(eastl::move(resources[req.resource]));
-        }
-        req.resource = resourceMapping[req.resource];
-      }
-    resources.resize(newResources.size());
-    eastl::move(newResources.begin(), newResources.end(), resources.begin());
-  }
-
-  choseSoa(resourceNames, resources.size(), resourceMapping, RESOURCE_NOT_MAPPED);
-
-  const auto updateResourceIndex = [&resourceMapping](ResourceIndex &index) {
-    NAU_ASSERT(resourceMapping[index] != RESOURCE_NOT_MAPPED);
-    index = resourceMapping[index];
-  };
-
-  // We also need to fix up node -> resource references
-  for (auto &state : nodeStates)
-  {
-    if (state.vrs)
-      updateResourceIndex(state.vrs->rateTexture);
-
-    for (const auto &[id, binding] : state.bindings)
-      if (binding.resource.has_value())
-      {
-        // FIXME: this is a dumb hack due to iteration being const only
-        // for dag::FixedVectorMap, should probably fix it at some point...
-        updateResourceIndex(*state.bindings[id].resource);
-      }
-
-    if (state.pass)
+    void Graph::choseSubgraph(std::span<const NodeIndex> old_to_new_index_mapping)
     {
-      if (state.pass->depthAttachment.has_value())
-        updateResourceIndex(state.pass->depthAttachment->resource);
-      for (auto &color : state.pass->colorAttachments)
-        if (color.has_value())
-          updateResourceIndex(color->resource);
-    }
-  }
+        NAU_ASSERT(old_to_new_index_mapping.size() == nodes.size());
+
+        // Jump through hoops in order to do this without any persistent
+        // allocations
+
+        // FRAMEMEM_VALIDATE;
+
+        size_t newNodeCount = 0;
+        for (auto [i, _] : nodes.enumerate())
+            if (old_to_new_index_mapping[i] != NODE_NOT_MAPPED)
+                ++newNodeCount;
+
+        // Sanity check: new indexing should not have gaps
+        for (auto [i, _] : nodes.enumerate())
+            if (old_to_new_index_mapping[i] != NODE_NOT_MAPPED)
+                NAU_ASSERT(old_to_new_index_mapping[i] < newNodeCount);
+
+        const auto choseSoa = [](auto& old_data, size_t new_count, const auto& mapping, const auto unmappedSentinel)
+        {
+            using Mapping = std::decay_t<decltype(old_data)>;
+            IdIndexedMapping<typename Mapping::index_type, typename Mapping::value_type, nau::FrameStdAllocator<typename Mapping::value_type>> newData;
+            newData.resize(new_count);
+            for (auto [i, data] : old_data.enumerate())
+                if (mapping[i] != unmappedSentinel)
+                    newData[mapping[i]] = std::move(data);
+
+            old_data.resize(new_count);
+            std::move(newData.begin(), newData.end(), old_data.begin());
+        };
+
+        choseSoa(nodes, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
+        choseSoa(nodeStates, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
+        choseSoa(nodeNames, newNodeCount, old_to_new_index_mapping, NODE_NOT_MAPPED);
+
+        // We need to fixup all node -> node references
+        for (auto [i, node] : nodes.enumerate())
+        {
+            auto oldPreds = std::move(node.predecessors);
+            node.predecessors.clear();
+            for (const auto pred : oldPreds)
+                if (old_to_new_index_mapping[pred] != NODE_NOT_MAPPED)
+                    node.predecessors.insert(old_to_new_index_mapping[pred]);
+        }
+
+        std::vector<ResourceIndex, nau::FrameStdAllocator<ResourceIndex>> resourceMapping(resources.size(), RESOURCE_NOT_MAPPED);
+
+        {
+            std::vector<Resource, nau::FrameStdAllocator<Resource>> newResources;
+            newResources.reserve(resources.size());
+            for (auto& node : nodes)
+                for (auto& req : node.resourceRequests)
+                {
+                    if (resourceMapping[req.resource] == RESOURCE_NOT_MAPPED)
+                    {
+                        resourceMapping[req.resource] = static_cast<ResourceIndex>(newResources.size());
+                        newResources.emplace_back(std::move(resources[req.resource]));
+                    }
+                    req.resource = resourceMapping[req.resource];
+                }
+            resources.resize(newResources.size());
+            std::move(newResources.begin(), newResources.end(), resources.begin());
+        }
+
+        choseSoa(resourceNames, resources.size(), resourceMapping, RESOURCE_NOT_MAPPED);
+
+        const auto updateResourceIndex = [&resourceMapping](ResourceIndex& index)
+        {
+            NAU_ASSERT(resourceMapping[index] != RESOURCE_NOT_MAPPED);
+            index = resourceMapping[index];
+        };
+
+        // We also need to fix up node -> resource references
+        for (auto& state : nodeStates)
+        {
+            if (state.vrs)
+                updateResourceIndex(state.vrs->rateTexture);
+
+            for (const auto& [id, binding] : state.bindings)
+                if (binding.resource.has_value())
+                {
+                    // FIXME: this is a dumb hack due to iteration being const only
+                    // for dag::FixedVectorMap, should probably fix it at some point...
+                    updateResourceIndex(*state.bindings[id].resource);
+                }
+
+            if (state.pass)
+            {
+                if (state.pass->depthAttachment.has_value())
+                    updateResourceIndex(state.pass->depthAttachment->resource);
+                for (auto& color : state.pass->colorAttachments)
+                    if (color.has_value())
+                        updateResourceIndex(color->resource);
+            }
+        }
 }
 
 Mapping Graph::calculateMapping()
@@ -229,14 +232,14 @@ Mapping::Mapping(uint32_t node_count, uint32_t res_count, uint32_t multiplexing_
 
 bool Mapping::wasResMapped(ResNameId id, MultiplexingIndex multi_idx) const
 {
-  return eastl::to_underlying(multi_idx) * mappedResNameIdCount_ < resNameIdMapping_.size() &&
-         eastl::to_underlying(id) < mappedResNameIdCount_ && mapRes(id, multi_idx) != RESOURCE_NOT_MAPPED;
+    return nau::to_underlying(multi_idx) * mappedResNameIdCount_ < resNameIdMapping_.size() &&
+           nau::to_underlying(id) < mappedResNameIdCount_ && mapRes(id, multi_idx) != RESOURCE_NOT_MAPPED;
 }
 
 bool Mapping::wasNodeMapped(NodeNameId id, MultiplexingIndex multi_idx) const
 {
-  return eastl::to_underlying(multi_idx) * mappedNodeNameIdCount_ < nodeNameIdMapping_.size() &&
-         eastl::to_underlying(id) < mappedNodeNameIdCount_ && mapNode(id, multi_idx) != NODE_NOT_MAPPED;
+    return nau::to_underlying(multi_idx) * mappedNodeNameIdCount_ < nodeNameIdMapping_.size() &&
+           nau::to_underlying(id) < mappedNodeNameIdCount_ && mapNode(id, multi_idx) != NODE_NOT_MAPPED;
 }
 
 uint32_t Mapping::multiplexingExtent() const
@@ -246,7 +249,7 @@ uint32_t Mapping::multiplexingExtent() const
 
 ResourceIndex &Mapping::mapRes(ResNameId id, MultiplexingIndex multi_idx)
 {
-  return resNameIdMapping_[eastl::to_underlying(multi_idx) * mappedResNameIdCount_ + eastl::to_underlying(id)];
+    return resNameIdMapping_[nau::to_underlying(multi_idx) * mappedResNameIdCount_ + nau::to_underlying(id)];
 }
 
 // Const cast is ok in below cases as we never mutate `this`, only copy a
@@ -258,7 +261,7 @@ ResourceIndex Mapping::mapRes(ResNameId id, MultiplexingIndex multi_idx) const
 
 NodeIndex &Mapping::mapNode(NodeNameId id, MultiplexingIndex multi_idx)
 {
-  return nodeNameIdMapping_[eastl::to_underlying(multi_idx) * mappedNodeNameIdCount_ + eastl::to_underlying(id)];
+    return nodeNameIdMapping_[nau::to_underlying(multi_idx) * mappedNodeNameIdCount_ + nau::to_underlying(id)];
 }
 
 NodeIndex Mapping::mapNode(NodeNameId id, MultiplexingIndex multi_idx) const

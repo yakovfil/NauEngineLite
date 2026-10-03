@@ -6,6 +6,9 @@
 #include <nau/kernel/kernel_config.h>
 #include <nau/memory/mem_allocator.h>
 
+#include <span>
+#include <vector>
+
 namespace nau::iosys
 {
     /// @addtogroup utility_classes
@@ -108,9 +111,9 @@ namespace nau::iosys
         {
             return datasize;
         }
-        virtual eastl::span<const char> getTargetRomData() const override
+        virtual std::span<const char> getTargetRomData() const override
         {
-            return eastl::span<const char>((const char*)dataptr, datasize);
+            return std::span<const char>((const char*)dataptr, datasize);
         }
 
         void close();
@@ -178,7 +181,7 @@ namespace nau::iosys
         virtual ~IStreamDecompress()
         {
         }
-        virtual StreamDecompressResult decompress(eastl::span<const uint8_t> in, eastl::vector<char>& out, size_t* nbytes_read = nullptr) = 0;
+        virtual StreamDecompressResult decompress(std::span<const uint8_t> in, std::vector<char>& out, size_t* nbytes_read = nullptr) = 0;
     };
 
     /// @}

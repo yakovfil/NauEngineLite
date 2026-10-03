@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
+
 #include "nau/diag/error.h"
 
 namespace nau::test
@@ -39,7 +42,7 @@ namespace nau::test
         const char* ErrorText = "test error";
 
         auto error = NauMakeError(ErrorText);
-        ASSERT_EQ(eastl::string{ErrorText}, error->getMessage());
+        ASSERT_EQ(std::string{ErrorText}, error->getMessage());
         ASSERT_TRUE(error->is<nau::Error>());
     }
 
@@ -55,7 +58,7 @@ namespace nau::test
 
     TEST(TestError, ErrorIsStdException)
     {
-        const eastl::string ErrorText = "test error";
+        const std::string ErrorText = "test error";
         auto error = NauMakeError(ErrorText);
 
         ASSERT_TRUE(error->is<std::exception>());
@@ -67,7 +70,7 @@ namespace nau::test
     TEST(TestError, FormattedMessage)
     {
         auto error = NauMakeError("Text[{}][{}]", 77, 22);
-        ASSERT_EQ(error->getMessage(), eastl::string_view{"Text[77][22]"});
+        ASSERT_EQ(error->getMessage(), std::string_view{"Text[77][22]"});
     }
 
 }  // namespace nau::test

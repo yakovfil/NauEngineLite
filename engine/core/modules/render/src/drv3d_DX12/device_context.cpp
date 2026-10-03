@@ -2,17 +2,31 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <algorithm>
+#include <bitset>
+#include <format>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "device.h"
 
 //#include <osApiWrappers/dag_files.h>
 #include "nau/dataBlock/dag_dataBlock.h"
 //#include <debug/dag_logSys.h>
 //#include <perfMon/dag_statDrv.h>
-#include <EASTL/sort.h>
+#include <drv3d_commonCode/drv_returnAddrStore.h>
+
+#include <algorithm>
+
 #include "nau/3d/dag_lowLatency.h"
 #include "nau/utils/performance_profiling.h"
-
-#include <drv3d_commonCode/drv_returnAddrStore.h>
 
 #if _TARGET_XBOX
 #include <osApiWrappers/xbox/app.h> // make_thread_time_sensitive
@@ -405,7 +419,7 @@ void DeviceContext::debugBreak()
   immediateModeExecute();
 }
 
-void DeviceContext::addDebugBreakString(eastl::string_view str)
+void DeviceContext::addDebugBreakString(std::string_view str)
 {
   auto cmd = make_command<CmdAddDebugBreakString>();
   DX12_LOCK_FRONT();
@@ -413,7 +427,7 @@ void DeviceContext::addDebugBreakString(eastl::string_view str)
   immediateModeExecute();
 }
 
-void DeviceContext::removeDebugBreakString(eastl::string_view str)
+void DeviceContext::removeDebugBreakString(std::string_view str)
 {
   auto cmd = make_command<CmdRemoveDebugBreakString>();
   DX12_LOCK_FRONT();
@@ -573,8 +587,8 @@ void DeviceContext::waitInternal()
 
   if (!front.eventsPool.empty())
   {
-    event = eastl::move(front.eventsPool.back());
-    front.eventsPool.pop_back();
+      event = std::move(front.eventsPool.back());
+      front.eventsPool.pop_back();
   }
   if (!event)
   {
@@ -588,7 +602,7 @@ void DeviceContext::waitInternal()
   frontFlush();
 
   wait_for_frame_progress_with_event(device.queues, progressToWaitFor, event.get(), "wait");
-  front.eventsPool.push_back(eastl::move(event));
+  front.eventsPool.push_back(std::move(event));
 }
 
 void DeviceContext::finishInternal()
@@ -801,19 +815,20 @@ void report_metrics(VariantContainerVisitMetricsCollector<A> &metrics)
     auto frameCount = metrics.template getVisitCountFor<CmdPresent>();
 
     // -1 because last one is void as terminating entry
-    eastl::sort(eastl::begin(commandArray), eastl::end(commandArray) - 1, [](auto &l, auto &r) {
-      return r.visitCount.value() < l.visitCount.value() ||
-             ((r.visitCount.value() == l.visitCount.value()) && (l.cmdIndex < r.cmdIndex));
+    std::sort(std::begin(commandArray), std::end(commandArray) - 1, [](auto& l, auto& r)
+    {
+        return r.visitCount.value() < l.visitCount.value() ||
+               ((r.visitCount.value() == l.visitCount.value()) && (l.cmdIndex < r.cmdIndex));
     });
 
     NAU_LOG_DEBUG("DX12: Command Stream visited commands statistics:");
     NAU_LOG_DEBUG("{:3s}, [{:3s}] {:<45s}, {:10s}, {:6s}, {:9s}", "#", "ID", "name", "count", "%", "frame avg");
-    for (auto at = eastl::begin(commandArray), ed = eastl::end(commandArray) - 1; at != ed; ++at)
+    for (auto at = std::begin(commandArray), ed = std::end(commandArray) - 1; at != ed; ++at)
     {
       auto perc = at->visitCount.value() * 100.0 / totalCount.value();
       auto perFrame = double(at->visitCount.value()) / frameCount;
-      NAU_LOG_DEBUG("{:3u}, [{:3u}] {:<45s}, {:8.2f} {:1s}, {:5.2f}%, {:9.2f}", 1 + (at - eastl::begin(commandArray)), at->cmdIndex,
-        cmdNames[at->cmdIndex], at->visitCount.units(), at->visitCount.name(), perc, perFrame);
+      NAU_LOG_DEBUG("{:3u}, [{:3u}] {:<45s}, {:8.2f} {:1s}, {:5.2f}%, {:9.2f}", 1 + (at - std::begin(commandArray)), at->cmdIndex,
+                    cmdNames[at->cmdIndex], at->visitCount.units(), at->visitCount.name(), perc, perFrame);
     }
     NAU_LOG_DEBUG("{:.2f} {} total visits", totalCount.units(), totalCount.name());
   }
@@ -850,7 +865,7 @@ void DeviceContext::clearRenderTargets(ViewportState vp, uint32_t clear_mask, co
   immediateModeExecute();
 }
 
-void DeviceContext::pushConstRegisterData(uint32_t stage, eastl::span<const ConstRegisterType> data)
+void DeviceContext::pushConstRegisterData(uint32_t stage, std::span<const ConstRegisterType> data)
 {
   auto update = device.resources.allocatePushMemory(device.getDXGIAdapter(), device.device.get(),
     sizeof(ConstRegisterType) * data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -858,7 +873,7 @@ void DeviceContext::pushConstRegisterData(uint32_t stage, eastl::span<const Cons
   {
     return;
   }
-  eastl::copy(data.begin(), data.end(), update.as<ConstRegisterType>());
+  std::copy(data.begin(), data.end(), update.as<ConstRegisterType>());
   update.flush();
   auto cmd = make_command<CmdSetConstRegisterBuffer>(update, stage);
   commandStream.pushBack(cmd, false /*wake executor*/);
@@ -978,7 +993,7 @@ void DeviceContext::setScissorEnable(bool enabled)
   immediateModeExecute();
 }
 
-void DeviceContext::setScissorRects(eastl::span<const D3D12_RECT> rects)
+void DeviceContext::setScissorRects(std::span<const D3D12_RECT> rects)
 {
   commandStream.pushBack(make_command<CmdSetScissorRects>(), rects.data(), rects.size());
   immediateModeExecute();
@@ -1195,7 +1210,7 @@ void DeviceContext::popEvent()
   immediateModeExecute();
 }
 
-void DeviceContext::updateViewports(eastl::span<const ViewportState> viewports)
+void DeviceContext::updateViewports(std::span<const ViewportState> viewports)
 {
   commandStream.pushBack(make_command<CmdSetViewports>(), viewports.data(), viewports.size());
   immediateModeExecute();
@@ -1305,8 +1320,8 @@ void DeviceContext::wait()
     DX12_LOCK_FRONT();
     if (!front.eventsPool.empty())
     {
-      event = eastl::move(front.eventsPool.back());
-      front.eventsPool.pop_back();
+        event = std::move(front.eventsPool.back());
+        front.eventsPool.pop_back();
     }
   }
   if (!event)
@@ -1327,7 +1342,7 @@ void DeviceContext::wait()
   wait_for_frame_progress_with_event(device.queues, progressToWaitFor, event.get(), "wait");
   {
     DX12_LOCK_FRONT();
-    front.eventsPool.push_back(eastl::move(event));
+    front.eventsPool.push_back(std::move(event));
   }
 }
 
@@ -1365,7 +1380,7 @@ void DeviceContext::destroyBuffer(BufferState buffer, const char8_t *name)
 #if !DX12_USE_AUTO_PROMOTE_AND_DECAY
     auto cmd = make_command<CmdResetBufferState>(buffer);
 #endif
-    device.resources.freeBufferOnFrameCompletion(eastl::move(buffer), ResourceMemoryHeap::FreeReason::USER_DELETE, isStillValidRes);
+    device.resources.freeBufferOnFrameCompletion(std::move(buffer), ResourceMemoryHeap::FreeReason::USER_DELETE, isStillValidRes);
 
 #if !DX12_USE_AUTO_PROMOTE_AND_DECAY
     commandStream.pushBack(cmd);
@@ -1380,9 +1395,9 @@ BufferState DeviceContext::discardBuffer(BufferState to_discared, DeviceMemoryCl
   BufferState result;
   {
     DX12_LOCK_FRONT();
-    result = device.resources.discardBuffer(device.getDXGIAdapter(), device.device.get(), eastl::move(to_discared), memory_class,
-      format, struct_size, raw_view, struct_view, flags, cflags, name, front.frameIndex,
-      device.config.features.test(DeviceFeaturesConfig::DISABLE_BUFFER_SUBALLOCATION), device.shouldNameObjects());
+    result = device.resources.discardBuffer(device.getDXGIAdapter(), device.device.get(), std::move(to_discared), memory_class,
+                                            format, struct_size, raw_view, struct_view, flags, cflags, name, front.frameIndex,
+                                            device.config.features.test(DeviceFeaturesConfig::DISABLE_BUFFER_SUBALLOCATION), device.shouldNameObjects());
   }
 
   return result;
@@ -1436,9 +1451,9 @@ void DeviceContext::present(OutputMode mode)
 
     NAU_LOG_DEBUG("DX12: Frame {}: interval was {} us, threshold is {} us; capturing next frame", front.frameIndex, frameInterval,
       capInfo.thresholdUS);
-    eastl::wstring name =
-      eastl::wstring(eastl::wstring::CtorSprintf(), L"CaptureAfterLongFrame-%04d.%02d.%02d-%02d.%02d.%02d-%02d.xpix",
-        1900 + t->tm_year, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, capInfo.captureId);
+    std::wstring name =
+        std::format(L"CaptureAfterLongFrame-{:04d}.{:02d}.{:02d}-{:02d}.{:02d}.{:02d}-{:02d}.xpix",
+                    1900 + t->tm_year, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, capInfo.captureId);
     ++capInfo.captureId;
     commandStream.pushBack(make_command<CmdCaptureNextFrames>(capInfo.flags, capInfo.frameCount), name.c_str(), name.size() + 1);
     // Capture takes a lot of time, so next frames will have a big latency; ignore them
@@ -1582,7 +1597,7 @@ void DeviceContext::changeFullscreenExclusiveMode(bool is_exclusive, ComPtr<IDXG
   finishInternal();
 
   auto size = front.swapchain.getExtent();
-  back.swapchain.changeFullscreenExclusiveMode(is_exclusive, eastl::move(output));
+  back.swapchain.changeFullscreenExclusiveMode(is_exclusive, std::move(output));
   // "For the flip presentation model, after you transition the display state to full screen, you must
   // call ResizeBuffers to ensure that your call to IDXGISwapChain1::Present1 succeeds."
   // Source: https://docs.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-setfullscreenstate
@@ -1602,13 +1617,22 @@ IDXGIOutput* DeviceContext::getSwapchainOutput()
 
 void DeviceContext::shutdownSwapchain()
 {
-  DX12_LOCK_FRONT();
-  finishInternal();
+    DX12_LOCK_FRONT();
+    finishInternal();
 
-  back.swapchain.prepareForShutdown(device);
-  front.swapchain.prepareForShutdown(device);
-  back.swapchain.shutdown();
-  front.swapchain.shutdown();
+    // Additional windows can remain open when the primary window stops the app.
+    // Release their images and descriptor heaps while the device is still alive.
+    for (auto& [id, swapchain] : back.addSwapchains)
+    {
+        swapchain.prepareForShutdown(device);
+        swapchain.shutdown();
+    }
+    back.addSwapchains.clear();
+
+    back.swapchain.prepareForShutdown(device);
+    front.swapchain.prepareForShutdown(device);
+    back.swapchain.shutdown();
+    front.swapchain.shutdown();
 }
 
 void DeviceContext::insertTimestampQuery(Query *query)
@@ -1680,16 +1704,16 @@ void DeviceContext::generateMipmaps(Image *img)
 
 void DeviceContext::setFramebuffer(Image **image_list, ImageViewState *view_list, bool read_only_depth)
 {
-  static_assert(eastl::is_aggregate_v<CmdSetFramebuffer>);
-  auto cmd = make_command<CmdSetFramebuffer>();
-  memcpy(cmd.imageList, image_list, sizeof(cmd.imageList));
-  memcpy(cmd.viewList, view_list, sizeof(cmd.viewList));
-  for (uint32_t i = 0; i < (Driver3dRenderTarget::MAX_SIMRT + 1); ++i)
-  {
-    if (image_list[i])
+    static_assert(std::is_aggregate_v<CmdSetFramebuffer>);
+    auto cmd = make_command<CmdSetFramebuffer>();
+    memcpy(cmd.imageList, image_list, sizeof(cmd.imageList));
+    memcpy(cmd.viewList, view_list, sizeof(cmd.viewList));
+    for (uint32_t i = 0; i < (Driver3dRenderTarget::MAX_SIMRT + 1); ++i)
     {
-      cmd.viewDescriptors[i] = device.getImageView(image_list[i], view_list[i]);
-    }
+        if (image_list[i])
+        {
+            cmd.viewDescriptors[i] = device.getImageView(image_list[i], view_list[i]);
+        }
   }
   cmd.readOnlyDepth = read_only_depth;
   commandStream.pushBack(cmd);
@@ -1797,7 +1821,7 @@ void DeviceContext::endConditionalRender()
   immediateModeExecute();
 }
 
-void DeviceContext::addVertexShader(ShaderID id, eastl::unique_ptr<VertexShaderModule> shader)
+void DeviceContext::addVertexShader(ShaderID id, std::unique_ptr<VertexShaderModule> shader)
 {
   auto cmd = make_command<CmdAddVertexShader>(id, shader.release());
   DX12_LOCK_FRONT();
@@ -1805,7 +1829,7 @@ void DeviceContext::addVertexShader(ShaderID id, eastl::unique_ptr<VertexShaderM
   immediateModeExecute();
 }
 
-void DeviceContext::addPixelShader(ShaderID id, eastl::unique_ptr<PixelShaderModule> shader)
+void DeviceContext::addPixelShader(ShaderID id, std::unique_ptr<PixelShaderModule> shader)
 {
   auto cmd = make_command<CmdAddPixelShader>(id, shader.release());
   DX12_LOCK_FRONT();
@@ -1835,7 +1859,7 @@ void DeviceContext::addGraphicsProgram(GraphicsProgramID program, ShaderID vs, S
   immediateModeExecute();
 }
 
-void DeviceContext::addComputeProgram(ProgramID id, eastl::unique_ptr<ComputeShaderModule> csm, CSPreloaded preloaded)
+void DeviceContext::addComputeProgram(ProgramID id, std::unique_ptr<ComputeShaderModule> csm, CSPreloaded preloaded)
 {
   auto cmd = make_command<CmdAddComputeProgram>(id, csm.release(), preloaded);
   DX12_LOCK_FRONT();
@@ -2033,7 +2057,7 @@ void DeviceContext::preRecovery()
   back.swapchain.preRecovery();
 }
 
-void DeviceContext::recover(const eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &unbounded_samplers)
+void DeviceContext::recover(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& unbounded_samplers)
 {
   back.sharedContextState.frames.walkAll([=](auto &frame) //
     { frame.recover(device.device.get()); });
@@ -2223,8 +2247,8 @@ void DeviceContext::waitForProgress(uint64_t progress)
     needsFlush = progress == front.recordingWorkItemProgress;
     if (needsFlush && !front.eventsPool.empty())
     {
-      event = eastl::move(front.eventsPool.back());
-      front.eventsPool.pop_back();
+        event = std::move(front.eventsPool.back());
+        front.eventsPool.pop_back();
     }
   }
   if (needsFlush)
@@ -2248,7 +2272,7 @@ void DeviceContext::waitForProgress(uint64_t progress)
   if (event)
   {
     DX12_LOCK_FRONT();
-    front.eventsPool.push_back(eastl::move(event));
+    front.eventsPool.push_back(std::move(event));
   }
 }
 
@@ -2907,8 +2931,7 @@ struct BufferWriter
 
   BufferWriter(char *buf, size_t sz) : buffer{buf}, size{sz} {}
 
-
-  void write(eastl::string_view text)
+  void write(std::string_view text)
   {
     size_t spaceLeft = size - offset - 1;
     auto copyCount = Vectormath::min(text.length(), spaceLeft);
@@ -2924,7 +2947,10 @@ struct BufferWriter
     offset += copyCount;
   }
 
-  void write(const char *text) { write(eastl::string_view{text}); }
+  void write(const char* text)
+  {
+      write(std::string_view{text});
+  }
 
   size_t finish()
   {
@@ -3126,9 +3152,9 @@ void DeviceContext::ExecutionContext::setScissorEnable(bool enable)
 
 void DeviceContext::ExecutionContext::setScissorRects(ScissorRectListRef::RangeType rects)
 {
-  eastl::copy_n(rects.begin(), rects.size(), contextState.graphicsState.scissorRects);
-  contextState.graphicsState.scissorRectCount = rects.size();
-  contextState.graphicsState.statusBits.set(GraphicsState::SCISSOR_RECT_DIRTY);
+    std::copy_n(rects.begin(), rects.size(), contextState.graphicsState.scissorRects);
+    contextState.graphicsState.scissorRectCount = rects.size();
+    contextState.graphicsState.statusBits.set(GraphicsState::SCISSOR_RECT_DIRTY);
 }
 
 void DeviceContext::ExecutionContext::setIndexBuffer(BufferResourceReferenceAndAddressRange buffer, DXGI_FORMAT type)
@@ -3193,11 +3219,11 @@ void DeviceContext::ExecutionContext::updateViewports(ViewportListRef::RangeType
   };
 
   if (contextState.graphicsState.viewportCount != new_vps.size() ||
-      !eastl::equal(new_vps.begin(), new_vps.end(), contextState.graphicsState.viewports, cmp))
+      !std::equal(new_vps.begin(), new_vps.end(), contextState.graphicsState.viewports, cmp))
   {
-    eastl::copy_n(new_vps.begin(), new_vps.size(), contextState.graphicsState.viewports);
-    contextState.graphicsState.viewportCount = new_vps.size();
-    contextState.graphicsState.statusBits.set(GraphicsState::VIEWPORT_DIRTY);
+      std::copy_n(new_vps.begin(), new_vps.size(), contextState.graphicsState.viewports);
+      contextState.graphicsState.viewportCount = new_vps.size();
+      contextState.graphicsState.statusBits.set(GraphicsState::VIEWPORT_DIRTY);
   }
 }
 
@@ -3283,7 +3309,7 @@ void DeviceContext::ExecutionContext::readBackImagePrePhase()
   contextState.textureReadBackSplitBarrierEnds.clear();
 }
 
-bool DeviceContext::ExecutionContext::checkDrawCallHasOutput(eastl::span<const char> info)
+bool DeviceContext::ExecutionContext::checkDrawCallHasOutput(std::span<const char> info)
 {
 #if DX12_DROP_NOT_USEFUL_DRAW_CALLS
   auto colorTargets = contextState.graphicsState.framebufferState.framebufferLayout.colorTargetMask;
@@ -3597,12 +3623,12 @@ void DeviceContext::ExecutionContext::addComputePipeline(ProgramID id, ComputeSh
 {
   // if optimization pass is used, then it has to handle this, as it might needs the data for later
   // commands
-  eastl::unique_ptr<ComputeShaderModule> sm{csm};
+  std::unique_ptr<ComputeShaderModule> sm{csm};
   // module id is the compute program id, no need for extra param
-  device.pipeMan.addCompute(device.device.get(), device.pipelineCache, id, eastl::move(*csm),
-    get_recover_behvior_from_cfg(device.config.features.test(DeviceFeaturesConfig::PIPELINE_COMPILATION_ERROR_IS_FATAL),
-      device.config.features.test(DeviceFeaturesConfig::ASSERT_ON_PIPELINE_COMPILATION_ERROR)),
-    device.shouldNameObjects(), preloaded);
+  device.pipeMan.addCompute(device.device.get(), device.pipelineCache, id, std::move(*csm),
+                            get_recover_behvior_from_cfg(device.config.features.test(DeviceFeaturesConfig::PIPELINE_COMPILATION_ERROR_IS_FATAL),
+                                                         device.config.features.test(DeviceFeaturesConfig::ASSERT_ON_PIPELINE_COMPILATION_ERROR)),
+                            device.shouldNameObjects(), preloaded);
 }
 
 void DeviceContext::ExecutionContext::addGraphicsPipeline(GraphicsProgramID program, ShaderID vs, ShaderID ps)
@@ -4895,9 +4921,9 @@ void DeviceContext::ExecutionContext::flushIndexBuffer()
 
     if (buffer && readyCommandList())
     {
-      NAU_ASSERT(buffer.size <= eastl::numeric_limits<uint32_t>::max());
-      D3D12_INDEX_BUFFER_VIEW view{buffer.gpuPointer, static_cast<uint32_t>(buffer.size), type};
-      contextState.cmdBuffer.iaSetIndexBuffer(&view);
+        NAU_ASSERT(buffer.size <= std::numeric_limits<uint32_t>::max());
+        D3D12_INDEX_BUFFER_VIEW view{buffer.gpuPointer, static_cast<uint32_t>(buffer.size), type};
+        contextState.cmdBuffer.iaSetIndexBuffer(&view);
     }
   }
 
@@ -4923,7 +4949,7 @@ void DeviceContext::ExecutionContext::flushVertexBuffers()
     1u << GraphicsState::VERTEX_BUFFER_STATE_6_DIRTY | 1u << GraphicsState::VERTEX_BUFFER_STATE_7_DIRTY;
 
   const uint32_t vertexBufferBits =
-    (contextState.graphicsState.statusBits.to_uint32() & vertexBufferDirtyMask) >> GraphicsState::VERTEX_BUFFER_0_DIRTY;
+      (contextState.graphicsState.statusBits.to_ulong() & vertexBufferDirtyMask) >> GraphicsState::VERTEX_BUFFER_0_DIRTY;
 
   // find range of which buffers we need to update
   uint32_t first = 0, last = 0, count = 0;
@@ -4962,7 +4988,7 @@ void DeviceContext::ExecutionContext::flushVertexBuffers()
     contextState.bufferAccessTracker.updateLastFrameAccess(vertexBuffer.resourceId);
   }
 
-  contextState.graphicsState.statusBits &= eastl::bitset<GraphicsState::COUNT>{~(vertexBufferDirtyMask | vertexBufferStateDirtyMask)};
+  contextState.graphicsState.statusBits &= std::bitset<GraphicsState::COUNT>{~(vertexBufferDirtyMask | vertexBufferStateDirtyMask)};
 }
 
 void DeviceContext::ExecutionContext::flushGraphicsStateResourceBindings()
@@ -5291,11 +5317,11 @@ void DeviceContext::ExecutionContext::bufferReadBack(BufferResourceReferenceAndR
     UINT cnt = sizeof(wcbuf);
     NAU_LOG_ERROR("DX12: Read Back Copy out of range (skipping):");
     cpu_memory.buffer->GetPrivateData(WKPDID_D3DDebugObjectNameW, &cnt, wcbuf);
-    eastl::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
+    std::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
     NAU_LOG_ERROR("DX12: Dest '{}' Size {}, copy range {} - {}", cbuf, infoD.Width, dstOffset, dstOffset + buffer.size);
 
     buffer.buffer->GetPrivateData(WKPDID_D3DDebugObjectNameW, &cnt, wcbuf);
-    eastl::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
+    std::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
     NAU_LOG_ERROR("DX12: Source '{}' Size {}, copy range {} - {}", cbuf, infoS.Width, srcOffset, srcOffset + buffer.size);
     return;
   }
@@ -5438,14 +5464,14 @@ void DeviceContext::ExecutionContext::removeVertexShader(ShaderID shader)
 {
   auto &frame = contextState.getFrameData();
   auto module = device.pipeMan.releaseVertexShader(shader);
-  frame.deletedShaderModules.push_back(eastl::move(module));
+  frame.deletedShaderModules.push_back(std::move(module));
 }
 
 void DeviceContext::ExecutionContext::removePixelShader(ShaderID shader)
 {
   auto &frame = contextState.getFrameData();
   auto module = device.pipeMan.releasePixelShader(shader);
-  frame.deletedShaderModules.push_back(eastl::move(module));
+  frame.deletedShaderModules.push_back(std::move(module));
 }
 
 void DeviceContext::ExecutionContext::deleteProgram(ProgramID program)
@@ -5467,7 +5493,8 @@ void DeviceContext::ExecutionContext::deleteGraphicsProgram(GraphicsProgramID pr
 void DeviceContext::ExecutionContext::deleteQueries(QueryPointerListRef::RangeType queries)
 {
   auto &frame = contextState.getFrameData();
-  frame.deletedQueries.insert(end(frame.deletedQueries), begin(queries), end(queries));
+  for (auto* query : queries)
+      frame.deletedQueries.push_back(query);
 }
 
 void DeviceContext::ExecutionContext::hostToDeviceMemoryCopy(BufferResourceReferenceAndRange target,
@@ -5486,11 +5513,11 @@ void DeviceContext::ExecutionContext::hostToDeviceMemoryCopy(BufferResourceRefer
       UINT cnt = sizeof(wcbuf);
       NAU_LOG_ERROR("DX12: Upload Copy out of range (skipping):");
       target.buffer->GetPrivateData(WKPDID_D3DDebugObjectNameW, &cnt, wcbuf);
-      eastl::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
+      std::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
       NAU_LOG_ERROR("DX12: Dest '{}' Size {}, copy range {} - {}", cbuf, infoD.Width, dstOffset, dstOffset + target.size);
 
       source.buffer->GetPrivateData(WKPDID_D3DDebugObjectNameW, &cnt, wcbuf);
-      eastl::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
+      std::copy(wcbuf, wcbuf + cnt / sizeof(wchar_t), cbuf);
       NAU_LOG_ERROR("DX12: Source '{}' Size {}, copy range {} - {}", cbuf, infoS.Width, srcOffset, srcOffset + target.size);
       return;
     }
@@ -6329,13 +6356,13 @@ void DeviceContext::ExecutionContext::compilePipelineSet(DynamicArray<InputLayou
   DynamicArray<GraphicsPipelinePreloadInfo> &&graphics_pipelines, DynamicArray<MeshPipelinePreloadInfo> &&mesh_pipelines,
   DynamicArray<ComputePipelinePreloadInfo> &&compute_pipelines)
 {
-  device.pipeMan.compilePipelineSet(device.getDevice(), device.pipelineCache, contextState.framebufferLayouts,
-    eastl::forward<DynamicArray<InputLayoutID>>(input_layouts),
-    eastl::forward<DynamicArray<StaticRenderStateID>>(static_render_states),
-    eastl::forward<DynamicArray<FramebufferLayout>>(framebuffer_layouts),
-    eastl::forward<DynamicArray<GraphicsPipelinePreloadInfo>>(graphics_pipelines),
-    eastl::forward<DynamicArray<MeshPipelinePreloadInfo>>(mesh_pipelines),
-    eastl::forward<DynamicArray<ComputePipelinePreloadInfo>>(compute_pipelines));
+    device.pipeMan.compilePipelineSet(device.getDevice(), device.pipelineCache, contextState.framebufferLayouts,
+                                      std::forward<DynamicArray<InputLayoutID>>(input_layouts),
+                                      std::forward<DynamicArray<StaticRenderStateID>>(static_render_states),
+                                      std::forward<DynamicArray<FramebufferLayout>>(framebuffer_layouts),
+                                      std::forward<DynamicArray<GraphicsPipelinePreloadInfo>>(graphics_pipelines),
+                                      std::forward<DynamicArray<MeshPipelinePreloadInfo>>(mesh_pipelines),
+                                      std::forward<DynamicArray<ComputePipelinePreloadInfo>>(compute_pipelines));
 }
 
 void DeviceContext::ExecutionContext::switchActivePipeline(ActivePipeline pipeline) { contextState.switchActivePipeline(pipeline); }

@@ -3,6 +3,9 @@
 #pragma once
 
 #include <nau/dag_ioSys/dag_memIo.h>
+
+#include <span>
+#include <vector>
 namespace nau::iosys
 {
     typedef struct BrotliDecoderStateStruct* BrotliDecoderStateCtx;
@@ -11,7 +14,7 @@ namespace nau::iosys
     {
         BrotliStreamDecompress();
         ~BrotliStreamDecompress();
-        virtual StreamDecompressResult decompress(eastl::span<const uint8_t> in, eastl::vector<char>& out, size_t* nbytes_read = nullptr) override;
+        virtual StreamDecompressResult decompress(std::span<const uint8_t> in, std::vector<char>& out, size_t* nbytes_read = nullptr) override;
 
     private:
         static constexpr int TEMP_BUFFER_SIZE = 16384;

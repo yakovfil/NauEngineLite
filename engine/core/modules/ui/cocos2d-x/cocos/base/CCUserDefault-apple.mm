@@ -29,7 +29,7 @@
 
 #import <Foundation/Foundation.h>
 
-#include <EASTL/string.h>
+#include <string>
 
 #import "base/CCUserDefault.h"
 #import "tinyxml2.h"
@@ -79,7 +79,7 @@ static tinyxml2::XMLElement* getXMLNodeForKey(const char* pKey, tinyxml2::XMLDoc
  		tinyxml2::XMLDocument* xmlDoc = new (std::nothrow) tinyxml2::XMLDocument();
 		*doc = xmlDoc;
 
-        eastl::string xmlBuffer = FileUtils::getInstance()->getStringFromFile(UserDefault::getInstance()->getXMLFilePath());
+        std::string xmlBuffer = FileUtils::getInstance()->getStringFromFile(UserDefault::getInstance()->getXMLFilePath());
 
 		if (xmlBuffer.empty())
 		{
@@ -324,12 +324,12 @@ double UserDefault::getDoubleForKey(const char* pKey, double defaultValue)
     return ret;
 }
 
-eastl::string UserDefault::getStringForKey(const char* pKey)
+std::string UserDefault::getStringForKey(const char* pKey)
 {
     return getStringForKey(pKey, "");
 }
 
-string UserDefault::getStringForKey(const char* pKey, const eastl::string & defaultValue)
+string UserDefault::getStringForKey(const char* pKey, const std::string & defaultValue)
 {
 #ifdef KEEP_COMPATABILITY
     tinyxml2::XMLDocument* doc = nullptr;
@@ -458,7 +458,7 @@ void UserDefault::setDoubleForKey(const char* pKey, double value)
     [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:value] forKey:[NSString stringWithUTF8String:pKey]];
 }
 
-void UserDefault::setStringForKey(const char* pKey, const eastl::string & value)
+void UserDefault::setStringForKey(const char* pKey, const std::string & value)
 {
 #ifdef KEEP_COMPATABILITY
     deleteNodeByKey(pKey);

@@ -2,14 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/core/entityManager.h>
-#include "ecsQueryInternal.h"
-
 #include <daECS/core/internal/trackComponentAccess.h>
 
-#include <EASTL/array.h>
-#include <EASTL/vector_map.h>
-
+#include <algorithm>
+#include <array>
+#include <functional>
 #include <mutex>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "ecsQueryInternal.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
@@ -20,7 +24,7 @@ void EntityManager::dumpArchetypes(int max_a)
   {
     uint32_t count, size, ai;
   };
-  eastl::vector<AInfo> archetypesInfo(archetypes.size());
+  std::vector<AInfo> archetypesInfo(archetypes.size());
   for (uint32_t i = 0; i < archetypes.size(); ++i)
     archetypesInfo[i] = AInfo{archetypes.getArchetype(i).componentsCnt, archetypes.getArchetype(i).entitySize, i};
   auto dump = [&]() {
@@ -42,15 +46,15 @@ void EntityManager::dumpArchetypes(int max_a)
       ECS_LOG("archetype {} has entitySize = {} and {} components, used in templates<{}>", a.ai, a.size, a.count, str.c_str());
     }
   };
-  eastl::sort(archetypesInfo.begin(), archetypesInfo.end(), [](auto &a, auto &b) 
-              {
-                return a.size > b.size; 
-              });
+  std::sort(archetypesInfo.begin(), archetypesInfo.end(), [](auto& a, auto& b)
+  {
+      return a.size > b.size;
+  });
   dump();
-  eastl::sort(archetypesInfo.begin(), archetypesInfo.end(), [](auto& a, auto& b)
-              {
-                  return a.count > b.count;
-              });
+  std::sort(archetypesInfo.begin(), archetypesInfo.end(), [](auto& a, auto& b)
+  {
+      return a.count > b.count;
+  });
   dump();
 }
 
@@ -92,12 +96,12 @@ size_t EntityManager::dumpMemoryUsage()
   totalMem += entitiesMem + allocMem;
 
   size_t componentsMem = dataComponents.components.capacity() *
-                           (sizeof(DataComponent) + sizeof(ComponentSerializer *) + sizeof(eastl::string) + // todo: add strings
+                             (sizeof(DataComponent) + sizeof(ComponentSerializer*) + sizeof(std::string) +  // todo: add strings
                                                                                                             // themselves
-                             sizeof(uint32_t) + sizeof(component_t) + sizeof(component_index_t)) +
+                              sizeof(uint32_t) + sizeof(component_t) + sizeof(component_index_t)) +
                          dataComponents.dependencies.capacity() * sizeof(component_t) +
                          dataComponents.componentIndex.bucket_count() *
-                           sizeof(ska::detailv3::sherwood_v3_entry<eastl::pair<component_t, component_index_t>>) +
+                             sizeof(ska::detailv3::sherwood_v3_entry<std::pair<component_t, component_index_t>>) +
                          sizeof(DataComponents);
 
   totalMem += componentsMem;
@@ -300,13 +304,9 @@ const ecs::BaseQueryDesc EntityManager::getQueryDesc(QueryId h) const
 
 #if NAU_DEBUG
 
-using Callstack = eastl::array<void *, 16>;
+using Callstack = std::array<void*, 16>;
 
-namespace eastl
-{
-
-template <>
-struct hash<Callstack>
+struct CallstackHash
 {
   size_t operator()(const Callstack &st) const
   {
@@ -314,7 +314,6 @@ struct hash<Callstack>
   }
 };
 
-} // namespace eastl
 
 struct TrackAccessRecordRAIILock
 {
@@ -322,32 +321,35 @@ struct TrackAccessRecordRAIILock
 
   TrackAccessRecordRAIILock(std::recursive_mutex &_mtx) : mtx(g_entity_mgr->isConstrainedMTMode() ? &_mtx : nullptr)
   {
-    if (EASTL_UNLIKELY(mtx != nullptr))
-      mtx->lock();
+      if (NAU_UNLIKELY(mtx != nullptr))
+          mtx->lock();
   }
 
   ~TrackAccessRecordRAIILock()
   {
-    if (EASTL_UNLIKELY(mtx != nullptr))
-      mtx->unlock();
+      if (NAU_UNLIKELY(mtx != nullptr))
+          mtx->unlock();
   }
 };
 
 struct TrackAccessRecord
 {
   ecsdebug::TrackOp op = ecsdebug::TRACK_READ;
-  eastl::string details;
+  std::string details;
   Callstack stack;
 
   ecs::template_t templateId = ecs::INVALID_TEMPLATE_INDEX;
 
   const bool operator==(const TrackAccessRecord &rhs) const
   {
-    return op == rhs.op && templateId == rhs.templateId && details == rhs.details &&
-           eastl::equal(stack.begin(), stack.end(), rhs.stack.begin());
+      return op == rhs.op && templateId == rhs.templateId && details == rhs.details &&
+             std::equal(stack.begin(), stack.end(), rhs.stack.begin());
   }
 
-  const uint32_t getHash() const { return ecs::ecs_hash(details) ^ hash_int(templateId) ^ eastl::hash<Callstack>()(stack); }
+  const uint32_t getHash() const
+  {
+      return ecs::ecs_hash(details) ^ hash_int(templateId) ^ CallstackHash()(stack);
+  }
 };
 
 struct TrackAccessRecordWithDups : TrackAccessRecord
@@ -362,17 +364,17 @@ struct HashedTrackAccessRecord
   uint32_t dupsCount;
 };
 
-using TrackAccessRecordsList = eastl::vector<TrackAccessRecord>;
-using TrackAccessRecordWithDupsList = eastl::vector<TrackAccessRecordWithDups>;
-using HashedTrackAccessRecordList = eastl::vector<HashedTrackAccessRecord>;
+using TrackAccessRecordsList = std::vector<TrackAccessRecord>;
+using TrackAccessRecordWithDupsList = std::vector<TrackAccessRecordWithDups>;
+using HashedTrackAccessRecordList = std::vector<HashedTrackAccessRecord>;
 static ska::flat_hash_map<uint32_t, TrackAccessRecord> records_by_hash;
-static eastl::vector_map<ecs::component_t, HashedTrackAccessRecordList> records_by_component;
+static nau::SortedVectorMap<ecs::component_t, HashedTrackAccessRecordList> records_by_component;
 static std::recursive_mutex track_mutex;
 
 void ecsdebug::start_track_ecs_component(ecs::component_t comp)
 {
   TrackAccessRecordRAIILock scopeLock(track_mutex);
-  records_by_component.insert(comp);
+  records_by_component.try_emplace(comp);
 }
 
 void ecsdebug::track_ecs_component_by_index(ecs::component_index_t cidx, ecsdebug::TrackOp op, const char* details, ecs::EntityId eid, bool need_stack)
@@ -383,7 +385,7 @@ void ecsdebug::track_ecs_component_by_index(ecs::component_index_t cidx, ecsdebu
 
 void ecsdebug::track_ecs_component(ecs::component_t comp, ecsdebug::TrackOp op, const char* details, ecs::EntityId eid, bool need_stack)
 {
-    if(EASTL_LIKELY(records_by_component.empty()))  // intentionally before lock
+    if (NAU_LIKELY(records_by_component.empty()))  // intentionally before lock
         return;
     TrackAccessRecordRAIILock scopeLock(track_mutex);
 
@@ -394,12 +396,12 @@ void ecsdebug::track_ecs_component(ecs::component_t comp, ecsdebug::TrackOp op, 
     TrackAccessRecord rec;
     if(need_stack)
     {
-        eastl::fill(rec.stack.begin(), rec.stack.end(), nullptr);
+        std::fill(rec.stack.begin(), rec.stack.end(), nullptr);
         // stackhlp_fill_stack(rec.stack.data(), rec.stack.max_size(), 2); TODO uncomment this line
     }
     else
     {
-        eastl::fill(rec.stack.begin(), rec.stack.end(), nullptr);
+        std::fill(rec.stack.begin(), rec.stack.end(), nullptr);
     }
 
   rec.op = op;
@@ -420,7 +422,7 @@ void ecsdebug::track_ecs_component(ecs::component_t comp, ecsdebug::TrackOp op, 
   const uint32_t recordHash = rec.getHash();
   auto insertRes = records_by_hash.emplace(recordHash, TrackAccessRecord{});
   if (insertRes.second)
-    insertRes.first->second = eastl::move(rec);
+      insertRes.first->second = std::move(rec);
   else
   {
     // Check collisions
@@ -434,8 +436,8 @@ void ecsdebug::track_ecs_component(const ecs::BaseQueryDesc &desc, const char *d
 {
   TrackAccessRecordRAIILock scopeLock(track_mutex);
 
-  if (EASTL_LIKELY(records_by_component.empty()))
-    return;
+  if (NAU_LIKELY(records_by_component.empty()))
+      return;
 
   for (const ecs::ComponentDesc &c : desc.componentsRO)
     track_ecs_component(c.name, TRACK_READ, details, eid, need_stack);
@@ -448,28 +450,28 @@ void ecsdebug::stop_dump_track_ecs_components()
 {
   TrackAccessRecordRAIILock scopeLock(track_mutex);
 
-  ska::flat_hash_map<Callstack, eastl::string> solvedCallstacks;
+  ska::flat_hash_map<Callstack, std::string, CallstackHash> solvedCallstacks;
 
   for (const auto &kv : records_by_component)
   {
-    eastl::vector_map<uint32_t, TrackAccessRecordWithDupsList> recordsByFrame;
+      nau::SortedVectorMap<uint32_t, TrackAccessRecordWithDupsList> recordsByFrame;
 
-    for (const auto &h : kv.second)
-    {
-      auto findRes = records_by_hash.find(h.hash);
-      NAU_ASSERT_CONTINUE(findRes != records_by_hash.end());
+      for (const auto& h : kv.second)
+      {
+          auto findRes = records_by_hash.find(h.hash);
+          NAU_ASSERT_CONTINUE(findRes != records_by_hash.end());
 
-      TrackAccessRecordWithDups record;
-      static_cast<TrackAccessRecord &>(record) = findRes->second;
-      record.dupsCount = h.dupsCount;
+          TrackAccessRecordWithDups record;
+          static_cast<TrackAccessRecord&>(record) = findRes->second;
+          record.dupsCount = h.dupsCount;
 
-      auto res = recordsByFrame.insert(h.frameNo);
-      res.first->second.push_back(record);
-    }
+          auto res = recordsByFrame.try_emplace(h.frameNo);
+          res.first->second.push_back(record);
+      }
 
     ECS_LOG("====[ {} ]====", g_entity_mgr->getDataComponents().findComponentName(kv.first));
 
-    eastl::string report;
+    std::string report;
     report.reserve(16 << 20);
 
     const TrackAccessRecordWithDupsList *lastPrinted = nullptr;
@@ -479,33 +481,33 @@ void ecsdebug::stop_dump_track_ecs_components()
 
       const TrackAccessRecordWithDupsList &curRecords = kv.second;
       if (lastPrinted && lastPrinted->size() == curRecords.size() &&
-          eastl::equal(lastPrinted->begin(), lastPrinted->end(), curRecords.begin()))
-        continue;
+          std::equal(lastPrinted->begin(), lastPrinted->end(), curRecords.begin()))
+          continue;
 
       lastPrinted = &curRecords;
       for (const auto &r : curRecords)
       {
-        report.append_sprintf("  [%06d][{}]: {}", frameNo, r.op == TRACK_WRITE ? "W" : "_", r.details.c_str());
+          report += nau::utils::format("  [{:06d}][{}]: {}", frameNo, r.op == TRACK_WRITE ? "W" : "_", r.details.c_str());
 
-        if (r.templateId != ecs::INVALID_TEMPLATE_INDEX)
-          report.append_sprintf(" ({})", g_entity_mgr->getTemplateName(r.templateId));
+          if (r.templateId != ecs::INVALID_TEMPLATE_INDEX)
+              report += nau::utils::format(" ({})", g_entity_mgr->getTemplateName(r.templateId));
 
-        if (r.dupsCount != 0)
-          report.append_sprintf(" (dupsCount: {})\n", r.dupsCount);
-        else
-          report.append("\n");
-
-        if (r.stack[0])
-        {
-          auto solved = solvedCallstacks.find(r.stack);
-          if (solved != solvedCallstacks.end())
-            report.append_sprintf("{}\n", solved->second.c_str());
+          if (r.dupsCount != 0)
+              report += nau::utils::format(" (dupsCount: {})\n", r.dupsCount);
           else
+              report.append("\n");
+
+          if (r.stack[0])
           {
-            auto insertRes = solvedCallstacks.emplace(r.stack, "");
-              insertRes.first->second = "0";  // TODO uncomment stackhlp_get_call_stack_str((void **)r.stack.data(), r.stack.max_size()).str();
-            report.append_sprintf("{}\n", insertRes.first->second.c_str());
-          }
+              auto solved = solvedCallstacks.find(r.stack);
+              if (solved != solvedCallstacks.end())
+                  report += nau::utils::format("{}\n", solved->second.c_str());
+              else
+              {
+                  auto insertRes = solvedCallstacks.emplace(r.stack, "");
+                  insertRes.first->second = "0";  // TODO uncomment stackhlp_get_call_stack_str((void **)r.stack.data(), r.stack.max_size()).str();
+                  report += nau::utils::format("{}\n", insertRes.first->second.c_str());
+              }
         }
       }
       report.append("\n\n");

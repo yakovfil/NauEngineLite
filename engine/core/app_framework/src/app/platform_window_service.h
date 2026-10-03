@@ -1,14 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
+
+#include <vector>
 
 #include "nau/messaging/messaging.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/async_disposable.h"
 #include "nau/service/service.h"
-
 
 namespace nau
 {
@@ -30,7 +30,7 @@ namespace nau
     private:
         std::thread m_platformAppThread;
         async::Task<> m_platformAppCompletedTask;
-        eastl::vector<AsyncMessageSubscription> m_messageSubscriptions;
+        std::vector<AsyncMessageSubscription> m_messageSubscriptions;
     };
 
 }  // namespace nau

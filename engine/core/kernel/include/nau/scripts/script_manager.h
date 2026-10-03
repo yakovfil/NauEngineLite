@@ -1,10 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/span.h>
-#include <EASTL/string_view.h>
+#include <span>
+#include <string_view>
 
 #include "nau/dispatch/class_descriptor.h"
 #include "nau/dispatch/dispatch.h"
@@ -23,19 +22,19 @@ namespace nau::scripts
 
         virtual ~ScriptManager() = default;
 
-        virtual Result<Ptr<>> executeScriptFromBytes(const char* scriptName, eastl::span<const std::byte> scriptCode) = 0;
+        virtual Result<Ptr<>> executeScriptFromBytes(const char* scriptName, std::span<const std::byte> scriptCode) = 0;
 
         virtual Result<Ptr<>> executeScriptFromFile(const io::FsPath& path) = 0;
 
         virtual void registerClass(IClassDescriptor::Ptr classDescriptor) = 0;
 
-        virtual Result<> invokeGlobal(eastl::string_view method, DispatchArguments args, Functor<void(const nau::Ptr<>& result)>) = 0;
+        virtual Result<> invokeGlobal(std::string_view method, DispatchArguments args, Functor<void(const nau::Ptr<>& result)>) = 0;
 
-        virtual Result<Ptr<IDispatch>> createScriptInstance(eastl::string_view scriptClass) = 0;
+        virtual Result<Ptr<IDispatch>> createScriptInstance(std::string_view scriptClass) = 0;
 
         virtual void addScriptSearchPath(io::FsPath path) = 0;
 
-        virtual void addScriptFileExtension(eastl::string_view ext) = 0;
+        virtual void addScriptFileExtension(std::string_view ext) = 0;
 
         template <typename T>
         void registerNativeClass()

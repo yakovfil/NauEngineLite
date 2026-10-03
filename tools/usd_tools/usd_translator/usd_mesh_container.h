@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
 #include <pxr/usd/usd/prim.h>
+
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/asset_container.h"
 #include "nau/rtti/rtti_impl.h"
@@ -21,9 +22,9 @@ namespace UsdTranslator
     public:
         UsdMeshContainer(PXR_NS::UsdPrim prim);
 
-        nau::Ptr<> getAsset(eastl::string_view path) override;
+        nau::Ptr<> getAsset(std::string_view path) override;
 
-        eastl::vector<eastl::string> getContent() const override;
+        std::vector<std::string> getContent() const override;
 
     private:
         PXR_NS::UsdPrim m_prim;

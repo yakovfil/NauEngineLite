@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
 
 #include "test_diag.h"
 
@@ -14,7 +15,7 @@ namespace nau::test
 
         Test_Asserts()
         {
-            diag::setDeviceError(eastl::make_unique<AssertTestDeviceError>());
+            diag::setDeviceError(std::make_unique<AssertTestDeviceError>());
         }
 
         ~Test_Asserts()

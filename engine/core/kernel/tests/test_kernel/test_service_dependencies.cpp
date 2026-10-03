@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
+#include <vector>
 
 #include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/internal/runtime_state.h"
@@ -144,9 +146,9 @@ namespace nau::test
                 }
             }
 
-            eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override
+            std::vector<const rtti::TypeInfo*> getServiceDependencies() const override
             {
-                return eastl::vector<const rtti::TypeInfo*>{
+                return std::vector<const rtti::TypeInfo*>{
                     &rtti::getTypeInfo<Dependency>()...};
             }
         };
@@ -185,10 +187,10 @@ namespace nau::test
      */
     TEST_F(TestServiceDependencies, Initialization)
     {
-        m_serviceProvider->addService(eastl::make_unique<Service3>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service4>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service2>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service1>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service3>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service4>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service2>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service1>(*m_serviceProvider));
 
         const auto isPreInitialized = [this]<typename T>(TypeList<T>)
         {
@@ -225,11 +227,11 @@ namespace nau::test
      */
     TEST_F(TestServiceDependencies, Shutdown)
     {
-        m_serviceProvider->addService(eastl::make_unique<Service1>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service3>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service4>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<Service2>(*m_serviceProvider));
-        m_serviceProvider->addService(eastl::make_unique<ServiceShutdownOnly>());
+        m_serviceProvider->addService(std::make_unique<Service1>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service3>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service4>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<Service2>(*m_serviceProvider));
+        m_serviceProvider->addService(std::make_unique<ServiceShutdownOnly>());
 
         auto& serviceProviderInit = m_serviceProvider->as<core_detail::IServiceProviderInitialization&>();
         auto resPreInit = async::waitResult(serviceProviderInit.preInitServices());

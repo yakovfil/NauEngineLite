@@ -3,94 +3,119 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <util/dag_string.h>
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include <EASTL/vector.h>
-#include <EASTL/hash_set.h>
 #include <daECS/core/component.h>
 #include <generic/dag_initOnDemand.h>
+#include <util/dag_string.h>
+
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 class DataBlock;
 
 namespace ecs
 {
 
-typedef eastl::vector<eastl::pair<eastl::string, ecs::ChildComponent>> ComponentsList;
-typedef eastl::vector<eastl::string> SceneScriptsList;
+    typedef std::vector<std::pair<std::string, ecs::ChildComponent>> ComponentsList;
+    typedef std::vector<std::string> SceneScriptsList;
 
-class SceneManager;
-class Scene
-{
-public:
-  struct EntityRecord
-  {
-    ComponentsList clist;
-    uint32_t order : 31;
-    uint32_t toBeSaved : 1;
-    eastl::string templateName;
-    EntityRecord(ComponentsList &&cl, uint32_t o, const char *tn, bool tbs) :
-      clist(eastl::move(cl)), order(o), toBeSaved(tbs ? 1u : 0u), templateName(tn)
-    {}
-  };
-  typedef ska::flat_hash_map<EntityId, EntityRecord, EidHash> EMap;
-
-  struct ImportRecord
-  {
-    static constexpr uint32_t TOP_IMPORT_ORDER = 0xFFFFFFFFUL;
-    eastl::string importScenePath;
-    uint32_t order;
-  };
-  typedef eastl::vector<ImportRecord> ImportScenesList;
-
-  typename EMap::const_iterator begin() const { return entities.begin(); }
-  typename EMap::const_iterator end() const { return entities.end(); }
-  int entitiesCount() { return entities.size(); }
-  const EntityRecord *findEntityRecord(ecs::EntityId eid) const;
-  const ecs::ComponentsList *findComponentsList(ecs::EntityId eid) const;
-  EntityRecord *findEntityRecordForModify(ecs::EntityId eid);
-  void eraseEntityRecord(ecs::EntityId eid);
-  void insertEmptyEntityRecord(ecs::EntityId eid, const char *tname);
-  void insertEntityRecord(ecs::EntityId eid, const char *tname, ComponentsList const &comps);
-  void cloneEntityRecord(ecs::EntityId source_eid, ecs::EntityId dest_eid, const char *template_name);
-
-  const ImportScenesList &getImportsRecordList() const { return imports; }
-
-  bool hasUnsavedChanges() const { return unsavedChanges; }
-  void setNewChangesApplied() { unsavedChanges = true; }
-  void setAllChangesWereSaved() { unsavedChanges = false; }
-
-
-  /// <summary>
-  /// Unloads all scripts that wal loaded during SceneManager::StartScene
-  /// </summary>
-  void ClearAllScripts();
-
-
-private:
-  
-    void clear()
+    class SceneManager;
+    class Scene
     {
-        entities.clear();
-        imports.clear();
-        unsavedChanges = false;
-        orderSequence = 0;
-    }
+    public:
+        struct EntityRecord
+        {
+            ComponentsList clist;
+            uint32_t order : 31;
+            uint32_t toBeSaved : 1;
+            std::string templateName;
+            EntityRecord(ComponentsList&& cl, uint32_t o, const char* tn, bool tbs) :
+                clist(std::move(cl)),
+                order(o),
+                toBeSaved(tbs ? 1u : 0u),
+                templateName(tn)
+            {
+            }
+        };
+        typedef ska::flat_hash_map<EntityId, EntityRecord, EidHash> EMap;
 
-  EMap      entities;
-  eastl::vector<ecs::EntityId> tempEntities;
+        struct ImportRecord
+        {
+            static constexpr uint32_t TOP_IMPORT_ORDER = 0xFFFFFFFFUL;
+            std::string importScenePath;
+            uint32_t order;
+        };
+        typedef std::vector<ImportRecord> ImportScenesList;
 
-  uint32_t  orderSequence = 0;
-  
-  eastl::string scenePath;
-  
-  ImportScenesList  imports;
-  SceneScriptsList  initialSceneScripts;
-  SceneScriptsList  runtimeSceneScripts;
-  
-  bool unsavedChanges = false;
-  
-  friend class SceneManager;
-};
+        typename EMap::const_iterator begin() const
+        {
+            return entities.begin();
+        }
+        typename EMap::const_iterator end() const
+        {
+            return entities.end();
+        }
+        int entitiesCount()
+        {
+            return entities.size();
+        }
+        const EntityRecord* findEntityRecord(ecs::EntityId eid) const;
+        const ecs::ComponentsList* findComponentsList(ecs::EntityId eid) const;
+        EntityRecord* findEntityRecordForModify(ecs::EntityId eid);
+        void eraseEntityRecord(ecs::EntityId eid);
+        void insertEmptyEntityRecord(ecs::EntityId eid, const char* tname);
+        void insertEntityRecord(ecs::EntityId eid, const char* tname, ComponentsList const& comps);
+        void cloneEntityRecord(ecs::EntityId source_eid, ecs::EntityId dest_eid, const char* template_name);
+
+        const ImportScenesList& getImportsRecordList() const
+        {
+            return imports;
+        }
+
+        bool hasUnsavedChanges() const
+        {
+            return unsavedChanges;
+        }
+        void setNewChangesApplied()
+        {
+            unsavedChanges = true;
+        }
+        void setAllChangesWereSaved()
+        {
+            unsavedChanges = false;
+        }
+
+        /// <summary>
+        /// Unloads all scripts that wal loaded during SceneManager::StartScene
+        /// </summary>
+        void ClearAllScripts();
+
+    private:
+        void clear()
+        {
+            entities.clear();
+            imports.clear();
+            unsavedChanges = false;
+            orderSequence = 0;
+        }
+
+        EMap entities;
+        std::vector<ecs::EntityId> tempEntities;
+
+        uint32_t orderSequence = 0;
+
+        std::string scenePath;
+
+        ImportScenesList imports;
+        SceneScriptsList initialSceneScripts;
+        SceneScriptsList runtimeSceneScripts;
+
+        bool unsavedChanges = false;
+
+        friend class SceneManager;
+    };
 
 class SceneManager
 {
@@ -191,7 +216,7 @@ public:
   /// Add initial script to scene
   /// </summary>
   /// <returns></returns>
-  void AddSceneInitScript(const eastl::string& script);
+  void AddSceneInitScript(const std::string& script);
 
   /// <summary>
   /// Remembers entities created before this function was called
@@ -213,7 +238,7 @@ protected:
 
 private:
   Scene scene;
-  eastl::hash_set<ecs::EntityId, ecs::EidHash> initialEntities;
+  std::unordered_set<ecs::EntityId, ecs::EidHash> initialEntities;
   //ecs::EntityManager* sceneEntMgr;
   friend class Scene;
 };
@@ -265,7 +290,7 @@ inline void Scene::cloneEntityRecord(ecs::EntityId source_eid, ecs::EntityId des
     EntityRecord rec{ComponentsList(it->second.clist), orderSequence++,
       template_name ? template_name : it->second.templateName.c_str(),
       /*toBeSaved*/ true};
-    entities.insert_or_assign(dest_eid, eastl::move(rec));
+    entities.insert_or_assign(dest_eid, std::move(rec));
     setNewChangesApplied();
   }
 }

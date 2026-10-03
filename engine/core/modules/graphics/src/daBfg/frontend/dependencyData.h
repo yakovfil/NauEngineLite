@@ -3,12 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_vector.h>
-
+#include "dabfg/id/idIndexedMapping.h"
+#include "nau/utils/inline_vector.h"
 #include "render/daBfg/detail/nodeNameId.h"
 #include "render/daBfg/detail/resNameId.h"
-#include "dabfg/id/idIndexedMapping.h"
-
 
 namespace dabfg
 {
@@ -23,10 +21,10 @@ struct VirtualResourceLifetime
   NodeNameId introducedBy = NodeNameId::Invalid;
 
   // Chain of non-renaming modification
-  eastl::fixed_vector<NodeNameId, 32> modificationChain;
+  nau::InlineVector<NodeNameId, 32> modificationChain;
 
   // List of nodes that want to read this resource before it gets consumed
-  eastl::fixed_vector<NodeNameId, 32> readers;
+  nau::InlineVector<NodeNameId, 32> readers;
 
   // A node that renames this resource (mutually exclusive with nextFrameReaders!!!)
   NodeNameId consumedBy = NodeNameId::Invalid;

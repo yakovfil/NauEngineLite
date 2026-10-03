@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCController.h"
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
@@ -43,7 +44,7 @@ public:
     {
     }
 
-    static std::vector<Controller*>::iterator findController(const eastl::string& deviceName, int deviceId)
+    static std::vector<Controller*>::iterator findController(const std::string& deviceName, int deviceId)
     {
         auto iter = std::find_if(Controller::s_allController.begin(), Controller::s_allController.end(), [&](Controller* controller){
                 return (deviceName == controller->_deviceName) && (deviceId == controller->_deviceId);
@@ -52,7 +53,7 @@ public:
         return iter;
     }
 
-    static void onConnected(const eastl::string& deviceName, int deviceId)
+    static void onConnected(const std::string& deviceName, int deviceId)
     {
         // Check whether the controller is already connected.
         CCLOG("onConnected %s,%d", deviceName.c_str(),deviceId);
@@ -70,7 +71,7 @@ public:
         controller->onConnected();
     }
 
-    static void onDisconnected(const eastl::string& deviceName, int deviceId)
+    static void onDisconnected(const std::string& deviceName, int deviceId)
     {
         CCLOG("onDisconnected %s,%d", deviceName.c_str(),deviceId);
 
@@ -85,7 +86,7 @@ public:
         Controller::s_allController.erase(iter);
     }
 
-    static void onButtonEvent(const eastl::string& deviceName, int deviceId, int keyCode, bool isPressed, float value, bool isAnalog)
+    static void onButtonEvent(const std::string& deviceName, int deviceId, int keyCode, bool isPressed, float value, bool isAnalog)
     {
         auto iter = findController(deviceName, deviceId);
         if (iter == Controller::s_allController.end())
@@ -98,7 +99,7 @@ public:
         (*iter)->onButtonEvent(keyCode, isPressed, value, isAnalog);
     }
 
-    static void onAxisEvent(const eastl::string& deviceName, int deviceId, int axisCode, float value, bool isAnalog)
+    static void onAxisEvent(const std::string& deviceName, int deviceId, int axisCode, float value, bool isAnalog)
     {
         auto iter = findController(deviceName, deviceId);
         if (iter == Controller::s_allController.end())

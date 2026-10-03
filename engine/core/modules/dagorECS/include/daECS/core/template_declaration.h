@@ -2,6 +2,8 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include <utility>
+
 #include "daECS/core/componentTypes.h"
 #include "daECS/core/entityManager.h"
 #include "nau/utils/for_each.h"
@@ -13,7 +15,7 @@ namespace ecs
     {
         auto res = g_entity_mgr->addTemplate(
             ecs::Template(name,
-                          eastl::move(map),
+                          std::move(map),
                           {},
                           ecs::Template::component_set(),
                           ecs::Template::component_set(),

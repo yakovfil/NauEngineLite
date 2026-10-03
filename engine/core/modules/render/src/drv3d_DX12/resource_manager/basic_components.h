@@ -3,9 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
-#include <EASTL/numeric.h>
+#include <numeric>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 //#include <debug/daNAU_ASSERT.h>
 #include "nau/threading/spin_lock.h"
 #include "nau/threading/lock_guard.h"
@@ -88,7 +91,7 @@ protected:
   // Hacky way to make PendingForCompletedFrameData for each module available, the
   // enable_if with convertible check ensures that no bad type can be used!
   template <typename T, typename U>
-  typename eastl::enable_if<eastl::is_convertible<T &, PendingForCompletedFrameData &>::value>::type
+  typename std::enable_if<std::is_convertible<T&, PendingForCompletedFrameData&>::value>::type
   accessRecodingPendingFrameCompletion(U accessor)
   {
     lock_(recodingPendingFrameCompletionMutex);
@@ -187,13 +190,13 @@ protected:
   template <typename... Args>
   bool checkForOOM(bool was_okay, Args &&...args)
   {
-    markParamsAsUsed(eastl::forward<Args>(args)...);
-    if (!was_okay)
-    {
-      reportOOMInformation();
-    }
-    NAU_ASSERT(was_okay, eastl::forward<Args>(args)...);
-    return was_okay;
+      markParamsAsUsed(std::forward<Args>(args)...);
+      if (!was_okay)
+      {
+          reportOOMInformation();
+      }
+      NAU_ASSERT(was_okay, std::forward<Args>(args)...);
+      return was_okay;
   }
 
   template <typename C, typename... Args>
@@ -201,10 +204,15 @@ protected:
   {
     OutOfMemoryRepoter &self;
     C checker;
-    eastl::tuple<Args...> args;
+    std::tuple<Args...> args;
 
-  public:
-    ScopeExitChecker(OutOfMemoryRepoter &s, C &&c, Args &&...a) : self{s}, checker{c}, args{eastl::forward<Args>(a)...} {}
+public:
+    ScopeExitChecker(OutOfMemoryRepoter& s, C&& c, Args&&... a) :
+        self{s},
+        checker{c},
+        args{std::forward<Args>(a)...}
+    {
+    }
 
     ScopeExitChecker(const ScopeExitChecker &) = delete;
     ScopeExitChecker(ScopeExitChecker &&) = delete;
@@ -213,14 +221,17 @@ protected:
 
     ~ScopeExitChecker()
     {
-      eastl::apply([this](auto &&...args) { this->self.checkForOOM(this->checker(), args...); }, args);
+        std::apply([this](auto&&... args)
+        {
+            this->self.checkForOOM(this->checker(), args...);
+        }, args);
     }
   };
 
   template <typename C, typename... Args>
   ScopeExitChecker<C, Args...> checkForOOMOnExit(C &&checker, Args &&...args)
   {
-    return {*this, eastl::forward<C>(checker), eastl::forward<Args>(args)...};
+      return {*this, std::forward<C>(checker), std::forward<Args>(args)...};
   }
 };
 
@@ -576,8 +587,8 @@ protected:
       Type type;
       uint64_t frameIndex;
       int timeIndex;
-      eastl::string eventPath;
-      eastl::string objectName;
+      std::string eventPath;
+      std::string objectName;
       uint32_t size;
       union
       {
@@ -595,9 +606,9 @@ protected:
       };
     };
     PerFrameData currentFrame{};
-    eastl::string curentEventPath;
-    eastl::vector<ActionInfo> actionHistory;
-    eastl::vector<PerFrameData> frameHistory;
+    std::string curentEventPath;
+    std::vector<ActionInfo> actionHistory;
+    std::vector<PerFrameData> frameHistory;
 
     const PerFrameData &getLastFrameMetrics() const
     {
@@ -643,9 +654,10 @@ protected:
     {
       size_t size = sizeof(currentFrame);
       size += curentEventPath.capacity();
-      size += eastl::accumulate(begin(actionHistory), end(actionHistory), size_t(0),
-        [](auto l, auto &r) //
-        { return l + (sizeof(ActionInfo) + r.eventPath.capacity() + r.objectName.capacity()); });
+      size += std::accumulate(begin(actionHistory), end(actionHistory), size_t(0),
+                              [](auto l, auto& r)  //
+      { return l + (sizeof(ActionInfo) + r.eventPath.capacity() + r.objectName.capacity());
+      });
       size += (actionHistory.capacity() - actionHistory.size()) * sizeof(ActionInfo);
       size += frameHistory.capacity() * sizeof(PerFrameData);
       return size;
@@ -1421,7 +1433,7 @@ public:
   {
     auto metricsAccess = metrics.access();
     auto at = metricsAccess->curentEventPath.find_last_of('/');
-    if (at != eastl::string::npos)
+    if (at != std::string::npos)
     {
       metricsAccess->curentEventPath.resize(at);
     }
@@ -1538,14 +1550,14 @@ class GlobalSubresourceIdProvider : public MetricsProvider
 
   struct GlobalSubresourceIdProviderState
   {
-    eastl::vector<BareBoneImageGlobalSubresouceIdRange> freeRanges;
-    ImageGlobalSubresouceId nextFreeSubRes = first_dynamic_texture_global_id;
+      std::vector<BareBoneImageGlobalSubresouceIdRange> freeRanges;
+      ImageGlobalSubresouceId nextFreeSubRes = first_dynamic_texture_global_id;
 
-    void reset()
-    {
-      freeRanges.clear();
-      nextFreeSubRes = first_dynamic_texture_global_id;
-    }
+      void reset()
+      {
+          freeRanges.clear();
+          nextFreeSubRes = first_dynamic_texture_global_id;
+      }
   };
   ContainerMutexWrapper<GlobalSubresourceIdProviderState, nau::threading::SpinLock> idProviderState;
 
@@ -1576,8 +1588,11 @@ protected:
   uint32_t getFreeGlobalSubresourceIdRangeValues()
   {
     auto stateAccess = idProviderState.access();
-    return eastl::accumulate(stateAccess->freeRanges.cbegin(), stateAccess->freeRanges.cend(), 0u,
-      [](auto sum, auto &range) { return sum + range.size(); });
+    return std::accumulate(stateAccess->freeRanges.cbegin(), stateAccess->freeRanges.cend(), 0u,
+                           [](auto sum, auto& range)
+    {
+        return sum + range.size();
+    });
   }
 
 public:

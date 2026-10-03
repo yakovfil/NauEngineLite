@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string_view>
+
 #include "nau/animation/playback/animation.h"
 #include "nau/assets/asset_view.h"
 #include "nau/async/task.h"
@@ -42,7 +44,7 @@ namespace nau::animation::data
          * @param [in] path Path to ozz file.
          * @return          Task object providing operation status as well as access to the created view.
          */
-        static nau::Ptr<AnimationAssetView> createFromOzzPath(eastl::string_view path);
+        static nau::Ptr<AnimationAssetView> createFromOzzPath(std::string_view path);
 
         /**
          * @brief Retrieves animation object extracted from the asset.

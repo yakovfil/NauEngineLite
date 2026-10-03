@@ -3,6 +3,12 @@
 
 #include "main_loop_service.h"
 
+#include <algorithm>
+#include <list>
+#include <memory>
+#include <unordered_set>
+#include <vector>
+
 #ifndef NAU_MINIMAL_RUNTIME
     #include "nau/gui/dag_imgui.h"
 #endif
@@ -15,12 +21,12 @@ namespace nau
         {
             IClassDescriptor* classDescriptor = nullptr;
             bool collectDependencies = true;
-            eastl::unordered_set<rtti::TypeIndex> dependencies;
+            std::unordered_set<rtti::TypeIndex> dependencies;
         };
 
-        SystemEntry& getSystemEntry(const eastl::vector<IClassDescriptor::Ptr>& allSystems, eastl::list<SystemEntry>& systems, IClassDescriptor& classDescriptor)
+        SystemEntry& getSystemEntry(const std::vector<IClassDescriptor::Ptr>& allSystems, std::list<SystemEntry>& systems, IClassDescriptor& classDescriptor)
         {
-            auto entry = eastl::find_if(systems.begin(), systems.end(), [&classDescriptor](const SystemEntry& entry)
+            auto entry = std::find_if(systems.begin(), systems.end(), [&classDescriptor](const SystemEntry& entry)
             {
                 return entry.classDescriptor == &classDescriptor;
             });
@@ -56,7 +62,7 @@ namespace nau
         {
             if (attributes->get<PreferredExecutionMode, ExecutionMode>().value_or(ExecutionMode::Sequential) == ExecutionMode::Concurrent)
             {
-                auto& concurrentContainer = *m_concurrentContainers.emplace_back(eastl::make_unique<ConcurrentExecutionContainer>(Ptr{&systemClass}));
+                auto& concurrentContainer = *m_concurrentContainers.emplace_back(std::make_unique<ConcurrentExecutionContainer>(Ptr{&systemClass}));
                 co_await concurrentContainer.preInitService();
                 co_return;
             }
@@ -64,7 +70,7 @@ namespace nau
 
         IRttiObject* const systemInstance = *systemClass.getConstructor()->invoke(nullptr, {});
         NAU_FATAL(systemInstance);
-        getServiceProvider().addService(eastl::unique_ptr<IRttiObject>{systemInstance});
+        getServiceProvider().addService(std::unique_ptr<IRttiObject>{systemInstance});
 
         if (auto* const sceneUpdate = systemInstance->as<IGameSceneUpdate*>())
         {
@@ -93,18 +99,18 @@ namespace nau
         {
             const auto offset = m_preUpdate.size();
             m_preUpdate.resize(serviceWithPreUpdate.size());
-            eastl::copy(serviceWithPreUpdate.begin(), serviceWithPreUpdate.end(), m_preUpdate.begin() + offset);
+            std::copy(serviceWithPreUpdate.begin(), serviceWithPreUpdate.end(), m_preUpdate.begin() + offset);
         }
 
         if (auto serviceWithPostUpdate = getServiceProvider().getAll<IGamePostUpdate>(); !serviceWithPostUpdate.empty())
         {
             const auto offset = m_postUpdate.size();
             m_postUpdate.resize(serviceWithPostUpdate.size());
-            eastl::copy(serviceWithPostUpdate.begin(), serviceWithPostUpdate.end(), m_postUpdate.begin() + offset);
+            std::copy(serviceWithPostUpdate.begin(), serviceWithPostUpdate.end(), m_postUpdate.begin() + offset);
         }
 
-        eastl::vector<IClassDescriptor::Ptr> allSystems = getServiceProvider().findClasses<IGamePreUpdate, IGamePostUpdate, IGameSceneUpdate>();
-        eastl::list<SystemEntry> orderedSystems;
+        std::vector<IClassDescriptor::Ptr> allSystems = getServiceProvider().findClasses<IGamePreUpdate, IGamePostUpdate, IGameSceneUpdate>();
+        std::list<SystemEntry> orderedSystems;
 
         for (const IClassDescriptor::Ptr& systemClass : allSystems)
         {
@@ -136,6 +142,17 @@ namespace nau
         return async::makeResolvedTask();
     }
 
+    void MainLoopService::setApplicationStartupTask(async::Task<> task)
+    {
+        NAU_FATAL(!m_applicationStartupTask);
+        m_applicationStartupTask = std::move(task);
+    }
+
+    bool MainLoopService::isApplicationStartupReady() const
+    {
+        return m_applicationStartupTask && m_applicationStartupTask.isReady();
+    }
+
     async::Task<> MainLoopService::shutdownMainLoop()
     {
 #if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
@@ -143,12 +160,21 @@ namespace nau
         {
             m_sceneManager = getServiceProvider().find<scene::ISceneManagerInternal>();
         }
+#endif
+        // Startup can still be activating scenes or uploading assets. Keep the
+        // scene queues and concurrent systems alive until its continuations finish.
+        Result<> startupResult;
+        if (m_applicationStartupTask)
+        {
+            startupResult = co_await m_applicationStartupTask.doTry();
+        }
+#if !defined(NAU_MINIMAL_RUNTIME) || defined(NAU_SCENE_RUNTIME)
         if (m_sceneManager)
         {
             co_await m_sceneManager->shutdown();
         }
 #endif
-        co_return;
+        co_await startupResult;
     }
 
     void MainLoopService::pollShutdown()

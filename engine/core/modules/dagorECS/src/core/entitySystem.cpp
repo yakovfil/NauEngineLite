@@ -1,12 +1,24 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/core/entitySystem.h>
 #include <daECS/core/coreEvents.h>
 #include <daECS/core/entityManager.h>
-#include "tokenize_const_string.h"
-#include "check_es_optional.h"
+#include <daECS/core/entitySystem.h>
 #include <nau/utils/dag_stlqsort.h>
+
+#include <algorithm>
+#include <functional>
+#include <limits>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
+#include "check_es_optional.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
+#include "tokenize_const_string.h"
 
 namespace ecs
 {
@@ -95,8 +107,12 @@ bool EntityManager::validateQueryDesc(const BaseQueryDesc &desc) const
 {
   NAU_UNUSED(desc);
 #if NAU_DEBUG
-  auto find = [](nau::ConstSpan<ComponentDesc> sl, const ComponentDesc &v) {
-    return eastl::find_if(sl.begin(), sl.end(), [&](const ComponentDesc &s) { return s.name == v.name; }) != sl.end();
+  auto find = [](nau::ConstSpan<ComponentDesc> sl, const ComponentDesc& v)
+  {
+      return std::find_if(sl.begin(), sl.end(), [&](const ComponentDesc& s)
+      {
+          return s.name == v.name;
+      }) != sl.end();
   };
   for (auto &no : desc.componentsNO)
     if (find(desc.componentsRQ, no) || find(desc.componentsRO, no) || find(desc.componentsRW, no))
@@ -140,14 +156,14 @@ static bool visit_top_sort(int node, const EdgeContainer &edges, MarkContainer &
   return ret;
 }
 
-typedef eastl::fixed_vector<int, 2, true> edge_container; // typically no more than 2 edges
+typedef nau::InlineVector<int, 2, true> edge_container;  // typically no more than 2 edges
 
 template <typename LoopDetected>
-static bool topo_sort(int N, const eastl::vector<edge_container>& edges, eastl::vector<int, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType>& sortedList, LoopDetected cb)
+static bool topo_sort(int N, const std::vector<edge_container>& edges, std::vector<int, std::allocator<int>>& sortedList, LoopDetected cb)
 {
   sortedList.reserve(N);
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> tempMark(N, false);
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> visitedMark(N, false);
+  nau::DynamicBitVector<> tempMark(N, false);
+  nau::DynamicBitVector<> visitedMark(N, false);
   bool isDAG = true;
   for (size_t i = 0; i < N; ++i)
     isDAG &= visit_top_sort(i, edges, tempMark, visitedMark, sortedList, cb);
@@ -172,19 +188,22 @@ void EntityManager::resetEsOrder()
     return false;
   });
 
-  static eastl::vector_set<ecs::hash_str_t> ignoredES; // move to instance?
+  static nau::SortedVectorSet<ecs::hash_str_t> ignoredES;  // move to instance?
   {
     FRAMEMEM_REGION;
 
     // enumerate all ES
-    eastl::vector<EntitySystemDesc *> esFullList;
+    std::vector<EntitySystemDesc*> esFullList;
     for (EntitySystemDesc *psd = EntitySystemDesc::tail; psd; psd = psd->next)
       esFullList.push_back(psd);
 
     // randomize list to avoid depending on native ES registration order
     // which might be different on different platforms, depend on hot-reload, etc...
-    eastl::sort(esFullList.begin(), esFullList.end(),
-      [](auto a, auto b) { return ECS_HASH_SLOW(a->name).hash < ECS_HASH_SLOW(b->name).hash; });
+    std::sort(esFullList.begin(), esFullList.end(),
+              [](auto a, auto b)
+    {
+        return ECS_HASH_SLOW(a->name).hash < ECS_HASH_SLOW(b->name).hash;
+    });
 
     // check if they are correct event handlers
     for (auto sd : esFullList)
@@ -202,14 +221,14 @@ void EntityManager::resetEsOrder()
 
     // build graph
 
-    eastl::hash_map<eastl::string_view, int, eastl::hash<eastl::string_view>, eastl::equal_to<eastl::string_view>> nameESMap;
+    std::unordered_map<std::string_view, int, std::hash<std::string_view>, std::equal_to<std::string_view>> nameESMap;
 
-    eastl::vector<int> esToGraphNodeMap; // ES to graph vertex map
+    std::vector<int> esToGraphNodeMap;  // ES to graph vertex map
     esToGraphNodeMap.reserve(esFullList.size());
-    eastl::vector<int> graphNodeToEsMap; // graph vertex -> ES map
+    std::vector<int> graphNodeToEsMap;  // graph vertex -> ES map
     graphNodeToEsMap.reserve(esFullList.size());
     int graphNodesCount = 0;
-    eastl::vector<edge_container> edgesFrom;
+    std::vector<edge_container> edgesFrom;
     auto insertEdge = [&edgesFrom](int from, int to) {
       if (edgesFrom.size() <= std::max(from, to))
         edgesFrom.resize(std::max(from, to) + 1);
@@ -220,10 +239,10 @@ void EntityManager::resetEsOrder()
     if (esOrder.size())
     {
       // restore linear esOrder
-      eastl::vector<eastl::string_view> esOrderList;
+      std::vector<std::string_view> esOrderList;
       esOrderList.resize(esOrder.size());
       for (auto &i : esOrder)
-        esOrderList[i.second] = eastl::string_view(i.first);
+          esOrderList[i.second] = std::string_view(i.first);
 
       edgesFrom.reserve(esOrderList.size());
       int prevGraphNode = -1;
@@ -239,47 +258,49 @@ void EntityManager::resetEsOrder()
       }
     }
 
-    auto insertNameEdge = [&](const char *name, int graphNode, eastl::string_view es, bool before) {
-      auto insResult = nameESMap.emplace(es, graphNodesCount);
-      if (insResult.second)
-      {
-        if (esOrder.size() && (esSkip.find_as(name, eastl::less_2<const eastl::string, const char *>()) != esSkip.end()))
+    auto insertNameEdge = [&](const char* name, int graphNode, std::string_view es, bool before)
+    {
+        auto insResult = nameESMap.emplace(es, graphNodesCount);
+        if (insResult.second)
         {
-          const bool eventHandler = es.find("_event_handler") != es.npos;
-          NAU_UNUSED(eventHandler);
-          logerr("ES <{}> is supposed to be {} ES/sync <%.*s>, which is undeclared.{}", name, before ? "before" : "after", es.length(),
-            es.data(), eventHandler ? "Just remove _event_handler in the end, as it is not part of ES name" : "");
+            if (esOrder.size() && (esSkip.find(name) != esSkip.end()))
+            {
+                const bool eventHandler = es.find("_event_handler") != es.npos;
+                NAU_UNUSED(eventHandler);
+                logerr("ES <{}> is supposed to be {} ES/sync <%.*s>, which is undeclared.{}", name, before ? "before" : "after", es.length(),
+                       es.data(), eventHandler ? "Just remove _event_handler in the end, as it is not part of ES name" : "");
+            }
+            ++graphNodesCount;
         }
-        ++graphNodesCount;
-      }
-      const int other = insResult.first->second;
-      insertEdge(before ? graphNode : other, before ? other : graphNode);
+        const int other = insResult.first->second;
+        insertEdge(before ? graphNode : other, before ? other : graphNode);
     };
 
     // before/after edges
     auto insertEdges = [&](const char *name, int graphNode, const char *edges, bool before) {
       if (!edges || edges[0] == '*')
         return;
-      tokenize_const_string(edges, ", ", [&](eastl::string_view es) {
-        insertNameEdge(name, graphNode, es, before);
-        return true;
+      tokenize_const_string(edges, ", ", [&](std::string_view es)
+      {
+          insertNameEdge(name, graphNode, es, before);
+          return true;
       });
     };
 
     for (int i = 0, e = esFullList.size(); i < e; ++i)
     {
-      eastl::string_view name(esFullList[i]->name);
-      auto insResult = nameESMap.emplace(name, graphNodesCount);
-      const int graphNode = insResult.first->second;
-      if (!insResult.second) // was already inserted
-      {
-        const int j = graphNodeToEsMap.size() <= graphNode ? -1 : graphNodeToEsMap[graphNode];
-        if (j >= 0 && !allow_name_collision(esFullList[i], esFullList[j]))
+        std::string_view name(esFullList[i]->name);
+        auto insResult = nameESMap.emplace(name, graphNodesCount);
+        const int graphNode = insResult.first->second;
+        if (!insResult.second)  // was already inserted
         {
-          logerr("ES of name <{}> already registered in module <{}> now requested in module <{}>", esFullList[i]->name,
-            esFullList[i]->getModuleName(), esFullList[j]->getModuleName());
-          esFullList[j] = nullptr;
-        }
+            const int j = graphNodeToEsMap.size() <= graphNode ? -1 : graphNodeToEsMap[graphNode];
+            if (j >= 0 && !allow_name_collision(esFullList[i], esFullList[j]))
+            {
+                logerr("ES of name <{}> already registered in module <{}> now requested in module <{}>", esFullList[i]->name,
+                       esFullList[i]->getModuleName(), esFullList[j]->getModuleName());
+                esFullList[j] = nullptr;
+            }
       }
       else // inserted new one
         graphNodesCount++;
@@ -298,7 +319,7 @@ void EntityManager::resetEsOrder()
     {
       if (!esFullList[i])
         continue;
-      auto it = nameESMap.find(eastl::string_view(esFullList[i]->name));
+      auto it = nameESMap.find(std::string_view(esFullList[i]->name));
       NAU_ASSERT_CONTINUE(it != nameESMap.end());
       const int graphNode = it->second;
       const char *beforeStr = esFullList[i]->getBefore(), *afterStr = esFullList[i]->getAfter();
@@ -310,18 +331,22 @@ void EntityManager::resetEsOrder()
 
 
     // topo sort
-    eastl::vector<int, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> sortedList;
-    auto loopDetected = [&](int i, auto &) {
-      auto it = eastl::find_if(nameESMap.begin(), nameESMap.end(), [&](const auto &it) { return it.second == i; });
-      eastl::string node = "n/a";
-      if (it != nameESMap.end())
-        node = it->first;
-      logerr("syncPoint {} resulted in graph to become cyclic and was removed from sorting. ES order is non-determinstic",
-        node.c_str());
+    std::vector<int, std::allocator<int>> sortedList;
+    auto loopDetected = [&](int i, auto&)
+    {
+        auto it = std::find_if(nameESMap.begin(), nameESMap.end(), [&](const auto& it)
+        {
+            return it.second == i;
+        });
+        std::string node = "n/a";
+        if (it != nameESMap.end())
+            node = it->first;
+        logerr("syncPoint {} resulted in graph to become cyclic and was removed from sorting. ES order is non-determinstic",
+               node.c_str());
     };
     topo_sort(graphNodesCount, edgesFrom, sortedList, loopDetected);
-    const int lowestPrio = eastl::numeric_limits<int>::max();
-    eastl::vector<int, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> sortedPrio;
+    const int lowestPrio = std::numeric_limits<int>::max();
+    std::vector<int, std::allocator<int>> sortedPrio;
     sortedPrio.resize(sortedList.size(), lowestPrio);
     for (size_t i = 0, e = sortedList.size(); i < e; ++i)
     {
@@ -337,7 +362,7 @@ void EntityManager::resetEsOrder()
       PrioEntitySystemDesc(int i, int p) : id(i), prio(p) {}
       bool operator<(const PrioEntitySystemDesc &other) const { return prio < other.prio; }
     };
-    eastl::vector<PrioEntitySystemDesc, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> prio;
+    std::vector<PrioEntitySystemDesc, std::allocator<PrioEntitySystemDesc>> prio;
     prio.reserve(esFullList.size());
 
     for (int i = 0, e = esFullList.size(); i < e; ++i)
@@ -345,12 +370,12 @@ void EntityManager::resetEsOrder()
       EntitySystemDesc *sd = esFullList[i];
       if (!sd) // removed invalid ES
         continue;
-      if (disableEntitySystems.find_as(sd->name, eastl::less_2<const eastl::string, const char *>()) != disableEntitySystems.end())
+      if (disableEntitySystems.find(sd->name) != disableEntitySystems.end())
       {
           ECS_LOG("skip ES <{}> due to it is switched off in inspection", sd->name);
         continue;
       }
-      if (esSkip.find_as(sd->name, eastl::less_2<const eastl::string, const char *>()) != esSkip.end())
+      if (esSkip.find(sd->name) != esSkip.end())
       {
           ECS_LOG("skip ES <{}> due to it is not needed", sd->name);
         continue;
@@ -367,7 +392,7 @@ void EntityManager::resetEsOrder()
 
       // if there is no before/after and not in esOrder
       if (sd->ops.onUpdate && (sd->getBefore() == nullptr && sd->getAfter() == nullptr) && !esOrder.empty() &&
-          esOrder.find_as(sd->name, eastl::less_2<const eastl::string, const char *>()) == esOrder.end())
+          esOrder.find(sd->name) == esOrder.end())
       {
         if (ignoredES.insert(ECS_HASH_SLOW(sd->name).hash).second)
           {
@@ -447,16 +472,16 @@ void EntityManager::resetEsOrder()
 
 void EntityManager::enableES(const char *es_name, bool on)
 {
-  auto it = disableEntitySystems.find_as(es_name, eastl::less_2<const eastl::string, const char *>());
-  if (on != (it == disableEntitySystems.end()))
-  {
-    if (on)
-      disableEntitySystems.erase(it);
-    else
-      disableEntitySystems.emplace(es_name);
-    lastEsGen = EntitySystemDesc::generation - 1;
-    resetEsOrder();
-  }
+    auto it = disableEntitySystems.find(es_name);
+    if (on != (it == disableEntitySystems.end()))
+    {
+        if (on)
+            disableEntitySystems.erase(it);
+        else
+            disableEntitySystems.emplace(es_name);
+        lastEsGen = EntitySystemDesc::generation - 1;
+        resetEsOrder();
+    }
 }
 void EntityManager::setEsOrder(nau::ConstSpan<const char *> es_order, nau::ConstSpan<const char *> es_skip)
 {

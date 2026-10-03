@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "base/CCDirector.h"
 
 // standard includes
-#include <EASTL/string.h>
+#include <string>
 
 #include "2d/CCAnimationCache.h"
 #include "2d/CCCamera.h"
@@ -1200,9 +1200,9 @@ void Director::getFPSImageData(unsigned char** datapointer, ssize_t* length)
 void Director::createStatsLabel()
 {
     Texture2D* texture = nullptr;
-    eastl::string fpsString = "00.0";
-    eastl::string drawBatchString = "000";
-    eastl::string drawVerticesString = "00000";
+    std::string fpsString = "00.0";
+    std::string drawBatchString = "000";
+    std::string drawVerticesString = "00000";
     if (_FPSLabel)
     {
         fpsString = _FPSLabel->getString();

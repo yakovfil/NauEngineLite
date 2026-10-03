@@ -21,14 +21,13 @@ Use only spaces, and indent 4 spaces at a time.
 Use C++ 20.
 
 ### STL
-Use eastl in the first place. If eastl does not contain the required functionality, use std.
-In some cases Nau Engine solutions must be used.
+Prefer the toolchain C++20 standard library for containers, algorithms, traits, views, optional/variant and ordinary ownership. Do not add EASTL dependencies. Use Nau adapters where a caller requires a specific allocation domain, inline storage, intrusive ownership or bounded callable storage. The standard-library migration is source/ABI breaking: keep all public interfaces, SDK exports and consumers on the migrated toolchain standard-library boundary, and rebuild them together.
 
 ### Exceptions
 Don't use exceptions. Instead, use std::expected
 
 ### Smart pointers
-In general case, use smart pointers from eastl. In individual cases (e.g. when performance is critical, etc.) it is acceptable to use raw pointers.
+Use std::unique_ptr or std::shared_ptr for ordinary ownership. Keep Nau intrusive handles where the existing add-reference/release hooks define ownership. In individual cases (e.g. when performance is critical, etc.) it is acceptable to use raw pointers.
 
 ### RTTI
 The use of RTTI is forbidden.
@@ -245,21 +244,15 @@ SomeClass::SomeClass(int x, int y, int z) :
 
 
 ## Library Types Usage
-| what                 | c++ stdlib | EASTL|  Own (nau) |
-|----------------------|------------|------|------------|
-| Containers* / Alloc  |            |   X  |            |
-| Threads*             |  X         |      |            |
-| Critical Sections    |            |      | X          |
-| Spin Locks           |            |      | X          |
-| Atomics*             |  X         |      |            |
-| Chrono               |  X         |      |            |
-| Type Traits          |  X         |      |            |
-| Concepts             |  X         |      |            |
-| Utils*               |            |   X  |            |
-| Memory (SmartPtr)    |            |   X  |            |
-| Function*            |            |      | X          |
-| Ranges               |  x         |      |            |
-| Generators           |            |      | X           |
+| Facility | Default | Preserved Nau contracts |
+| --- | --- | --- |
+| Containers and allocation | Standard containers | Typed array/pool/frame/stack adapters |
+| Threads, atomics, chrono | Standard library | Existing engine scheduling and synchronization |
+| Critical sections and spin locks | Nau | Existing locking contracts |
+| Traits, concepts, ranges, utilities | Standard library | C++20-compatible helpers where needed |
+| Smart pointers | Standard library | Intrusive reference hooks |
+| Callables | Standard library for copyable targets | Nau move-only and bounded inline callbacks |
+| Generators | Nau | Existing coroutine lifecycle |
 
 ### Notes
 * **Containers**: all containers that uses allocations: vector, string, list, set, map, unordered_set, unordered_map, etc...
@@ -268,7 +261,7 @@ SomeClass::SomeClass(int x, int y, int z) :
 * **Utils**: pair, optional, variant, tuple, ...
 
 **Function**.
-Not using std::function<> or eastl::function<> because it can not deal with move-only captures.
+std::function requires copyable targets and may allocate. Use the existing Nau move-only wrapper for move-only captures, FixedFunction for copyable bounded captures, and FixedMoveOnlyFunction for bounded move-only captures.
 This code will not compile:
 ```cpp
     std::unique_ptr<int> ptr = std::make_unique<int>(77);
@@ -289,3 +282,11 @@ Instead [nau::Functor<>](https://github.com/NauEngine/NauPrototype/blob/dev/engi
 - Follow [const-correctness](https://isocpp.org/wiki/faq/const-correctness).
 - Prefer aggregation/composition over inheritance.
 - Use **#pragma once** instead of include guards.
+
+### Preserved allocation and storage adapters
+
+Use `ArrayStdAllocator<T>` and `PoolStdAllocator<T>` where the engine array or node pool domain is required. Use `FrameStdAllocator<T>` and `StackStdAllocator<T>` to capture the owning temporary resource; destroy containers before resetting or destroying that resource. Resource-bound adapters do not propagate on assignment. Use the adapter's documented transfer operations, including `swapResourceContainers`, instead of swapping standard containers backed by unequal allocators. All supported alignments and rebound node sizes must be honored.
+
+`InlineVector` and `InlineString` preserve inline capacity and explicit overflow policies. `SortedVectorMap`/`SortedVectorSet` and their multi variants retain contiguous sorted storage; growth and insertion can invalidate pointers and iterators. `DynamicBitVector`, `IntrusiveList`, `IntrusivePtr`, and `LruCache` preserve their documented bit, membership, reference-hook and cache-lifetime contracts. Keep tiny_utf8-backed `nau::string` for the established engine string API.
+
+Never declare an owning standard string/container byte-relocatable based on a previous container's layout. `dag::Vector` uses object construction for non-relocatable values. The compact `RelocatableFixedVector` requires byte-relocatable elements; use `InlineVector` for owning standard values. Audit enclosing structures before retaining an explicit relocation declaration.

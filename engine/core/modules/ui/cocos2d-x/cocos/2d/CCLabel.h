@@ -27,6 +27,7 @@
 #ifndef _COCOS2D_CCLABEL_H_
 #define _COCOS2D_CCLABEL_H_
 
+#include <string>
 #include "2d/CCNode.h"
 #include "renderer/CCCustomCommand.h"
 #include "renderer/CCQuadCommand.h"
@@ -157,7 +158,7 @@ public:
      *
      * @return An automatically released Label object.
      */
-    static Label* createWithSystemFont(const eastl::string& text, const std::string& font, float fontSize,
+    static Label* createWithSystemFont(const std::string& text, const std::string& font, float fontSize,
         const Size& dimensions = Size::ZERO, TextHAlignment hAlignment = TextHAlignment::LEFT,
         TextVAlignment vAlignment = TextVAlignment::TOP);
 
@@ -173,7 +174,7 @@ public:
     *
     * @return An automatically released Label object.
     */
-    static Label * createWithTTF(const eastl::string& text, const std::string& fontFilePath, float fontSize,
+    static Label * createWithTTF(const std::string& text, const std::string& fontFilePath, float fontSize,
         const Size& dimensions = Size::ZERO, TextHAlignment hAlignment = TextHAlignment::LEFT,
         TextVAlignment vAlignment = TextVAlignment::TOP);
 
@@ -188,7 +189,7 @@ public:
     * @return An automatically released Label object.
     * @see TTFConfig setTTFConfig setMaxLineWidth
     */
-    static Label* createWithTTF(const TTFConfig& ttfConfig, const eastl::string& text, 
+    static Label* createWithTTF(const TTFConfig& ttfConfig, const std::string& text,
         TextHAlignment hAlignment = TextHAlignment::LEFT, int maxLineWidth = 0);
 
     /**
@@ -202,7 +203,7 @@ public:
     * @return An automatically released Label object.
     * @see setBMFontFilePath setMaxLineWidth
     */
-    static Label* createWithBMFont(const std::string& bmfontPath, const eastl::string& text,
+    static Label* createWithBMFont(const std::string& bmfontPath, const std::string& text,
         const TextHAlignment& hAlignment = TextHAlignment::LEFT, int maxLineWidth = 0);
 
     /**
@@ -218,7 +219,7 @@ public:
     * @return An automatically released Label object.
     * @see setBMFontFilePath setMaxLineWidth
     */
-    static Label* createWithBMFont(const std::string& bmfontPath, const eastl::string& text,
+    static Label* createWithBMFont(const std::string& bmfontPath, const std::string& text,
         const TextHAlignment& hAlignment, int maxLineWidth, const Rect& imageRect, bool imageRotated);
 
     /**
@@ -233,7 +234,7 @@ public:
     * @return An automatically released Label object.
     * @see setBMFontFilePath setMaxLineWidth
     */
-    static Label* createWithBMFont(const std::string& bmfontPath, const eastl::string& text,
+    static Label* createWithBMFont(const std::string& bmfontPath, const std::string& text,
         const TextHAlignment& hAlignment, int maxLineWidth, const std::string& subTextureKey);
 
     /**
@@ -248,7 +249,7 @@ public:
     * @return An automatically released Label object.
     * @see setBMFontFilePath setMaxLineWidth
     */
-    CC_DEPRECATED_ATTRIBUTE static Label* createWithBMFont(const std::string& bmfontPath, const eastl::string& text,
+    CC_DEPRECATED_ATTRIBUTE static Label* createWithBMFont(const std::string& bmfontPath, const std::string& text,
             const TextHAlignment& hAlignment, int maxLineWidth, const Vec2& imageOffset);
 
     /**
@@ -320,7 +321,7 @@ public:
     /**
      * Sets a new char map configuration to Label.
      *
-     * @see `createWithCharMap(const eastl::string&,int,int,int)`
+     * @see `createWithCharMap(const std::string&,int,int,int)`
      */
     virtual bool setCharMap(const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap);
 
@@ -334,7 +335,7 @@ public:
     /**
      * Sets a new char map configuration to Label.
      *
-     * @see `createWithCharMap(const eastl::string&)`
+     * @see `createWithCharMap(const std::string&)`
      */
     virtual bool setCharMap(const std::string& plistFile);
 
@@ -364,10 +365,10 @@ public:
     /// @}
 
     /** Sets the text that this Label is to display.*/
-    virtual void setString(const eastl::string& text) override;
+    virtual void setString(const std::string& text) override;
 
     /** Return the text the Label is currently displaying.*/
-    virtual eastl::string getString() const override {  return _utf8Text.tostring(); }
+    virtual std::string getString() const override {  return _utf8Text.tostring(); }
 
     /**
      * Return the number of lines of text.
@@ -653,7 +654,7 @@ public:
     virtual void updateDisplayedColor(const Color3B& parentColor) override;
     virtual void updateDisplayedOpacity(uint8_t parentOpacity) override;
 
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
 
     virtual const Size& _getContentSize() const override;
     virtual Rect getBoundingBox() const override;
@@ -682,11 +683,11 @@ CC_CONSTRUCTOR_ACCESS:
      */
     virtual ~Label();
 
-    bool initWithTTF(const eastl::string& text, const std::string& fontFilePath, float fontSize,
+    bool initWithTTF(const std::string& text, const std::string& fontFilePath, float fontSize,
                      const Size& dimensions = Size::ZERO, TextHAlignment hAlignment = TextHAlignment::LEFT,
                      TextVAlignment vAlignment = TextVAlignment::TOP);
 
-    bool initWithTTF(const TTFConfig& ttfConfig, const eastl::string& text,
+    bool initWithTTF(const TTFConfig& ttfConfig, const std::string& text,
                      TextHAlignment hAlignment = TextHAlignment::LEFT, int maxLineWidth = 0);
 
 protected:
@@ -720,7 +721,7 @@ protected:
 
     bool multilineTextWrapByChar();
     bool multilineTextWrapByWord();
-    bool multilineTextWrap(const std::function<int(const eastl::u32string&, int, int)>& lambda);
+    bool multilineTextWrap(const std::function<int(const std::u32string&, int, int)>& lambda);
     void shrinkLabelToContentSize(const std::function<bool(void)>& lambda);
     bool isHorizontalClamp();
     bool isVerticalClamp();
@@ -729,7 +730,7 @@ protected:
     void updateLabelLetters();
     virtual bool alignText();
     void computeAlignmentOffset();
-    bool computeHorizontalKernings(const eastl::u32string& stringToRender);
+    bool computeHorizontalKernings(const std::u32string& stringToRender);
 
     void recordLetterInfo(const cocos2d::Vec2& point, char32_t utf32Char, int letterIndex, int lineIndex);
     void recordPlaceholderInfo(int letterIndex, char32_t utf16Char);
@@ -747,8 +748,8 @@ protected:
     bool isHorizontalClamped(float letterPositionX, int lineIndex);
     void restoreFontSize();
     void updateLetterSpriteScale(Sprite* sprite);
-    int getFirstCharLen(const eastl::u32string& utf32Text, int startIndex, int textLen) const;
-    int getFirstWordLen(const eastl::u32string& utf32Text, int startIndex, int textLen) const;
+    int getFirstCharLen(const std::u32string& utf32Text, int startIndex, int textLen) const;
+    int getFirstWordLen(const std::u32string& utf32Text, int startIndex, int textLen) const;
 
     void reset();
 
@@ -766,7 +767,7 @@ protected:
 
     LabelType _currentLabelType;
     bool _contentDirty;
-    eastl::u32string _utf32Text;
+    std::u32string _utf32Text;
     nau::string _utf8Text;
     int _numberOfLines;
 

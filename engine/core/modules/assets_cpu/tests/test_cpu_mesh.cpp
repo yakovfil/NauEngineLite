@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <vector>
 
 #include "asset_file_content_provider.h"
 #include "asset_manager_impl.h"
@@ -27,7 +28,7 @@ namespace nau::test
     {
         NAU_CLASS_(nau::test::ControlledViewFactory, IAssetViewFactory, IRefCounted)
     public:
-        eastl::vector<const rtti::TypeInfo*> getAssetViewTypes() const override
+        std::vector<const rtti::TypeInfo*> getAssetViewTypes() const override
         {
             return {&rtti::getTypeInfo<ControlledView>()};
         }

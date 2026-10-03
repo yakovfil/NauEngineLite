@@ -3,8 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/iterator.h>
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <iterator>
 //#include <util/dag_globDef.h>
 
 
@@ -19,53 +19,53 @@
 template <typename R, typename C>
 inline void free_list_insert_and_coalesce(C &container, ValueRange<R> range)
 {
-  using eastl::begin;
-  using eastl::end;
+    using std::begin;
+    using std::end;
 
-  auto at = begin(container);
-  auto pat = at;
-  auto ed = end(container);
-  for (; at != ed; pat = at++)
-  {
-    if (at->start < range.start)
+    auto at = begin(container);
+    auto pat = at;
+    auto ed = end(container);
+    for (; at != ed; pat = at++)
     {
-      if (at->stop < range.start)
-      {
-        continue;
-      }
-
-      at->stop = range.stop;
-      auto nxt = at + 1;
-      if (nxt != ed)
-      {
-        if (range.stop == nxt->start)
+        if (at->start < range.start)
         {
-          at->stop = nxt->stop;
-          container.erase(nxt);
-        }
-      }
-      return;
-    }
-    else
-    {
-      if (range.stop < at->start)
-      {
-        break;
-      }
+            if (at->stop < range.start)
+            {
+                continue;
+            }
 
-      // did we just full in the gap in between pat and at?
-      // TODO should be inpossible.
-      if (pat->stop == range.start)
-      {
-        pat->stop = at->stop;
-        container.erase(at);
-      }
-      else
-      {
-        at->start = range.start;
-      }
-      return;
-    }
+            at->stop = range.stop;
+            auto nxt = at + 1;
+            if (nxt != ed)
+            {
+                if (range.stop == nxt->start)
+                {
+                    at->stop = nxt->stop;
+                    container.erase(nxt);
+                }
+            }
+            return;
+        }
+        else
+        {
+            if (range.stop < at->start)
+            {
+                break;
+            }
+
+            // did we just full in the gap in between pat and at?
+            // TODO should be inpossible.
+            if (pat->stop == range.start)
+            {
+                pat->stop = at->stop;
+                container.erase(at);
+            }
+            else
+            {
+                at->start = range.start;
+            }
+            return;
+        }
   }
   container.insert(at, range);
 }
@@ -73,19 +73,21 @@ inline void free_list_insert_and_coalesce(C &container, ValueRange<R> range)
 template <typename C, typename S>
 inline auto free_list_find_smallest_fit(C &container, S count)
 {
-  using eastl::begin;
-  using eastl::end;
-  using eastl::find_if;
+    using std::begin;
+    using std::end;
+    using std::find_if;
 
-  // find first
-  auto at = find_if(begin(container), end(container),
-    [count](auto range) //
-    { return range.size() >= count; });
+    // find first
+    auto at = find_if(begin(container), end(container),
+                      [count](auto range)  //
+    {
+        return range.size() >= count;
+    });
 
-  if (at == end(container))
-  {
-    return at;
-  }
+    if (at == end(container))
+    {
+        return at;
+    }
 
   // find smallest (may not be the best, though!)
   auto cmp = at++;
@@ -110,27 +112,27 @@ inline auto free_list_find_smallest_fit(C &container, S count)
 template <typename C, typename S>
 inline auto free_list_find_smallest_fit_aligned(C &container, S count, S alignment)
 {
-  using eastl::begin;
-  using eastl::end;
-  using eastl::find_if;
+    using std::begin;
+    using std::end;
+    using std::find_if;
 
-  // find first
-  auto at = find_if(begin(container), end(container),
-    [count, alignment](auto range) //
+    // find first
+    auto at = find_if(begin(container), end(container),
+                      [count, alignment](auto range)  //
     {
-      auto r2 = range.front(((range.front() + alignment - 1) & ~(alignment - 1)) - range.front());
-      // alignment offset may push it over stop
-      if (!r2.isValidRange())
-      {
-        return false;
-      }
-      return r2.size() >= count;
+        auto r2 = range.front(((range.front() + alignment - 1) & ~(alignment - 1)) - range.front());
+        // alignment offset may push it over stop
+        if (!r2.isValidRange())
+        {
+            return false;
+        }
+        return r2.size() >= count;
     });
 
-  if (at == end(container))
-  {
-    return at;
-  }
+    if (at == end(container))
+    {
+        return at;
+    }
 
   // find smallest (may not be the best, though!)
   auto cmp = at++;
@@ -169,12 +171,12 @@ inline auto free_list_find_smallest_fit_aligned(C &container, S count, S alignme
 template <typename R, typename C, typename S>
 inline ValueRange<R> free_list_allocate_smallest_fit(C &container, S count)
 {
-  using eastl::end;
-  auto ref = free_list_find_smallest_fit(container, count);
-  if (ref == end(container))
-  {
-    return {};
-  }
+    using std::end;
+    auto ref = free_list_find_smallest_fit(container, count);
+    if (ref == end(container))
+    {
+        return {};
+    }
 
   auto r = *ref;
   if (ref->size() == count)
@@ -191,19 +193,21 @@ inline ValueRange<R> free_list_allocate_smallest_fit(C &container, S count)
 template <typename C, typename S>
 inline auto free_list_find_reverse_smallest_fit(C &container, S count)
 {
-  using eastl::find_if;
-  using eastl::rbegin;
-  using eastl::rend;
+    using std::find_if;
+    using std::rbegin;
+    using std::rend;
 
-  // find first
-  auto at = find_if(rbegin(container), rend(container),
-    [count](auto range) //
-    { return range.size() >= count; });
+    // find first
+    auto at = find_if(rbegin(container), rend(container),
+                      [count](auto range)  //
+    {
+        return range.size() >= count;
+    });
 
-  if (at == rend(container))
-  {
-    return at;
-  }
+    if (at == rend(container))
+    {
+        return at;
+    }
 
   // find smallest (may not be the best, though!)
   auto cmp = at++;
@@ -228,12 +232,12 @@ inline auto free_list_find_reverse_smallest_fit(C &container, S count)
 template <typename R, typename C, typename S>
 inline ValueRange<R> free_list_allocate_reverse_smallest_fit(C &container, S count)
 {
-  using eastl::rend;
-  auto ref = free_list_find_reverse_smallest_fit(container, count);
-  if (ref == rend(container))
-  {
-    return {};
-  }
+    using std::rend;
+    auto ref = free_list_find_reverse_smallest_fit(container, count);
+    if (ref == rend(container))
+    {
+        return {};
+    }
 
   auto r = *ref;
   if (ref->size() == count)
@@ -250,24 +254,26 @@ inline ValueRange<R> free_list_allocate_reverse_smallest_fit(C &container, S cou
 template <typename C, typename S>
 inline auto free_list_find_reverse_first_fit(C &container, S count)
 {
-  using eastl::find_if;
-  using eastl::rbegin;
-  using eastl::rend;
+    using std::find_if;
+    using std::rbegin;
+    using std::rend;
 
-  return find_if(rbegin(container), rend(container),
-    [count](auto range) //
-    { return range.size() >= count; });
+    return find_if(rbegin(container), rend(container),
+                   [count](auto range)  //
+    {
+        return range.size() >= count;
+    });
 }
 
 template <typename R, typename C, typename S>
 inline ValueRange<R> free_list_allocate_reverse_first_fit(C &container, S count)
 {
-  using eastl::rend;
-  auto ref = free_list_find_reverse_first_fit(container, count);
-  if (ref == rend(container))
-  {
-    return {};
-  }
+    using std::rend;
+    auto ref = free_list_find_reverse_first_fit(container, count);
+    if (ref == rend(container))
+    {
+        return {};
+    }
 
   auto r = *ref;
   if (ref->size() == count)
@@ -289,22 +295,25 @@ inline bool free_list_try_resize(C &container, const ValueRange<R> &range, S new
 
   if (new_count > range.size())
   {
-    auto next_free_list =
-      eastl::find_if(begin(container), end(container), [range](auto free_range) { return free_range.start == range.stop; });
+      auto next_free_list =
+          std::find_if(begin(container), end(container), [range](auto free_range)
+      {
+          return free_range.start == range.stop;
+      });
 
-    int32_t size_increase = new_count - range.size();
-    if (end(container) != next_free_list && (next_free_list->size() >= size_increase))
-    {
-      if (size_increase == next_free_list->size())
+      int32_t size_increase = new_count - range.size();
+      if (end(container) != next_free_list && (next_free_list->size() >= size_increase))
       {
-        container.erase(next_free_list);
+          if (size_increase == next_free_list->size())
+          {
+              container.erase(next_free_list);
+          }
+          else
+          {
+              next_free_list->start += size_increase;
+          }
+          return true;
       }
-      else
-      {
-        next_free_list->start += size_increase;
-      }
-      return true;
-    }
 
     return false;
   }

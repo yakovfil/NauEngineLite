@@ -5,44 +5,52 @@
 
 #include <binPack2D/GuillotineBinPack.h>
 #include <binPack2D/SkylineBinPack.h>
-#include <EASTL/hash_map.h>
-#include <EASTL/fixed_vector.h>
+
+#include <unordered_map>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_textureIDHolder.h"
-#include "nau/startup/dag_globalSettings.h"
 #include "nau/diag/logging.h"
-
+#include "nau/startup/dag_globalSettings.h"
+#include "nau/utils/inline_vector.h"
 
 template <bool persistent>
 class DynamicAtlasTexTemplate
 {
 public:
-  typedef eastl::hash_map<unsigned, int> HashToIdx;
-  struct ItemData
-  {
-    enum
+    typedef std::unordered_map<unsigned, int> HashToIdx;
+    struct ItemData
     {
-      ST_restoring = 0x7FFEu,
-      ST_discarded = 0x7FFFu
-    };
-    float u0, v0, u1, v1;
-    uint16_t w, h, x0, y0;
-    int16_t xBaseOfs, yBaseOfs;
-    int16_t dx;
-    uint16_t allocW;
-    uint32_t lruFrame, hash;
+        enum
+        {
+            ST_restoring = 0x7FFEu,
+            ST_discarded = 0x7FFFu
+        };
+        float u0, v0, u1, v1;
+        uint16_t w, h, x0, y0;
+        int16_t xBaseOfs, yBaseOfs;
+        int16_t dx;
+        uint16_t allocW;
+        uint32_t lruFrame, hash;
 
-    bool valid() const { return hash != 0 && (!persistent || dx < ST_restoring); }
-    void discard() { dx = ST_discarded; }
-    bool scheduleRestoring()
-    {
-      if (dx == ST_discarded)
-      {
-        dx = ST_restoring;
-        return true;
-      }
-      return false;
-    }
+        bool valid() const
+        {
+            return hash != 0 && (!persistent || dx < ST_restoring);
+        }
+        void discard()
+        {
+            dx = ST_discarded;
+        }
+        bool scheduleRestoring()
+        {
+            if (dx == ST_discarded)
+            {
+                dx = ST_restoring;
+                return true;
+            }
+            return false;
+        }
   };
 
   void init(const IPoint2 &sz, int resv, int _margin, const char *tex_name, int tex_fmt = TEXFMT_R8 | TEXCF_UPDATE_DESTINATION)
@@ -176,7 +184,7 @@ public:
     {
         //idx = append_items(itemData, 1);
         idx = itemData.size();
-        itemData.push_back_uninitialized();
+        itemData.emplace_back();
     }
 
     hash2idx.insert(hash).first->second = idx;
@@ -247,7 +255,7 @@ public:
     {
         //idx = append_items(itemData, 1); // TODO: potentional problem
         idx = itemData.size();
-        itemData.push_back_uninitialized();
+        itemData.emplace_back();
     }
 
     hash2idx.insert(hash).first->second = idx;
@@ -278,8 +286,8 @@ public:
 
 protected:
   HashToIdx hash2idx;
-  eastl::vector<ItemData> itemData;
-  eastl::vector<int> itemUu;
+  std::vector<ItemData> itemData;
+  std::vector<int> itemUu;
   IPoint2 texSz = IPoint2(1, 1);
   float invW = 1, invH = 1;
   rbp::GuillotineBinPack binPack;
@@ -326,7 +334,7 @@ protected:
       return;
     }
 
-    eastl::vector<rbp::RectSizeRequest> src_rects;
+    std::vector<rbp::RectSizeRequest> src_rects;
     src_rects.reserve(rect_num);
     {
       rbp::RectSizeRequest req;
@@ -361,7 +369,7 @@ protected:
       NAU_LOG_ERROR("{}: failed to update corner quad {}x{} (tex {}x{} cflg={:#x})", name, cornerResv, cornerResv, texSz.x, texSz.y, ti.cflg);
 #endif
 
-    eastl::vector<rbp::RectResult> new_rects;
+    std::vector<rbp::RectResult> new_rects;
     new_rects.reserve(src_rects.size());
     binPack.Insert(src_rects, new_rects, true, binPack.RectBestAreaFit, binPack.SplitMinimizeArea, false);
     for (int i = 0; i < new_rects.size(); i++)
@@ -611,7 +619,7 @@ public:
       bpp = 1; //== unrecognized but safe
 
     //append_items(sysTextures, MAX_FRAME_QUEUE);
-    sysTextures.push_back_uninitialized();
+    sysTextures.resize(MAX_FRAME_QUEUE);
     for (int i = 0; i < MAX_FRAME_QUEUE; ++i)
       sysTextures[i].init(sz, tex_fmt);
   }
@@ -699,21 +707,21 @@ public:
   const nau::math::IVector2 &getSz() const { return sysTexSz; }
 
 protected:
-  eastl::fixed_vector<FencedGPUResource, MAX_FRAME_QUEUE, false> sysTextures; // StaticTab
-  int currentLockedTex = -1;
-  int nextTexture = 0;
+    nau::InlineVector<FencedGPUResource, MAX_FRAME_QUEUE, false> sysTextures;  // StaticTab
+    int currentLockedTex = -1;
+    int nextTexture = 0;
 
-  nau::math::IVector2 sysTexSz = nau::math::IVector2(1, 1);
-  int texFmt = TEXFMT_R8;
-  int bpp = 1;
+    nau::math::IVector2 sysTexSz = nau::math::IVector2(1, 1);
+    int texFmt = TEXFMT_R8;
+    int bpp = 1;
 
-  rbp::SkylineBinPack pack;
+    rbp::SkylineBinPack pack;
 
-  void fillOutRec(CopyRec &out_rec, const rbp::Rect &r)
-  {
-    out_rec.x0 = r.x;
-    out_rec.y0 = r.y;
-    out_rec.w = r.width;
-    out_rec.h = r.height;
-  }
+    void fillOutRec(CopyRec& out_rec, const rbp::Rect& r)
+    {
+        out_rec.x0 = r.x;
+        out_rec.y0 = r.y;
+        out_rec.w = r.width;
+        out_rec.h = r.height;
+    }
 };

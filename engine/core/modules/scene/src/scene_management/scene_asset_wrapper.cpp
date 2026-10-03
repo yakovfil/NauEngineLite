@@ -1,11 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <optional>
+#include <string>
+
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/components/internal/missing_component.h"
 #include "nau/scene/scene_factory.h"
 #include "nau/scene/scene_manager.h"
-
 
 namespace nau::scene
 {
@@ -28,7 +30,7 @@ namespace nau::scene
 
         SceneAssetInfo getSceneInfo() const override;
 
-        eastl::optional<Vector<ReferenceField>> getReferencesInfo() const override;
+        std::optional<Vector<ReferenceField>> getReferencesInfo() const override;
 
         void visitScene(ISceneAssetVisitor& visitor) const override;
 
@@ -67,7 +69,7 @@ namespace nau::scene
         }
         else
         {
-            componentAsset.transform = eastl::nullopt;
+            componentAsset.transform = std::nullopt;
         }
 
         componentAsset.properties = nau::Ptr{component.as<RuntimeValue*>()};
@@ -99,7 +101,7 @@ namespace nau::scene
 
         SceneObjectAsset objectAsset = {
             .uid = thisObjectUid,
-            .name{eastl::string(sceneObject.getName())},
+            .name{std::string(sceneObject.getName())},
             .childCount = children.size(),
             .additionalComponentCount = components.size()};
 
@@ -137,7 +139,7 @@ namespace nau::scene
         return info;
     }
 
-    eastl::optional<Vector<ReferenceField>> SceneAssetWrapper::getReferencesInfo() const
+    std::optional<Vector<ReferenceField>> SceneAssetWrapper::getReferencesInfo() const
     {
         NAU_ASSERT(m_rootObjectRef);
         if (!m_rootObjectRef)

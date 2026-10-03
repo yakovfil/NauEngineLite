@@ -1,10 +1,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <util/dag_stdint.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/vector_multiset.h>
 #include <daECS/net/sequence.h>
+#include <util/dag_stdint.h>
+
+#include "nau/utils/sorted_vector.h"
 
 namespace net
 {
@@ -42,8 +42,8 @@ private:
     int timeoutAt;
     bool operator<(const PendingAckRec &rhs) const { return timeoutAt < rhs.timeoutAt; }
   };
-  eastl::vector_multiset<PendingAckRec> pendingAcks;
-  eastl::vector_set<sequence_t, LessSeq> receivedQueue;
+  nau::SortedVectorMultiSet<PendingAckRec> pendingAcks;
+  nau::SortedVectorSet<sequence_t, LessSeq> receivedQueue;
 };
 
 } // namespace net

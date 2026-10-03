@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/physics/jolt/jolt_physics_world.h"
 
 #include <Jolt/Core/JobSystemSingleThreaded.h>
@@ -16,6 +15,14 @@
 #include <Jolt/Physics/PhysicsSettings.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
+
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "jolt_physics_layers.h"
 #include "nau/diag/assertion.h"
@@ -53,7 +60,7 @@ namespace nau::physics::jolt
         JPH::RegisterDefaultAllocator();
         JPH::Factory::sInstance = new JPH::Factory;
 
-        auto joltDefaultMaterial = eastl::make_unique<JoltPhysicsMaterial>();
+        auto joltDefaultMaterial = std::make_unique<JoltPhysicsMaterial>();
         m_engineDefaultMaterial = rtti::createInstance<NauJoltPhysicsMaterialImpl>("Default");
         joltDefaultMaterial->setEngineMaterial(m_engineDefaultMaterial);
 
@@ -62,18 +69,18 @@ namespace nau::physics::jolt
 
         JPH::RegisterTypes();
 
-        m_layerPairFilter = eastl::make_unique<JPH::ObjectLayerPairFilterTable>(JOLT_SETTING_OBJECT_LAYERS_COUNTS);
-        m_broadPhaseLayerInterface = eastl::make_unique<JPH::BroadPhaseLayerInterfaceTable>(
+        m_layerPairFilter = std::make_unique<JPH::ObjectLayerPairFilterTable>(JOLT_SETTING_OBJECT_LAYERS_COUNTS);
+        m_broadPhaseLayerInterface = std::make_unique<JPH::BroadPhaseLayerInterfaceTable>(
             JOLT_SETTING_OBJECT_LAYERS_COUNTS, JOLT_SETTING_BROAD_PHASE_LAYERS_COUNT);
 
-        m_objectOverBroadPhaseFilter = eastl::make_unique<DefaultObjectVsBroadPhaseLayerFilter>();
+        m_objectOverBroadPhaseFilter = std::make_unique<DefaultObjectVsBroadPhaseLayerFilter>();
 
-        m_bodyDrawFilter = eastl::make_unique<JoltBodyDrawFilterImpl>();
-        m_joltDebugRender = eastl::make_unique<DebugRendererImp>();
+        m_bodyDrawFilter = std::make_unique<JoltBodyDrawFilterImpl>();
+        m_joltDebugRender = std::make_unique<DebugRendererImp>();
 
-        m_joltPhysicsSystem = eastl::make_unique<JPH::PhysicsSystem>();
-        m_joltJobSystem = eastl::make_unique<JPH::JobSystemSingleThreaded>(JOLT_MAX_JOBS);
-        m_joltTempAllocator = eastl::make_unique<JPH::TempAllocatorImpl>(JOLT_TEMP_ALLOC_SIZE);
+        m_joltPhysicsSystem = std::make_unique<JPH::PhysicsSystem>();
+        m_joltJobSystem = std::make_unique<JPH::JobSystemSingleThreaded>(JOLT_MAX_JOBS);
+        m_joltTempAllocator = std::make_unique<JPH::TempAllocatorImpl>(JOLT_TEMP_ALLOC_SIZE);
 
         m_joltPhysicsSystem->Init(
             JOLT_SETTING_MAX_BODIES,
@@ -127,7 +134,7 @@ namespace nau::physics::jolt
 
     void JoltPhysicsWorld::setContactListener(nau::Ptr<IPhysicsContactListener> listener)
     {
-        m_engineContactListener = eastl::move(listener);
+        m_engineContactListener = std::move(listener);
     }
 
     JPH::BodyInterface& JoltPhysicsWorld::getBodyInterface() const
@@ -135,14 +142,14 @@ namespace nau::physics::jolt
         return m_joltPhysicsSystem->GetBodyInterface();
     }
 
-    IPhysicsMaterial::Ptr JoltPhysicsWorld::createMaterial(eastl::string_view name,
-                                                           eastl::optional<TFloat> friction,
-                                                           eastl::optional<TFloat> restitution)
+    IPhysicsMaterial::Ptr JoltPhysicsWorld::createMaterial(std::string_view name,
+                                                           std::optional<TFloat> friction,
+                                                           std::optional<TFloat> restitution)
     {
         return nau::rtti::createInstance<NauJoltPhysicsMaterialImpl>(name, friction, restitution);
     }
 
-    eastl::optional<RayCastResult> JoltPhysicsWorld::castRay(const nau::physics::RayCastQuery& query) const
+    std::optional<RayCastResult> JoltPhysicsWorld::castRay(const nau::physics::RayCastQuery& query) const
     {
         using namespace nau::scene;
 
@@ -160,14 +167,14 @@ namespace nau::physics::jolt
         if (!m_joltPhysicsSystem->GetNarrowPhaseQuery().CastRay(ray, hit, {}, channelFilter))
         {
             debugDrawLine(debugRayStart, debugRayEnd, failureDebugColor, query.debugDrawDuration);
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         JPH::BodyLockRead lock(m_joltPhysicsSystem->GetBodyLockInterface(), hit.mBodyID);
         if (!lock.Succeeded())
         {
             debugDrawLine(debugRayStart, debugRayEnd, failureDebugColor, query.debugDrawDuration);
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         const JPH::Body& hitBody = lock.GetBody();
@@ -195,12 +202,12 @@ namespace nau::physics::jolt
         return result;
     }
 
-    async::Task<eastl::vector<RayCastResult>> JoltPhysicsWorld::castRaysAsync(eastl::vector<physics::RayCastQuery> queries) const
+    async::Task<std::vector<RayCastResult>> JoltPhysicsWorld::castRaysAsync(std::vector<physics::RayCastQuery> queries) const
     {
         using namespace nau::async;
         using namespace nau::scene;
 
-        auto performCastsOnPhysicsExecutor = [](const JoltPhysicsWorld& self, const decltype(queries)& queries) -> Task<eastl::vector<RayCastResult>>
+        auto performCastsOnPhysicsExecutor = [](const JoltPhysicsWorld& self, const decltype(queries)& queries) -> Task<std::vector<RayCastResult>>
         {
             const auto FailureDebugColor = math::Color4(1.0, 0.0, 0.0);
             const auto SuccessDebugColor = math::Color4(0.0, 1.0, 0.0);
@@ -208,7 +215,7 @@ namespace nau::physics::jolt
             auto& corePhysics = getServiceProvider().get<ICorePhysicsInternal>();
             co_await corePhysics.getExecutor();
 
-            eastl::vector<RayCastResult> castResults;
+            std::vector<RayCastResult> castResults;
             castResults.reserve(queries.size());
 
             for (const physics::RayCastQuery& query : queries)
@@ -422,14 +429,14 @@ namespace nau::physics::jolt
 
         // Use the default formulas for combining friction and restitution.
         settings.mCombinedFriction = sqrt(friction1 * friction2);
-        settings.mCombinedRestitution = eastl::max(restitution1, restitution2);
+        settings.mCombinedRestitution = std::max(restitution1, restitution2);
     }
 
-    eastl::vector<nau::math::vec3> JoltPhysicsWorld::calculateContactPoints(const JPH::ContactManifold& manifold)
+    std::vector<nau::math::vec3> JoltPhysicsWorld::calculateContactPoints(const JPH::ContactManifold& manifold)
     {
         // At this moment we have only rigid bodies. For simplicity assume that two bodies don't penetrate into each other.
         // In this case manifold.mRelativeContactPointsOn1 and manifold.mRelativeContactPointsOn2 is the same.
-        eastl::vector<nau::math::vec3> result;
+        std::vector<nau::math::vec3> result;
         for (JPH::uint idx = 0; idx < manifold.mRelativeContactPointsOn1.size(); ++idx)
         {
             const auto& point = manifold.GetWorldSpaceContactPointOn1(idx);
@@ -446,7 +453,7 @@ namespace nau::physics::jolt
 #endif
     }
 
-    eastl::tuple<float, float, const JoltPhysicsMaterial*> JoltPhysicsWorld::getFrictionAndRestitution(
+    std::tuple<float, float, const JoltPhysicsMaterial*> JoltPhysicsWorld::getFrictionAndRestitution(
         const JPH::Body& joltBody,
         const JPH::SubShapeID& subShapeID)
     {
@@ -457,7 +464,7 @@ namespace nau::physics::jolt
         {
             if (const auto nauPhysicsMaterial = material->engineMaterial())
             {
-                return eastl::make_tuple(
+                return std::make_tuple(
                     nauPhysicsMaterial->getFriction().value_or(joltBody.GetFriction()),
                     nauPhysicsMaterial->getRestitution().value_or(joltBody.GetRestitution()),
                     material);
@@ -465,8 +472,8 @@ namespace nau::physics::jolt
         }
 
         // This is the default material, use the settings from the body.
-        return eastl::make_tuple(joltBody.GetFriction(), joltBody.GetRestitution(),
-                                 reinterpret_cast<const JoltPhysicsMaterial*>(JPH::PhysicsMaterial::sDefault.GetPtr()));
+        return std::make_tuple(joltBody.GetFriction(), joltBody.GetRestitution(),
+                               reinterpret_cast<const JoltPhysicsMaterial*>(JPH::PhysicsMaterial::sDefault.GetPtr()));
     }
 
     void JoltPhysicsWorld::syncSceneState()

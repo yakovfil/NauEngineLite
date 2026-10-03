@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/rtti/type_info.h"
 
@@ -22,9 +23,9 @@ namespace nau
          */
         struct ConnectionData
         {
-            eastl::string localPeerId;
-            eastl::string remotePeerId;
-            eastl::string localUri;
+            std::string localPeerId;
+            std::string remotePeerId;
+            std::string localUri;
         };
 
         /**
@@ -60,28 +61,28 @@ namespace nau
              * 
              * @return String ID of the local peer.
              */
-            virtual const eastl::string& localPeerId() = 0;
-            
+            virtual const std::string& localPeerId() = 0;
+
             /**
              * @brief Retrieves the remote peer ID. Its representation is implementation-dependent, but it has to be unique for the current sesion,
              *
              * @return String ID of the remote peer.
              */
-            virtual const eastl::string& remotePeerId() = 0;
+            virtual const std::string& remotePeerId() = 0;
 
             /**
              * @brief Retrieves the local end point URI.
              * 
              * @return Local end point URI.
              */
-            virtual const eastl::string& localEndPoint() = 0;
+            virtual const std::string& localEndPoint() = 0;
 
             /**
              * @brief Retrieves the remote end point URI.
              * 
              * @return Remote end point URI.
              */
-            virtual const eastl::string& remoteEndPoint() = 0;
+            virtual const std::string& remoteEndPoint() = 0;
         };
 
         /**
@@ -96,14 +97,14 @@ namespace nau
          * @param [in] remotePeerId Remote ID of the peer which is establishing connection.
          * @param [in] uri          URI that describes protocol, address and port for incoming connection.
          */
-        virtual void listen(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& uri) = 0;
+        virtual void listen(const std::string& localPeerId, const std::string& remotePeerId, const std::string& uri) = 0;
 
         /**
          * @brief Retrieves information about active listeners.
          * 
          * @param [out] listeners Data that has been cleared and filled by listeners.
          */
-        virtual void getListeners(eastl::vector<ConnectionData>& listeners) = 0;
+        virtual void getListeners(std::vector<ConnectionData>& listeners) = 0;
 
         /**
          * @brief Initiates outgoing connection.
@@ -112,34 +113,34 @@ namespace nau
          * @param [in] remotePeerId Remote ID of the peer which is awaiting connection.
          * @param [in] uri          URI that describes protocol, address and port for outgoing connection.
          */
-        virtual void connect(const eastl::string& localPeerId, const eastl::string& remotePeerId, const eastl::string& uri) = 0;
+        virtual void connect(const std::string& localPeerId, const std::string& remotePeerId, const std::string& uri) = 0;
 
         /**
          * @brief Retrieves information about active connectors.
          *
          * @param [out] listeners Data that has been cleared and filled by connectors.
          */
-        virtual void getConnectors(eastl::vector<ConnectionData>& connectors) = 0;
+        virtual void getConnectors(std::vector<ConnectionData>& connectors) = 0;
 
         /**
          * @brief Get peers connected to specified peer
          * @param peerId - specific peer
          * @param peers - connected to specific peer peers 
          */
-        virtual void getConnections(const eastl::string& peerId, eastl::vector<eastl::string>& peers) = 0;
+        virtual void getConnections(const std::string& peerId, std::vector<std::string>& peers) = 0;
 
         /**
          * @brief Get all connections
          * @param connections - cleared and filled by ptrs to established connections
          */
-        virtual void getConnections(eastl::vector<eastl::weak_ptr<IConnection>>& connections) = 0;
+        virtual void getConnections(std::vector<std::weak_ptr<IConnection>>& connections) = 0;
 
         /**
          * @brief Write frame state, expected to be called once per frame
          * @param peerId - remote peer, destination
          * @param frame - serialized frame state
          */
-        virtual void writeFrame(const eastl::string& peerId, const eastl::string& frame) = 0;
+        virtual void writeFrame(const std::string& peerId, const std::string& frame) = 0;
 
         /**
          * @brief Read frame state
@@ -148,7 +149,7 @@ namespace nau
          * @param frame - serialized frame state
          * @return True, if frame state exists, false otherwise
          */
-        virtual bool readFrame(const eastl::string& peerId, const eastl::string& fromPeerId, eastl::string& frame) = 0;
+        virtual bool readFrame(const std::string& peerId, const std::string& fromPeerId, std::string& frame) = 0;
 
         /**
          * @brief Update service. Must be called once per frame.

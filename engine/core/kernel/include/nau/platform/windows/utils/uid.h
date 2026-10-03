@@ -1,12 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <EASTL/functional.h>
 #include <guiddef.h>
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -52,7 +51,6 @@ namespace nau
         NAU_KERNEL_EXPORT friend bool operator!=(const Uid& uid, const Uid& uidOther) noexcept;
 
         friend std::hash<nau::Uid>;
-        friend eastl::hash<nau::Uid>;
     };
 
     NAU_KERNEL_EXPORT std::string toString(const Uid& uid);
@@ -63,15 +61,6 @@ NAU_DECLARE_TYPEID(nau::Uid)
 
 template <>
 struct std::hash<nau::Uid>
-{
-    [[nodiscard]] size_t operator()(const nau::Uid& val) const
-    {
-        return val.getHashCode();
-    }
-};
-
-template <>
-struct eastl::hash<nau::Uid>
 {
     [[nodiscard]] size_t operator()(const nau::Uid& val) const
     {

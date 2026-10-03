@@ -4,11 +4,16 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <vector>
+
 #include "nau/assets/asset_db.h"
 #include "nau/assets/asset_meta_info.h"
 #include "nau/assets/asset_path_resolver.h"
 #include "nau/utils/uid.h"
-
 
 namespace nau
 {
@@ -32,7 +37,7 @@ namespace nau
     struct AssetDbInfo
     {
         Uid uid;
-        eastl::vector<AssetMetaInfoInternal> content;
+        std::vector<AssetMetaInfoInternal> content;
 
 #pragma region Class Info
         NAU_CLASS_FIELDS(
@@ -51,28 +56,28 @@ namespace nau
         void reloadAssetDB(io::FsPath dbPath) override;
 
         AssetMetaInfoBase findAssetMetaInfoByUid(const Uid& uid) const override;
-        eastl::vector<AssetMetaInfoBase> findAssetMetaInfoByKind(const eastl::string& kind) const override;
+        std::vector<AssetMetaInfoBase> findAssetMetaInfoByKind(const std::string& kind) const override;
 
-        eastl::string getNausdPathFromUid(const Uid& uid) const override;
-        Uid getUidFromNausdPath(const eastl::string& nausdPath) const override;
+        std::string getNausdPathFromUid(const Uid& uid) const override;
+        Uid getUidFromNausdPath(const std::string& nausdPath) const override;
 
-        eastl::string getSourcePathFromUid(const Uid& uid) const override;
-        Uid getUidFromSourcePath(const eastl::string& sourcePath) const override;
+        std::string getSourcePathFromUid(const Uid& uid) const override;
+        Uid getUidFromSourcePath(const std::string& sourcePath) const override;
 
-        eastl::string getSourcePathFromNausdPath(const eastl::string& nausdPath) const override;
-        eastl::string getNausdPathFromSourcePath(const eastl::string& sourcePath) const override;
+        std::string getSourcePathFromNausdPath(const std::string& nausdPath) const override;
+        std::string getNausdPathFromSourcePath(const std::string& sourcePath) const override;
 
-        eastl::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) override;
+        std::tuple<AssetPath, AssetContentInfo> resolvePath(const AssetPath& assetPath) override;
 
-        eastl::vector<eastl::string_view> getSupportedSchemes() const override;
+        std::vector<std::string_view> getSupportedSchemes() const override;
 
     private:
         void addAssetDBInternal(io::FsPath dbPath);
         void reloadAssetDBInternal(io::FsPath dbPath);
 
     private:
-        eastl::map<Uid, AssetMetaInfoInternal> m_allAssets;
-        eastl::vector<AssetDBEntry> m_allDbs;
+        std::map<Uid, AssetMetaInfoInternal> m_allAssets;
+        std::vector<AssetDBEntry> m_allDbs;
         std::shared_mutex m_mutex;
     };
 }  // namespace nau

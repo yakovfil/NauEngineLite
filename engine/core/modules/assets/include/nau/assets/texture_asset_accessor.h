@@ -8,8 +8,9 @@
 // #include <string>
 // #include <vector>
 
-#include <EASTL/span.h>
 #include <tinyimageformat.h>
+
+#include <span>
 
 #include "nau/assets/asset_accessor.h"
 #include "nau/async/task.h"
@@ -57,6 +58,6 @@ namespace nau
 
         virtual TextureDescription getDescription() const = 0;
 
-        virtual void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination) = 0;
+        virtual void copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination) = 0;
     };
 }  // namespace nau

@@ -28,7 +28,7 @@
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID || CC_TARGET_PLATFORM == CC_PLATFORM_IOS || CC_TARGET_PLATFORM == CC_PLATFORM_MAC || CC_TARGET_PLATFORM == CC_PLATFORM_LINUX || CC_TARGET_PLATFORM == CC_PLATFORM_WIN32 )
 
 #include "platform/CCPlatformMacros.h"
-#include <EASTL/string.h>
+#include <string>
 #include <vector>
 #include <unordered_map>
 
@@ -151,7 +151,7 @@ public:
     /**
      * Gets the name of this Controller object.
      */
-    const eastl::string& getDeviceName() const { return _deviceName;}
+    const std::string& getDeviceName() const { return _deviceName;}
 
     /**
      * Gets the Controller id.
@@ -209,7 +209,7 @@ private:
     std::unordered_map<int, KeyStatus> _allKeyStatus;
     std::unordered_map<int, KeyStatus> _allKeyPrevStatus;
 
-    eastl::string _deviceName;
+    std::string _deviceName;
     int _deviceId;
 
     int _controllerTag;

@@ -1,14 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "ui_manager.h"
 
-#include <EASTL/queue.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/unordered_map.h>
 #include <cocos/base/CCDirector.h>
 #include <cocos/base/CCEventDispatcher.h>
 #include <cocos/base/CCEventKeyboard.h>
@@ -17,10 +11,16 @@
 #include <cocos/math/CCGeometry.h>
 #include <cocos/platform/CCRenderView.h>
 #include <timeapi.h>
+
+#include <memory>
+#include <queue>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "2d/CCScene.h"
-#include "EASTL/vector.h"
 #include "nau/diag/assertion.h"
 #include "nau/diag/error.h"
 #include "nau/diag/logging.h"
@@ -29,18 +29,18 @@
 #include "nau/math/math.h"
 #include "nau/memory/general_allocator.h"
 #include "nau/memory/mem_allocator.h"
+#include "nau/scene/scene_factory.h"
+#include "nau/scene/scene_manager.h"
 #include "nau/service/service_provider.h"
 #include "nau/ui/elements/canvas.h"
 #include "nau_backend/device_nau.h"
 #include "ui_render_view.h"
-#include "nau/scene/scene_factory.h"
-#include "nau/scene/scene_manager.h"
 
 namespace
 {
 
     static cocos2d::Touch* g_touches[cocos2d::EventTouch::MAX_TOUCHES] = {nullptr};
-    static eastl::unordered_map<intptr_t, int> g_touchIdReorderMap;
+    static std::unordered_map<intptr_t, int> g_touchIdReorderMap;
     static unsigned int g_indexBitsUsed = 0;
     int getUnUsedIndex()
     {
@@ -74,9 +74,9 @@ namespace
         g_indexBitsUsed &= temp;
     }
 
-    eastl::vector<cocos2d::Touch*> getAllTouchesVector()
+    std::vector<cocos2d::Touch*> getAllTouchesVector()
     {
-        eastl::vector<cocos2d::Touch*> ret;
+        std::vector<cocos2d::Touch*> ret;
         int i;
         int temp = g_indexBitsUsed;
 
@@ -300,7 +300,7 @@ namespace nau::ui
         float force = 0.0f;
         float maxForce = 0.0f;
         cocos2d::EventTouch touchEvent;
-        eastl::vector<cocos2d::Touch*> touches;
+        std::vector<cocos2d::Touch*> touches;
 
         for (int i = 0; i < num; ++i)
         {
@@ -350,7 +350,7 @@ namespace nau::ui
         int unusedIndex = 0;
         cocos2d::EventTouch touchEvent;
 
-        eastl::vector<cocos2d::Touch*> touches;
+        std::vector<cocos2d::Touch*> touches;
         for (int i = 0; i < num; ++i)
         {
             id = ids[i];
@@ -402,7 +402,7 @@ namespace nau::ui
         float x = 0.0f;
         float y = 0.0f;
         cocos2d::EventTouch touchEvent;
-        eastl::vector<cocos2d::Touch*> touches;
+        std::vector<cocos2d::Touch*> touches;
 
         for (int i = 0; i < num; ++i)
         {
@@ -628,7 +628,7 @@ namespace nau::ui
         return m_engineScene.get();
     }
 
-    nau::ui::Node* UiManagerImpl::getCanvasChildUnderCursor(const eastl::string& canvasName)
+    nau::ui::Node* UiManagerImpl::getCanvasChildUnderCursor(const std::string& canvasName)
     {
 #if NODE_DEBUG_SEARCH
         Canvas* canvas = getCanvas(canvasName);
@@ -641,8 +641,8 @@ namespace nau::ui
             nau::input::getMouseAxisValue(0, nau::input::MouseKey::AxisX),
             nau::input::getMouseAxisValue(0, nau::input::MouseKey::AxisY));
 
-        eastl::queue<Node*> nodesQueue;
-        eastl::vector<Node*> children;
+        std::queue<Node*> nodesQueue;
+        std::vector<Node*> children;
         canvas->getChildren(children);
 
         for (const auto& child : children)
@@ -666,7 +666,7 @@ namespace nau::ui
                 return currentNode;
             }
 
-            eastl::vector<Node*> childNodes;
+            std::vector<Node*> childNodes;
             currentNode->getChildren(childNodes);
             for (const auto& childNode : childNodes)
             {
@@ -723,7 +723,7 @@ namespace nau::ui
         m_screenHeightReference = height;
     }
 
-    eastl::pair<float, float> UiManagerImpl::getInputPosition(float axisX, float axisY) const
+    std::pair<float, float> UiManagerImpl::getInputPosition(float axisX, float axisY) const
     {
         float inputX = m_screenWidght * axisX;
         float inputY = m_screenHeight * axisY;
@@ -767,7 +767,7 @@ namespace nau::ui
         }
     }
 
-    Canvas* UiManagerImpl::getCanvas(const eastl::string& canvasName)
+    Canvas* UiManagerImpl::getCanvas(const std::string& canvasName)
     {
         auto it = m_canvases.find(canvasName);
 
@@ -782,7 +782,7 @@ namespace nau::ui
         }
     }
 
-    void UiManagerImpl::removeCanvas(const eastl::string& canvasName)
+    void UiManagerImpl::removeCanvas(const std::string& canvasName)
     {
         NAU_ASSERT(m_cocoScene);
 
@@ -860,7 +860,7 @@ namespace nau::ui
         pFileUtils->setSearchPaths(searchPaths);
     }
 
-    eastl::vector<const rtti::TypeInfo*> UiManagerImpl::getServiceDependencies() const
+    std::vector<const rtti::TypeInfo*> UiManagerImpl::getServiceDependencies() const
     {
         return {&rtti::getTypeInfo<ICoreGraphics>(), &rtti::getTypeInfo<cocos2d::backend::IDeviceProvider>()};
     }

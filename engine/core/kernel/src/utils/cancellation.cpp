@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/utils/cancellation.h"
+
+#include <list>
+#include <memory>
 
 #include "nau/async/async_timer.h"
 #include "nau/threading/lock_guard.h"
@@ -17,7 +19,7 @@ namespace nau::rt_detail
     class CancellationState
     {
     public:
-        using Ptr = eastl::shared_ptr<CancellationState>;
+        using Ptr = std::shared_ptr<CancellationState>;
         using CallbackFunc = void (*)(void*);
 
         ~CancellationState()
@@ -35,14 +37,14 @@ namespace nau::rt_detail
         {
             {
                 lock_(m_mutex);
-                if(const bool alreadyCancelled = std::exchange(m_isCancelled, true))
+                if (const bool alreadyCancelled = std::exchange(m_isCancelled, true))
                 {
                     return;
                 }
             }
             // After state going to be cancelled, m_subscriptions will not be ever modified.
             // So m_mutex must not be used (also this can lead to deadlock).
-            for(auto& subscription : m_subscriptions)
+            for (auto& subscription : m_subscriptions)
             {
                 subscription();
             }
@@ -51,14 +53,14 @@ namespace nau::rt_detail
         uintptr_t subscribe(CallbackFunc callback, void* data)
         {
             NAU_ASSERT(callback, "Callback expected to be not null");
-            if(!callback)
+            if (!callback)
             {
                 return 0;
             }
 
             lock_(m_mutex);
 
-            if(m_isCancelled)
+            if (m_isCancelled)
             {
                 callback(data);
                 return 0;
@@ -72,7 +74,7 @@ namespace nau::rt_detail
 
         void unsubscribe(uintptr_t handle)
         {
-            if(handle == 0)
+            if (handle == 0)
             {
                 return;
             }
@@ -110,7 +112,7 @@ namespace nau::rt_detail
             void operator()()
             {
                 lock_(mutex);
-                if(callback)
+                if (callback)
                 {
                     callback(callbackData);
                 }
@@ -121,7 +123,7 @@ namespace nau::rt_detail
 
         mutable std::mutex m_mutex;
         bool m_isCancelled = false;
-        eastl::list<SubscriptionEntry> m_subscriptions;
+        std::list<SubscriptionEntry> m_subscriptions;
     };
 
     /**
@@ -129,7 +131,7 @@ namespace nau::rt_detail
     class ExpirationState
     {
     public:
-        using Ptr = eastl::shared_ptr<ExpirationState>;
+        using Ptr = std::shared_ptr<ExpirationState>;
         using Clock = std::chrono::system_clock;
         using CallbackFunc = void (*)(void*);
 
@@ -171,14 +173,14 @@ namespace nau::rt_detail
         {
             NAU_ASSERT(callback, "Callback expected to be not null");
 
-            if(!callback)
+            if (!callback)
             {
                 return 0;
             }
 
             lock_(m_mutex);
 
-            if(isExpired())
+            if (isExpired())
             {
                 callback(data);
                 return 0;
@@ -196,7 +198,7 @@ namespace nau::rt_detail
 
         void unsubscribe(uintptr_t handle)
         {
-            if(handle == 0)
+            if (handle == 0)
             {
                 return;
             }
@@ -233,7 +235,7 @@ namespace nau::rt_detail
             void operator()()
             {
                 lock_(mutex);
-                if(callback)
+                if (callback)
                 {
                     callback(callbackData);
                 }
@@ -249,49 +251,47 @@ namespace nau::rt_detail
         {
             using namespace std::chrono;
 
-            if(isExpired())
+            if (isExpired())
             {
                 return;
             }
 
-            if(m_timeout && !m_timerSubscription)
+            if (m_timeout && !m_timerSubscription)
             {
                 const auto timePass = duration_cast<milliseconds>(Clock::now() - m_creationTime);
 
-                if(timePass < *m_timeout)
+                if (timePass < *m_timeout)
                 {
                     const int64_t timeLeft = static_cast<int64_t>(m_timeout->count()) - static_cast<int64_t>(timePass.count());
                     NAU_ASSERT(timeLeft > 0);
 
                     m_timerSubscription = async::invokeAfter(milliseconds{timeLeft}, [](void* ptr) noexcept
-                                                             {
-                                                                 auto& self = *reinterpret_cast<ExpirationState*>(ptr);
-                                                                 self.invokeCallbacks();
-                                                             },
-                                                             this);
+                    {
+                        auto& self = *reinterpret_cast<ExpirationState*>(ptr);
+                        self.invokeCallbacks();
+                    }, this);
                 }
             }
 
-            if(m_cancellation && !m_cancellationSubscription)
+            if (m_cancellation && !m_cancellationSubscription)
             {
                 m_cancellationSubscription = m_cancellation->subscribe([](void* ptr)
-                                                                       {
-                                                                           auto& self = *reinterpret_cast<ExpirationState*>(ptr);
-                                                                           self.invokeCallbacks();
-                                                                       },
-                                                                       this);
+                {
+                    auto& self = *reinterpret_cast<ExpirationState*>(ptr);
+                    self.invokeCallbacks();
+                }, this);
             }
         }
 
         void resetSubscriptions()
         {
-            if(m_timerSubscription)
+            if (m_timerSubscription)
             {
                 async::cancelInvokeAfter(*m_timerSubscription);
                 m_timerSubscription.reset();
             }
 
-            if(m_cancellationSubscription)
+            if (m_cancellationSubscription)
             {
                 NAU_ASSERT(m_cancellation);
                 m_cancellation->unsubscribe(*m_cancellationSubscription);
@@ -305,7 +305,7 @@ namespace nau::rt_detail
         {
             {
                 lock_(m_mutex);
-                if(std::exchange(m_callbacksAreInvoked, true) == true)
+                if (std::exchange(m_callbacksAreInvoked, true) == true)
                 {
                     return;
                 }
@@ -315,7 +315,7 @@ namespace nau::rt_detail
             // - Unsubscribe does not modify container
             // - Subscribe will be completed at started, because of IsExpired() == true.
 
-            for(auto& subscription : m_subscriptions)
+            for (auto& subscription : m_subscriptions)
             {
                 subscription();
             }
@@ -327,7 +327,7 @@ namespace nau::rt_detail
 
         mutable threading::SpinLock m_mutex;
         bool m_callbacksAreInvoked = false;
-        eastl::list<SubscriptionEntry> m_subscriptions;
+        std::list<SubscriptionEntry> m_subscriptions;
 
         std::optional<uintptr_t> m_timerSubscription;
         std::optional<uintptr_t> m_cancellationSubscription;
@@ -354,7 +354,7 @@ namespace nau
 
     CancellationSubscription& CancellationSubscription::operator=(CancellationSubscription&& other)
     {
-        if(m_cancellation && m_subscriptionHandle != 0)
+        if (m_cancellation && m_subscriptionHandle != 0)
         {
             m_cancellation->unsubscribe(m_subscriptionHandle);
         }
@@ -384,7 +384,7 @@ namespace nau
 
     void CancellationSubscription::reset()
     {
-        if(m_cancellation && m_subscriptionHandle != 0)
+        if (m_cancellation && m_subscriptionHandle != 0)
         {
             auto cancellation = std::exchange(m_cancellation, nullptr);
             const auto handle = std::exchange(m_subscriptionHandle, 0);
@@ -421,7 +421,7 @@ namespace nau
 
     CancellationSubscription Cancellation::subscribe(void (*callback)(void*), void* callbackData)
     {
-        if(m_cancellation)
+        if (m_cancellation)
         {
             auto handle = m_cancellation->subscribe(callback, callbackData);
             return {m_cancellation, handle};
@@ -442,7 +442,7 @@ namespace nau
     }
 
     CancellationSource::CancellationSource() :
-        m_cancellation{eastl::make_shared<rt_detail::CancellationState>()}
+        m_cancellation{std::make_shared<rt_detail::CancellationState>()}
     {
     }
 
@@ -470,7 +470,7 @@ namespace nau
     void CancellationSource::cancel()
     {
         NAU_ASSERT(m_cancellation);
-        if(m_cancellation)
+        if (m_cancellation)
         {
             m_cancellation->cancel();
         }
@@ -479,7 +479,7 @@ namespace nau
     void CancellationSource::SetTimeoutInternal(std::chrono::milliseconds timeout)
     {
         NAU_ASSERT(m_cancellation);
-        if(m_cancellation)
+        if (m_cancellation)
         {
             m_cancellation->setTimeout(timeout);
         }
@@ -487,7 +487,7 @@ namespace nau
 
     ExpirationSubscription::~ExpirationSubscription()
     {
-        if(m_expiration)
+        if (m_expiration)
         {
             m_expiration->unsubscribe(m_subscriptionHandle);
         }
@@ -504,7 +504,7 @@ namespace nau
 
     ExpirationSubscription& ExpirationSubscription::operator=(ExpirationSubscription&& other)
     {
-        if(m_expiration)
+        if (m_expiration)
         {
             m_expiration->unsubscribe(m_subscriptionHandle);
         }
@@ -532,17 +532,17 @@ namespace nau
     Expiration::Expiration() = default;
 
     Expiration::Expiration(Cancellation cancellation, std::chrono::milliseconds timeout) :
-        m_expiration(eastl::make_shared<rt_detail::ExpirationState>(std::move(cancellation.m_cancellation), timeout))
+        m_expiration(std::make_shared<rt_detail::ExpirationState>(std::move(cancellation.m_cancellation), timeout))
     {
     }
 
     Expiration::Expiration(Cancellation cancellation) :
-        m_expiration(eastl::make_shared<rt_detail::ExpirationState>(std::move(cancellation.m_cancellation)))
+        m_expiration(std::make_shared<rt_detail::ExpirationState>(std::move(cancellation.m_cancellation)))
     {
     }
 
     Expiration::Expiration(std::chrono::milliseconds timeout) :
-        m_expiration(eastl::make_shared<rt_detail::ExpirationState>(timeout))
+        m_expiration(std::make_shared<rt_detail::ExpirationState>(timeout))
     {
     }
 
@@ -558,7 +558,7 @@ namespace nau
 
     ExpirationSubscription Expiration::subscribe(void (*callback)(void*), void* callbackData)
     {
-        if(m_expiration)
+        if (m_expiration)
         {
             auto handle = m_expiration->Subscribe(callback, callbackData);
             return {m_expiration, handle};

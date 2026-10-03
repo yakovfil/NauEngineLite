@@ -1,8 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/diag/logging.h"
+
+#include <algorithm>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/diag/assertion.h"
 #include "nau/memory/singleton_memop.h"
@@ -11,7 +16,7 @@
 namespace nau::diag
 {
     class LoggerImpl final : public Logger,
-                             public eastl::enable_shared_from_this<LoggerImpl>
+                             public std::enable_shared_from_this<LoggerImpl>
     {
     public:
         ~LoggerImpl()
@@ -24,7 +29,7 @@ namespace nau::diag
 
         void setFilterImpl(const SubscriptionHandle& handle, ILogMessageFilter::Ptr) override;
 
-        void logMessage(LogLevel criticality, eastl::vector<eastl::string> tags, SourceInfo sourceInfo, eastl::string text) override;
+        void logMessage(LogLevel criticality, std::vector<std::string> tags, SourceInfo sourceInfo, std::string text) override;
 
     private:
         struct SubscriberEntry
@@ -53,7 +58,7 @@ namespace nau::diag
         std::shared_mutex m_mutex;
         std::atomic_uint32_t m_messageIndex = 0;
         uint32_t m_subscriberId = 0;
-        eastl::list<SubscriberEntry> m_subscribers;
+        std::list<SubscriberEntry> m_subscribers;
     };
 
     Logger::SubscriptionHandle LoggerImpl::subscribeImpl(ILogSubscriber::Ptr subscriber, ILogMessageFilter::Ptr filter)
@@ -73,7 +78,7 @@ namespace nau::diag
 
         lock_(m_mutex);
 
-        auto iter = eastl::find_if(m_subscribers.begin(), m_subscribers.end(), [subscriptionId](const SubscriberEntry& entry)
+        auto iter = std::find_if(m_subscribers.begin(), m_subscribers.end(), [subscriptionId](const SubscriberEntry& entry)
         {
             return entry.id == subscriptionId;
         });
@@ -90,10 +95,10 @@ namespace nau::diag
         lock_(m_mutex);
     }
 
-    void LoggerImpl::logMessage(LogLevel criticality, eastl::vector<eastl::string> tags, SourceInfo sourceInfo, eastl::string text)
+    void LoggerImpl::logMessage(LogLevel criticality, std::vector<std::string> tags, SourceInfo sourceInfo, std::string text)
     {
         static thread_local unsigned recursionCounter = 0;
-        static thread_local eastl::vector<LoggerMessage> pendingMessages;
+        static thread_local std::vector<LoggerMessage> pendingMessages;
 
         // preventing logMessage from recursive call (ever subscriber can subsequently invoke logging):
         ++recursionCounter;
@@ -196,7 +201,7 @@ namespace nau::diag
 
     Logger::Ptr createLogger()
     {
-        return eastl::make_shared<LoggerImpl>();
+        return std::make_shared<LoggerImpl>();
     }
 
     void setLogger(Logger::Ptr&& logger)

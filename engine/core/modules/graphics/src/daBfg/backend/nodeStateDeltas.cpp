@@ -3,12 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "nodeStateDeltas.h"
 
-#include <EASTL/algorithm.h>
-#include <EASTL/iterator.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/vector_map.h>
-#include "nau/memory/eastl_aliases.h"
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <optional>
+#include <utility>
 
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace dag
 {
@@ -19,7 +21,7 @@ static bool operator==(const RelocatableFixedVector<T, first_size> &first, const
 {
   if (first.size() != second.size())
     return false;
-  return eastl::equal(first.begin(), first.end(), second.begin());
+  return std::equal(first.begin(), first.end(), second.begin());
 }
 
 } // namespace dag
@@ -84,18 +86,18 @@ struct DeltaCalculator
     return current;
   }
 
-  shaders::UniqueOverrideStateId delta(const eastl::optional<shaders::OverrideState> &current,
-    const eastl::optional<shaders::OverrideState> &)
+  shaders::UniqueOverrideStateId delta(const std::optional<shaders::OverrideState>& current,
+                                       const std::optional<shaders::OverrideState>&)
   {
     return current.has_value() ? shaders::overrides::create(*current) : shaders::OverrideStateId{};
   }
 
-  VrsStateDelta delta(const eastl::optional<intermediate::VrsState> &current, const eastl::optional<intermediate::VrsState> &)
+  VrsStateDelta delta(const std::optional<intermediate::VrsState>& current, const std::optional<intermediate::VrsState>&)
   {
     return current.has_value() ? VrsStateDelta{*current} : StopVrs{};
   }
 
-  RenderPassDelta delta(const eastl::optional<intermediate::RenderPass> &current, const eastl::optional<intermediate::RenderPass> &)
+  RenderPassDelta delta(const std::optional<intermediate::RenderPass>& current, const std::optional<intermediate::RenderPass>&)
   {
     return current.has_value() ? RenderPassDelta{*current} : FinishRenderPass{};
   }
@@ -105,24 +107,27 @@ struct DeltaCalculator
     //FRAMEMEM_VALIDATE;
 
     // Pre-allocate all framemem data for graceful cleanup
-    using BindingToSv = eastl::pair<int, intermediate::Binding>;
-    using TmpBindingsSet = eastl::vector_set<BindingToSv, eastl::less<BindingToSv>, nau::EastlFrameAllocator>;
-    TmpBindingsSet newSet(new_binding.begin(), new_binding.end());
-    TmpBindingsSet oldSet(old_binding.begin(), old_binding.end());
+    using BindingToSv = std::pair<int, intermediate::Binding>;
+    using TmpBindingsSet = nau::SortedVectorSet<BindingToSv, std::less<BindingToSv>, nau::FrameStdAllocator<BindingToSv>>;
+    TmpBindingsSet newSet, oldSet;
+    for (const auto& [key, value] : new_binding)
+        newSet.emplace(key, value);
+    for (const auto& [key, value] : old_binding)
+        oldSet.emplace(key, value);
 
-    using TmpShaderVarBindingsMap = eastl::vector_map<int, intermediate::Binding, eastl::less<int>, nau::EastlFrameAllocator>;
+    using TmpShaderVarBindingsMap = nau::SortedVectorMap<int, intermediate::Binding, std::less<int>, nau::FrameStdAllocator<std::pair<int, intermediate::Binding>>>;
     TmpShaderVarBindingsMap oldWithoutNew;
     oldWithoutNew.reserve(oldSet.size());
     TmpShaderVarBindingsMap result;
     result.reserve(newSet.size() + oldSet.size());
 
-    eastl::set_difference_2(newSet.begin(), newSet.end(), oldSet.begin(), oldSet.end(), eastl::inserter(result, result.begin()),
-      eastl::inserter(oldWithoutNew, oldWithoutNew.begin()));
+    std::set_difference(newSet.begin(), newSet.end(), oldSet.begin(), oldSet.end(), std::inserter(result, result.begin()));
+    std::set_difference(oldSet.begin(), oldSet.end(), newSet.begin(), newSet.end(), std::inserter(oldWithoutNew, oldWithoutNew.begin()));
 
     // Unbind stuff
     for (auto &[k, v] : oldWithoutNew)
       if (result.find(k) == result.end())
-        result[k] = {v.type, eastl::nullopt, false, v.projectedTag};
+          result[k] = {v.type, std::nullopt, false, v.projectedTag};
 
     // Transfer to regular heap memory
     return {result.begin(), result.end()};
@@ -132,9 +137,9 @@ struct DeltaCalculator
     const intermediate::ShaderBlockBindings &new_info)
   {
     ShaderBlockLayersInfoDelta result;
-    result.objectLayer = new_info.objectLayer != old_info.objectLayer ? eastl::optional<int>(new_info.objectLayer) : eastl::nullopt;
-    result.sceneLayer = new_info.sceneLayer != old_info.sceneLayer ? eastl::optional<int>(new_info.sceneLayer) : eastl::nullopt;
-    result.frameLayer = new_info.frameLayer != old_info.frameLayer ? eastl::optional<int>(new_info.frameLayer) : eastl::nullopt;
+    result.objectLayer = new_info.objectLayer != old_info.objectLayer ? std::optional<int>(new_info.objectLayer) : std::nullopt;
+    result.sceneLayer = new_info.sceneLayer != old_info.sceneLayer ? std::optional<int>(new_info.sceneLayer) : std::nullopt;
+    result.frameLayer = new_info.frameLayer != old_info.frameLayer ? std::optional<int>(new_info.frameLayer) : std::nullopt;
     return result;
   }
 };

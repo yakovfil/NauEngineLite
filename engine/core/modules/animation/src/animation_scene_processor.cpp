@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/animation_scene_processor.h"
+
+#include <span>
 
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/components/skeleton_component.h"
@@ -25,7 +26,7 @@ namespace nau::animation
         return async::makeResolvedTask();
     }
 
-    async::Task<> AnimationSceneProcessor::activateComponentsAsync([[maybe_unused]] Uid worldUid, eastl::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
+    async::Task<> AnimationSceneProcessor::activateComponentsAsync([[maybe_unused]] Uid worldUid, std::span<const scene::Component*> components, [[maybe_unused]] async::Task<> barrier)
     {
         IAssetDescriptorFactory& assetManager = getServiceProvider().get<IAssetDescriptorFactory>();
         for (const scene::Component* component : components)

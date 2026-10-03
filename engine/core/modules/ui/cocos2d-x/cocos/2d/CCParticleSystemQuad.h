@@ -28,6 +28,7 @@ THE SOFTWARE.
 ****************************************************************************/
 #pragma once
 
+#include <string>
 #include "2d/CCParticleSystem.h"
 #include "renderer/CCQuadCommand.h"
 
@@ -137,7 +138,7 @@ public:
      */
     virtual void setTotalParticles(int tp) override;
 
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
     
 CC_CONSTRUCTOR_ACCESS:
     /**

@@ -3,18 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <eastl/vector.h>
-#include <EASTL/vector_multiset.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/span.h>
+#include <memory>
+#include <span>
+#include <utility>
+#include <vector>
 
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 using NodeIdx = uint32_t;
 using EdgeIdx = uint32_t;
-using AdjacencyLists = eastl::vector<eastl::vector<NodeIdx>>;
-using SortedAdjacencyLists = eastl::vector<eastl::vector_multiset<NodeIdx>>;
-using NodeLayout = eastl::vector<eastl::vector<NodeIdx>>;
+using AdjacencyLists = std::vector<std::vector<NodeIdx>>;
+using SortedAdjacencyLists = std::vector<nau::SortedVectorMultiSet<NodeIdx>>;
+using NodeLayout = std::vector<std::vector<NodeIdx>>;
 
 struct GraphLayout
 {
@@ -44,8 +45,8 @@ struct GraphLayout
    * In layout without edges merging all arrays contain exactly one edge.
    */
 
-  using OriginalEdges = eastl::fixed_vector<EdgeIdx, 8>;
-  eastl::vector<eastl::vector<eastl::pair<NodeIdx, OriginalEdges>>> edgeMapping;
+  using OriginalEdges = nau::InlineVector<EdgeIdx, 8>;
+  std::vector<std::vector<std::pair<NodeIdx, OriginalEdges>>> edgeMapping;
 };
 
 /**
@@ -61,12 +62,12 @@ class IGraphLayouter
 {
 public:
   // TODO: make topsort an optional optimization
-  virtual GraphLayout layout(const AdjacencyLists &graph, eastl::span<const NodeIdx> topsort, bool merge_fake_nodes) = 0;
+    virtual GraphLayout layout(const AdjacencyLists& graph, std::span<const NodeIdx> topsort, bool merge_fake_nodes) = 0;
 
-  virtual ~IGraphLayouter() = default;
+    virtual ~IGraphLayouter() = default;
 };
 
 /**
  * Creates a default layouter based on graphviz's dot algorithm.
  */
-eastl::unique_ptr<IGraphLayouter> make_default_layouter();
+std::unique_ptr<IGraphLayouter> make_default_layouter();

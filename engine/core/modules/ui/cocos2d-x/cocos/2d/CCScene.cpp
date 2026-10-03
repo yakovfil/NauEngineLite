@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include "2d/CCScene.h"
 #include "base/CCDirector.h"
 #include "2d/CCCamera.h"
@@ -116,9 +117,9 @@ Scene* Scene::createWithSize(const Size& size)
     }
 }
 
-eastl::string Scene::getDescription() const
+std::string Scene::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<Scene | tag = %d>", _tag);
+    return cocos2d::StringUtils::format("<Scene | tag = %d>", _tag);
 }
 
 void Scene::onProjectionChanged(EventCustom* /*event*/)

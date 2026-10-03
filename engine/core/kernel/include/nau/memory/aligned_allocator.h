@@ -1,12 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
+#include <unordered_map>
+#include <utility>
+
 #include "nau/memory/mem_allocator.h"
-#include "nau/threading/thread_local_value.h"
 #include "nau/threading/spin_lock.h"
+#include "nau/threading/thread_local_value.h"
 
 namespace nau
 {
@@ -92,19 +94,18 @@ namespace nau
         virtual void setName(const char* name) override;
 
     protected:
-
         struct AllocationInfo
         {
-            void* m_unaligned; 
+            void* m_unaligned;
             size_t m_size;
             size_t m_alignment;
         };
 
-        eastl::pair<AllocationInfo*, eastl::unordered_map<void*, AllocationInfo>*> getAllocationInfo(const void* ptr) const;
-       
+        std::pair<AllocationInfo*, std::unordered_map<void*, AllocationInfo>*> getAllocationInfo(const void* ptr) const;
+
         mutable ThreadLocalValue<std::string> m_name;
-        mutable ThreadLocalValue<eastl::unordered_map<void*, AllocationInfo>> m_allocations;
+        mutable ThreadLocalValue<std::unordered_map<void*, AllocationInfo>> m_allocations;
         mutable threading::SpinLock m_lock;
     };
 
-} // namespace nau
+}  // namespace nau

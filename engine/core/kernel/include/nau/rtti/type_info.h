@@ -1,21 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 #include <compare>
 #include <concepts>
+#include <functional>
+#include <memory>
 #include <string_view>
 #include <type_traits>
-
-#if __has_include(<EASTL/functional.h>)
-    // need for eastl::hash<>
-    #include <EASTL/functional.h>
-    #include <EASTL/vector.h>
-    #define HAS_EASTL
-#else
-    #include <vector>
-#endif
+#include <vector>
 
 #include "nau/kernel/kernel_config.h"
 #include "nau/meta/class_info.h"
@@ -249,15 +242,6 @@ namespace nau::rtti
         return rtti_detail::TypeId{nau::strings::constHash(name)};
     }
 
-#ifdef HAS_EASTL
-    template <rtti::WithTypeInfo T, rtti::WithTypeInfo... U>
-    inline eastl::vector<rtti::TypeInfo> makeTypeInfoCollection()
-    {
-        return {
-            rtti::getTypeInfo<T>(),
-            rtti::getTypeInfo<U>()...};
-    }
-#else
     template <rtti::WithTypeInfo T, rtti::WithTypeInfo... U>
     inline std::vector<rtti::TypeInfo> makeTypeInfoCollection()
     {
@@ -265,8 +249,6 @@ namespace nau::rtti
             rtti::getTypeInfo<T>(),
             rtti::getTypeInfo<U>()...};
     }
-
-#endif
 
 }  // namespace nau::rtti
 
@@ -279,18 +261,3 @@ struct std::hash<::nau::rtti::TypeIndex>
         return val.getHashCode();
     }
 };
-
-#ifdef HAS_EASTL
-template <>
-
-struct eastl::hash<::nau::rtti::TypeIndex>
-{
-    [[nodiscard]]
-    size_t operator()(const ::nau::rtti::TypeIndex& val) const
-    {
-        return val.getHashCode();
-    }
-};
-
-    #undef HAS_EASTL
-#endif  // HAS_EASTL

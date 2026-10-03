@@ -3,9 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/array.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/unique_ptr.h>
+#include <array>
+#include <memory>
 
 #include "dag_postFxRenderer.h"
 #include "nau/math/dag_e3dColor.h"
@@ -25,7 +24,7 @@ namespace nau::render
             Yes
         };
 
-        ShadingResolver(eastl::unique_ptr<PostFxRenderer> resolveShading);
+        ShadingResolver(std::unique_ptr<PostFxRenderer> resolveShading);
         ~ShadingResolver();
 
         PostFxRenderer* getResolveShading() const
@@ -41,13 +40,13 @@ namespace nau::render
                      const math::RectInt* resolve_area = nullptr);
 
     private:
-        eastl::unique_ptr<PostFxRenderer> resolveShading;
+        std::unique_ptr<PostFxRenderer> resolveShading;
     };
 
     class DeferredRenderTarget
     {
     public:
-        DeferredRenderTarget(eastl::unique_ptr<render::ShadingResolver> resolveShading,
+        DeferredRenderTarget(std::unique_ptr<render::ShadingResolver> resolveShading,
                              const char* name,
                              int w,
                              int h,
@@ -70,7 +69,7 @@ namespace nau::render
             GBUF_NUM
         };
 
-        DeferredRenderTarget(eastl::unique_ptr<render::ShadingResolver> resolveShading,
+        DeferredRenderTarget(std::unique_ptr<render::ShadingResolver> resolveShading,
                              const char* name,
                              int w,
                              int h,
@@ -144,7 +143,7 @@ namespace nau::render
 
     protected:
         DeferredRT m_renderTargets;
-        eastl::unique_ptr<ShadingResolver> m_shadingResolver;
+        std::unique_ptr<ShadingResolver> m_shadingResolver;
         PostFxRenderer* m_debugRenderer = nullptr;
     };
 

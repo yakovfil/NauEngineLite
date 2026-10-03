@@ -1,6 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <vector>
+
 #include "nau/async/work_queue.h"
 #include "nau/test/helpers/stopwatch.h"
 #include "nau/threading/barrier.h"
@@ -39,7 +41,7 @@ namespace nau::test
         auto queue1 = WorkQueue::create();
         auto queue2 = WorkQueue::create();
 
-        eastl::vector<async::Task<>> awaiters;
+        std::vector<async::Task<>> awaiters;
 
         awaiters.push_back(queue1->waitForWork().detach());
         awaiters.push_back(queue2->waitForWork().detach());
@@ -122,7 +124,7 @@ namespace nau::test
             reinterpret_cast<std::atomic_size_t*>(counterPtr)->fetch_add(1);
         };
 
-        eastl::vector<std::thread> threads;
+        std::vector<std::thread> threads;
         threads.reserve(ThreadsCount);
         threading::Barrier barrier{ThreadsCount};
 
@@ -157,8 +159,8 @@ namespace nau::test
      */
     TEST_F(TestWorkQueue, Timeout)
     {
-        using namespace eastl::chrono;
-        using namespace eastl::chrono_literals;
+        using namespace std::chrono;
+        using namespace std::chrono_literals;
 
         constexpr size_t IterCount = 3;
         constexpr auto Timeout = 10ms;
@@ -188,8 +190,8 @@ namespace nau::test
 
     TEST_F(TestWorkQueue, BreakPollWithNotify)
     {
-        using namespace eastl::chrono;
-        using namespace eastl::chrono_literals;
+        using namespace std::chrono;
+        using namespace std::chrono_literals;
 
         constexpr size_t IterCount = 3;
         constexpr auto Timeout = 10ms;
@@ -234,7 +236,7 @@ namespace nau::test
      */
     TEST_F(TestWorkQueue, WorkloadDuringTimeout)
     {
-        using namespace eastl::chrono_literals;
+        using namespace std::chrono_literals;
 
         constexpr size_t IterCount = 3;
         constexpr auto WorkloadTimeout = 10ms;

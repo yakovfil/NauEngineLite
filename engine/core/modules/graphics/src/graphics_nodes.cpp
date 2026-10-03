@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "graphics_nodes.h"
+
+#include <algorithm>
+#include <iterator>
+#include <vector>
 
 #include "graphics_impl.h"
 #include "nau/animation/assets/skeleton_asset.h"
@@ -22,7 +25,7 @@ namespace nau
 {
     namespace Debug
     {
-        void drawBonesRecursive(const eastl::vector<SkeletonJoint>& joints, const nau::math::Matrix4* jointsTransforms, size_t rootJointIndex)
+        void drawBonesRecursive(const std::vector<SkeletonJoint>& joints, const nau::math::Matrix4* jointsTransforms, size_t rootJointIndex)
         {
             getDebugRenderer().drawSphere(0.05f, nau::math::Color4(0.0f, 0.0f, 1.0f, 1.0f), jointsTransforms[rootJointIndex], 8, 0.12f);
             for (size_t i = 0; i < joints.size(); ++i)
@@ -56,14 +59,14 @@ namespace nau
             {
                 tr = modelTr * tr;
             }
-            const eastl::vector<SkeletonJoint>& joints = skeletonComponent.getJoints();
-            auto rootNodeIt = eastl::find_if(joints.begin(), joints.end(), [](const SkeletonJoint& joint)
+            const std::vector<SkeletonJoint>& joints = skeletonComponent.getJoints();
+            auto rootNodeIt = std::find_if(joints.begin(), joints.end(), [](const SkeletonJoint& joint)
             {
                 return joint.parentIndex == -1;
             });
             if (rootNodeIt != joints.end())
             {
-                const size_t rootNodeIndex = eastl::distance(joints.begin(), rootNodeIt);
+                const size_t rootNodeIndex = std::distance(joints.begin(), rootNodeIt);
                 Debug::drawBonesRecursive(joints, &debugBonesTransforms[0], rootNodeIndex);
             }
             else

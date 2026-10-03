@@ -1,14 +1,16 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "gltf_skin_accessor.h"
 
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace nau
 {
-    GltfSkinAssetAccessor::GltfSkinAssetAccessor(const GltfFile& file, size_t skinIndex, eastl::string_view skeletonPath, const eastl::vector<io::IFile::Ptr>& bufferFiles)
+    GltfSkinAssetAccessor::GltfSkinAssetAccessor(const GltfFile& file, size_t skinIndex, std::string_view skeletonPath, const std::vector<io::IFile::Ptr>& bufferFiles)
     {
         NAU_ASSERT(skinIndex < file.skins.size());
 
@@ -17,7 +19,7 @@ namespace nau
         const GltfAccessor& dataAccessor = file.accessors[skinData.inverseBindMatrices];
         const GltfBufferView& dataBufferView = file.bufferViews[dataAccessor.bufferView];
 
-        m_descriptor.skeletonDesc = SkeletonDataDescriptor{ static_cast<unsigned>(skinData.joints.size()), eastl::string(skeletonPath) };
+        m_descriptor.skeletonDesc = SkeletonDataDescriptor{static_cast<unsigned>(skinData.joints.size()), std::string(skeletonPath)};
 
         auto& invBindMatricesAccessor = m_descriptor.inverseBindMatricesAccessor;
         invBindMatricesAccessor.file = bufferFiles[dataBufferView.buffer];
@@ -30,7 +32,7 @@ namespace nau
         return m_descriptor.skeletonDesc;
     }
 
-    void GltfSkinAssetAccessor::copyInverseBindMatrices(eastl::vector<nau::math::Matrix4>& data) const
+    void GltfSkinAssetAccessor::copyInverseBindMatrices(std::vector<nau::math::Matrix4>& data) const
     {
         auto inputStream = m_descriptor.inverseBindMatricesAccessor.file->createStream(io::AccessMode::Read);
         inputStream->setPosition(io::OffsetOrigin::Begin, m_descriptor.inverseBindMatricesAccessor.offset);
@@ -41,7 +43,7 @@ namespace nau
         if (reader)
         {
             data.resize(m_descriptor.skeletonDesc.jointsCount);
-            io::copyFromStream(data.begin(), m_descriptor.inverseBindMatricesAccessor.size, *reader).ignore();
+            io::copyFromStream(data.data(), m_descriptor.inverseBindMatricesAccessor.size, *reader).ignore();
         }
 
         return;

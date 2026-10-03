@@ -3,10 +3,12 @@
 
 #include <stdint.h>
 
-#include <EASTL/shared_ptr.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
-#include <EASTL/unordered_map.h>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <unordered_map>
+#include <vector>
 
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/io/fs_path.h"
@@ -29,7 +31,7 @@ namespace nau
         /**
          * @brief Source name
          */
-        eastl::string m_name;
+        std::string m_name;
     };
 
     /**
@@ -45,7 +47,7 @@ namespace nau
          *
          * @param [in] Callback with ref to sources vector
          */
-        virtual void setGetSources(nau::Functor<void(eastl::vector<eastl::shared_ptr<InputSource>>& sources)>) = 0;
+        virtual void setGetSources(nau::Functor<void(std::vector<std::shared_ptr<InputSource>>& sources)>) = 0;
     };
 
     /**
@@ -104,7 +106,7 @@ namespace nau
          * 
          * @return Name of the input device.
          */
-        virtual eastl::string getName() const = 0;
+        virtual std::string getName() const = 0;
 
         /**
          * @brief Retrieves the type of the input device.
@@ -133,7 +135,7 @@ namespace nau
          * @param [in] keyId    Index of the key.
          * @return              Name of the key.
          */
-        virtual eastl::string getKeyName(unsigned keyId) const = 0;
+        virtual std::string getKeyName(unsigned keyId) const = 0;
 
         /**
          * @brief Retrieves the axis name by its index.
@@ -141,7 +143,7 @@ namespace nau
          * @param [in] axisId   Index of the axis.
          * @return              Name of the axis.
          */
-        virtual eastl::string getAxisName(unsigned axisId) const = 0;
+        virtual std::string getAxisName(unsigned axisId) const = 0;
 
         /**
          * @brief Retrieves the key index by its name.
@@ -149,7 +151,7 @@ namespace nau
          * @param [in] keyName  Name of the key.
          * @return              Index of the key.
          */
-        virtual unsigned getKeyByName(const eastl::string_view keyName) const = 0;
+        virtual unsigned getKeyByName(const std::string_view keyName) const = 0;
 
         /**
          * @brief Retrieves the axis index by its name.
@@ -157,7 +159,7 @@ namespace nau
          * @param [in] axisName Name of the axis.
          * @return              Index of the axis.
          */
-        virtual unsigned getAxisByName(const eastl::string_view axisName) const = 0;
+        virtual unsigned getAxisByName(const std::string_view axisName) const = 0;
 
         /**
          * @brief Retrieves the state of the key.
@@ -188,7 +190,7 @@ namespace nau
          *
          * @return Name of the input device.
          */
-        virtual eastl::string getName() const = 0;
+        virtual std::string getName() const = 0;
 
         /**
          * @brief Retrieves a pointer to the actual input device.
@@ -206,7 +208,7 @@ namespace nau
     };
 
     template <typename T>
-    concept InputSignalSupportedType = eastl::is_same_v<T, float> || eastl::is_same_v<T, int> || eastl::is_same_v<T, unsigned int> || eastl::is_same_v<T, char> || eastl::is_same_v<T, eastl::string>;
+    concept InputSignalSupportedType = std::is_same_v<T, float> || std::is_same_v<T, int> || std::is_same_v<T, unsigned int> || std::is_same_v<T, char> || std::is_same_v<T, std::string>;
 
     /**
      * @brief Encapsulates input signal generic properties.
@@ -217,17 +219,16 @@ namespace nau
             CLASS_FIELD(properties))
 
     public:
-
         /**
          * @brief Assigns value to the signal property.
-         * 
-         * @tparam T Type of the signal property value. It has to be one of the following: `float`, `int`, `unsigned int`, `char`, `eastl::string`.
-         * 
+         *
+         * @tparam T Type of the signal property value. It has to be one of the following: `float`, `int`, `unsigned int`, `char`, `std::string`.
+         *
          * @param [in] key      Key under which the property was registered. If the property has not yet been added, use add method.
          * @param [in] value    Value to assign.
          */
         template <typename T>
-        void set(const eastl::string& key, const T& value)
+        void set(const std::string& key, const T& value)
         {
             if constexpr (InputSignalSupportedType<T>)
             {
@@ -254,7 +255,7 @@ namespace nau
          * @return          A Result<T> object storing the requested value.
          */
         template <typename T>
-        Result<T> get(const eastl::string& key) const
+        Result<T> get(const std::string& key) const
         {
             const auto value = m_properties.at(key);
 
@@ -290,14 +291,14 @@ namespace nau
 
         /**
          * @brief Registers the signal property.
-         * 
-         * @tparam T Type of the signal property value. It has to be one of the following: `float`, `int`, `unsigned int`, `char`, `eastl::string`.
-         * 
+         *
+         * @tparam T Type of the signal property value. It has to be one of the following: `float`, `int`, `unsigned int`, `char`, `std::string`.
+         *
          * @param [in] key      Key to register the property under.
          * @param [in] value    Initial value of the property.
          */
         template <typename T>
-        void add(const eastl::string& key, const T& value)
+        void add(const std::string& key, const T& value)
         {
             if constexpr (InputSignalSupportedType<T>)
             {
@@ -312,7 +313,7 @@ namespace nau
         /**
          * @brief Stores signal properties and provides access to their values by their names.
          */
-        eastl::unordered_map<eastl::string, RuntimeValue::Ptr> m_properties;
+        std::unordered_map<std::string, RuntimeValue::Ptr> m_properties;
 
         /**
          * @brief Indicates whether signal properties have been change and the signal state require update.
@@ -358,7 +359,7 @@ namespace nau
          * 
          * @return Name of the signal.
          */
-        virtual const eastl::string& getName() const = 0;
+        virtual const std::string& getName() const = 0;
 
         /**
          * @brief Retrieves the signal type.
@@ -367,7 +368,7 @@ namespace nau
          * 
          * For more information on signal types, see IInputSignal.
          */
-        virtual const eastl::string& getType() const = 0;
+        virtual const std::string& getType() const = 0;
 
         /**
          * @brief Retrieves a pointer to the input controller, which this signal is attached to.
@@ -505,7 +506,7 @@ namespace nau
          * 
          * @return Name of the action.
          */
-        virtual eastl::string getName() const = 0;
+        virtual std::string getName() const = 0;
 
         /**
          * @brief Retrieves the type of the action.
@@ -528,14 +529,14 @@ namespace nau
          * 
          * Multiple tags can be attached to a single action.
          */
-        virtual void addContextTag(const eastl::string& tag) = 0;
+        virtual void addContextTag(const std::string& tag) = 0;
 
         /**
          * @brief Detaches the tag from the action.
          * 
          * @param [in] tag Tag to detach from the action.
          */
-        virtual void removeContextTag(const eastl::string& tag) = 0;
+        virtual void removeContextTag(const std::string& tag) = 0;
 
         /**
          * @brief Checks if the tag is attached to the action.
@@ -543,7 +544,7 @@ namespace nau
          * @param [in] tag  Tag to inquire about.
          * @return          `true` if the tag is attached to the action, `false` otherwise.
          */
-        virtual bool isContextTag(const eastl::string& tag) const = 0;
+        virtual bool isContextTag(const std::string& tag) const = 0;
 
         /**
          * @brief Updates the associated signal and exhibits the user-defined behavior if necessary. 
@@ -571,7 +572,7 @@ namespace nau
          * @param [in] actionCallback   A functor that is to be called upon action trigger.
          * @return                      A pointer to the created action.
          */
-        virtual eastl::shared_ptr<IInputAction> addAction(const eastl::string& name, IInputAction::Type type, IInputSignal* signal, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
+        virtual std::shared_ptr<IInputAction> addAction(const std::string& name, IInputAction::Type type, IInputSignal* signal, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
 
         /**
          * @brief Creates an input action and registers it in the system.
@@ -580,7 +581,7 @@ namespace nau
          * @param [in] actionCallback   A functor that is to be called upon action trigger.
          * @return                      A pointer to the created action.
          */
-        virtual eastl::shared_ptr<IInputAction> addAction(const eastl::string& serialized, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
+        virtual std::shared_ptr<IInputAction> addAction(const std::string& serialized, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
 
         /**
          * @brief Removes the action from the system.
@@ -588,7 +589,7 @@ namespace nau
          * @param [in] action   A reference to the action to remove.
          * @return              `true` on success, `false` otherwise.
          */
-        virtual bool removeAction(eastl::shared_ptr<IInputAction>&& action) = 0;
+        virtual bool removeAction(std::shared_ptr<IInputAction>&& action) = 0;
 
         /**
          * @brief Creates an input action from the .blk file and registers it in the system.
@@ -597,7 +598,7 @@ namespace nau
          * @param [in] actionCallback   A functor that is to be called upon action trigger.
          * @return                      A pointer to the created action.
          */
-        virtual eastl::shared_ptr<IInputAction> loadAction(const io::FsPath& filePath, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
+        virtual std::shared_ptr<IInputAction> loadAction(const io::FsPath& filePath, nau::Functor<void(IInputSignal*)> actionCallback) = 0;
 
         /**
          * @brief Outputs the action (as DataBlock) into the .blk file.
@@ -606,14 +607,14 @@ namespace nau
          * @param [in] filePath Path to the .blk file to ouput the action to.
          * @return              `true` on success, `false` otherwise.
          */
-        virtual bool saveAction(const eastl::shared_ptr<IInputAction> action, const eastl::string& filePath) = 0;
+        virtual bool saveAction(const std::shared_ptr<IInputAction> action, const std::string& filePath) = 0;
 
         /**
          * @brief Retrieves actions that have been registered in the system.
          * 
          * @param [out] actions Output actions vector.
          */
-        virtual void getActions(eastl::vector<eastl::shared_ptr<IInputAction>>& actions) = 0;
+        virtual void getActions(std::vector<std::shared_ptr<IInputAction>>& actions) = 0;
 
         /**
          * @brief Creates a signal.
@@ -621,7 +622,7 @@ namespace nau
          * @param [in] signalType   String type of the signal. For list of supported types see IInputSignal.
          * @return                  A pointer to the created signal.
          */
-        virtual IInputSignal* createSignal(const eastl::string& signalType) = 0;
+        virtual IInputSignal* createSignal(const std::string& signalType) = 0;
 
         /**
          * @brief Creates a signal.
@@ -631,7 +632,7 @@ namespace nau
          * @param [in] signal           Functor that is to be called at signal creation. You may use this functor to set properties, values or nested input signals of the created signal.
          * @return                      A pointer to the created signal.
         */
-        virtual IInputSignal* createSignal(const eastl::string& signalType, const eastl::string& controllerName, nau::Functor<void(IInputSignal*)> signal) = 0;
+        virtual IInputSignal* createSignal(const std::string& signalType, const std::string& controllerName, nau::Functor<void(IInputSignal*)> signal) = 0;
 
         /**
          * @brief Resets the system active context list to a single active context.
@@ -640,14 +641,14 @@ namespace nau
          * 
          * To add an active context and keep existing active contexts use addContext method.
          */
-        virtual void setContext(const eastl::string& context) = 0;
+        virtual void setContext(const std::string& context) = 0;
 
         /**
          * @brief Adds the context to the system active context list.
          * 
          * @param [in] context  Name of the context to add.
          */
-        virtual void addContext(const eastl::string& context) = 0;
+        virtual void addContext(const std::string& context) = 0;
 
         /**
          * @brief Removes the context from the system active context list.
@@ -656,14 +657,14 @@ namespace nau
          * 
          * Actions from the removed contexts are not triggered.
          */
-        virtual void removeContext(const eastl::string& context) = 0;
+        virtual void removeContext(const std::string& context) = 0;
 
         /**
          * @brief Retrieves all connected input devices.
          * 
          * @return A vector of connected input devices.
          */
-        virtual eastl::vector<IInputDevice*> getDevices() = 0;
+        virtual std::vector<IInputDevice*> getDevices() = 0;
 
         /**
          * @brief Retrieves the input controller (i.e. platform-independent input device abstraction) that matches the description.
@@ -671,7 +672,7 @@ namespace nau
          * @param [in] controllerDesc   Definition of the requested controller registered in the system.
          * @return                      A pointer to the matching controller or `NULL` if none has been found.
          */
-        virtual IInputController* getController(const eastl::string& controllerDesc) = 0;
+        virtual IInputController* getController(const std::string& controllerDesc) = 0;
 
         /**
          * @brief Set current input source 
@@ -680,7 +681,7 @@ namespace nau
          * 
          * Source valid until next setInputSource call
          */
-        virtual void setInputSource(const eastl::string& source) = 0;
+        virtual void setInputSource(const std::string& source) = 0;
     };
 
 }  // namespace nau

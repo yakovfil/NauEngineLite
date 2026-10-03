@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "nau/ui/ui_control.h"
-#include "nau/ui/elements/sprite.h"
+#include <string>
 
+#include "nau/ui/elements/sprite.h"
+#include "nau/ui/ui_control.h"
 
 namespace nau::ui
 {
@@ -22,8 +23,8 @@ namespace nau::ui
 
         FORCEINLINE void setOnValueChangedCallback(OnValueChangedCallback cb) { m_onValueChanged = cb; };
 
-        void setTrackSprite(const eastl::string& filename);
-        void setThumbSprite(const eastl::string& filename);
+        void setTrackSprite(const std::string& filename);
+        void setThumbSprite(const std::string& filename);
 
     protected:
         OnValueChangedCallback m_onValueChanged {nullptr};

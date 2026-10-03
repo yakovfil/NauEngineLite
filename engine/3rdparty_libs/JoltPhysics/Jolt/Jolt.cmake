@@ -495,7 +495,7 @@ target_include_directories(Jolt PUBLIC
 target_precompile_headers(Jolt PRIVATE ${JOLT_PHYSICS_ROOT}/Jolt.h)
 
 # Set the debug/non-debug build flags
-target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Debug>:_DEBUG>")
+target_compile_definitions(Jolt PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Release,Distribution,ReleaseASAN,ReleaseUBSAN,ReleaseCoverage>:NDEBUG>")
 
 # ASAN should use the default allocators

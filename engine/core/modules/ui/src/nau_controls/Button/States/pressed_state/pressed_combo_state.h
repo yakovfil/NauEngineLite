@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "../button_state_base.h"
+#include <memory>
 
-#include "EASTL/unique_ptr.h"
+#include "../button_state_base.h"
 
 namespace nau::ui
 {
@@ -21,7 +21,7 @@ namespace nau::ui
         void exit(nau::ui::NauButton* button) override;
 
     private:
-        std::vector<eastl::unique_ptr<ButtonStateBase>> m_includedStates;
+        std::vector<std::unique_ptr<ButtonStateBase>> m_includedStates;
     };
 
 } // namespace nau::ui

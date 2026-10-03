@@ -1,20 +1,20 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/dispatch/dispatch.h"
 
 #if 0
-#include "nau/dispatch/native_dispatch.h"
-#include "nau/meta/class_info.h"
-#include "nau/serialization/runtime_value_builder.h"
-#include "nau/utils/strings.h"
-#include "nau/utils/type_utility.h"
+    #include <functional>
 
-#include "EASTL/vector.h"
-#include "EASTL/string.h"
-
-#include <functional>
+    #include "nau/dispatch/native_dispatch.h"
+    #include "nau/meta/class_info.h"
+    #include "nau/serialization/runtime_value_builder.h"
+    #include "nau/utils/strings.h"
+    #include "nau/utils/type_utility.h"
 
 
 
@@ -186,7 +186,7 @@ namespace nau::test
 
     TEST(TestDisptach, Test1)
     {
-        eastl::vector<eastl::string> strings1;
+        std::vector<std::string> strings1;
 
         strings1.emplace_back("text1");
         strings1.emplace_back("text2");
@@ -194,7 +194,7 @@ namespace nau::test
         using MyDispatch = nau_detail::NativeDispatchImpl<MyService>;
 
         auto myService = rtti::createInstance<MyService>();
-        auto dispatch = eastl::make_unique<MyDispatch>(myService);
+        auto dispatch = std::make_unique<MyDispatch>(myService);
 
         IDispatch::ArgsCollection args;
         
@@ -216,7 +216,7 @@ namespace nau::test
 
         // constexpr bool a = meta::MetaDefined<MyService, meta::ClassNameAttribute>;
 
-#if 0
+    #if 0
         
 
 
@@ -236,7 +236,7 @@ namespace nau::test
             auto* const str = (*res)->as<RuntimeStringValue*>();
             std::cout << std::format("Result: ({})\n", str->getUtf8());
         }
-#endif
+    #endif
         auto desc = nau::NativeDispatch::makeDispatchDescription<MyService>();
         std::cout << "Ready_\n";
     }

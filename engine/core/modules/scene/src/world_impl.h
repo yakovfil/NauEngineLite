@@ -4,8 +4,11 @@
 
 #pragma once
 
-#include "nau/scene/world.h"
+#include <string>
+#include <string_view>
+
 #include "nau/scene/scene_object.h"
+#include "nau/scene/world.h"
 
 namespace nau::scene
 {
@@ -16,9 +19,9 @@ namespace nau::scene
     public:
         WorldImpl();
 
-        eastl::string_view getName() const override;
+        std::string_view getName() const override;
 
-        void setName(eastl::string_view name) override;
+        void setName(std::string_view name) override;
 
         Vector<IScene::WeakRef> getScenes() const override;
 
@@ -34,7 +37,7 @@ namespace nau::scene
 
         class SceneManagerImpl& getSceneManager() const;
 
-        eastl::string m_name;
+        std::string m_name;
         bool m_isPaused = false;
     };
 

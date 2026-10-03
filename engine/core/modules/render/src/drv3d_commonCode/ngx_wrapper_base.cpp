@@ -4,7 +4,10 @@
 
 #include "ngx_wrapper_base.h"
 
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <iterator>
+#include <tuple>
+
 #include "nau/3d/dag_drv3d.h"
 //#include <osApiWrappers/dag_unicode.h>
 #include "nau/startup/dag_globalSettings.h"
@@ -50,7 +53,7 @@ bool NgxWrapperBase::init(void *device, const char *log_dir)
   {
     char dllFolderAbs[DAGOR_MAX_PATH];
     getcwd(dllFolderAbs, DAGOR_MAX_PATH);
-    eastl::replace(eastl::begin(dllFolderAbs), eastl::end(dllFolderAbs), '\\', '/');
+    std::replace(std::begin(dllFolderAbs), std::end(dllFolderAbs), '\\', '/');
     int sb = i_strlen(dllFolderAbs);
     _snprintf(dllFolderAbs + sb, DAGOR_MAX_PATH - sb, "/%s", dllFolder);
     utf8_to_wcs(dllFolderAbs, dllFolderAbsW, DAGOR_MAX_PATH);
@@ -74,10 +77,10 @@ bool NgxWrapperBase::init(void *device, const char *log_dir)
     return false;
   }
 
-  eastl::tie(capabilityParams, result) = ngxGetCapabilityParameters();
+  std::tie(capabilityParams, result) = ngxGetCapabilityParameters();
   if (result == NVSDK_NGX_Result_FAIL_OutOfDate)
   {
-    eastl::tie(capabilityParams, result) = ngxGetParameters(); // use the deprecated version for older drivers
+      std::tie(capabilityParams, result) = ngxGetParameters();  // use the deprecated version for older drivers
   }
 
   if (NVSDK_NGX_FAILED(result))
@@ -193,8 +196,11 @@ bool NgxWrapperBase::createOptimalDlssFeature(void *context, uint32_t target_wid
       (int)NVSDK_NGX_PerfQuality_Value_DLAA,
       -1,
     };
-    dlss_quality = *eastl::find_if(eastl::begin(sortedQualityValues), eastl::end(sortedQualityValues),
-      [&](int q) { return q == -1 || isDlssQualityAvailableAtResolution(target_width, target_height, q); });
+    dlss_quality = *std::find_if(std::begin(sortedQualityValues), std::end(sortedQualityValues),
+                                 [&](int q)
+    {
+        return q == -1 || isDlssQualityAvailableAtResolution(target_width, target_height, q);
+    });
     if (dlss_quality >= 0)
     {
       NAU_LOG_ERROR("NGX: DLSS quality was changed from {} to {} based on availability at current resolution: {}x{}", origDlssQuality,

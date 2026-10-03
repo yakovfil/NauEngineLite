@@ -1,11 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/asset_tools/db_manager.h"
 
 #include <regex>
 #include <sstream>
+#include <string>
 
 #include "nau/asset_tools/asset_utils.h"
 #include "nau/serialization/json_utils.h"
@@ -69,7 +69,7 @@ namespace nau
 
     bool AssetDatabaseManager::save()
     {
-        eastl::u8string serializedResult = serialization::JsonUtils::stringify(m_cache);
+        std::u8string serializedResult = serialization::JsonUtils::stringify(m_cache);
         return m_fs.writeFile(m_dbFile, reinterpret_cast<const char*>(serializedResult.data()), serializedResult.length());
     }
 
@@ -180,7 +180,7 @@ namespace nau
     {
         std::vector<AssetMetaInfo>& db = assets();
 
-        const eastl::string path = sourcePath.data();
+        const std::string path = sourcePath.data();
 
         const auto it = std::find_if(db.begin(), db.end(), [&](const AssetMetaInfo& info)
         {
@@ -199,7 +199,7 @@ namespace nau
     {
         std::vector<AssetMetaInfo>& db = assets();
 
-        const eastl::string path = sourcePath.data();
+        const std::string path = sourcePath.data();
 
         const auto it = std::find_if(db.begin(), db.end(), [&](const AssetMetaInfo& info)
         {

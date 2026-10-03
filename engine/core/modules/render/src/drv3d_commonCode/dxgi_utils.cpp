@@ -6,14 +6,18 @@
 
 #include "dxgi_utils.h"
 
+#include <optional>
+#include <utility>
+
 #if _TARGET_PC_WIN
 
 //#include <util/dag_string.h>
-#include <dxgi.h>
+    #include <dxgi.h>
 
-#include <EASTL/vector.h>
-#include "nau/string/string.h"
-#include <cmath>
+    #include <cmath>
+    #include <vector>
+
+    #include "nau/string/string.h"
 
 static constexpr size_t outputNameSize = 64;
 static_assert(outputNameSize >= sizeof(DXGI_OUTPUT_DESC::DeviceName), "sizeof outputName is too small!");
@@ -78,12 +82,12 @@ ComPtr<IDXGIOutput> get_output_monitor_by_name_or_default_(IDXGIAdapter *pAdapte
     // the primary monitor is which coordinates is (0,0)
     if (outDesc.DesktopCoordinates.left == 0 && outDesc.DesktopCoordinates.top == 0)
     {
-      defaultOutput = eastl::move(output);
-      if (DefaultOnly)
-        return defaultOutput;
+        defaultOutput = std::move(output);
+        if (DefaultOnly)
+            return defaultOutput;
     }
     else if (!firstFoundOutput)
-      firstFoundOutput = eastl::move(output);
+        firstFoundOutput = std::move(output);
   }
 
   if (defaultOutput)
@@ -104,7 +108,7 @@ ComPtr<IDXGIOutput> get_default_monitor(IDXGIAdapter *pAdapter)
   return get_output_monitor_by_name_or_default_<true>(pAdapter, nullptr);
 }
 
-bool resolutions_have_same_ratio(eastl::pair<uint32_t, uint32_t> l_res, eastl::pair<uint32_t, uint32_t> r_res)
+bool resolutions_have_same_ratio(std::pair<uint32_t, uint32_t> l_res, std::pair<uint32_t, uint32_t> r_res)
 {
   // minimum half difference of the most common aspect ratios (3:2, 4:3, 5:4, 16:9, 16:10, 21:9)
   constexpr double ratio_eps = 0.04;
@@ -115,7 +119,7 @@ bool resolutions_have_same_ratio(eastl::pair<uint32_t, uint32_t> l_res, eastl::p
   return abs(l_ratio - r_ratio) < ratio_eps;
 }
 
-eastl::optional<eastl::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXGIOutput *dxgi_output)
+std::optional<std::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXGIOutput* dxgi_output)
 {
   // Based on the example:
   // https://docs.microsoft.com/en-us/windows-hardware/drivers/display/displaying-app-on-portrait-device
@@ -142,8 +146,8 @@ eastl::optional<eastl::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXG
     UINT32 NumPathArrayElements = 0;
     UINT32 NumModeInfoArrayElements = 0;
 
-    eastl::vector<DISPLAYCONFIG_PATH_INFO> PathInfoArray;
-    eastl::vector<DISPLAYCONFIG_MODE_INFO> ModeInfoArray;
+    std::vector<DISPLAYCONFIG_PATH_INFO> PathInfoArray;
+    std::vector<DISPLAYCONFIG_MODE_INFO> ModeInfoArray;
 
     do
     {
@@ -218,7 +222,7 @@ eastl::optional<eastl::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXG
   // For DEBUG
   // returns the actual desktop resolution as recommended resolution
 #if 0
-  return eastl::pair<uint32_t, uint32_t>(
+  return std::pair<uint32_t, uint32_t>(
     outDesc.DesktopCoordinates.right - outDesc.DesktopCoordinates.left,
     outDesc.DesktopCoordinates.bottom - outDesc.DesktopCoordinates.top);
 #endif
@@ -241,7 +245,7 @@ eastl::optional<eastl::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXG
     return {};
   }
 
-  return eastl::pair<uint32_t, uint32_t>(PreferredMode.width, PreferredMode.height);
+  return std::pair<uint32_t, uint32_t>(PreferredMode.width, PreferredMode.height);
 }
 
 #endif

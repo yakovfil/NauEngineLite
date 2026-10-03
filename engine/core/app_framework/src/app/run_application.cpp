@@ -1,9 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/app/run_application.h"
 
+#include <memory>
+#include <string>
+
+#include "main_loop/main_loop_service.h"
 #include "nau/app/application.h"
 #include "nau/app/application_services.h"
 #include "nau/app/core_window_manager.h"
@@ -35,7 +38,7 @@ namespace nau
 
             void gamePostUpdate(std::chrono::milliseconds dt) override
             {
-                if (!m_appStartupTask || !m_appStartupTask.isReady())
+                if (!getServiceProvider().get<MainLoopService>().isApplicationStartupReady())
                 {
                     return;
                 }
@@ -50,14 +53,11 @@ namespace nau
 
             void startupAppDelegate()
             {
-                NAU_FATAL(!m_appStartupTask);
-
-                m_appStartupTask = m_appDelegate.startupApplication();
+                getServiceProvider().get<MainLoopService>().setApplicationStartupTask(m_appDelegate.startupApplication());
             }
 
         private:
             ApplicationDelegate& m_appDelegate;
-            async::Task<> m_appStartupTask;
         };
     }  // namespace
 
@@ -68,7 +68,7 @@ namespace nau
     Result<> ApplicationDelegate::initializeApplication()
     {
 #if !defined(NAU_STATIC_RUNTIME)
-        const eastl::string moduleList = getModulesListString();
+        const std::string moduleList = getModulesListString();
         if (!moduleList.empty())
         {
             NauCheckResult(loadModulesList(moduleList));
@@ -76,7 +76,7 @@ namespace nau
 #endif
         getServiceProvider().addService(createPlatformWindowService());
 
-        getServiceProvider().addService(eastl::make_unique<DelegateLoop>(*this));
+        getServiceProvider().addService(std::make_unique<DelegateLoop>(*this));
 
         return initializeServices();
     }
@@ -99,8 +99,8 @@ namespace nau
 
         while (app->step())
         {
-// TODO Tracy            NAU_CPU_SCOPED;
-// TODO Tracy            NAU_PROFILING_FRAME_END;
+            // TODO Tracy            NAU_CPU_SCOPED;
+            // TODO Tracy            NAU_PROFILING_FRAME_END;
         }
 
         return 0;

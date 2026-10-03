@@ -23,6 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include <functional>
 #include "base/ObjectFactory.h"
 
@@ -36,7 +37,7 @@ ObjectFactory::TInfo::TInfo()
 {
 }
 
-ObjectFactory::TInfo::TInfo(const eastl::string& type, Instance ins)
+ObjectFactory::TInfo::TInfo(const std::string& type, Instance ins)
 :_class(type)
 ,_fun(ins)
 ,_func(nullptr)
@@ -44,7 +45,7 @@ ObjectFactory::TInfo::TInfo(const eastl::string& type, Instance ins)
     ObjectFactory::getInstance()->registerType(*this);
 }
 
-ObjectFactory::TInfo::TInfo(const eastl::string& type, InstanceFunc ins)
+ObjectFactory::TInfo::TInfo(const std::string& type, InstanceFunc ins)
     :_class(type)
     ,_fun(nullptr)
     ,_func(ins)
@@ -101,7 +102,7 @@ void ObjectFactory::destroyInstance()
     CC_SAFE_DELETE(_sharedFactory);
 }
 
-Ref* ObjectFactory::createObject(const eastl::string &name)
+Ref* ObjectFactory::createObject(const std::string &name)
 {
     Ref *o = nullptr;
     do 

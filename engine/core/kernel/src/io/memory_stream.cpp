@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/io/memory_stream.h"
+
+#include <span>
 
 #include "nau/diag/assertion.h"
 #include "nau/memory/bytes_buffer.h"
@@ -30,7 +31,7 @@ namespace nau::io
 
         void flush() override;
 
-        eastl::span<const std::byte> getBufferAsSpan(size_t offset, std::optional<size_t> size) const override;
+        std::span<const std::byte> getBufferAsSpan(size_t offset, std::optional<size_t> size) const override;
 
     private:
         BytesBuffer m_buffer;
@@ -49,7 +50,7 @@ namespace nau::io
         const size_t availableSize = m_buffer.size() - m_pos;
         const size_t actualReadCount = std::min(availableSize, count);
 
-        if(actualReadCount == 0)
+        if (actualReadCount == 0)
         {
             return 0;
         }
@@ -62,7 +63,7 @@ namespace nau::io
     {
         NAU_FATAL(m_pos <= m_buffer.size());
         const size_t availableSize = m_buffer.size() - m_pos;
-        if(availableSize < count)
+        if (availableSize < count)
         {
             const auto needBytes = count - availableSize;
             m_buffer.append(needBytes);
@@ -85,11 +86,11 @@ namespace nau::io
         int64_t newPos = offset;  // OffsetOrigin::Begin
         const int64_t currentSize = static_cast<int64_t>(m_buffer.size());
 
-        if(origin == OffsetOrigin::Current)
+        if (origin == OffsetOrigin::Current)
         {
             newPos = static_cast<int64_t>(m_pos) + offset;
         }
-        else if(origin == OffsetOrigin::End)
+        else if (origin == OffsetOrigin::End)
         {
             newPos = currentSize + offset;
         }
@@ -100,11 +101,11 @@ namespace nau::io
         }
 #endif
 
-        if(newPos < 0)
+        if (newPos < 0)
         {
             newPos = 0;
         }
-        else if(currentSize < newPos)
+        else if (currentSize < newPos)
         {
             newPos = currentSize;
         }
@@ -120,7 +121,7 @@ namespace nau::io
     {
     }
 
-    eastl::span<const std::byte> MemoryStream::getBufferAsSpan(size_t offset, std::optional<size_t> size) const
+    std::span<const std::byte> MemoryStream::getBufferAsSpan(size_t offset, std::optional<size_t> size) const
     {
         NAU_ASSERT(offset >= 0 && offset <= m_buffer.size(), "Invalid offset");
         NAU_ASSERT(!size || (offset + *size <= m_buffer.size()));
@@ -136,7 +137,7 @@ namespace nau::io
         NAU_CLASS_(nau::io::ReadOnlyMemoryStream, IMemoryStream)
     public:
         ReadOnlyMemoryStream() = default;
-        ReadOnlyMemoryStream(eastl::span<const std::byte> buffer);
+        ReadOnlyMemoryStream(std::span<const std::byte> buffer);
 
     private:
         Result<size_t> read(std::byte* buffer, size_t count) override;
@@ -149,14 +150,14 @@ namespace nau::io
 
         void flush() override;
 
-        eastl::span<const std::byte> getBufferAsSpan(size_t offset, std::optional<size_t> size) const override;
+        std::span<const std::byte> getBufferAsSpan(size_t offset, std::optional<size_t> size) const override;
 
     private:
-        eastl::span<const std::byte> m_buffer;
+        std::span<const std::byte> m_buffer;
         size_t m_pos = 0;
     };
 
-    ReadOnlyMemoryStream::ReadOnlyMemoryStream(eastl::span<const std::byte> buffer) :
+    ReadOnlyMemoryStream::ReadOnlyMemoryStream(std::span<const std::byte> buffer) :
         m_buffer(buffer)
     {
     }
@@ -228,7 +229,7 @@ namespace nau::io
     {
     }
 
-    eastl::span<const std::byte> ReadOnlyMemoryStream::getBufferAsSpan(size_t offset, std::optional<size_t> size) const
+    std::span<const std::byte> ReadOnlyMemoryStream::getBufferAsSpan(size_t offset, std::optional<size_t> size) const
     {
         NAU_ASSERT(offset >= 0 && offset <= m_buffer.size(), "Invalid offset");
         NAU_ASSERT(!size || (offset + *size <= m_buffer.size()));
@@ -236,7 +237,7 @@ namespace nau::io
         const size_t actualOffset = std::min(offset, m_buffer.size());
         const size_t actualSize = size.value_or(m_buffer.size() - actualOffset);
 
-        return { m_buffer.data() + actualOffset, actualSize };
+        return {m_buffer.data() + actualOffset, actualSize};
     }
 
     IMemoryStream::Ptr createMemoryStream(AccessModeFlag accessMode, IMemAllocator::Ptr allocator)
@@ -244,7 +245,7 @@ namespace nau::io
         return rtti::createInstanceWithAllocator<MemoryStream, IMemoryStream>(std::move(allocator));
     }
 
-    IMemoryStream::Ptr createReadonlyMemoryStream(eastl::span<const std::byte> buffer, IMemAllocator::Ptr allocator)
+    IMemoryStream::Ptr createReadonlyMemoryStream(std::span<const std::byte> buffer, IMemAllocator::Ptr allocator)
     {
         return rtti::createInstanceWithAllocator<ReadOnlyMemoryStream, IMemoryStream>(std::move(allocator), std::move(buffer));
     }

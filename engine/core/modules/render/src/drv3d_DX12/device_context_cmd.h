@@ -1370,12 +1370,12 @@ DX12_BEGIN_CONTEXT_COMMAND(LoadComputeShaderFromDump)
 DX12_END_CONTEXT_COMMAND
 
 DX12_BEGIN_CONTEXT_COMMAND(CompilePipelineSet)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<InputLayoutID>, inputLayouts)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<StaticRenderStateID>, staticRenderStates)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<FramebufferLayout>, framebufferLayouts)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<GraphicsPipelinePreloadInfo>, graphicsPipelines)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<MeshPipelinePreloadInfo>, meshPipelines)
-  DX12_CONTEXT_COMMAND_PARAM(eastl::span<ComputePipelinePreloadInfo>, computePipelines)
+DX12_CONTEXT_COMMAND_PARAM(std::span<InputLayoutID>, inputLayouts)
+DX12_CONTEXT_COMMAND_PARAM(std::span<StaticRenderStateID>, staticRenderStates)
+DX12_CONTEXT_COMMAND_PARAM(std::span<FramebufferLayout>, framebufferLayouts)
+DX12_CONTEXT_COMMAND_PARAM(std::span<GraphicsPipelinePreloadInfo>, graphicsPipelines)
+DX12_CONTEXT_COMMAND_PARAM(std::span<MeshPipelinePreloadInfo>, meshPipelines)
+DX12_CONTEXT_COMMAND_PARAM(std::span<ComputePipelinePreloadInfo>, computePipelines)
 
 #if DX12_CONTEXT_COMMAND_IMPLEMENTATION
   ctx.compilePipelineSet(DynamicArray<InputLayoutID>::fromSpan(inputLayouts),

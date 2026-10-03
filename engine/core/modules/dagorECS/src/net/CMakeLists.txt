@@ -105,7 +105,7 @@ target_link_libraries(gameLibs_daECS_net
 
     lz4
 )
-target_link_libraries(gameLibs_daECS_net eastl)
+target_link_libraries(gameLibs_daECS_net )
 
 target_include_directories(gameLibs_daECS_net PUBLIC)
 

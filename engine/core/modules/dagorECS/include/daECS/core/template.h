@@ -3,22 +3,29 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <ska_hash_map/flat_hash_map2.hpp>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector_set.h>
-#include <EASTL/fixed_vector.h>
-#include <EASTL/bitvector.h>
-
-#include <nau/utils/dag_hashedKeyMap.h>
-#include <nau/utils/dag_oaHashNameMap.h>
-#include <nau/utils/dag_nameHashers.h>
-#include <daECS/core/internal/typesAndLimits.h>
 #include <daECS/core/component.h>
 #include <daECS/core/componentsMap.h>
 #include <daECS/core/ecsHash.h>
+#include <daECS/core/internal/typesAndLimits.h>
+#include <nau/utils/dag_hashedKeyMap.h>
+#include <nau/utils/dag_nameHashers.h>
+#include <nau/utils/dag_oaHashNameMap.h>
+
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "internal/inplaceKeySet.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/inline_vector.h"
+#include "nau/utils/sorted_vector.h"
+#include "nau/utils/tuple_vector.h"
 
 class DataBlock;
 
@@ -44,8 +51,8 @@ constexpr uint32_t constexpr_strlen(const char *s)
 }
 
 #define ECS_HASHLEN(a)                                                                                 \
-  (ecs::HashedLenConstString({a, eastl::integral_constant<::ecs::hash_str_t, str_hash_fnv1(a)>::value, \
-    eastl::integral_constant<uint32_t, ::ecs::constexpr_strlen(a)>::value}))
+    (ecs::HashedLenConstString({a, std::integral_constant<::ecs::hash_str_t, str_hash_fnv1(a)>::value, \
+                                std::integral_constant<uint32_t, ::ecs::constexpr_strlen(a)>::value}))
 #define ECS_HASHLEN_SLOW(a)        (::ecs::HashedLenConstString({a, str_hash_fnv1(a), (uint32_t)strlen(a)}))
 #define ECS_HASHLEN_SLOW_LEN(a, l) (::ecs::HashedLenConstString({a, mem_hash_fnv1(a, (l)), (l)}))
 
@@ -74,8 +81,15 @@ public:
     const component_t *begin() const { return b; }
     const component_t *end() const { return b + cnt; }
     const component_t *find() const { return b + cnt; }
-    bool count(component_t c) const { return eastl::binary_search(begin(), end(), c); }
-    const component_t *find(component_t c) const { return eastl::binary_search_i(begin(), end(), c); }
+    bool count(component_t c) const
+    {
+        return std::binary_search(begin(), end(), c);
+    }
+    const component_t* find(component_t c) const
+    {
+        auto it = std::lower_bound(begin(), end(), c);
+        return it != end() && *it == c ? it : end();
+    }
     const component_t *findNil(component_t c) const
     {
       const component_t *r = find(c);
@@ -92,10 +106,10 @@ public:
     }
     static ComponentsSet from(const component_t *b, size_t cnt) { return ComponentsSet{b, cnt}; }
   };
-  typedef eastl::vector_set<component_t, eastl::less<component_t>, EASTLAllocatorType, eastl::vector<component_t, EASTLAllocatorType>>
-    component_set;
+  typedef nau::SortedVectorSet<component_t, std::less<component_t>, std::allocator<component_t>, std::vector<component_t, std::allocator<component_t>>>
+      component_set;
   static constexpr size_t PARENTS_INPLACE_SIZE = 5; // 98% templates in Enlisted have <=4 parents
-  typedef eastl::fixed_vector<template_t, PARENTS_INPLACE_SIZE> ParentsList;
+  typedef nau::InlineVector<template_t, PARENTS_INPLACE_SIZE> ParentsList;
 
   Template(const char *tname, ComponentsMap &&amap, component_set &&tracked_set, component_set &&replicated_set,
     component_set &&ignored_initial_repl, bool singleton_, const char *path_ = "");
@@ -160,14 +174,14 @@ private:
   friend class EntityManager;
   friend struct TemplateRefs;
   friend struct TemplatesData;
-  eastl::unique_ptr<component_t[]> sets;
+  std::unique_ptr<component_t[]> sets;
   ParentsList parents;   // Root if empty. Reversed relatively to data description
   const char *name = ""; // todo: remove me, we have nameId by index of template
 #if NAU_DEBUG
   const char *path = "";
 #endif
   ComponentsMap components;
-  mutable dag::RelocatableFixedVector<component_index_t, 7, true, EASTLAllocatorType /*, MidmemAlloc TODO Allocators.*/, uint16_t> dependencies;  // cache for dependencies
+  mutable dag::RelocatableFixedVector<component_index_t, 7, true, nau::HeapByteAllocator /*, MidmemAlloc TODO Allocators.*/, uint16_t> dependencies;  // cache for dependencies
   uint16_t trackedCount = 0, replicatedCount = 0, ignoredCount = 0;
   mutable uint8_t localFlags = FLAGS_ALL;
   uint8_t inheritedFlags = FLAGS_ALL; // including parents
@@ -211,8 +225,8 @@ struct DataBlock
 struct TemplateDBInfo
 {
 #if NAU_DEBUG
-  ska::flat_hash_map<hash_str_t, eastl::string, ska::power_of_two_std_hash<hash_str_t>> componentTemplate; // this is for debug only
-  ska::flat_hash_map<hash_str_t, eastl::string, ska::power_of_two_std_hash<hash_str_t>> componentTags;     // bit mask.
+    ska::flat_hash_map<hash_str_t, std::string, ska::power_of_two_std_hash<hash_str_t>> componentTemplate;  // this is for debug only
+    ska::flat_hash_map<hash_str_t, std::string, ska::power_of_two_std_hash<hash_str_t>> componentTags;      // bit mask.
 #endif
   TagsSet filterTags;
   ComponentsFlags componentFlags;
@@ -237,10 +251,10 @@ struct TemplateDBInfo
   {
     void operator()(MetaInfoData *);
   };
-  eastl::unique_ptr<MetaInfoData, MetaInfoDataDeleter> metaInfoData;
+  std::unique_ptr<MetaInfoData, MetaInfoDataDeleter> metaInfoData;
   void resetMetaInfo() { metaInfoData.reset(); }
 };
-extern bool filter_needed(const char *filter_tags, const ska::flat_hash_set<eastl::string> &valid_tags);
+extern bool filter_needed(const char* filter_tags, const ska::flat_hash_set<std::string>& valid_tags);
 extern bool filter_needed(const char *filter_tags, const TagsSet &valid_tags);
 
 struct TemplateComponentsDB
@@ -252,7 +266,7 @@ struct TemplateComponentsDB
     COMPONENT_TYPE,
     COMPONENT_NAME
   };
-  eastl::tuple_vector<component_type_t, uint32_t> componentTypes; // type, name in componentNames
+  nau::TupleVector<component_type_t, uint32_t> componentTypes;  // type, name in componentNames
   dag::StringTableAllocator componentNames = {13, 13};
 
   component_type_t getComponentTypeById(template_component_index_t id) const
@@ -315,7 +329,7 @@ struct TemplateComponentsDB
         return false;
       }
       uint32_t nameAddr = n ? componentNames.addDataRaw(n, strlen(n) + 1) : ~0;
-      componentTypes.emplace_back(eastl::move(type), eastl::move(nameAddr));
+      componentTypes.emplace_back(std::move(type), std::move(nameAddr));
       componentToName.emplace_new(c, index);
       return true;
     }
@@ -330,13 +344,13 @@ struct TemplateComponentsDB
 
 struct TemplatesData : public TemplateComponentsDB
 {
-  typedef eastl::vector<Template> TemplateList;
-  using NameMap = dag::OAHashNameMap<false, dag::FNV1OAHasher<false>>;
-  typedef typename TemplateList::iterator iterator;
-  typedef typename TemplateList::const_iterator const_iterator;
-  TemplateList templates;
-  NameMap templatesIds; // probably consider use compile time hashes for creation
-  dag::OAHashNameMap<false> pathNames;
+    typedef std::vector<Template> TemplateList;
+    using NameMap = dag::OAHashNameMap<false, dag::FNV1OAHasher<false>>;
+    typedef typename TemplateList::iterator iterator;
+    typedef typename TemplateList::const_iterator const_iterator;
+    TemplateList templates;
+    NameMap templatesIds;  // probably consider use compile time hashes for creation
+    dag::OAHashNameMap<false> pathNames;
 #if NAU_DEBUG
 #endif
   size_t size() const { return templates.size(); }
@@ -433,7 +447,7 @@ inline void TemplateRefs::reportLoops(CB cb) const
     NAU_ASSERT(isTopoSorted());
     return;
   }
-  eastl::bitvector</* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> temp(templates.size()), perm(templates.size());
+  nau::DynamicBitVector<> temp(templates.size()), perm(templates.size());
   for (uint32_t i = 0, sz = templates.size(); i < sz; ++i)
     iterate_parents(
       i,
@@ -490,7 +504,7 @@ public:
   }
   const TemplatesData &data() const { return (const TemplatesData &)*this; }
 
-  const Template *getTemplateByName(const eastl::string_view &name) const
+  const Template* getTemplateByName(const std::string_view& name) const
   {
     return getTemplateByName(ECS_HASHLEN_SLOW_LEN(name.data(), (uint32_t)name.length()));
   }
@@ -525,8 +539,8 @@ private:
     template_t t = INVALID_TEMPLATE_INDEX;
     bool singleton = false; /*uint8_t pad=0;*/
   };
-  eastl::vector<InstantiatedTemplateInfo> instantiatedTemplates; // parallel to templates
-  // tuple - we need instantiated_id+singleton array. that's the only thing that is needed for typical creation
+  std::vector<InstantiatedTemplateInfo> instantiatedTemplates;  // parallel to templates
+                                                                // tuple - we need instantiated_id+singleton array. that's the only thing that is needed for typical creation
 };
 
 template <typename Callable>

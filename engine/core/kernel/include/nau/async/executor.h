@@ -1,19 +1,17 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/span.h>
-
+#include <span>
 #include <thread>
 #include <type_traits>
 
 #include "nau/async/cpp_coroutine.h"
 #include "nau/diag/assertion.h"
+#include "nau/kernel/kernel_config.h"
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/rtti/weak_ptr.h"
-#include "nau/kernel/kernel_config.h"
 #include "nau/utils/functor.h"
 #include "nau/utils/preprocessor.h"
 
@@ -85,7 +83,7 @@ namespace nau::async
         NAU_KERNEL_EXPORT static Executor::Ptr getInvoked();
 
         /**
-        */
+         */
         NAU_KERNEL_EXPORT static Executor::Ptr getThisThreadExecutor();
 
         /**
@@ -121,7 +119,7 @@ namespace nau::async
     protected:
         NAU_KERNEL_EXPORT static void invoke(Executor&, Invocation) noexcept;
 
-        NAU_KERNEL_EXPORT static void invoke(Executor&, eastl::span<Invocation> invocations) noexcept;
+        NAU_KERNEL_EXPORT static void invoke(Executor&, std::span<Invocation> invocations) noexcept;
 
         virtual void scheduleInvocation(Invocation) noexcept = 0;
     };
@@ -146,7 +144,7 @@ namespace nau::async
 
         void await_suspend(std::coroutine_handle<> continuation) const
         {
-            if(executor)
+            if (executor)
             {
                 executor->execute(std::move(continuation));
             }
@@ -172,13 +170,13 @@ namespace nau::async
 
 }  // namespace nau::async
 
-#define ASYNC_SWITCH_EXECUTOR(executorExpression)                         \
-    {                                                                     \
-        ::nau::async::Executor::Ptr executorVar = executorExpression;     \
-        NAU_ASSERT(executorVar);                                            \
-                                                                          \
-        if(nau::async::Executor::getCurrent().get() != executorVar.get()) \
-        {                                                                 \
-            co_await executorVar;                                         \
-        }                                                                 \
+#define ASYNC_SWITCH_EXECUTOR(executorExpression)                          \
+    {                                                                      \
+        ::nau::async::Executor::Ptr executorVar = executorExpression;      \
+        NAU_ASSERT(executorVar);                                           \
+                                                                           \
+        if (nau::async::Executor::getCurrent().get() != executorVar.get()) \
+        {                                                                  \
+            co_await executorVar;                                          \
+        }                                                                  \
     }\

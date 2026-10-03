@@ -1,11 +1,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
-#include <generic/dag_tab.h>
-#include <ecs/core/entityManager.h>
-#include <ecs/core/attributeEx.h>
 #include <daECS/net/message.h>
+#include <ecs/core/attributeEx.h>
+#include <ecs/core/entityManager.h>
+#include <generic/dag_tab.h>
+
+#include <string>
 
 namespace rcptf
 {

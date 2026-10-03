@@ -3,10 +3,14 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/bitset.h>
-#include <EASTL/variant.h>
-#include <EASTL/vector.h>
-#include <EASTL/numeric.h>
+#include <algorithm>
+#include <bitset>
+#include <memory>
+#include <numeric>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 //#include <debug/dag_log.h>
 
 #include "driver.h"
@@ -41,7 +45,7 @@ class ResourceHeapFeatureController : public BufferDescriptorProvider
       CAN_MIX_RESOURCES,
       COUNT
     };
-    using Type = eastl::bitset<Bits::COUNT>;
+    using Type = std::bitset<Bits::COUNT>;
   };
 
   Features::Type features{};
@@ -536,10 +540,7 @@ protected:
   {
     RaytraceAccelerationStructure *as;
   };
-  using AnyResourceReference = eastl::variant<eastl::monostate, Image *, BufferGlobalId, AliasHeapReference, ScratchBufferReference,
-    PushRingBufferReference, UploadRingBufferReference, TempUploadBufferReference, PersistentUploadBufferReference,
-    PersistentReadBackBufferReference, PersistentBidirectionalBufferReference, RaytraceScratchBufferReference,
-    RaytraceBottomLevelAccelerationStructureRefnerence, RaytraceTopLevelAccelerationStructureRefnerence>;
+  using AnyResourceReference = std::variant<std::monostate, Image*, BufferGlobalId, AliasHeapReference, ScratchBufferReference, PushRingBufferReference, UploadRingBufferReference, TempUploadBufferReference, PersistentUploadBufferReference, PersistentReadBackBufferReference, PersistentBidirectionalBufferReference, RaytraceScratchBufferReference, RaytraceBottomLevelAccelerationStructureRefnerence, RaytraceTopLevelAccelerationStructureRefnerence>;
   struct HeapResourceInfo
   {
     ValueRange<uint64_t> range;
@@ -551,26 +552,29 @@ protected:
   };
   struct BasicResourceHeap
   {
-    using FreeRangeSetType = eastl::vector<ValueRange<uint64_t>>;
-    using UsedRangeSetType = eastl::vector<HeapResourceInfo>;
-    FreeRangeSetType freeRanges;
-    UsedRangeSetType usedRanges;
-    ValueRange<uint64_t> lockedRange{};
-    uint64_t totalSize = 0;
-    static constexpr uint64_t fragmentation_range = 10000;
-    uint32_t fragmentation = 0;
+      using FreeRangeSetType = std::vector<ValueRange<uint64_t>>;
+      using UsedRangeSetType = std::vector<HeapResourceInfo>;
+      FreeRangeSetType freeRanges;
+      UsedRangeSetType usedRanges;
+      ValueRange<uint64_t> lockedRange{};
+      uint64_t totalSize = 0;
+      static constexpr uint64_t fragmentation_range = 10000;
+      uint32_t fragmentation = 0;
 
-    void updateFragmentation()
-    {
-      FragmentationCalculatorContext ctx;
-      ctx.fragments(freeRanges);
-      if (ctx.totalSize())
-        fragmentation = fragmentation_range - ((ctx.maxSize() * fragmentation_range) / ctx.totalSize());
-    }
+      void updateFragmentation()
+      {
+          FragmentationCalculatorContext ctx;
+          ctx.fragments(freeRanges);
+          if (ctx.totalSize())
+              fragmentation = fragmentation_range - ((ctx.maxSize() * fragmentation_range) / ctx.totalSize());
+      }
 
     uint64_t freeSize() const
     {
-      return eastl::accumulate(begin(freeRanges), end(freeRanges), 0ull, [](uint64_t v, auto range) { return v + range.size(); });
+        return std::accumulate(begin(freeRanges), end(freeRanges), 0ull, [](uint64_t v, auto range)
+        {
+            return v + range.size();
+        });
     }
 
     uint64_t allocatedSize() const { return totalSize - freeSize(); }
@@ -589,9 +593,11 @@ protected:
 
     auto findUsedInfo(ValueRange<uint64_t> range)
     {
-      return eastl::lower_bound(begin(usedRanges), end(usedRanges), range,
-        [](auto &info, auto range) //
-        { return info.range.front() < range.front(); });
+        return std::lower_bound(begin(usedRanges), end(usedRanges), range,
+                                [](auto& info, auto range)  //
+        {
+            return info.range.front() < range.front();
+        });
     }
 
     void freeRange(ValueRange<uint64_t> range)
@@ -614,7 +620,7 @@ protected:
       NAU_ASSERT(rangeRef != end(usedRanges) && rangeRef->range == range);
       if (rangeRef != end(usedRanges) && rangeRef->range == range)
       {
-        rangeRef->resource = eastl::forward<T>(ref);
+          rangeRef->resource = std::forward<T>(ref);
       }
     }
 
@@ -712,9 +718,10 @@ protected:
       updateFragmentation();
 
       // Add tracking info now, user of memory has to update the entry with its usage info
-      auto insertPoint = eastl::lower_bound(begin(usedRanges), end(usedRanges), possibleAllocRange,
-        [](auto &info, auto range) //
-        { return info.range.front() < range.front(); });
+      auto insertPoint = std::lower_bound(begin(usedRanges), end(usedRanges), possibleAllocRange,
+                                          [](auto& info, auto range)  //
+      { return info.range.front() < range.front();
+      });
       usedRanges.emplace(insertPoint, possibleAllocRange);
       // if we can no longer allocate anything at this heap, we can shrink the tracking of used
       // ranges to save a bit or memory
@@ -885,7 +892,7 @@ protected:
     const ValueRange<uint64_t> *operator->() const { return &getRange(); }
 
     // Undefined behavior if isUsedRange returns false for this
-    auto getUsedResource() const -> eastl::add_lvalue_reference_t<decltype(usedRangePos->resource)>
+    auto getUsedResource() const -> std::add_lvalue_reference_t<decltype(usedRangePos->resource)>
     {
       NAU_ASSERT(isUsedRange());
       return usedRangePos->resource;
@@ -922,13 +929,13 @@ protected:
 
   struct ResourceHeap : BaseType::BasicResourceHeap
   {
-    eastl::unique_ptr<uint8_t[], VirtualFreeCaller> heap;
+      std::unique_ptr<uint8_t[], VirtualFreeCaller> heap;
 
-    bool isPartOf(ResourceMemory mem) const
-    {
-      auto e = heap.get() + totalSize;
-      return heap.get() <= mem.asPointer() && e > mem.asPointer();
-    }
+      bool isPartOf(ResourceMemory mem) const
+      {
+          auto e = heap.get() + totalSize;
+          return heap.get() <= mem.asPointer() && e > mem.asPointer();
+      }
 
     // only valid if isPartOf(mem) is true
     uint64_t calculateOffset(ResourceMemory mem) const { return mem.asPointer() - heap.get(); }
@@ -952,7 +959,7 @@ protected:
     }
   };
 
-  eastl::vector<ResourceHeap> groups[ResourceHeapProperties::group_count];
+  std::vector<ResourceHeap> groups[ResourceHeapProperties::group_count];
   bool lockedHeaps = false;
 
   void listHeaps()
@@ -1049,7 +1056,7 @@ public:
 
     lock_(heapGroupMutex);
     auto &heap = group[heapID.index];
-    heap.updateMemoryRangeUse(make_value_range(heap.calculateOffset(mem), mem.size()), eastl::forward<T>(ref));
+    heap.updateMemoryRangeUse(make_value_range(heap.calculateOffset(mem), mem.size()), std::forward<T>(ref));
   }
 
 protected:
@@ -1131,9 +1138,9 @@ protected:
     }
   };
 
-  eastl::vector<ResourceHeap> groups[ResourceHeapProperties::group_count];
+  std::vector<ResourceHeap> groups[ResourceHeapProperties::group_count];
 
-public:
+  public:
   static D3D12_RESOURCE_STATES propertiesToInitialState(D3D12_RESOURCE_DIMENSION dim, D3D12_RESOURCE_FLAGS flags,
     DeviceMemoryClass memory_class);
   ResourceHeapProperties getProperties(D3D12_RESOURCE_FLAGS flags, DeviceMemoryClass memory_class, uint64_t aligment);
@@ -1179,7 +1186,7 @@ public:
 
     lock_(heapGroupMutex);
     auto &heap = group[heapID.index];
-    heap.updateMemoryRangeUse(mem.getRange(), eastl::forward<T>(ref));
+    heap.updateMemoryRangeUse(mem.getRange(), std::forward<T>(ref));
   }
 
 protected:

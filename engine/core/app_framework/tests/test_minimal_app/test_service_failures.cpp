@@ -3,6 +3,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "nau/runtime/async_disposable.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service.h"
@@ -23,7 +27,7 @@ namespace nau::test
         int shutdown = 0;
         int disposed = 0;
         int destroyed = 0;
-        eastl::vector<int>* order = nullptr;
+        std::vector<int>* order = nullptr;
     };
 
     template <int Id, typename Dependency = void>
@@ -75,7 +79,7 @@ namespace nau::test
             return m_state.failDispose ? async::Task<>::makeRejected(NauMakeError("dispose failure")) : async::makeResolvedTask();
         }
 
-        eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const override
+        std::vector<const rtti::TypeInfo*> getServiceDependencies() const override
         {
             if constexpr (!std::is_void_v<Dependency>)
                 return {&rtti::getTypeInfo<Dependency>()};
@@ -93,9 +97,9 @@ namespace nau::test
         async::TaskSource<> gate;
         pending.initGate = &gate;
         auto provider = createServiceProvider();
-        provider->addService(eastl::make_unique<FailureService<1>>(failed));
-        provider->addService(eastl::make_unique<FailureService<2>>(pending));
-        provider->addService(eastl::make_unique<FailureService<3, FailureService<1>>>(dependent));
+        provider->addService(std::make_unique<FailureService<1>>(failed));
+        provider->addService(std::make_unique<FailureService<2>>(pending));
+        provider->addService(std::make_unique<FailureService<3, FailureService<1>>>(dependent));
         auto& lifecycle = provider->as<core_detail::IServiceProviderInitialization&>();
         auto preInit = lifecycle.preInitServices();
         ASSERT_TRUE(preInit.isReady());
@@ -126,20 +130,20 @@ namespace nau::test
         first.initGate = &gate;
         second.failInit = true;
         auto provider = createServiceProvider();
-        provider->addService(eastl::make_unique<FailureService<1>>(first));
-        provider->addService(eastl::make_unique<FailureService<2>>(second));
+        provider->addService(std::make_unique<FailureService<1>>(first));
+        provider->addService(std::make_unique<FailureService<2>>(second));
         auto& lifecycle = provider->as<core_detail::IServiceProviderInitialization&>();
         auto init = lifecycle.initServices();
         EXPECT_FALSE(init.isReady());
         EXPECT_EQ(second.initialized, 1);
         ASSERT_TRUE(lifecycle.getLifecycleError());
-        EXPECT_NE(lifecycle.getLifecycleError()->getMessage().find("init failure"), eastl::string::npos);
+        EXPECT_NE(lifecycle.getLifecycleError()->getMessage().find("init failure"), std::string::npos);
         gate.reject(NauMakeError("deferred failure"));
         ASSERT_TRUE(init.isReady());
         ASSERT_TRUE(init.isRejected());
         const auto message = init.getError()->getMessage();
-        EXPECT_NE(message.find("deferred failure"), eastl::string::npos);
-        EXPECT_NE(message.find("init failure"), eastl::string::npos);
+        EXPECT_NE(message.find("deferred failure"), std::string::npos);
+        EXPECT_NE(message.find("init failure"), std::string::npos);
         auto shutdown = lifecycle.shutdownServices();
         EXPECT_TRUE(shutdown.isReady());
         EXPECT_EQ(first.shutdown + second.shutdown, 0);
@@ -151,7 +155,7 @@ namespace nau::test
         ServiceFailureState state;
         state.failPreInit = true;
         auto provider = createServiceProvider();
-        provider->addService(eastl::make_unique<FailureService<1>>(state));
+        provider->addService(std::make_unique<FailureService<1>>(state));
         auto& lifecycle = provider->as<core_detail::IServiceProviderInitialization&>();
         auto preInit = lifecycle.preInitServices();
         EXPECT_TRUE(preInit.isRejected());
@@ -167,7 +171,7 @@ namespace nau::test
     TEST(ServiceFailures, CleanupContinuesInDependencyOrderAndRetainsPendingTasks)
     {
         ServiceFailureState first, second, dependent;
-        eastl::vector<int> order;
+        std::vector<int> order;
         first.order = second.order = dependent.order = &order;
         first.failShutdown = true;
         dependent.failShutdown = true;
@@ -176,9 +180,9 @@ namespace nau::test
         second.shutdownGate = &shutdownGate;
         dependent.disposeGate = &disposeGate;
         auto provider = createServiceProvider();
-        provider->addService(eastl::make_unique<FailureService<1>>(first));
-        provider->addService(eastl::make_unique<FailureService<2>>(second));
-        provider->addService(eastl::make_unique<FailureService<3, FailureService<1>>>(dependent));
+        provider->addService(std::make_unique<FailureService<1>>(first));
+        provider->addService(std::make_unique<FailureService<2>>(second));
+        provider->addService(std::make_unique<FailureService<3, FailureService<1>>>(dependent));
         auto& lifecycle = provider->as<core_detail::IServiceProviderInitialization&>();
         auto init = lifecycle.initServices();
         ASSERT_TRUE(init.isReady());
@@ -199,10 +203,10 @@ namespace nau::test
         ASSERT_TRUE(shutdown.isReady());
         ASSERT_TRUE(shutdown.isRejected());
         const auto message = shutdown.getError()->getMessage();
-        EXPECT_NE(message.find("shutdown failure"), eastl::string::npos);
-        EXPECT_NE(message.find("deferred shutdown"), eastl::string::npos);
-        EXPECT_NE(message.find("dispose failure"), eastl::string::npos);
-        EXPECT_NE(message.find("deferred dispose"), eastl::string::npos);
+        EXPECT_NE(message.find("shutdown failure"), std::string::npos);
+        EXPECT_NE(message.find("deferred shutdown"), std::string::npos);
+        EXPECT_NE(message.find("dispose failure"), std::string::npos);
+        EXPECT_NE(message.find("deferred dispose"), std::string::npos);
         provider.reset();
         EXPECT_EQ(dependent.destroyed, 1);
     }

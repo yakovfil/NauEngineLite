@@ -3,19 +3,20 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/supp/dag_comPtr.h"
-#include <EASTL/vector.h>
+#include <algorithm>
+#include <numeric>
+#include <utility>
+#include <vector>
 
-#include "driver.h"
 #include "constants.h"
-#include "resource_memory.h"
-#include "host_device_shared_memory_region.h"
-#include "d3d12_error_handling.h"
 #include "container_mutex_wrapper.h"
-
+#include "d3d12_error_handling.h"
+#include "driver.h"
+#include "host_device_shared_memory_region.h"
+#include "nau/supp/dag_comPtr.h"
 #include "resource_manager/basic_buffer.h"
 #include "resource_manager/esram_components.h"
-
+#include "resource_memory.h"
 
 namespace drv3d_dx12
 {
@@ -104,7 +105,7 @@ protected:
     // should we ever run out of segment space we allocate a
     // new segment. As soon as we no longer need it, we drop
     // the segment.
-    eastl::vector<RingSegment> ringSegments;
+    std::vector<RingSegment> ringSegments;
 
     void finishRecording(uint32_t history_index)
     {
@@ -131,8 +132,11 @@ protected:
       while ((ringSegments.size() >= T::min_active_segments) && T::shouldTrim(heap))
       {
         // remove no longer needed segments one by one
-        auto toBeRemoved = eastl::find_if(begin(ringSegments) + T::min_active_segments, end(ringSegments),
-          [=](auto &segment) { return 0 == segment.allocationSize; });
+        auto toBeRemoved = std::find_if(begin(ringSegments) + T::min_active_segments, end(ringSegments),
+                                        [=](auto& segment)
+        {
+            return 0 == segment.allocationSize;
+        });
         if (end(ringSegments) != toBeRemoved)
         {
           T::onSegmentRemove(heap, toBeRemoved->bufferMemory.size());
@@ -183,7 +187,7 @@ protected:
         heap->free(allocation);
         return false;
       }
-      auto &ringSegment = ringSegments.emplace_back(eastl::move(newSegment));
+      auto& ringSegment = ringSegments.emplace_back(std::move(newSegment));
 
       T::onSegmentAdd(heap, ringSegment.bufferMemory, ringSegment.buffer.Get());
 
@@ -199,11 +203,11 @@ protected:
       }
       if (2 == ringSegments.size())
       {
-        eastl::swap(ringSegments.front(), ringSegments.back());
+          std::swap(ringSegments.front(), ringSegments.back());
       }
       else
       {
-        eastl::rotate(begin(ringSegments), begin(ringSegments) + 1, end(ringSegments));
+          std::rotate(begin(ringSegments), begin(ringSegments) + 1, end(ringSegments));
       }
     }
 
@@ -234,9 +238,11 @@ protected:
 
     size_t currentMemorySize() const
     {
-      return eastl::accumulate(begin(ringSegments), end(ringSegments), 0,
-        [](size_t value, auto &segment) //
-        { return value + segment.bufferMemory.size(); });
+        return std::accumulate(begin(ringSegments), end(ringSegments), 0,
+                               [](size_t value, auto& segment)  //
+        {
+            return value + segment.bufferMemory.size();
+        });
     }
 
     void shutdown(HeapType *heap)
@@ -422,7 +428,7 @@ protected:
     size_t nextBufferSizeShrinkThreshold = T::min_buffer_size;
     uint32_t timesSinceUse = 0;
 
-    eastl::vector<Buffer> buffers;
+    std::vector<Buffer> buffers;
 
     HostDeviceSharedMemoryRegion allocate(HeapType *heap, DXGIAdapter *adapter, ID3D12Device *device, size_t size, size_t alignment)
     {
@@ -434,8 +440,8 @@ protected:
         {
           if (currentBuffer.allocations)
           {
-            buffers.push_back(eastl::move(currentBuffer));
-            currentBuffer.bufferMemory = {};
+              buffers.push_back(std::move(currentBuffer));
+              currentBuffer.bufferMemory = {};
           }
           else
           {
@@ -446,8 +452,8 @@ protected:
 
         if (standbyBuffer && standbyBuffer.bufferMemory.size() >= size)
         {
-          currentBuffer = eastl::move(standbyBuffer);
-          standbyBuffer.bufferMemory = {};
+            currentBuffer = std::move(standbyBuffer);
+            standbyBuffer.bufferMemory = {};
         }
         else
         {
@@ -551,9 +557,10 @@ protected:
         return;
       }
 
-      auto iter = eastl::find_if(begin(buffers), end(buffers),
-        [ref](const auto &buf) //
-        { return ref == buf.buffer.Get(); });
+      auto iter = std::find_if(begin(buffers), end(buffers),
+                               [ref](const auto& buf)  //
+      { return ref == buf.buffer.Get();
+      });
       NAU_ASSERT(iter != end(buffers));
       if (iter != end(buffers))
       {
@@ -566,7 +573,7 @@ protected:
               T::onSegmentRemove(heap, standbyBuffer.bufferMemory.size());
             }
             standbyBuffer.reset(heap);
-            standbyBuffer = eastl::move(*iter);
+            standbyBuffer = std::move(*iter);
             standbyBuffer.fillSize = 0;
           }
           else
@@ -574,13 +581,13 @@ protected:
             T::onSegmentRemove(heap, iter->bufferMemory.size());
             iter->reset(heap);
           }
-          *iter = eastl::move(buffers.back());
+          *iter = std::move(buffers.back());
           buffers.pop_back();
         }
       }
     }
 
-    void free(HeapType *heap, const eastl::vector<ID3D12Resource *> &list)
+    void free(HeapType* heap, const std::vector<ID3D12Resource*>& list)
     {
       for (auto ref : list)
       {
@@ -621,8 +628,11 @@ protected:
 
     size_t currentMemorySize() const
     {
-      return eastl::accumulate(begin(buffers), end(buffers), currentBuffer.bufferMemory.size() + standbyBuffer.bufferMemory.size(),
-        [](size_t value, auto &buffer) { return value + buffer.bufferMemory.size(); });
+        return std::accumulate(begin(buffers), end(buffers), currentBuffer.bufferMemory.size() + standbyBuffer.bufferMemory.size(),
+                               [](size_t value, auto& buffer)
+        {
+            return value + buffer.bufferMemory.size();
+        });
     }
 
     void shutdown(HeapType *heap)
@@ -671,9 +681,9 @@ class TemporaryUploadMemoryProvider : public TemporaryMemoryBase
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<ID3D12Resource *> uploadBufferRefs;
-    uint32_t uploadBufferUsage = 0;
-    uint32_t tempUsage = 0;
+      std::vector<ID3D12Resource*> uploadBufferRefs;
+      uint32_t uploadBufferUsage = 0;
+      uint32_t tempUsage = 0;
   };
 
   struct TemporaryUploadMemoryImeplementation
@@ -719,7 +729,7 @@ protected:
   void completeFrameExecution(const CompletedFrameExecutionInfo &info, PendingForCompletedFrameData &data)
   {
     // sort to make free a bit faster by doing one buffer at a time
-    eastl::sort(begin(data.uploadBufferRefs), end(data.uploadBufferRefs));
+    std::sort(begin(data.uploadBufferRefs), end(data.uploadBufferRefs));
     {
       auto tempBufferAccess = tempBuffer.access();
       tempBufferAccess->free(this, data.uploadBufferRefs);
@@ -763,7 +773,7 @@ protected:
         {
           return;
         }
-        eastl::sort(begin(data.uploadBufferRefs), end(data.uploadBufferRefs));
+        std::sort(begin(data.uploadBufferRefs), end(data.uploadBufferRefs));
         {
           tempBufferAccess->free(this, data.uploadBufferRefs);
           tempBufferAccess->uploadBufferUsage -= data.uploadBufferUsage;
@@ -902,34 +912,34 @@ protected:
 
     struct MemoryBufferHeap : BasicBuffer
     {
-      eastl::vector<ValueRange<uint64_t>> freeRanges;
+        std::vector<ValueRange<uint64_t>> freeRanges;
 
-      HostDeviceSharedMemoryRegion allocate(size_t size, size_t alignment)
-      {
-        HostDeviceSharedMemoryRegion result;
-        auto at = free_list_find_smallest_fit_aligned(freeRanges, size, alignment);
-        if (at != end(freeRanges))
+        HostDeviceSharedMemoryRegion allocate(size_t size, size_t alignment)
         {
-          auto range = make_value_range<uint64_t>(align_value<size_t>(at->front(), alignment), size);
-          auto p2 = at->cutOut(range);
-          if (at->empty())
-          {
-            if (p2.empty())
+            HostDeviceSharedMemoryRegion result;
+            auto at = free_list_find_smallest_fit_aligned(freeRanges, size, alignment);
+            if (at != end(freeRanges))
             {
-              freeRanges.erase(at);
-            }
-            else
-            {
-              *at = p2;
-            }
-          }
-          else if (!p2.empty())
-          {
-            // move p2 after at, as on 'cutOut' this will always store the first of the two ranges
-            freeRanges.insert(at + 1, p2);
-          }
+                auto range = make_value_range<uint64_t>(align_value<size_t>(at->front(), alignment), size);
+                auto p2 = at->cutOut(range);
+                if (at->empty())
+                {
+                    if (p2.empty())
+                    {
+                        freeRanges.erase(at);
+                    }
+                    else
+                    {
+                        *at = p2;
+                    }
+                }
+                else if (!p2.empty())
+                {
+                    // move p2 after at, as on 'cutOut' this will always store the first of the two ranges
+                    freeRanges.insert(at + 1, p2);
+                }
 
-          result.buffer = buffer.Get();
+                result.buffer = buffer.Get();
 #if _TARGET_XBOX
           result.gpuPointer = getGPUPointer() + range.front();
 #endif
@@ -946,23 +956,25 @@ protected:
       }
     };
 
-    eastl::vector<MemoryBufferHeap> buffers;
+    std::vector<MemoryBufferHeap> buffers;
 
     void free(HeapType *heap, ID3D12Resource *res, ValueRange<uint64_t> range)
     {
-      auto heapRef = eastl::find_if(begin(buffers), end(buffers),
-        [res](const auto &heap) //
-        { return res == heap.buffer.Get(); });
-      NAU_ASSERT(heapRef != end(buffers));
-      if (heapRef != end(buffers))
-      {
-        if (heapRef->free(range))
+        auto heapRef = std::find_if(begin(buffers), end(buffers),
+                                    [res](const auto& heap)  //
         {
-          T::onSegmentRemove(heap, heapRef->bufferMemory.size());
-          heapRef->reset(heap);
+            return res == heap.buffer.Get();
+        });
+        NAU_ASSERT(heapRef != end(buffers));
+        if (heapRef != end(buffers))
+        {
+            if (heapRef->free(range))
+            {
+                T::onSegmentRemove(heap, heapRef->bufferMemory.size());
+                heapRef->reset(heap);
 
-          buffers.erase(heapRef);
-        }
+                buffers.erase(heapRef);
+            }
       }
     }
 
@@ -1020,7 +1032,7 @@ protected:
       newHeap.freeRanges.push_back(make_value_range(0ull, desc.Width));
       result = newHeap.allocate(size, alignment);
       NAU_ASSERT(static_cast<bool>(result));
-      buffers.push_back(eastl::move(newHeap));
+      buffers.push_back(std::move(newHeap));
       return result;
     }
 
@@ -1035,9 +1047,11 @@ protected:
 
     size_t currentMemorySize() const
     {
-      return eastl::accumulate(begin(buffers), end(buffers), 0,
-        [](size_t value, auto &buffer) //
-        { return value + buffer.bufferMemory.size(); });
+        return std::accumulate(begin(buffers), end(buffers), 0,
+                               [](size_t value, auto& buffer)  //
+        {
+            return value + buffer.bufferMemory.size();
+        });
     }
   };
 };
@@ -1049,7 +1063,7 @@ class PersistentUploadMemoryProvider : public PersistentMemoryBase
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<HostDeviceSharedMemoryRegion> uploadMemoryFrees;
+      std::vector<HostDeviceSharedMemoryRegion> uploadMemoryFrees;
   };
 
   struct PersistentUploadMemoryImplementation
@@ -1132,7 +1146,7 @@ class PersistentReadBackMemoryProvider : public PersistentUploadMemoryProvider
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<HostDeviceSharedMemoryRegion> readBackFrees;
+      std::vector<HostDeviceSharedMemoryRegion> readBackFrees;
   };
 
   struct PersistentReadBackMemoryImplementation
@@ -1215,7 +1229,7 @@ class PersistentBidirectionalMemoryProvider : public PersistentReadBackMemoryPro
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<HostDeviceSharedMemoryRegion> bidirectionalFrees;
+      std::vector<HostDeviceSharedMemoryRegion> bidirectionalFrees;
   };
 
   struct PersistentBidirectionalMemoryImplementation

@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "nau/assets/asset_descriptor.h"
 #include "nau/scene/camera/camera.h"
 #include "nau/scene/components/component_attributes.h"
@@ -31,8 +34,8 @@ namespace nau::scene
     public:
         Uid getCameraUid() const final;
         Uid getWorldUid() const final;
-        eastl::string_view getCameraName() const final;
-        void setCameraName(eastl::string_view name) final;
+        std::string_view getCameraName() const final;
+        void setCameraName(std::string_view name) final;
 
         float getFov() const final;
         float getClipNearPlane() const final;
@@ -43,7 +46,7 @@ namespace nau::scene
         void setClipFarPlane(float clipFarPlane) final;
 
     private:
-        eastl::string m_cameraName;
+        std::string m_cameraName;
     };
 
 }  // namespace nau::scene

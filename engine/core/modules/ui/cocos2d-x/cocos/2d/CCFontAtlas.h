@@ -29,7 +29,7 @@
 
 /// @cond DO_NOT_SHOW
 
-#include <EASTL/string.h>
+#include <string>
 #include <unordered_map>
 
 #include "platform/CCPlatformMacros.h"
@@ -78,7 +78,7 @@ public:
     void addLetterDefinition(char32_t utf32Char, const FontLetterDefinition &letterDefinition);
     bool getLetterDefinitionForChar(char32_t utf32Char, FontLetterDefinition &letterDefinition);
     
-    bool prepareLetterDefinitions(const eastl::u32string& utf16String);
+    bool prepareLetterDefinitions(const std::u32string& utf16String);
 
     const std::unordered_map<ssize_t, Texture2D*>& getTextures() const { return _atlasTextures; }
     void  addTexture(Texture2D *texture, int slot);
@@ -119,9 +119,9 @@ protected:
     
     void releaseTextures();
 
-    void findNewCharacters(const eastl::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap);
+    void findNewCharacters(const std::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap);
 
-    void conversionU32TOGB2312(const eastl::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap);
+    void conversionU32TOGB2312(const std::u32string& u32Text, std::unordered_map<unsigned int, unsigned int>& charCodeMap);
 
     void initTextureWithZeros(Texture2D *texture);
 

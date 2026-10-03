@@ -3,11 +3,6 @@
 
 #pragma once
 
-#include <EASTL/set.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/unordered_set.h>
-
 #include <array>
 #include <concepts>
 #include <map>
@@ -25,7 +20,6 @@
 #include "nau/utils/type_list/fill.h"
 #include "nau/utils/type_utility.h"
 
-
 namespace nau::ser_detail
 {
     template <typename T>
@@ -40,21 +34,6 @@ namespace nau::ser_detail
 
     template <typename T, typename... Traits>
     struct KnownSetCollection<std::unordered_set<T, Traits...>> : std::true_type
-    {
-    };
-
-    template <typename T, typename... Traits>
-    struct KnownSetCollection<eastl::set<T, Traits...>> : std::true_type
-    {
-    };
-
-    template <typename T, typename... U>
-    struct KnownSetCollection<eastl::hash_set<T, U...>> : std::true_type
-    {
-    };
-
-    template <typename T, typename Hash, typename Pred, typename Alloc, bool Cache>
-    struct KnownSetCollection<eastl::unordered_set<T, Hash, Pred, Alloc, Cache>> : std::true_type
     {
     };
 
@@ -306,21 +285,19 @@ namespace nau
 
     template <typename C, typename... Traits>
     requires(sizeof(C) == sizeof(char))
-    RuntimeStringValue::Ptr makeValueRef(eastl::basic_string<C, Traits...>&, IMemAllocator::Ptr = nullptr);
+    RuntimeStringValue::Ptr makeValueRef(std::basic_string<C, Traits...>&, IMemAllocator::Ptr = nullptr);
 
     template <typename C, typename... Traits>
     requires(sizeof(C) == sizeof(char))
-    RuntimeStringValue::Ptr makeValueRef(const eastl::basic_string<C, Traits...>&, IMemAllocator::Ptr = nullptr);
+    RuntimeStringValue::Ptr makeValueRef(const std::basic_string<C, Traits...>&, IMemAllocator::Ptr = nullptr);
 
     // template <typename... Traits>
-    // RuntimeStringValue::Ptr makeValueRef(eastl::basic_string<char8_t, Traits...>&, IMemAllocator::Ptr = nullptr);
+    // RuntimeStringValue::Ptr makeValueRef(std::basic_string<char8_t, Traits...>&, IMemAllocator::Ptr = nullptr);
 
     // template <typename... Traits>
-    // RuntimeStringValue::Ptr makeValueRef(const eastl::basic_string<char8_t, Traits...>&, IMemAllocator::Ptr = nullptr);
+    // RuntimeStringValue::Ptr makeValueRef(const std::basic_string<char8_t, Traits...>&, IMemAllocator::Ptr = nullptr);
 
-    RuntimeStringValue::Ptr makeValueCopy(eastl::string_view, IMemAllocator::Ptr = nullptr);
-
-    RuntimeStringValue::Ptr makeValueCopy(eastl::u8string_view, IMemAllocator::Ptr = nullptr);
+    RuntimeStringValue::Ptr makeValueCopy(std::u8string_view, IMemAllocator::Ptr = nullptr);
 
     template <AutoStringRepresentable T>
     RuntimeStringValue::Ptr makeValueRef(T&, IMemAllocator::Ptr = nullptr);

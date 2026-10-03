@@ -3,15 +3,20 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-#include <EASTL/tuple.h>
-#include <EABase/nullptr.h>
+
+#include <cstddef>
+#include <limits>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
 #include "daECS/core/ecsHash.h"
 #include "daECS/core/entityId.h"
-#include "nau/utils/for_each.h"
+#include "daECS/core/internal/inplaceKeySet.h"
 #include "daECS/core/internal/typesAndLimits.h"
 #include "daECS/utility/ecs_asserts.h"
-#include "daECS/core/internal/inplaceKeySet.h"
+#include "nau/utils/for_each.h"
 #include "nau/utils/typed_flag.h"
 
 namespace ecs
@@ -39,7 +44,7 @@ struct EventSetInsertHelper
   static void insert(EventSet &ev) { ev.insert(T::staticType()); }
 };
 template <typename T, T v>
-struct EventSetInsertHelper<eastl::integral_constant<T, v>>
+struct EventSetInsertHelper<std::integral_constant<T, v>>
 {
   static void insert(EventSet &ev) { ev.insert(v); }
 };
@@ -122,65 +127,70 @@ public:
 typedef void destroy_event(ecs::Event &);
 typedef void move_out_event(void *__restrict to, ecs::Event &&from); // will be moved out (move constructor called)
 
-
-#define ECS_INSIDE_EVENT_DECL(Klass, Flags)                                                       \
-  static constexpr ::ecs::event_flags_t staticFlags()                                             \
-  {                                                                                               \
-    return (Flags) | (eastl::is_trivially_destructible<Klass>::value ? 0 : ::ecs::EVFLG_DESTROY); \
-  }                                                                                               \
-  static constexpr ::ecs::event_type_t staticType()                                               \
-  {                                                                                               \
-    return ECS_HASH(#Klass).hash;                                                                 \
-  }                                                                                               \
-  static constexpr const char *staticName()                                                       \
-  {                                                                                               \
-    return #Klass;                                                                                \
-  }                                                                                               \
-  static void destroy(Event &e)                                                                   \
-  {                                                                                               \
-    static_assert(sizeof(Klass) <= ::ecs::Event::max_event_size);                               \
-    if (!(Klass::staticFlags() & ::ecs::EVFLG_DESTROY)) /*to reduce generated code size*/         \
-      return;                                                                                     \
-    DAECS_EXT_ASSERT(e.getType() == staticType());                                                \
-    static_cast<Klass &>(e).~Klass();                                                             \
-  }                                                                                               \
-  static void move_out(void *__restrict allocateAt, Event &&from)                                 \
-  {                                                                                               \
-    if (!(Klass::staticFlags() & ::ecs::EVFLG_DESTROY)) /*to reduce generated code size*/         \
-      return;                                                                                     \
-    DAECS_EXT_ASSERT(from.getType() == staticType());                                             \
-    new (allocateAt/*, _NEW_INPLACE*/) Klass(eastl::move(static_cast<Klass &&>(from)));               \
-  }
+#define ECS_INSIDE_EVENT_DECL(Klass, Flags)                                                         \
+    static constexpr ::ecs::event_flags_t staticFlags()                                             \
+    {                                                                                               \
+        return (Flags) | (std::is_trivially_destructible<Klass>::value ? 0 : ::ecs::EVFLG_DESTROY); \
+    }                                                                                               \
+    static constexpr ::ecs::event_type_t staticType()                                               \
+    {                                                                                               \
+        return ECS_HASH(#Klass).hash;                                                               \
+    }                                                                                               \
+    static constexpr const char* staticName()                                                       \
+    {                                                                                               \
+        return #Klass;                                                                              \
+    }                                                                                               \
+    static void destroy(Event& e)                                                                   \
+    {                                                                                               \
+        static_assert(sizeof(Klass) <= ::ecs::Event::max_event_size);                               \
+        if (!(Klass::staticFlags() & ::ecs::EVFLG_DESTROY)) /*to reduce generated code size*/       \
+            return;                                                                                 \
+        DAECS_EXT_ASSERT(e.getType() == staticType());                                              \
+        static_cast<Klass&>(e).~Klass();                                                            \
+    }                                                                                               \
+    static void move_out(void* __restrict allocateAt, Event&& from)                                 \
+    {                                                                                               \
+        if (!(Klass::staticFlags() & ::ecs::EVFLG_DESTROY)) /*to reduce generated code size*/       \
+            return;                                                                                 \
+        DAECS_EXT_ASSERT(from.getType() == staticType());                                           \
+        new(allocateAt /*, _NEW_INPLACE*/) Klass(std::move(static_cast<Klass&&>(from)));            \
+    }
 
 #define ECS_UNICAST_EVENT_DECL(Klass)   ECS_INSIDE_EVENT_DECL(Klass, ::ecs::EVCAST_UNICAST)
 #define ECS_BROADCAST_EVENT_DECL(Klass) ECS_INSIDE_EVENT_DECL(Klass, ::ecs::EVCAST_BROADCAST)
 #define ECS_EVENT_CONSTRUCTOR(Klass)    ecs::Event(ECS_HASH(#Klass).hash, sizeof(Klass), staticFlags())
 
-#define ECS_BASE_DECL_EVENT_TYPE(Klass, Flags, ...)                                                          \
-  class Klass : public ecs::Event, public eastl::tuple<__VA_ARGS__>                                          \
-  {                                                                                                          \
-  public:                                                                                                    \
-    ECS_INSIDE_EVENT_DECL(Klass, Flags)                                                                      \
-    typedef eastl::tuple<__VA_ARGS__> TupleType;                                                             \
-    template <typename... Args,                                                                              \
-      typename eastl::enable_if<eastl::tuple_size<TupleType>::value == sizeof...(Args), bool>::type = false> \
-    Klass(Args &&...args) : ECS_EVENT_CONSTRUCTOR(Klass), TupleType(eastl::forward<Args>(args)...)           \
-    {                                                                                                        \
-      static_assert(sizeof(Klass) <= ecs::Event::max_event_size);                                          \
-    }                                                                                                        \
-    Klass(TupleType &&tup) : ECS_EVENT_CONSTRUCTOR(Klass), TupleType(eastl::move(tup))                       \
-    {}                                                                                                       \
-    template <size_t I>                                                                                      \
-    const typename eastl::tuple_element<I, TupleType>::type &get() const                                     \
-    {                                                                                                        \
-      return eastl::get<I>(static_cast<const TupleType &>(*this));                                           \
-    }                                                                                                        \
-    template <size_t I>                                                                                      \
-    typename eastl::tuple_element<I, TupleType>::type &get()                                                 \
-    {                                                                                                        \
-      return eastl::get<I>(static_cast<TupleType &>(*this));                                                 \
-    }                                                                                                        \
-  };
+#define ECS_BASE_DECL_EVENT_TYPE(Klass, Flags, ...)                                                                  \
+    class Klass : public ecs::Event,                                                                                 \
+                  public std::tuple<__VA_ARGS__>                                                                     \
+    {                                                                                                                \
+    public:                                                                                                          \
+        ECS_INSIDE_EVENT_DECL(Klass, Flags)                                                                          \
+        typedef std::tuple<__VA_ARGS__> TupleType;                                                                   \
+        template <typename... Args,                                                                                  \
+                  typename std::enable_if<std::tuple_size<TupleType>::value == sizeof...(Args), bool>::type = false> \
+        Klass(Args&&... args) :                                                                                      \
+            ECS_EVENT_CONSTRUCTOR(Klass),                                                                            \
+            TupleType(std::forward<Args>(args)...)                                                                   \
+        {                                                                                                            \
+            static_assert(sizeof(Klass) <= ecs::Event::max_event_size);                                              \
+        }                                                                                                            \
+        Klass(TupleType&& tup) :                                                                                     \
+            ECS_EVENT_CONSTRUCTOR(Klass),                                                                            \
+            TupleType(std::move(tup))                                                                                \
+        {                                                                                                            \
+        }                                                                                                            \
+        template <size_t I>                                                                                          \
+        const typename std::tuple_element<I, TupleType>::type& get() const                                           \
+        {                                                                                                            \
+            return std::get<I>(static_cast<const TupleType&>(*this));                                                \
+        }                                                                                                            \
+        template <size_t I>                                                                                          \
+        typename std::tuple_element<I, TupleType>::type& get()                                                       \
+        {                                                                                                            \
+            return std::get<I>(static_cast<TupleType&>(*this));                                                      \
+        }                                                                                                            \
+    };
 
 #define ECS_UNICAST_EVENT_TYPE(Klass, ...)   ECS_BASE_DECL_EVENT_TYPE(Klass, ::ecs::EVCAST_UNICAST, __VA_ARGS__)
 #define ECS_BROADCAST_EVENT_TYPE(Klass, ...) ECS_BASE_DECL_EVENT_TYPE(Klass, ::ecs::EVCAST_BROADCAST, __VA_ARGS__)
@@ -239,7 +249,7 @@ public:
     inst(T::staticName(), T::staticType(), sizeof(T), T::staticFlags(), (T::staticFlags() & EVFLG_DESTROY) ? &T::destroy : nullptr,
       (T::staticFlags() & EVFLG_DESTROY) ? &T::move_out : nullptr)
   {
-    static_assert(sizeof(T) < eastl::numeric_limits<event_size_t>::max());
+      static_assert(sizeof(T) < std::numeric_limits<event_size_t>::max());
   }
 
 protected:

@@ -8,8 +8,7 @@ build/acceptance commands and the remaining native visual-check limitation.
 The kernel uses the minimal source manifest without extra translation units.
 The initially considered stream_utils.cpp and nau_container.cpp were not required
 by the verified link and are identified as unused candidates in the inventory.
-Bundled dependencies are EABase, EASTL, tiny-utf8, fmt, utfcpp, ModifiedSonyMath,
-jsoncpp, wyhash, fast_float and tinyimageformat. Focused tests add googletest.
+The active browser dependency boundary is the toolchain C++20 standard library plus tiny-utf8, fmt, utfcpp, ModifiedSonyMath, jsoncpp, wyhash, fast_float and tinyimageformat. EASTL and EABase are not active browser dependencies. Nau adapters preserve the selected allocation, ownership and container contracts without reintroducing a parallel standard-library dependency. Focused tests add googletest.
 
 Static modules are PlatformApp, CoreAssets, CoreScene and CoreAssetsCpu.
 CoreAssets includes paths/references, descriptors, reloadable views, the file

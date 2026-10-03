@@ -3,8 +3,8 @@
 // inetworking.h
 
 #pragma once
-#include <EASTL/shared_ptr.h>
-#include <EASTL/string.h>
+#include <memory>
+#include <string>
 
 #include "networking_connection.h"
 #include "networking_signaling.h"
@@ -25,7 +25,7 @@ namespace nau
          * @param [in] data String data in implementation dependent format.
          * @return          `true`, if the string data has been successfully parsed and applied, `false` otherwise.
          */
-        virtual bool applyConfig(const eastl::string& data) = 0;
+        virtual bool applyConfig(const std::string& data) = 0;
 
         /**
          * @brief Initializes networking context. Call this function once before the first update.
@@ -60,13 +60,13 @@ namespace nau
          * 
          * @return A pointer to the INetworkingListener instance or `NULL` in case of failure.
          */
-        virtual eastl::shared_ptr<INetworkingListener> createListener() = 0;
+        virtual std::shared_ptr<INetworkingListener> createListener() = 0;
 
         /**
          * @brief Creates a connector object. 
          * 
          * @return A pointer to the INetworkingConnector instance or `NULL` in case of failure.
          */
-        virtual eastl::shared_ptr<INetworkingConnector> createConnector() = 0;
+        virtual std::shared_ptr<INetworkingConnector> createConnector() = 0;
     };
 }  // namespace nau

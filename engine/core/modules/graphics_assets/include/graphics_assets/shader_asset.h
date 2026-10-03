@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <span>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3dConsts.h"
 #include "nau/assets/asset_view.h"
@@ -21,7 +23,7 @@ namespace nau
 
     public:
         static async::Task<nau::Ptr<ShaderAssetView>> createFromAssetAccessor(nau::Ptr<> accessor);
-        static PROGRAM makeShaderProgram(eastl::span<ShaderAssetView::Ptr> shaderAssets, VDECL overrideVDecl = BAD_VDECL);
+        static PROGRAM makeShaderProgram(std::span<ShaderAssetView::Ptr> shaderAssets, VDECL overrideVDecl = BAD_VDECL);
 
         const Shader* getShader() const { return &m_shader; }
         VDECL getInputLayout() const { return m_inputLayout; }

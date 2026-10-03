@@ -5,6 +5,7 @@
 #pragma once
 
 #include <concepts>
+#include <memory>
 
 #include "nau/physics/physics_assets.h"
 #include "nau/physics/physics_collider.h"
@@ -13,7 +14,6 @@
 #include "nau/physics/physics_world.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/serialization/runtime_value_builder.h"
-
 
 namespace nau::physics
 {
@@ -43,7 +43,7 @@ namespace nau::physics
          * @param [in] material         Material to apply to the collider.
          * @return                      A pointer to the created sphere shape.
          */
-        eastl::unique_ptr<ISphereCollision> createSphereCollision(TFloat radius, nau::physics::IPhysicsMaterial* material = nullptr) const;
+        std::unique_ptr<ISphereCollision> createSphereCollision(TFloat radius, nau::physics::IPhysicsMaterial* material = nullptr) const;
 
         /**
          * @brief Creates a box collider shape.
@@ -52,7 +52,7 @@ namespace nau::physics
          * @param [in] material         Material to apply to the collider.
          * @return                      A pointer to the created box shape.
          */
-        eastl::unique_ptr<IBoxCollision> createBoxCollision(math::vec3 extent, nau::physics::IPhysicsMaterial* material = nullptr) const;
+        std::unique_ptr<IBoxCollision> createBoxCollision(math::vec3 extent, nau::physics::IPhysicsMaterial* material = nullptr) const;
 
         /**
          * @brief Creates a capsule collider shape.
@@ -61,7 +61,7 @@ namespace nau::physics
          * @param [in] material         Material to apply to the collider.
          * @return                      A pointer to the created capsule shape.
          */
-        eastl::unique_ptr<ICapsuleCollision> createCapsuleCollision(
+        std::unique_ptr<ICapsuleCollision> createCapsuleCollision(
             const ICapsuleCollision::ConstructionData& constructionData,
             nau::physics::IPhysicsMaterial* material = nullptr) const;
 
@@ -72,7 +72,7 @@ namespace nau::physics
          * @param [in] material         Material to apply to the collider.
          * @return                      A pointer to the created cylinder shape.
          */
-        eastl::unique_ptr<ICylinderCollision> createCylinderCollision(
+        std::unique_ptr<ICylinderCollision> createCylinderCollision(
             const ICylinderCollision::ConstructionData& constructionData,
             nau::physics::IPhysicsMaterial* material = nullptr) const;
 
@@ -114,13 +114,13 @@ namespace nau::physics
          * @return                      A pointer to the created shape.
          */
         template <std::derived_from<ICollisionShape> CollisionShapeType, typename Argument>
-        eastl::unique_ptr<CollisionShapeType> createGenericCollisionShapeTyped(
+        std::unique_ptr<CollisionShapeType> createGenericCollisionShapeTyped(
             const Argument& constructionData,
             nau::physics::IPhysicsMaterial* material = nullptr) const;
     };
 
     template <std::derived_from<ICollisionShape> CollisionShapeType, typename Argument>
-    eastl::unique_ptr<CollisionShapeType> ICollisionShapesFactory::createGenericCollisionShapeTyped(
+    std::unique_ptr<CollisionShapeType> ICollisionShapesFactory::createGenericCollisionShapeTyped(
         const Argument& constructionData,
         nau::physics::IPhysicsMaterial* material) const
     {
@@ -138,22 +138,22 @@ namespace nau::physics
         return rtti::pointer_cast<CollisionShapeType>(std::move(shape));
     }
 
-    inline eastl::unique_ptr<ISphereCollision> ICollisionShapesFactory::createSphereCollision(TFloat radius, physics::IPhysicsMaterial* material) const
+    inline std::unique_ptr<ISphereCollision> ICollisionShapesFactory::createSphereCollision(TFloat radius, physics::IPhysicsMaterial* material) const
     {
         return createGenericCollisionShapeTyped<ISphereCollision>(radius, material);
     }
 
-    inline eastl::unique_ptr<IBoxCollision> ICollisionShapesFactory::createBoxCollision(math::vec3 extent, physics::IPhysicsMaterial* material) const
+    inline std::unique_ptr<IBoxCollision> ICollisionShapesFactory::createBoxCollision(math::vec3 extent, physics::IPhysicsMaterial* material) const
     {
         return createGenericCollisionShapeTyped<IBoxCollision>(extent, material);
     }
 
-    inline eastl::unique_ptr<ICapsuleCollision> ICollisionShapesFactory::createCapsuleCollision(const ICapsuleCollision::ConstructionData& constructionData, physics::IPhysicsMaterial* material) const
+    inline std::unique_ptr<ICapsuleCollision> ICollisionShapesFactory::createCapsuleCollision(const ICapsuleCollision::ConstructionData& constructionData, physics::IPhysicsMaterial* material) const
     {
         return createGenericCollisionShapeTyped<ICapsuleCollision>(constructionData, material);
     }
 
-    inline eastl::unique_ptr<ICylinderCollision> ICollisionShapesFactory::createCylinderCollision(const ICylinderCollision::ConstructionData& constructionData, physics::IPhysicsMaterial* material) const
+    inline std::unique_ptr<ICylinderCollision> ICollisionShapesFactory::createCylinderCollision(const ICylinderCollision::ConstructionData& constructionData, physics::IPhysicsMaterial* material) const
     {
         return createGenericCollisionShapeTyped<ICylinderCollision>(constructionData, material);
     }

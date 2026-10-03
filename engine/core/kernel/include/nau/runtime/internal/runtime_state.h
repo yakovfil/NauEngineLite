@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/runtime/runtime_state.h
 
-
 #pragma once
 
 #include <memory>
@@ -14,7 +13,7 @@ namespace nau
 {
     struct RuntimeState
     {
-        using Ptr = eastl::unique_ptr<RuntimeState>;
+        using Ptr = std::unique_ptr<RuntimeState>;
 
         NAU_KERNEL_EXPORT
         static RuntimeState::Ptr create();

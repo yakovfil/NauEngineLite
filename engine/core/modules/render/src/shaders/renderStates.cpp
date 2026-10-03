@@ -2,18 +2,19 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <EASTL/vector.h>
-#include <EASTL/vector_map.h>
-#include <EASTL/sort.h>
-#include <ska_hash_map/flat_hash_map2.hpp>
 #include <xxHash/xxh3.h>
 
-#include "nau/3d/dag_renderStates.h"
+#include <algorithm>
+#include <ska_hash_map/flat_hash_map2.hpp>
+#include <utility>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
+#include "nau/3d/dag_renderStates.h"
 #include "nau/shaders/dag_overrideStates.h"
 #include "nau/shaders/dag_renderStateId.h"
+#include "nau/utils/sorted_vector.h"
 #include "nonRelocCont.h"
-
 
 namespace shaders
 {
@@ -28,11 +29,11 @@ namespace render_states
 {
 
 static ska::flat_hash_map</*hash*/ uint64_t, RenderStateId, ska::power_of_two_std_hash<uint64_t>> renderStatesHash;
-static NonRelocatableCont<eastl::pair<RenderState, DriverRenderStateId>,32> renderStates;
-static eastl::vector_map<uint64_t, uint32_t> renderStateOverrides; // Key: (OverrideStateId<<32)|RenderStateId -> index in
-                                                                   // overriddenRenderStates
+static NonRelocatableCont<std::pair<RenderState, DriverRenderStateId>, 32> renderStates;
+static nau::SortedVectorMap<uint64_t, uint32_t> renderStateOverrides;  // Key: (OverrideStateId<<32)|RenderStateId -> index in
+                                                                       // overriddenRenderStates
 static ska::flat_hash_map</*hash*/ uint64_t, DriverRenderStateId, ska::power_of_two_std_hash<uint64_t>> overriddenRenderStatesHash;
-static eastl::vector<DriverRenderStateId> overriddenRenderStates;
+static std::vector<DriverRenderStateId> overriddenRenderStates;
 static int numFreeOverridenRenderStates = 0;
 
 static RenderState apply_override(RenderState state, const OverrideState &override_state)
@@ -156,14 +157,14 @@ RenderStateId create(const RenderState &state)
 {
   uint64_t hash = XXH3_64bits(&state, sizeof(state));
   auto it = renderStatesHash.find(hash);
-  if (EASTL_LIKELY(it != renderStatesHash.end()))
-    return it->second;
+  if (NAU_LIKELY(it != renderStatesHash.end()))
+      return it->second;
 #if DAGOR_DBGLEVEL > 1
   NAU_ASSERT((int)renderStates.find_if([&](auto &rs) { return rs.first == state; }) < 0); // must be unique
 #endif
-  auto statePair = eastl::make_pair(state, d3d::create_render_state(state));
+  auto statePair = std::make_pair(state, d3d::create_render_state(state));
   NAU_ASSERT(statePair.second != DriverRenderStateId());
-  RenderStateId ret(renderStates.push_back(eastl::move(statePair)));
+  RenderStateId ret(renderStates.push_back(std::move(statePair)));
   renderStatesHash[hash] = ret;
   return ret;
 }
@@ -184,7 +185,7 @@ void on_override_state_destroyed(OverrideStateId overrideId)
     if (ors == DriverRenderStateId())
       ++numFreeCalculated;
   G_ASSERT(numFreeCalculated == numFreeOverridenRenderStates);
-  G_ASSERT(eastl::is_sorted(renderStateOverrides.begin(), renderStateOverrides.end()));
+  G_ASSERT(std::is_sorted(renderStateOverrides.begin(), renderStateOverrides.end()));
 #endif
 }
 
@@ -201,8 +202,8 @@ void set(RenderStateId id)
     uint64_t key = (uint64_t((uint32_t)overrideId) << 32) | uint32_t(id);
     decltype(overriddenRenderStates)::value_type *ors;
     auto it = renderStateOverrides.lower_bound(key);
-    if (EASTL_LIKELY(it != renderStateOverrides.end() && it->first == key))
-      ors = &overriddenRenderStates[it->second];
+    if (NAU_LIKELY(it != renderStateOverrides.end() && it->first == key))
+        ors = &overriddenRenderStates[it->second];
     else // not found -> create new
     {
       uint32_t oid = create_overridden(rstate.first, overrideId);

@@ -23,10 +23,11 @@
  THE SOFTWARE.
  ****************************************************************************/
 
-
 #include "render_pipeline_nau.h"
 
 #include <assert.h>
+
+#include <vector>
 
 #include "depth_stencil_state_nau.h"
 #include "program_nau.h"
@@ -66,7 +67,7 @@ void RenderPipelineNau::apply(shaders::RenderState& renderState)
 
     inputLayout->getStride();
 
-    eastl::vector<VSDTYPE> ilDefVec;
+    std::vector<VSDTYPE> ilDefVec;
 
     char* buffer;
     std::size_t size;

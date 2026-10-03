@@ -2,8 +2,11 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
-#include "ecsQueryInternal.h"
 #include <daECS/core/entityManager.h>
+
+#include <algorithm>
+
+#include "ecsQueryInternal.h"
 
 #define DEBUG_VERBOSE_QUERY(...)
 // #define DEBUG_VERBOSE_QUERY debug
@@ -19,7 +22,8 @@ struct RaiiCounter
   int &counter;
   RaiiCounter(int &counter_) : counter(counter_) { ++counter; }
   ~RaiiCounter() { --counter; }
-  EA_NON_COPYABLE(RaiiCounter)
+  RaiiCounter(const RaiiCounter&) = delete;
+  RaiiCounter& operator=(const RaiiCounter&) = delete;
 };
 struct RaiiOptionalCounter
 {
@@ -36,7 +40,8 @@ struct RaiiOptionalCounter
   }
   RaiiOptionalCounter(bool can, int &c) : counter(can ? &c : nullptr) { inc(counter); }
   ~RaiiOptionalCounter() { dec(counter); }
-  EA_NON_COPYABLE(RaiiOptionalCounter)
+  RaiiOptionalCounter(const RaiiOptionalCounter&) = delete;
+  RaiiOptionalCounter& operator=(const RaiiOptionalCounter&) = delete;
 };
 
 __forceinline bool EntityManager::isResolved(uint32_t index) const { return isResolved(getQueryStatus(index)); }
@@ -83,7 +88,7 @@ __forceinline bool EntityManager::doesQueryIdApplyToArch(QueryId queryId, archet
   {
     // linear search inside inplace queries. that is likely be to quiet often case, and this data is already inside cache line
     auto e(archDesc.queriesInplace() + archDesc.getQueriesCount());
-    return eastl::find(archDesc.queriesInplace() + 1, e, archetype) != e; // first one is already compared, as it is firstArch
+    return std::find(archDesc.queriesInplace() + 1, e, archetype) != e;  // first one is already compared, as it is firstArch
   }
 
   return archSubQueriesContainer[archetypeEidQueries[queryId.index()].archSubQueriesAt + archSubQueryId] != INVALID_ARCHETYPE;

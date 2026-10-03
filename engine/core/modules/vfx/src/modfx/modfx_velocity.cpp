@@ -2,6 +2,9 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "modfx_velocity.h"
+
+#include <algorithm>
+
 #include "math/vfx_random.h"
 
 namespace nau::vfx::modfx
@@ -44,7 +47,7 @@ namespace nau::vfx::modfx
         nau::math::Vector3 to_particle = pos - axis_position;
         nau::math::Vector3 normal = to_particle - dot(axis_direction, to_particle) * axis_direction;
         float radius = length(normal);
-        normal /= eastl::max(radius, 0.00001f);
+        normal /= std::max(radius, 0.00001f);
         nau::math::Vector3 tangent = cross(axis_direction, normal);
 
         o_velocity = tangent * rotation_speed * radius - normal * pull_speed;
@@ -68,7 +71,7 @@ namespace nau::vfx::modfx
 
         float drag_force = vel_len * vel_len * c_f;
         float drag_limit = 0.5f;
-        drag_force = eastl::min(drag_force, (vel_len * drag_limit) * (1.0f / iter_dt));
+        drag_force = std::min(drag_force, (vel_len * drag_limit) * (1.0f / iter_dt));
         nau::math::Vector3 drag_v = drag_force * vel_norm;
 
         nau::math::Vector3 acc = (-drag_v + grav_vec) * friction_k;

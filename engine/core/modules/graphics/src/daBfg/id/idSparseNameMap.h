@@ -3,11 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/optional.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
-#include "nau/utils/dag_oaHashNameMap.h"
+#include <optional>
+#include <string_view>
+#include <vector>
 
+#include "nau/utils/dag_oaHashNameMap.h"
 
 template <class EnumType>
 struct IdSparseNameMap
@@ -29,5 +29,5 @@ struct IdSparseNameMap
 
 private:
   dag::OAHashNameMap<false> names;
-  eastl::vector<EnumType> ids;
+  std::vector<EnumType> ids;
 };

@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/meta/class_info.h"
 #include "nau/serialization/json.h"
@@ -53,9 +56,9 @@ namespace nau::test
         };
 
         template <typename T>
-        testing::AssertionResult checkPrimitive(T value, eastl::string_view expectedStr)
+        testing::AssertionResult checkPrimitive(T value, std::string_view expectedStr)
         {
-            const eastl::u8string text = serialization::JsonUtils::stringify(value);
+            const std::u8string text = serialization::JsonUtils::stringify(value);
             if (!strings::icaseEqual(strings::toStringView(text), expectedStr))
             {
                 return testing::AssertionFailure() << ::fmt::format("Invalid json string:({}), expected:({})", strings::toStringView(text), expectedStr);
@@ -69,7 +72,7 @@ namespace nau::test
 
             if (*parsedValue != value)
             {
-                return testing::AssertionFailure() << ::fmt::format("Invalid json parse value on type:({})", typeid(T).name());
+                return testing::AssertionFailure() << ::fmt::format("Invalid json parse value on type:({})", testing::internal::GetTypeName<T>());
             }
 
             return testing::AssertionSuccess();
@@ -101,7 +104,7 @@ namespace nau::test
     {
         using namespace nau::serialization;
 
-        const eastl::string_view jsonStr = R"--(
+        const std::string_view jsonStr = R"--(
             {
                 "id": 111,
                 "type": "object",
@@ -120,7 +123,7 @@ namespace nau::test
     {
         using namespace nau::serialization;
 
-        const eastl::string_view jsonStr = R"--(
+        const std::string_view jsonStr = R"--(
             [1, 2, true, 77]
         )--";
 
@@ -134,7 +137,7 @@ namespace nau::test
     TEST(TestSerializationJson, JsonIntToRuntimeValue)
     {
         const RuntimeIntegerValue::Ptr value = serialization::jsonToRuntimeValue(Json::Value{77});
-        ASSERT_EQ(value->getInt64(), 77i64);
+        ASSERT_EQ(value->getInt64(), int64_t{77});
     }
 
     /**
@@ -191,7 +194,7 @@ namespace nau::test
             ASSERT_EQ((*collection)[0]->as<const RuntimeIntegerValue&>().getInt64(), 111);
             ASSERT_EQ((*collection)[1]->as<const RuntimeIntegerValue&>().getInt64(), 222);
 
-            collection->append(makeValueCopy(eastl::string_view{"text"})).ignore();
+            collection->append(makeValueCopy(std::string_view{"text"})).ignore();
             collection->append(makeValueCopy(444.4f)).ignore();
         }
 
@@ -229,7 +232,7 @@ namespace nau::test
         GenericData data;
         data.id = 100;
         data.type = "unknown";
-        data.data1 = makeValueCopy(eastl::vector<unsigned>{1, 2, 3});
+        data.data1 = makeValueCopy(std::vector<unsigned>{1, 2, 3});
         const auto str = serialization::JsonUtils::stringify(data);
     }
 
@@ -237,7 +240,7 @@ namespace nau::test
      */
     TEST(TestSerializationJson, ParseObject)
     {
-        eastl::u8string_view json =
+        std::u8string_view json =
             u8R"--(
             {
                 "id": 222,
@@ -263,7 +266,7 @@ namespace nau::test
 
     TEST(TestSerializationJson, TypeCoercion1)
     {
-        eastl::u8string_view json1 =
+        std::u8string_view json1 =
             u8R"--(
             {
                 "int64Field": "12345678",
@@ -280,7 +283,7 @@ namespace nau::test
 
     TEST(TestSerializationJson, TypeCoercion2)
     {
-        eastl::u8string_view json1 =
+        std::u8string_view json1 =
             u8R"--(
             {
                 "int64Field": ""
@@ -302,7 +305,7 @@ namespace nau::test
     {
         GTEST_SKIP_("TypeCoercion::Strict is not implemented.");
 
-        eastl::u8string_view json1 =
+        std::u8string_view json1 =
             u8R"--(
             {
                 "int64Field": "12345678",
@@ -320,7 +323,7 @@ namespace nau::test
      */
     TEST(TestSerializationJson, StringViewKey)
     {
-        eastl::string_view json =
+        std::string_view json =
             R"--(
             {
                 "id": 222,

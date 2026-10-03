@@ -11,11 +11,11 @@
 
 // clang-format off
 
-#include <EASTL/string.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/vector.h>
-#include <EASTL/array.h>
-#include <EASTL/map.h>
+#include <string>
+#include <memory>
+#include <vector>
+#include <array>
+#include <map>
 
 // clang-format on
 

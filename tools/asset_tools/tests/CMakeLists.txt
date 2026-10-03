@@ -7,7 +7,13 @@ nau_collect_files(Sources
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Sources})
 add_executable(${TargetName} ${Sources})
-add_test(NAME ProjectTools COMMAND ${TargetName})
+add_test(NAME AssetTools COMMAND ${TargetName})
+
+# Metadata tests discover these plugins dynamically instead of linking them.
+add_dependencies(${TargetName}
+    NauUsdFormat NauComponentSchema NauInputSchema NauVFXSchema
+    NauAudioSchema NauAnimationClipAsset NauGuiSchema NauPhysicsSchema NauAssetMetadata
+)
 
 set_target_properties(${TargetName}
 	PROPERTIES

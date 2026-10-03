@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <tuple>
+
 #include "nau/3d/dag_drv3d.h"
-#include <EASTL/tuple.h>
 //#include <generic/dag_smallTab.h>
 
 

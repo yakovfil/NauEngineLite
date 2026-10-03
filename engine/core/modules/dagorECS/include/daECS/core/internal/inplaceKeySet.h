@@ -21,11 +21,8 @@ struct SizeTypeBytes<1>
   typedef uint8_t size_type_t;
 };
 
+template <class RelocatableKey, size_t inplace_count = 16 / sizeof(RelocatableKey), class SizeType = typename SizeTypeBytes<sizeof(RelocatableKey)>::size_type_t>
+using InplaceKeyContainer = dag::RelocatableFixedVector<RelocatableKey, inplace_count, true, nau::HeapByteAllocator /*, MidmemAlloc TODO Allocators.*/, SizeType>;
 
-template <class RelocatableKey, size_t inplace_count = 16 / sizeof(RelocatableKey),
-  class SizeType = typename SizeTypeBytes<sizeof(RelocatableKey)>::size_type_t>
-using InplaceKeyContainer = dag::RelocatableFixedVector<RelocatableKey, inplace_count, true, EASTLAllocatorType /*, MidmemAlloc TODO Allocators.*/, SizeType>;
-
-template <class RelocatableKey, size_t inplace_count = 16 / sizeof(RelocatableKey),
-  class SizeType = typename SizeTypeBytes<sizeof(RelocatableKey)>::size_type_t>
-using InplaceKeySet = dag::FixedVectorSet<RelocatableKey, inplace_count, true, eastl::use_self<RelocatableKey>, EASTLAllocatorType /*, MidmemAlloc TODO Allocators.*/, SizeType>;
+template <class RelocatableKey, size_t inplace_count = 16 / sizeof(RelocatableKey), class SizeType = typename SizeTypeBytes<sizeof(RelocatableKey)>::size_type_t>
+using InplaceKeySet = dag::FixedVectorSet<RelocatableKey, inplace_count, true, std::identity, nau::HeapByteAllocator /*, MidmemAlloc TODO Allocators.*/, SizeType>;

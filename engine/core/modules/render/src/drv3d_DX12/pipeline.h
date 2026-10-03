@@ -3,11 +3,17 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
-//#include <EASTL/string.h>
-//#include <perfMon/dag_autoFuncProf.h>
-//#include <perfMon/dag_statDrv.h>
+#include <algorithm>
+#include <bitset>
+#include <iterator>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
+// #include <string>
+// #include <perfMon/dag_autoFuncProf.h>
+// #include <perfMon/dag_statDrv.h>
 #include "nau/supp/dag_comPtr.h"
 #include "nau/dxil/compiled_shader_header.h"
 
@@ -114,9 +120,9 @@ struct BufferState
   uint32_t fistDiscardFrame = 0;
   uint64_t offset = 0;
   BufferGlobalId resourceId;
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> srvs;
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> uavs;
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> uavForClear;
+  std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> srvs;
+  std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> uavs;
+  std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> uavForClear;
 #if _TARGET_PC_WIN
   D3D12_GPU_VIRTUAL_ADDRESS gpuPointer = 0;
   uint8_t *cpuPointer = nullptr;
@@ -577,7 +583,7 @@ struct PipelineCreateInfoDataBase
     template <typename IST, typename CT, typename... Args>
     static CT &construct(void *at, Args &&...args)
     {
-      return *::new (at) CT{IST(eastl::forward<Args>(args)...)};
+        return *::new(at) CT{IST(std::forward<Args>(args)...)};
     }
   };
 
@@ -589,7 +595,7 @@ struct PipelineCreateInfoDataBase
     template <typename, typename CT, typename... Args>
     static CT &construct(void *at, Args &&...args)
     {
-      return *::new (at) CT{eastl::forward<Args>(args)...};
+        return *::new(at) CT{std::forward<Args>(args)...};
     }
   };
 
@@ -600,8 +606,8 @@ struct PipelineCreateInfoDataBase
     template <typename... Args>
     static ConstructType &construct(void *at, Args &&...args)
     {
-      return ConstructExecuter<eastl::is_pointer<IST>::value>::template construct<IST, ConstructType>(at,
-        eastl::forward<Args>(args)...);
+        return ConstructExecuter<std::is_pointer<IST>::value>::template construct<IST, ConstructType>(at,
+                                                                                                      std::forward<Args>(args)...);
     }
   };
 };
@@ -618,7 +624,7 @@ struct PipelineCreateInfoData : PipelineCreateInfoDataBase
   T &append(Args &&...args)
   {
     NAU_ASSERT(writeSize + sizeof(T) <= MAX_SIZE);
-    auto &ref = ConstructHandler<T>::construct(&store[writeSize], eastl::forward<Args>(args)...);
+    auto& ref = ConstructHandler<T>::construct(&store[writeSize], std::forward<Args>(args)...);
     writeSize += sizeof(T);
     debugTrack(ref);
     return ref;
@@ -626,7 +632,7 @@ struct PipelineCreateInfoData : PipelineCreateInfoDataBase
   template <typename T, typename U, typename... Args>
   T &emplace(Args &&...args)
   {
-    return append<T>(U{eastl::forward<Args>(args)...});
+      return append<T>(U{std::forward<Args>(args)...});
   }
   void *root() { return store; }
   uint32_t rootSize() { return writeSize; }
@@ -748,16 +754,16 @@ public:
 
 class FramebufferLayoutManager
 {
-  eastl::vector<FramebufferLayout> table;
+    std::vector<FramebufferLayout> table;
 
 public:
   FramebufferLayoutID getLayoutID(const FramebufferLayout &layout)
   {
-    auto ref = eastl::find(begin(table), end(table), layout);
-    if (end(table) == ref)
-    {
-      ref = table.insert(ref, layout);
-    }
+      auto ref = std::find(begin(table), end(table), layout);
+      if (end(table) == ref)
+      {
+          ref = table.insert(ref, layout);
+      }
     return FramebufferLayoutID{static_cast<int>(ref - begin(table))};
   }
   const FramebufferLayout &getLayout(FramebufferLayoutID id) const { return table[id.get()]; }
@@ -768,7 +774,7 @@ namespace backend
 class StaticRenderStateManager
 {
 protected:
-  eastl::vector<RenderStateSystem::StaticState> staticRenderStateTable;
+    std::vector<RenderStateSystem::StaticState> staticRenderStateTable;
 
 public:
   const RenderStateSystem::StaticState &getStaticRenderState(StaticRenderStateID ident) const
@@ -777,11 +783,11 @@ public:
   }
   StaticRenderStateID findOrAddStaticRenderState(const RenderStateSystem::StaticState &state)
   {
-    auto ref = eastl::find(begin(staticRenderStateTable), end(staticRenderStateTable), state);
-    if (end(staticRenderStateTable) == ref)
-    {
-      ref = staticRenderStateTable.insert(ref, state);
-    }
+      auto ref = std::find(begin(staticRenderStateTable), end(staticRenderStateTable), state);
+      if (end(staticRenderStateTable) == ref)
+      {
+          ref = staticRenderStateTable.insert(ref, state);
+      }
     return StaticRenderStateID::make(ref - begin(staticRenderStateTable));
   }
 };
@@ -886,16 +892,19 @@ class BasePipeline
   };
   struct BaseVariantInfo : BaseVariantKey
   {
-    eastl::unique_ptr<PipelineVariant> pipeline;
+      std::unique_ptr<PipelineVariant> pipeline;
 
-    BaseVariantInfo() = default;
-    BaseVariantInfo(const BaseVariantInfo &) = delete;
-    BaseVariantInfo(BaseVariantInfo &&) = default;
-    BaseVariantInfo(const BaseVariantKey &key) : BaseVariantKey{key} {}
+      BaseVariantInfo() = default;
+      BaseVariantInfo(const BaseVariantInfo&) = delete;
+      BaseVariantInfo(BaseVariantInfo&&) = default;
+      BaseVariantInfo(const BaseVariantKey& key) :
+          BaseVariantKey{key}
+      {
+      }
     BaseVariantInfo &operator=(const BaseVariantInfo &) = delete;
     BaseVariantInfo &operator=(BaseVariantInfo &&) = default;
   };
-  using VairantTable = eastl::vector<BaseVariantInfo>;
+  using VairantTable = std::vector<BaseVariantInfo>;
   VairantTable variants;
   GraphicsPipelineSignature &signature;
   uint32_t vsCombinedSRegisterCompareMask = 0;
@@ -917,34 +926,52 @@ public:
     PipelineCache::BasePipelineIdentifier cacheIdent = {};
     cacheIdent.vs = vsModule.header.hash;
     vsCombinedSRegisterCompareMask = vsModule.header.header.sRegisterCompareUseMask;
-    eastl::copy(eastl::begin(vsModule.header.header.tRegisterTypes), eastl::end(vsModule.header.header.tRegisterTypes),
-      eastl::begin(vsCombinedTRegisterTypes));
-    eastl::copy(eastl::begin(vsModule.header.header.uRegisterTypes), eastl::end(vsModule.header.header.uRegisterTypes),
-      eastl::begin(vsCombinedURegisterTypes));
+    std::copy(std::begin(vsModule.header.header.tRegisterTypes), std::end(vsModule.header.header.tRegisterTypes),
+              std::begin(vsCombinedTRegisterTypes));
+    std::copy(std::begin(vsModule.header.header.uRegisterTypes), std::end(vsModule.header.header.uRegisterTypes),
+              std::begin(vsCombinedURegisterTypes));
     cacheIdent.ps = psModule.header.hash;
     if (auto gsModule = get_gs(vsModule))
     {
       vsCombinedSRegisterCompareMask |= gsModule->sRegisterCompareUseMask;
-      eastl::transform(eastl::begin(vsCombinedTRegisterTypes), eastl::end(vsCombinedTRegisterTypes),
-        eastl::begin(gsModule->tRegisterTypes), eastl::begin(vsCombinedTRegisterTypes), [](auto a, auto b) { return a | b; });
-      eastl::transform(eastl::begin(vsCombinedURegisterTypes), eastl::end(vsCombinedURegisterTypes),
-        eastl::begin(gsModule->uRegisterTypes), eastl::begin(vsCombinedURegisterTypes), [](auto a, auto b) { return a | b; });
+      std::transform(std::begin(vsCombinedTRegisterTypes), std::end(vsCombinedTRegisterTypes),
+                     std::begin(gsModule->tRegisterTypes), std::begin(vsCombinedTRegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
+      std::transform(std::begin(vsCombinedURegisterTypes), std::end(vsCombinedURegisterTypes),
+                     std::begin(gsModule->uRegisterTypes), std::begin(vsCombinedURegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
     }
     if (auto hsModule = get_hs(vsModule))
     {
       vsCombinedSRegisterCompareMask |= hsModule->sRegisterCompareUseMask;
-      eastl::transform(eastl::begin(vsCombinedTRegisterTypes), eastl::end(vsCombinedTRegisterTypes),
-        eastl::begin(hsModule->tRegisterTypes), eastl::begin(vsCombinedTRegisterTypes), [](auto a, auto b) { return a | b; });
-      eastl::transform(eastl::begin(vsCombinedURegisterTypes), eastl::end(vsCombinedURegisterTypes),
-        eastl::begin(hsModule->uRegisterTypes), eastl::begin(vsCombinedURegisterTypes), [](auto a, auto b) { return a | b; });
+      std::transform(std::begin(vsCombinedTRegisterTypes), std::end(vsCombinedTRegisterTypes),
+                     std::begin(hsModule->tRegisterTypes), std::begin(vsCombinedTRegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
+      std::transform(std::begin(vsCombinedURegisterTypes), std::end(vsCombinedURegisterTypes),
+                     std::begin(hsModule->uRegisterTypes), std::begin(vsCombinedURegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
     }
     if (auto dsModule = get_ds(vsModule))
     {
       vsCombinedSRegisterCompareMask |= dsModule->sRegisterCompareUseMask;
-      eastl::transform(eastl::begin(vsCombinedTRegisterTypes), eastl::end(vsCombinedTRegisterTypes),
-        eastl::begin(dsModule->tRegisterTypes), eastl::begin(vsCombinedTRegisterTypes), [](auto a, auto b) { return a | b; });
-      eastl::transform(eastl::begin(vsCombinedURegisterTypes), eastl::end(vsCombinedURegisterTypes),
-        eastl::begin(dsModule->uRegisterTypes), eastl::begin(vsCombinedURegisterTypes), [](auto a, auto b) { return a | b; });
+      std::transform(std::begin(vsCombinedTRegisterTypes), std::end(vsCombinedTRegisterTypes),
+                     std::begin(dsModule->tRegisterTypes), std::begin(vsCombinedTRegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
+      std::transform(std::begin(vsCombinedURegisterTypes), std::end(vsCombinedURegisterTypes),
+                     std::begin(dsModule->uRegisterTypes), std::begin(vsCombinedURegisterTypes), [](auto a, auto b)
+      {
+          return a | b;
+      });
     }
 
     cacheId = cache.getGraphicsPipeline(cacheIdent);
@@ -1006,12 +1033,13 @@ public:
   {
     auto key = BaseVariantKey::forVertex(input_layout_id, static_state_id, framebuffer_layout_id, top, is_wire_frame);
 #if DX12_USE_BINARY_SEARCH_FOR_GRAPHICS_PIPELINE_VARIANTS
-    auto ref = eastl::lower_bound(begin(variants), end(variants), key,
-      [](const auto &l, const auto &r) //
-      { return l < r; });
+    auto ref = std::lower_bound(begin(variants), end(variants), key,
+                                [](const auto& l, const auto& r)  //
+    { return l < r;
+    });
     if (ref == end(variants) || key != *ref)
 #else
-    auto ref = eastl::find(begin(variants), end(variants), key);
+    auto ref = std::find(begin(variants), end(variants), key);
     if (ref == end(variants))
 #endif
     {
@@ -1026,12 +1054,13 @@ public:
   {
     auto key = BaseVariantKey::forMesh(static_state_id, framebuffer_layout_id, is_wire_frame);
 #if DX12_USE_BINARY_SEARCH_FOR_GRAPHICS_PIPELINE_VARIANTS
-    auto ref = eastl::lower_bound(begin(variants), end(variants), key,
-      [](const auto &l, const auto &r) //
-      { return l < r; });
+    auto ref = std::lower_bound(begin(variants), end(variants), key,
+                                [](const auto& l, const auto& r)  //
+    { return l < r;
+    });
     if (ref == end(variants) || key != *ref)
 #else
-    auto ref = eastl::find(begin(variants), end(variants), key);
+    auto ref = std::find(begin(variants), end(variants), key);
     if (ref == end(variants))
 #endif
     {
@@ -1106,8 +1135,8 @@ class ComputePipeline
       return true;
     auto name = name_generator.generateComputePipelineName(shaderModule);
 #if DX12_REPORT_PIPELINE_CREATE_TIMING
-    eastl::string profilerMsg;
-    profilerMsg.sprintf("ComputePipeline(\"%s\")::load: took %%dus", name.c_str());
+    std::string profilerMsg;
+    profilerMsg = nau::utils::format("ComputePipeline(\"{}\")::load: took %dus", name);
     AutoFuncProf funcProfiler{profilerMsg.c_str()};
 #endif
     //TIME_PROFILE_DEV(ComputePipeline_load);
@@ -1137,7 +1166,7 @@ class ComputePipeline
       if (give_name)
       {
         shorten_name_for_pix(name);
-        eastl::vector<wchar_t> nameBuf;
+        std::vector<wchar_t> nameBuf;
         nameBuf.resize(name.size() + 1);
         DX12_SET_DEBUG_OBJ_NAME(pipeline, lazyToWchar(name.data(), nameBuf.data(), nameBuf.size()));
       }
@@ -1229,7 +1258,7 @@ class ComputePipeline
     if (give_name && pipeline && !name.empty())
     {
       shorten_name_for_pix(name);
-      eastl::vector<wchar_t> nameBuf;
+      std::vector<wchar_t> nameBuf;
       nameBuf.resize(name.size() + 1);
       DX12_SET_DEBUG_OBJ_NAME(pipeline, lazyToWchar(name.data(), nameBuf.data(), nameBuf.size()));
     }
@@ -1245,9 +1274,9 @@ public:
     return pipeline.Get();
   }
 
-  ComputePipeline(ComputePipelineSignature &sign, ComputeShaderModule module, ID3D12Device2 *device, PipelineCache &cache,
-    RecoverablePipelineCompileBehavior on_error, bool give_name, backend::PipelineNameGenerator &name_generator) :
-    shaderModule{eastl::move(module)}, signature{sign}
+  ComputePipeline(ComputePipelineSignature& sign, ComputeShaderModule module, ID3D12Device2* device, PipelineCache& cache, RecoverablePipelineCompileBehavior on_error, bool give_name, backend::PipelineNameGenerator& name_generator) :
+      shaderModule{std::move(module)},
+      signature{sign}
   {
     load(device, cache, on_error, true, give_name, name_generator);
   }
@@ -1294,25 +1323,25 @@ class PipelineManager : public backend::ShaderModuleManager,
                         protected backend::InputLayoutManager,
                         public backend::StaticRenderStateManager
 {
-  eastl::vector<eastl::unique_ptr<BasePipeline>> graphicsPipelines[max_scripted_shaders_bin_groups];
-  eastl::vector<eastl::unique_ptr<ComputePipeline>> computePipelines[max_scripted_shaders_bin_groups];
-  eastl::vector<eastl::unique_ptr<GraphicsPipelineSignature>> graphicsSignatures;
+    std::vector<std::unique_ptr<BasePipeline>> graphicsPipelines[max_scripted_shaders_bin_groups];
+    std::vector<std::unique_ptr<ComputePipeline>> computePipelines[max_scripted_shaders_bin_groups];
+    std::vector<std::unique_ptr<GraphicsPipelineSignature>> graphicsSignatures;
 #if !_TARGET_XBOXONE
-  eastl::vector<eastl::unique_ptr<GraphicsPipelineSignature>> graphicsMeshSignatures;
+    std::vector<std::unique_ptr<GraphicsPipelineSignature>> graphicsMeshSignatures;
 #endif
-  eastl::vector<eastl::unique_ptr<ComputePipelineSignature>> computeSignatures;
+    std::vector<std::unique_ptr<ComputePipelineSignature>> computeSignatures;
 #if D3D_HAS_RAY_TRACING
-  eastl::vector<eastl::unique_ptr<RaytracePipeline>> raytracePipelines;
-  eastl::vector<eastl::unique_ptr<RaytracePipelineSignature>> raytraceSignatures;
+    std::vector<std::unique_ptr<RaytracePipeline>> raytracePipelines;
+    std::vector<std::unique_ptr<RaytracePipelineSignature>> raytraceSignatures;
 #endif
   struct PrepedForDelete
   {
     ProgramID program;
     GraphicsProgramID graphicsProgram;
-    eastl::unique_ptr<BasePipeline> graphics;
-    eastl::unique_ptr<ComputePipeline> compute;
+    std::unique_ptr<BasePipeline> graphics;
+    std::unique_ptr<ComputePipeline> compute;
 #if D3D_HAS_RAY_TRACING
-    eastl::unique_ptr<RaytracePipeline> raytrace;
+    std::unique_ptr<RaytracePipeline> raytrace;
 #endif
   };
   struct BlitPipeline
@@ -1320,10 +1349,10 @@ class PipelineManager : public backend::ShaderModuleManager,
     ComPtr<ID3D12PipelineState> pipeline;
     DXGI_FORMAT outFormat;
   };
-  eastl::vector<PrepedForDelete> prepedForDeletion;
+  std::vector<PrepedForDelete> prepedForDeletion;
   // blit signature is special
   ComPtr<ID3D12RootSignature> blitSignature;
-  eastl::vector<BlitPipeline> blitPipelines;
+  std::vector<BlitPipeline> blitPipelines;
   PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
   D3D_ROOT_SIGNATURE_VERSION signatureVersion = D3D_ROOT_SIGNATURE_VERSION_1;
 #if DX12_ENABLE_CONST_BUFFER_DESCRIPTORS
@@ -1373,9 +1402,7 @@ public:
   void addGraphics(ID3D12Device2 *device, PipelineCache &cache, FramebufferLayoutManager &fbs, GraphicsProgramID program, ShaderID vs,
     ShaderID ps, RecoverablePipelineCompileBehavior on_error, bool give_name);
 
-  eastl::unique_ptr<BasePipeline> createGraphics(ID3D12Device2 *device, PipelineCache &cache, FramebufferLayoutManager &fbs,
-    backend::VertexShaderModuleRefStore vertexShader, backend::PixelShaderModuleRefStore pixelShader,
-    RecoverablePipelineCompileBehavior on_error, bool give_name);
+  std::unique_ptr<BasePipeline> createGraphics(ID3D12Device2* device, PipelineCache& cache, FramebufferLayoutManager& fbs, backend::VertexShaderModuleRefStore vertexShader, backend::PixelShaderModuleRefStore pixelShader, RecoverablePipelineCompileBehavior on_error, bool give_name);
 
   void unloadAll();
   // remove of a program is a 2 step process, first prepareForRemove needs to be called, this
@@ -1398,12 +1425,15 @@ public:
   ID3D12RootSignature *getBlitSignature() { return blitSignature.Get(); }
   ID3D12PipelineState *getBlitPipeline(ID3D12Device2 *device, DXGI_FORMAT out_fmt, bool give_name)
   {
-    auto ref =
-      eastl::find_if(begin(blitPipelines), end(blitPipelines), [=](const BlitPipeline &bp) { return bp.outFormat == out_fmt; });
-    if (ref == end(blitPipelines))
-    {
-      return createBlitPipeline(device, out_fmt, give_name);
-    }
+      auto ref =
+          std::find_if(begin(blitPipelines), end(blitPipelines), [=](const BlitPipeline& bp)
+      {
+          return bp.outFormat == out_fmt;
+      });
+      if (ref == end(blitPipelines))
+      {
+          return createBlitPipeline(device, out_fmt, give_name);
+      }
     return ref->pipeline.Get();
   }
 
@@ -1427,7 +1457,7 @@ public:
     else if (staticRenderStateTable[ident.get()] != state)
     {
       NAU_LOG_DEBUG("DX12: need to patch render state {}", ident.get());
-      auto ref = eastl::find(begin(staticRenderStateTable) + ident.get() + 1, end(staticRenderStateTable), state);
+      auto ref = std::find(begin(staticRenderStateTable) + ident.get() + 1, end(staticRenderStateTable), state);
       if (end(staticRenderStateTable) == ref)
       {
         auto moveID = StaticRenderStateID::make(staticRenderStateTable.size());
@@ -1481,17 +1511,17 @@ public:
   {
     ShaderID vsID;
     ShaderID psID;
-    eastl::unique_ptr<BasePipeline> pipeline;
+    std::unique_ptr<BasePipeline> pipeline;
   };
-  eastl::vector<PreloadedGraphicsPipeline> preloadedGraphicsPipelines;
+  std::vector<PreloadedGraphicsPipeline> preloadedGraphicsPipelines;
 
   struct ShaderCompressionIndex
   {
     uint16_t compressionGroup;
     uint16_t compressionIndex;
   };
-  eastl::vector<ShaderCompressionIndex> computeProgramIndexToDumpShaderIndex[max_scripted_shaders_bin_groups];
-  eastl::vector<eastl::variant<eastl::monostate, ShaderID, ProgramID>> pixelShaderComputeProgramIDMap[max_scripted_shaders_bin_groups];
+  std::vector<ShaderCompressionIndex> computeProgramIndexToDumpShaderIndex[max_scripted_shaders_bin_groups];
+  std::vector<std::variant<std::monostate, ShaderID, ProgramID>> pixelShaderComputeProgramIDMap[max_scripted_shaders_bin_groups];
   struct ScriptedShaderBinDumpInspector
   {
     uint32_t group = 0;
@@ -1528,8 +1558,11 @@ public:
         return;
       }
 
-      auto preloadedPipelineIt = eastl::find_if(target->preloadedGraphicsPipelines.begin(), target->preloadedGraphicsPipelines.end(),
-        [vsID, psID](const auto &pp) { return (pp.vsID == vsID) && (pp.psID == psID); });
+      auto preloadedPipelineIt = std::find_if(target->preloadedGraphicsPipelines.begin(), target->preloadedGraphicsPipelines.end(),
+                                              [vsID, psID](const auto& pp)
+      {
+          return (pp.vsID == vsID) && (pp.psID == psID);
+      });
 
       if (preloadedPipelineIt != target->preloadedGraphicsPipelines.end())
       {
@@ -1545,14 +1578,14 @@ public:
 
         preloadedPipeline.vsID = vsID;
         preloadedPipeline.psID = psID;
-        preloadedPipeline.pipeline = eastl::move(pipeline);
+        preloadedPipeline.pipeline = std::move(pipeline);
       }
     }
 
     void addGraphicsProgram(uint16_t vs_index, uint16_t ps_index)
     {
       ShaderID psID;
-      if (auto shader = eastl::get_if<ShaderID>(&target->pixelShaderComputeProgramIDMap[group][ps_index]))
+      if (auto shader = std::get_if<ShaderID>(&target->pixelShaderComputeProgramIDMap[group][ps_index]))
       {
         psID = *shader;
       }
@@ -1578,10 +1611,10 @@ public:
     }
     void addComputeProgram(uint32_t shader_index)
     {
-      if (eastl::holds_alternative<ProgramID>(target->pixelShaderComputeProgramIDMap[group][shader_index]))
-      {
-        return;
-      }
+        if (std::holds_alternative<ProgramID>(target->pixelShaderComputeProgramIDMap[group][shader_index]))
+        {
+            return;
+        }
       auto id = ProgramID::asComputeProgram(group, target->computeProgramIndexToDumpShaderIndex[group].size());
       target->pixelShaderComputeProgramIDMap[group][shader_index] = id;
       auto dump = owner->getDump();
@@ -1621,8 +1654,8 @@ public:
       PrepedForDelete info;
       info.program = ProgramID::Null();
       info.graphicsProgram = program;
-      info.graphics = eastl::move(graphicsPipelines[group][i]);
-      prepedForDeletion.push_back(eastl::move(info));
+      info.graphics = std::move(graphicsPipelines[group][i]);
+      prepedForDeletion.push_back(std::move(info));
     }
     for (uint32_t i = 0; i < computePipelines[group].size(); ++i)
     {
@@ -1631,8 +1664,8 @@ public:
       PrepedForDelete info;
       info.program = program;
       info.graphicsProgram = GraphicsProgramID::Null();
-      info.compute = eastl::move(computePipelines[group][i]);
-      prepedForDeletion.push_back(eastl::move(info));
+      info.compute = std::move(computePipelines[group][i]);
+      prepedForDeletion.push_back(std::move(info));
     }
     resetDumpOfGroup(group);
     if (preloadedGraphicsPipelines.size() != 0)
@@ -1662,7 +1695,7 @@ public:
       }
     }
 
-    addCompute(device, cache, program, eastl::move(basicModule), on_error, give_name, preloaded);
+    addCompute(device, cache, program, std::move(basicModule), on_error, give_name, preloaded);
   }
 
   BasePipeline *findLoadedPipeline(const backend::VertexShaderModuleRefStore &vs, const backend::PixelShaderModuleRefStore &ps)
@@ -1884,7 +1917,7 @@ public:
           return true;
         }
         // has collision with a ps?!
-        auto program = eastl::get_if<ProgramID>(&mapping[shaderIndex]);
+        auto program = std::get_if<ProgramID>(&mapping[shaderIndex]);
         if (!program)
         {
           return true;
@@ -2106,7 +2139,7 @@ struct PipelineStageStateBase
   uint32_t bRegisterStateDirtyMask = 0;
   uint32_t tRegisterStateDirtyMask = 0;
   uint32_t uRegisterStateDirtyMask = 0;
-  eastl::bitset<dxil::MAX_T_REGISTERS> isConstDepthStencil = {};
+  std::bitset<dxil::MAX_T_REGISTERS> isConstDepthStencil = {};
   D3D12_CONSTANT_BUFFER_VIEW_DESC constRegisterLastBuffer = {};
   DescriptorHeapRange bRegisterDescribtorRange;
   DescriptorHeapRange tRegisterDescriptorRange;
@@ -2149,7 +2182,7 @@ struct PipelineStageStateBase
       reg.reset();
     for (auto &reg : uRegisters)
       reg.reset();
-    eastl::fill(eastl::begin(sRegisters), eastl::end(sRegisters), D3D12_CPU_DESCRIPTOR_HANDLE{0});
+    std::fill(std::begin(sRegisters), std::end(sRegisters), D3D12_CPU_DESCRIPTOR_HANDLE{0});
   }
   void setSRVTexture(uint32_t unit, Image *image, ImageViewState view_state, bool as_const_ds, D3D12_CPU_DESCRIPTOR_HANDLE view);
   void setSampler(uint32_t unit, D3D12_CPU_DESCRIPTOR_HANDLE sampler);

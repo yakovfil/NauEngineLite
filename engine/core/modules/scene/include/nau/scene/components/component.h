@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <EASTL/intrusive_list.h>
-
 #include <concepts>
 #include <type_traits>
 
@@ -15,10 +13,11 @@
 #include "nau/runtime/disposable.h"
 #include "nau/scene/nau_object.h"
 #include "nau/utils/functor.h"
+#include "nau/utils/intrusive_list.h"
 
 namespace nau::scene_internal
 {
-    struct ComponentListNode : eastl::intrusive_list_node
+    struct ComponentListNode : nau::IntrusiveListNode
     {
     };
 

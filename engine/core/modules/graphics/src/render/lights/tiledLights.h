@@ -6,7 +6,7 @@
 /*
 #include <3d/dag_resPtr.h>
 #include <3d/dag_textureIDHolder.h>
-#include <EASTL/unique_ptr.h>
+#include <memory>
 #include <math/integer/dag_IPoint2.h>
 #include <shaders/dag_overrideStateId.h>
 #include <vecmath/dag_vecMathDecl.h>

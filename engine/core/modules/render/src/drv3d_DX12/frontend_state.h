@@ -3,6 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <bitset>
+#include <iterator>
+#include <span>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/generic/dag_bitset.h"
 #include "nau/generic/dag_enumerate.h"
@@ -84,7 +89,7 @@ struct FrontendState
       COUNT,
       INVALID = COUNT
     };
-    typedef eastl::bitset<COUNT> Type;
+    typedef std::bitset<COUNT> Type;
   };
   struct ResourceDirtyState
   {
@@ -106,7 +111,7 @@ struct FrontendState
       COUNT,
       INVALID = COUNT
     };
-    using Type = eastl::bitset<COUNT>;
+    using Type = std::bitset<COUNT>;
   };
   struct ToggleState
   {
@@ -128,7 +133,7 @@ struct FrontendState
       COUNT,
       INVALID = COUNT
     };
-    typedef eastl::bitset<COUNT> Type;
+    typedef std::bitset<COUNT> Type;
   };
 
   // returns set
@@ -243,7 +248,7 @@ struct FrontendState
       stage.allDirty();
   }
 
-  eastl::span<ConstRegisterType> getRegisterSection(uint32_t stage)
+  std::span<ConstRegisterType> getRegisterSection(uint32_t stage)
   {
     // of those break, assumptions about which bits indicate what are incorrect
     static_assert(STAGE_CS == 0);
@@ -256,13 +261,13 @@ struct FrontendState
     uint32_t offset = ((stage & 2) << 11)    // turns 2 into 4096
                       + ((stage & 1) << 13); // turns 1 into 8192
 
-    decltype(eastl::dynamic_extent) size = (((stage + 1) & 1) << 12) // maps 0 (CS) and 2 (VS) to 4096
-                                           | ((-static_cast<int32_t>(stage & 1)) & PIXEL_SHADER_REGISTERS); // maps 1 (PS) to
-                                                                                                            // PIXEL_SHADER_REGISTERS
+    decltype(std::dynamic_extent) size = (((stage + 1) & 1) << 12)                                         // maps 0 (CS) and 2 (VS) to 4096
+                                         | ((-static_cast<int32_t>(stage & 1)) & PIXEL_SHADER_REGISTERS);  // maps 1 (PS) to
+                                                                                                           // PIXEL_SHADER_REGISTERS
     return {&totalRegisterSpace[offset], size};
   }
 
-  bool registerMemoryUpdate(uint32_t stage, uint32_t offset, eastl::span<const ConstRegisterType> src)
+  bool registerMemoryUpdate(uint32_t stage, uint32_t offset, std::span<const ConstRegisterType> src)
   {
     auto dstBase = getRegisterSection(stage);
     NAU_ASSERT_RETURN(offset < dstBase.size(), false, "const register offset out of range {} is larger than {}", offset,
@@ -270,8 +275,8 @@ struct FrontendState
     auto dst = dstBase.last(dstBase.size() - offset);
     NAU_ASSERT_RETURN(src.size() <= dst.size(), false, "const register update overflow, {} > {}", src.size(), dst.size());
     // search for first difference
-    auto range = eastl::mismatch(src.begin(), src.end(), dst.begin());
-    return range.second != eastl::copy(range.first, src.end(), range.second);
+    auto range = std::mismatch(src.begin(), src.end(), dst.begin());
+    return range.second != std::copy(range.first, src.end(), range.second);
   }
 
   template <typename A, typename U, typename D>
@@ -389,14 +394,11 @@ struct FrontendState
     return getFramebufferExtentInternal(ctx);
   }
 
-  void markDirtyIfMatchesInTRegister(uint32_t stage, BaseTex *texture, MipMapIndex mip, ArrayLayerIndex face,
-    eastl::bitset<dxil::MAX_T_REGISTERS> slots)
+  void markDirtyIfMatchesInTRegister(uint32_t stage, BaseTex* texture, MipMapIndex mip, ArrayLayerIndex face, Bitset<dxil::MAX_T_REGISTERS> slots)
   {
     G_UNUSED(texture); // can be used to validate
     StageResourcesState &target = stageResources[stage];
-    auto start = slots.find_first();
-    auto stop = slots.find_last();
-    for (; start <= stop; ++start)
+    for (auto start : slots)
     {
       if (slots.test(start))
       {
@@ -736,14 +738,14 @@ struct FrontendState
     indexBuffer = buffer;
   }
 
-  void setScissorRects(eastl::span<const D3D12_RECT> rects)
+  void setScissorRects(std::span<const D3D12_RECT> rects)
   {
-    if (rects.size() != scissorCount || !eastl::equal(rects.begin(), rects.end(), scissorRects))
-    {
-      markDirty(DirtyState::SCISSOR_RECT, true);
-      eastl::copy_n(rects.begin(), rects.size(), scissorRects);
-      scissorCount = rects.size();
-    }
+      if (rects.size() != scissorCount || !std::equal(rects.begin(), rects.end(), scissorRects))
+      {
+          markDirty(DirtyState::SCISSOR_RECT, true);
+          std::copy_n(rects.begin(), rects.size(), scissorRects);
+          scissorCount = rects.size();
+      }
   }
 
   void setScissorTestEnable(bool enable)
@@ -808,14 +810,14 @@ struct FrontendState
 
   void setUpdateViewportFromRenderTarget() { markDirty(DirtyState::VIEWPORT_FROM_RENDER_TARGETS, true); }
 
-  void setViewports(eastl::span<const ViewportState> states)
+  void setViewports(std::span<const ViewportState> states)
   {
-    if (states.size() != viewportCount || !eastl::equal(states.begin(), states.end(), viewports))
-    {
-      markDirty(DirtyState::VIEWPORT, true);
-      eastl::copy_n(states.begin(), states.size(), viewports);
-      viewportCount = states.size();
-    }
+      if (states.size() != viewportCount || !std::equal(states.begin(), states.end(), viewports))
+      {
+          markDirty(DirtyState::VIEWPORT, true);
+          std::copy_n(states.begin(), states.size(), viewports);
+          viewportCount = states.size();
+      }
 
     dirtyState.reset(DirtyState::VIEWPORT_FROM_RENDER_TARGETS);
   }
@@ -879,7 +881,7 @@ struct FrontendState
     registerSpaceSizes[STAGE_VS] = cnt;
     return cnt;
   }
-  void setConstRegisters(int stage, uint32_t offset, eastl::span<const ConstRegisterType> blob)
+  void setConstRegisters(int stage, uint32_t offset, std::span<const ConstRegisterType> blob)
   {
     auto ds = static_cast<DirtyState::Bits>(DirtyState::COMPUTE_CONST_REGISTERS + stage);
     NAU_ASSERT(ds < DirtyState::INVALID);
@@ -900,7 +902,7 @@ struct FrontendState
     {
       ImageViewState &targetView = newViews[0];
       Image *&targetImage = newImages[0];
-      if (renderTargets.color[0].tex && !(std::find(swapchainColors.begin(), swapchainColors.end(), renderTargets.color[0].tex)))
+      if (renderTargets.color[0].tex && (std::find(swapchainColors.begin(), swapchainColors.end(), renderTargets.color[0].tex) == swapchainColors.end()))
       {
         BaseTex *base = cast_to_texture_base(renderTargets.color[0].tex);
         targetView = base->getViewInfoRenderTarget(MipMapIndex::make(renderTargets.color[0].level),
@@ -1151,7 +1153,7 @@ struct FrontendState
                                             1u << ResourceDirtyState::VERTEX_BUFFER_4 | 1u << ResourceDirtyState::VERTEX_BUFFER_5 |
                                             1u << ResourceDirtyState::VERTEX_BUFFER_6 | 1u << ResourceDirtyState::VERTEX_BUFFER_7;
 
-      const uint32_t vertexBufferBits = (resourceDirtyState.to_uint32() & vertexBufferMask) >> ResourceDirtyState::VERTEX_BUFFER_0;
+      const uint32_t vertexBufferBits = (resourceDirtyState.to_ulong() & vertexBufferMask) >> ResourceDirtyState::VERTEX_BUFFER_0;
 
       for (auto i : nau::math::LsbVisitor{vertexBufferBits})
       {
@@ -1172,22 +1174,23 @@ struct FrontendState
         // a few warnings about wrong configurations
         if (shadingRateTexture)
         {
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH == pixelShadingRateCombiner))
-          {
-            // sort of valid usage, but when no rate texture is needed it should be set to null
-            NAU_LOG_WARNING("DX12: VRS: Pixel Shading Rate Combiner is set to PASSTHROUGH, but a sampling "
+            if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH == pixelShadingRateCombiner))
+            {
+                // sort of valid usage, but when no rate texture is needed it should be set to null
+                NAU_LOG_WARNING(
+                    "DX12: VRS: Pixel Shading Rate Combiner is set to PASSTHROUGH, but a sampling "
                     "rate texture is set, with this combiner the texture is not used");
-          }
+            }
         }
         else if (shadingTier == 1)
         {
           // on T1 combiners have no effect
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH != pixelShadingRateCombiner))
+          if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH != pixelShadingRateCombiner))
           {
             NAU_LOG_WARNING("DX12: VRS: Device is VRS Tier 1 and Pixel Shading Rate Combiner is not "
                     "PASSTHROUGH, which is invalid and will be ignored");
           }
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH != vertexShadingRateCombiner))
+          if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_PASSTHROUGH != vertexShadingRateCombiner))
           {
             NAU_LOG_WARNING("DX12: VRS: Device is VRS Tier 1 and Vertex Shading Rate Combiner is not "
                     "PASSTHROUGH, which is invalid and will be ignored");
@@ -1195,29 +1198,33 @@ struct FrontendState
         }
         else
         {
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_OVERRIDE == pixelShadingRateCombiner))
-          {
-            // this is turning VRS off in a wired way
-            NAU_LOG_WARNING("DX12: VRS: Pixel Shading Rate Combiner is set to OVERRIDE, but no sampling rate "
+            if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_OVERRIDE == pixelShadingRateCombiner))
+            {
+                // this is turning VRS off in a wired way
+                NAU_LOG_WARNING(
+                    "DX12: VRS: Pixel Shading Rate Combiner is set to OVERRIDE, but no sampling rate "
                     "texture is set, it will override to 1x1");
-          }
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_MIN == pixelShadingRateCombiner))
-          {
-            // this is turning VRS off in a wired way
-            NAU_LOG_WARNING("DX12: VRS: Pixel Shading Rate Combiner is set to MIN, but no sampling rate "
+            }
+            if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_MIN == pixelShadingRateCombiner))
+            {
+                // this is turning VRS off in a wired way
+                NAU_LOG_WARNING(
+                    "DX12: VRS: Pixel Shading Rate Combiner is set to MIN, but no sampling rate "
                     "texture is set, this will min to 1x1");
-          }
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_MAX == pixelShadingRateCombiner))
-          {
-            NAU_LOG_WARNING("DX12: VRS: Pixel Shading Rate Combiner is set to MAX, but no sampling rate "
+            }
+            if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_MAX == pixelShadingRateCombiner))
+            {
+                NAU_LOG_WARNING(
+                    "DX12: VRS: Pixel Shading Rate Combiner is set to MAX, but no sampling rate "
                     "texture is set, consider using PASSTHROUGH instead");
-          }
-          if (EASTL_UNLIKELY(D3D12_SHADING_RATE_COMBINER_SUM == pixelShadingRateCombiner))
-          {
-            NAU_LOG_WARNING("DX12: VRS: Pixel Shading Rate Combiner is set to SUM, but no sampling rate "
+            }
+            if (NAU_UNLIKELY(D3D12_SHADING_RATE_COMBINER_SUM == pixelShadingRateCombiner))
+            {
+                NAU_LOG_WARNING(
+                    "DX12: VRS: Pixel Shading Rate Combiner is set to SUM, but no sampling rate "
                     "texture is set, this is effectively adding one to the sampling rate of the "
                     "previous stage");
-          }
+            }
         }
       }
       if (dirtyState.test(DirtyState::VARIABLE_RATE_SHADING_TEXTURE) && shadingTier > 1)
@@ -1376,7 +1383,7 @@ struct FrontendState
     {
       if (mask & CLEAR_TARGET)
       {
-        eastl::fill(eastl::begin(clearColors), eastl::end(clearColors), color);
+          std::fill(std::begin(clearColors), std::end(clearColors), color);
       }
       flushRenderTargets(ctx);
       ctx.clearRenderTargets(viewports[0], mask, clearColors, depth, stencil);
@@ -1609,9 +1616,9 @@ struct FrontendState
   }
 
   /*
-    void dirtyAll(BaseTex *texture, const eastl::bitset<dxil::MAX_T_REGISTERS> *srvs,
-                  const eastl::bitset<dxil::MAX_U_REGISTERS> *uavs,
-                  eastl::bitset<Driver3dRenderTarget::MAX_SIMRT> rtvs, bool dsv)
+    void dirtyAll(BaseTex *texture, const std::bitset<dxil::MAX_T_REGISTERS> *srvs,
+                  const std::bitset<dxil::MAX_U_REGISTERS> *uavs,
+                  std::bitset<Driver3dRenderTarget::MAX_SIMRT> rtvs, bool dsv)
     {
       G_UNUSED(texture); // can be used to validate
       lock_(resourceBindingGuard);

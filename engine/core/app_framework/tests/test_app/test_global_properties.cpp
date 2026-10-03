@@ -1,6 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "nau/app/global_properties.h"
 #include "nau/io/memory_stream.h"
@@ -8,7 +12,7 @@
 namespace nau
 {
     // defined in: engine/core/app_framework/src/app/global_properties_impl.cpp
-    eastl::unique_ptr<GlobalProperties> createGlobalProperties();
+    std::unique_ptr<GlobalProperties> createGlobalProperties();
 }  // namespace nau
 
 namespace nau::test
@@ -20,7 +24,7 @@ namespace nau::test
             struct SubSection
             {
                 float propFloat = 0.f;
-                eastl::string propText;
+                std::string propText;
 
                 NAU_CLASS_FIELDS(
                     CLASS_NAMED_FIELD(propFloat, "prop_float"),
@@ -41,7 +45,7 @@ namespace nau::test
     class TestGlobalProperties : public testing::Test
     {
     protected:
-        static eastl::string_view getPropsJson()
+        static std::string_view getPropsJson()
         {
             return R"-(
                 {
@@ -69,7 +73,7 @@ namespace nau::test
                 })-";
         }
 
-        static testing::AssertionResult mergeFromJson(GlobalProperties& props, eastl::string_view json)
+        static testing::AssertionResult mergeFromJson(GlobalProperties& props, std::string_view json)
         {
             auto stream = io::createReadonlyMemoryStream({reinterpret_cast<const std::byte*>(json.data()), json.size()});
             if (auto parseRes = mergePropertiesFromStream(props, *stream, "application/json"); !parseRes)
@@ -82,11 +86,11 @@ namespace nau::test
 
         std::string dumpToString() const
         {
-            const eastl::string str = dumpPropertiesToString(*m_props);
+            const std::string str = dumpPropertiesToString(*m_props);
             return {str.data(), str.size()};
         }
 
-        const eastl::unique_ptr<GlobalProperties> m_props = createGlobalProperties();
+        const std::unique_ptr<GlobalProperties> m_props = createGlobalProperties();
     };
 
     /**
@@ -102,7 +106,7 @@ namespace nau::test
     {
         ASSERT_FALSE(m_props->contains("prop_int1"));
 
-        const eastl::optional<unsigned> value = m_props->getValue<unsigned>("prop_int2");
+        const std::optional<unsigned> value = m_props->getValue<unsigned>("prop_int2");
         ASSERT_FALSE(value);
     }
 
@@ -126,7 +130,7 @@ namespace nau::test
 
         ASSERT_EQ(m_props->getValue<int>("prop_int1"), 1);
         ASSERT_EQ(m_props->getValue<int>("prop_int2"), 2);
-        ASSERT_EQ(m_props->getValue<eastl::string>("prop_str"), eastl::string{"text"});
+        ASSERT_EQ(m_props->getValue<std::string>("prop_str"), std::string{"text"});
     }
 
     /**
@@ -142,7 +146,7 @@ namespace nau::test
         ASSERT_TRUE(m_props->contains("section_0/section_02/section_021/prop_float"));
         ASSERT_TRUE(m_props->contains("section_0/section_02/section_021/prop_text"));
 
-        eastl::optional<float> value = m_props->getValue<float>("section_0/section_02/section_021/prop_float");
+        std::optional<float> value = m_props->getValue<float>("section_0/section_02/section_021/prop_float");
         ASSERT_TRUE(value);
         ASSERT_EQ(*value, 77.f);
     }
@@ -162,13 +166,13 @@ namespace nau::test
     TEST_F(TestGlobalProperties, ReadCompoundValue)
     {
         ASSERT_TRUE(mergeFromJson(*m_props, getPropsJson()));
-        eastl::optional<PropSectionData> value = m_props->getValue<PropSectionData>("section_0/section_02");
+        std::optional<PropSectionData> value = m_props->getValue<PropSectionData>("section_0/section_02");
 
         ASSERT_TRUE(value);
         ASSERT_EQ(value->propBoolTrue, true);
         ASSERT_EQ(value->propBoolFalse, false);
         ASSERT_EQ(value->subSection.propFloat, 77.f);
-        ASSERT_EQ(value->subSection.propText, eastl::string{"section_021"});
+        ASSERT_EQ(value->subSection.propText, std::string{"section_021"});
     }
 
     /**
@@ -224,7 +228,7 @@ namespace nau::test
     {
         ASSERT_TRUE(mergeFromJson(*m_props, getPropsJson()));
 
-        const eastl::string_view propName = "/section_0/section_01/ids";
+        const std::string_view propName = "/section_0/section_01/ids";
 
         m_props->setValue(propName, std::vector<unsigned>{100, 200, 300}).ignore();
         m_props->setValue(propName, std::vector<unsigned>{400, 500, 600}).ignore();
@@ -245,7 +249,7 @@ namespace nau::test
      */
     TEST_F(TestGlobalProperties, GetModify)
     {
-        const eastl::string_view propName = "/section_0/section_01/ids";
+        const std::string_view propName = "/section_0/section_01/ids";
 
         m_props->setValue(propName, std::vector<unsigned>{100, 200, 300}).ignore();
 
@@ -272,7 +276,7 @@ namespace nau::test
     */
     TEST_F(TestGlobalProperties, GetModifyForNonCollectionIsFailed)
     {
-        const eastl::string_view propName = "/section_0/section_01/ids";
+        const std::string_view propName = "/section_0/section_01/ids";
 
         m_props->setValue(propName, 777).ignore();
 
@@ -288,7 +292,7 @@ namespace nau::test
     TEST_F(TestGlobalProperties, GetModifyForInvalidPathIsFailed)
     {
         ASSERT_TRUE(mergeFromJson(*m_props, getPropsJson()));
-        const eastl::string_view propName = "/section_0/section_non_existent";
+        const std::string_view propName = "/section_0/section_non_existent";
         ASSERT_FALSE(m_props->contains(propName));
 
         std::unique_lock<std::shared_mutex> lock;
@@ -323,37 +327,37 @@ namespace nau::test
      */
     TEST_F(TestGlobalProperties, CustomVarResolver)
     {
-        m_props->addVariableResolver("test1", [](eastl::string_view inStr) -> eastl::optional<eastl::string>
+        m_props->addVariableResolver("test1", [](std::string_view inStr) -> std::optional<std::string>
         {
             if (inStr == "value1")
             {
-                return eastl::string{"AAA"};
+                return std::string{"AAA"};
             }
 
-            return eastl::nullopt;
+            return std::nullopt;
         });
 
-        m_props->addVariableResolver("test2", [](eastl::string_view inStr) -> eastl::optional<eastl::string>
+        m_props->addVariableResolver("test2", [](std::string_view inStr) -> std::optional<std::string>
         {
             if (inStr == "value2")
             {
-                return eastl::string{"BBB"};
+                return std::string{"BBB"};
             }
 
-            return eastl::nullopt;
+            return std::nullopt;
         });
 
-        m_props->setValue("prop1/field1", eastl::string{"$test1{value1},$test1{value2}"}).ignore();
-        m_props->setValue("prop2/field1", eastl::string{"$test2{value1},$test2{value2}"}).ignore();
-        m_props->setValue("prop3", eastl::string{"$test1{value1},$test1{value2},$test2{value1},$test2{value2}"}).ignore();
+        m_props->setValue("prop1/field1", std::string{"$test1{value1},$test1{value2}"}).ignore();
+        m_props->setValue("prop2/field1", std::string{"$test2{value1},$test2{value2}"}).ignore();
+        m_props->setValue("prop3", std::string{"$test1{value1},$test1{value2},$test2{value1},$test2{value2}"}).ignore();
 
-        const auto str1 = *m_props->getValue<eastl::string>("prop1/field1");
+        const auto str1 = *m_props->getValue<std::string>("prop1/field1");
         EXPECT_EQ(str1, "AAA,$test1{value2}");
 
-        const auto str2 = *m_props->getValue<eastl::string>("prop2/field1");
+        const auto str2 = *m_props->getValue<std::string>("prop2/field1");
         EXPECT_EQ(str2, "$test2{value1},BBB");
 
-        const auto str3 = *m_props->getValue<eastl::string>("prop3");
+        const auto str3 = *m_props->getValue<std::string>("prop3");
         EXPECT_EQ(str3, "AAA,$test1{value2},$test2{value1},BBB");
     }
 }  // namespace nau::test

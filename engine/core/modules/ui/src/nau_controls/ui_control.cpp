@@ -3,11 +3,13 @@
 
 #include "nau/ui/ui_control.h"
 
-#include "base/CCEventListenerTouch.h"
-#include "base/CCEventListenerMouse.h"
-#include "base/CCEventDispatcher.h"
-#include "base/CCTouch.h"
+#include <algorithm>
+#include <limits>
 
+#include "base/CCEventDispatcher.h"
+#include "base/CCEventListenerMouse.h"
+#include "base/CCEventListenerTouch.h"
+#include "base/CCTouch.h"
 
 namespace nau::ui
 {
@@ -104,7 +106,7 @@ void UIControl::addTouchListener()
         }
 
         auto delta = touch->getDelta();
-        const float epsilon = eastl::numeric_limits<float>::epsilon();
+        const float epsilon = std::numeric_limits<float>::epsilon();
 
         if (std::fabs(delta.x) < epsilon && std::fabs(delta.y) < epsilon)
         {
@@ -246,12 +248,12 @@ bool UIControl::isInteractableAndVisible(math::vec2 localInputPosition)
                 bool intersects = childRect.intersectsRect(parentRect);
                 if (intersects) 
                 {
-                    float intersectLeft = eastl::max(childRect.getMinX(), parentRect.getMinX());
-                    float intersectRight = eastl::min(childRect.getMaxX(), parentRect.getMaxX());
-    
-                    float intersectBottom = eastl::max(childRect.getMinY(), parentRect.getMinY());
-                    float intersectTop = eastl::min(childRect.getMaxY(), parentRect.getMaxY());
-    
+                    float intersectLeft = std::max(childRect.getMinX(), parentRect.getMinX());
+                    float intersectRight = std::min(childRect.getMaxX(), parentRect.getMaxX());
+
+                    float intersectBottom = std::max(childRect.getMinY(), parentRect.getMinY());
+                    float intersectTop = std::min(childRect.getMaxY(), parentRect.getMaxY());
+
                     if (intersectLeft < intersectRight && intersectBottom < intersectTop) 
                     {
                         intersection = cocos2d::Rect(intersectLeft, intersectBottom, 

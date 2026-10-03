@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/core/dataComponent.h>
 
+#include <string>
+#include <vector>
+
 namespace ecs
 {
 CompileComponentRegister *CompileComponentRegister::tail = 0;
@@ -50,7 +53,7 @@ component_index_t DataComponents::createComponent(const HashedConstString name_,
 
   type_index_t existingType = INVALID_COMPONENT_TYPE_INDEX;
 
-  if (EASTL_LIKELY(existingId != INVALID_COMPONENT_INDEX))
+  if (NAU_LIKELY(existingId != INVALID_COMPONENT_INDEX))
   {
     existingType = getComponentById(existingId).componentType;
     const uint32_t oldNameAddr = components.get<NAME>()[existingId];
@@ -185,10 +188,10 @@ component_index_t DataComponents::createComponent(const HashedConstString name_,
   componentIndex[nameHash] = components.size();
   const uint32_t nameAddr = usedName ? names.addDataRaw(usedName, strlen(usedName) + 1) : 0;
   components.push_back(DataComponent{component_type, flags, component_type_name}, io, nameHash, INVALID_COMPONENT_INDEX,
-    {(uint32_t)dependencies.size()}, nameAddr);
+                       DependencyRange{(uint32_t)dependencies.size()}, nameAddr);
 
-  dependencies.insert(dependencies.end(), deps.begin(), deps.end());
-
+  for (const auto dependency : deps)
+      dependencies.push_back(dependency);
 
   ECS_VERBOSE_LOG("create {} ecs component <{}> hash<0x{}> of component_type {}<{}|0x{}> flags={}", components.size() - 1, usedName,
     nameHash, component_type, types.getTypeNameById(component_type), component_type_name, flags);
@@ -218,7 +221,7 @@ void DataComponents::initialize(const ComponentTypes &types)
   // it is essential to have eid as a first component index
   createComponent(ECS_HASH("eid"), types.findType(ECS_HASH("ecs::EntityId").hash), nau::Span<component_t>(), nullptr, 0, types);
   // roots
-  eastl::vector<CompileComponentRegister* /*, framemem_allocator TODO Allocators.*/> childs;
+  std::vector<CompileComponentRegister* /*, framemem_allocator TODO Allocators.*/> childs;
   uint32_t max_size = 0;
   for (CompileComponentRegister *start = CompileComponentRegister::tail; start; start = start->next)
   {
@@ -258,44 +261,46 @@ void DataComponents::initialize(const ComponentTypes &types)
     }
   }
 
-  eastl::vector<component_t /*, framemem_allocator  TODO Allocators.*/> deps_components;
+  std::vector<component_t /*, framemem_allocator  TODO Allocators.*/> deps_components;
   deps_components.reserve(max_size);
   auto tryAddComponent = [&deps_components, this, &types](auto &childs, bool can_skip_optional) -> bool {
     bool somethingAdded = false;
-    for (auto i = childs.begin(); i != childs.end(); ++i)
+    for (size_t i = 0; i != childs.size();)
     {
-      CompileComponentRegister *start = *i;
-      int dep;
-      deps_components.resize(0);
-      bool allDependendsExist = true;
-      for (dep = 0; dep < start->deps.size(); ++dep)
-      {
-        const char *depName = start->deps[dep];
-        bool optional = false;
-        if (*depName == '?')
+        CompileComponentRegister* start = childs[i];
+        int dep;
+        deps_components.resize(0);
+        bool allDependendsExist = true;
+        for (dep = 0; dep < start->deps.size(); ++dep)
         {
-          optional = true;
-          depName++;
-        }
-        HashedConstString depConstString = ECS_HASH_SLOW(depName);
-        if (filterTags.find(depConstString.hash) == filterTags.end())
-        {
-          if (!this->hasComponent(depConstString.hash) && (!optional || (optional && !can_skip_optional)))
-          {
-            allDependendsExist = false;
-            break;
-          }
-          if (!optional)
-            deps_components.push_back(depConstString.hash);
-        }
+            const char* depName = start->deps[dep];
+            bool optional = false;
+            if (*depName == '?')
+            {
+                optional = true;
+                depName++;
+            }
+            HashedConstString depConstString = ECS_HASH_SLOW(depName);
+            if (filterTags.find(depConstString.hash) == filterTags.end())
+            {
+                if (!this->hasComponent(depConstString.hash) && (!optional || (optional && !can_skip_optional)))
+                {
+                    allDependendsExist = false;
+                    break;
+                }
+                if (!optional)
+                    deps_components.push_back(depConstString.hash);
+            }
       }
       if (allDependendsExist)
       {
         this->createComponent(start->name, types.findType(start->type), deps_components, start->io, start->flags, types);
-        childs.erase_unsorted(i);
-        --i;
+        childs[i] = childs.back();
+        childs.pop_back();
         somethingAdded = true;
       }
+      else
+          ++i;
     }
     return somethingAdded;
   };
@@ -310,16 +315,16 @@ void DataComponents::initialize(const ComponentTypes &types)
     logerr("there are {} components which depends on undefined components", childs.size());
     for (auto start : childs)
     {
-      eastl::string err;
-      deps_components.resize(0);
-      for (auto dep : start->deps)
-      {
-        HashedConstString depConstString = ECS_HASH_SLOW(dep);
-        if (*dep != '?')
-          deps_components.push_back(depConstString.hash);
-        if (!hasComponent(depConstString.hash))
-          err += eastl::string(eastl::string::CtorSprintf(), "{}{}", err.length() ? ", " : "", dep);
-      }
+        std::string err;
+        deps_components.resize(0);
+        for (auto dep : start->deps)
+        {
+            HashedConstString depConstString = ECS_HASH_SLOW(dep);
+            if (*dep != '?')
+                deps_components.push_back(depConstString.hash);
+            if (!hasComponent(depConstString.hash))
+                err += nau::utils::format("{}{}", err.length() ? ", " : "", dep);
+        }
       logerr(" <{}> depends on undefined components: <{}>", start->name.str, err.c_str());
       createComponent(start->name, types.findType(start->type), deps_components, start->io, start->flags, types);
     }

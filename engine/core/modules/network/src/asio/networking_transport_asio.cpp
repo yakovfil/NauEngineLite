@@ -3,6 +3,9 @@
 
 #include "nau/network/asio/networking_transport_asio.h"
 
+#include <string>
+#include <vector>
+
 #include "nau/network/asio/networking_connection_asio.h"
 #include "networking_asio_wrapper.h"
 
@@ -13,7 +16,7 @@ namespace nau
     {
     }
 
-    size_t NetworkingTransportASIO::read(eastl::vector<nau::NetworkingMessage>& messages)
+    size_t NetworkingTransportASIO::read(std::vector<nau::NetworkingMessage>& messages)
     {
         messages.clear();
         nau::NetworkingMessage message;
@@ -41,12 +44,12 @@ namespace nau
         return m_connection->isConnected();
     }
 
-    const eastl::string& NetworkingTransportASIO::localEndPoint() const
+    const std::string& NetworkingTransportASIO::localEndPoint() const
     {
         return m_connection->localEndPoint();
     }
 
-    const eastl::string& NetworkingTransportASIO::remoteEndPoint() const
+    const std::string& NetworkingTransportASIO::remoteEndPoint() const
     {
         return m_connection->remoteEndPoint();
     }

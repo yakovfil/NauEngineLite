@@ -4,13 +4,15 @@
 
 #include "nodeExecutor.h"
 
-#include "dabfg/id/idRange.h"
+#include <type_traits>
+#include <variant>
+
 #include "dabfg/debug/backendDebug.h"
 #include "dabfg/frontend/multiplexingInternal.h"
-#include "nau/math/dag_color.h"
+#include "dabfg/id/idRange.h"
 #include "nau/diag/logging.h"
+#include "nau/math/dag_color.h"
 #include "nau/utils/span.h"
-
 
 namespace dabfg
 {
@@ -122,16 +124,16 @@ void NodeExecutor::gatherExternalResources(NodeNameId nameId, intermediate::Mult
   {
     const ResNameId resNameId = nameResolver.resolve(resNameIdUnresolved);
     const auto &resData = registry.resources.get(resNameId);
-    if (auto provider = eastl::get_if<ExternalResourceProvider>(&resData.creationInfo))
+    if (auto provider = std::get_if<ExternalResourceProvider>(&resData.creationInfo))
     {
       intermediate::ResourceIndex resIdx = mapping.mapRes(resNameId, ir_multi_idx);
       const ExternalResource res = (*provider)(multi_idx);
-      if (auto *tex = eastl::get_if<ManagedTexView>(&res))
-        NAU_ASSERT(*tex, "External texture {} wasn't provided by node {}", registry.knownNames.getName(resNameId),
-          registry.knownNames.getName(nameId));
-      else if (auto *buf = eastl::get_if<ManagedBufView>(&res))
-        NAU_ASSERT(*buf, "External buffer {} wasn't provided by node {}", registry.knownNames.getName(resNameId),
-          registry.knownNames.getName(nameId));
+      if (auto* tex = std::get_if<ManagedTexView>(&res))
+          NAU_ASSERT(*tex, "External texture {} wasn't provided by node {}", registry.knownNames.getName(resNameId),
+                     registry.knownNames.getName(nameId));
+      else if (auto* buf = std::get_if<ManagedBufView>(&res))
+          NAU_ASSERT(*buf, "External buffer {} wasn't provided by node {}", registry.knownNames.getName(resNameId),
+                     registry.knownNames.getName(nameId));
 
       resources[resIdx].resource = res;
     }
@@ -163,17 +165,17 @@ void NodeExecutor::processEvents(ResourceScheduler::NodeEventsRef events) const
 
         NAU_ASSERT_CONTINUE(tex);
 
-        if (auto *data = eastl::get_if<ResourceScheduler::Event::Activation>(&evt.data))
+        if (auto* data = std::get_if<ResourceScheduler::Event::Activation>(&evt.data))
         {
           NAU_ASSERT(!iRes.isExternal());
           d3d::activate_texture(tex.getBaseTex(), data->action, data->clearValue);
         }
-        else if (auto *data = eastl::get_if<ResourceScheduler::Event::Barrier>(&evt.data))
+        else if (auto* data = std::get_if<ResourceScheduler::Event::Barrier>(&evt.data))
         {
           if (!ignoreBarrier(data->barrier))
             d3d::resource_barrier({tex.getBaseTex(), data->barrier, 0, 0});
         }
-        else if (eastl::holds_alternative<ResourceScheduler::Event::Deactivation>(evt.data))
+        else if (std::holds_alternative<ResourceScheduler::Event::Deactivation>(evt.data))
         {
           NAU_ASSERT(!iRes.isExternal());
           d3d::deactivate_texture(tex.getBaseTex());
@@ -193,17 +195,17 @@ void NodeExecutor::processEvents(ResourceScheduler::NodeEventsRef events) const
 
         NAU_ASSERT_CONTINUE(buf);
 
-        if (auto *data = eastl::get_if<ResourceScheduler::Event::Activation>(&evt.data))
+        if (auto* data = std::get_if<ResourceScheduler::Event::Activation>(&evt.data))
         {
           NAU_ASSERT(!iRes.isExternal());
           d3d::activate_buffer(buf.getBuf(), data->action, data->clearValue);
         }
-        else if (auto *data = eastl::get_if<ResourceScheduler::Event::Barrier>(&evt.data))
+        else if (auto* data = std::get_if<ResourceScheduler::Event::Barrier>(&evt.data))
         {
           if (!ignoreBarrier(data->barrier))
             d3d::resource_barrier({buf.getBuf(), data->barrier});
         }
-        else if (eastl::holds_alternative<ResourceScheduler::Event::Deactivation>(evt.data))
+        else if (std::holds_alternative<ResourceScheduler::Event::Deactivation>(evt.data))
         {
           NAU_ASSERT(!iRes.isExternal());
           d3d::deactivate_buffer(buf.getBuf());
@@ -217,11 +219,11 @@ void NodeExecutor::processEvents(ResourceScheduler::NodeEventsRef events) const
       {
         auto blobView = resourceScheduler.getBlob(evt.frameResourceProducedOn, evt.resource);
 
-        if (auto *data = eastl::get_if<ResourceScheduler::Event::CpuActivation>(&evt.data))
+        if (auto* data = std::get_if<ResourceScheduler::Event::CpuActivation>(&evt.data))
         {
           data->func(blobView.data);
         }
-        else if (auto *data = eastl::get_if<ResourceScheduler::Event::CpuDeactivation>(&evt.data))
+        else if (auto* data = std::get_if<ResourceScheduler::Event::CpuDeactivation>(&evt.data))
         {
           data->func(blobView.data);
         }
@@ -242,11 +244,11 @@ void NodeExecutor::applyState(const sd::NodeStateDelta &state, int frame, int pr
 
   if (externalState.vrsEnabled && state.vrs.has_value())
   {
-    if (auto vrs = eastl::get_if<intermediate::VrsState>(&*state.vrs))
-    {
-      d3d::set_variable_rate_shading(vrs->rateX, vrs->rateY, vrs->vertexCombiner, vrs->pixelCombiner);
-      d3d::set_variable_rate_shading_texture(getManagedTexView(vrs->rateTexture, frame).getBaseTex());
-    }
+      if (auto vrs = std::get_if<intermediate::VrsState>(&*state.vrs))
+      {
+          d3d::set_variable_rate_shading(vrs->rateX, vrs->rateY, vrs->vertexCombiner, vrs->pixelCombiner);
+          d3d::set_variable_rate_shading_texture(getManagedTexView(vrs->rateTexture, frame).getBaseTex());
+      }
     else
     {
       d3d::set_variable_rate_shading(1, 1, VariableRateShadingCombiner::VRS_PASSTHROUGH, VariableRateShadingCombiner::VRS_PASSTHROUGH);
@@ -256,32 +258,32 @@ void NodeExecutor::applyState(const sd::NodeStateDelta &state, int frame, int pr
 
   if (state.pass)
   {
-    if (auto pass = eastl::get_if<intermediate::RenderPass>(&*state.pass))
-    {
-      dag::RelocatableFixedVector<RenderTarget, 8> colorTargets;
-      for (const auto &attachment : pass->colorAttachments)
+      if (auto pass = std::get_if<intermediate::RenderPass>(&*state.pass))
       {
-        // If the attachment is optional and its resource is missing
-        // then the corresponding color target is nullptr.
-        if (attachment.has_value())
-        {
-          const auto tex = getManagedTexView(attachment->resource, frame).getBaseTex();
-          colorTargets.emplace_back(RenderTarget{tex, attachment->mipLevel, attachment->layer});
-        }
-        else
-          colorTargets.emplace_back(RenderTarget{nullptr, 0, 0});
+          dag::RelocatableFixedVector<RenderTarget, 8> colorTargets;
+          for (const auto& attachment : pass->colorAttachments)
+          {
+              // If the attachment is optional and its resource is missing
+              // then the corresponding color target is nullptr.
+              if (attachment.has_value())
+              {
+                  const auto tex = getManagedTexView(attachment->resource, frame).getBaseTex();
+                  colorTargets.emplace_back(RenderTarget{tex, attachment->mipLevel, attachment->layer});
+              }
+              else
+                  colorTargets.emplace_back(RenderTarget{nullptr, 0, 0});
+          }
+
+          RenderTarget depthTarget;
+          if (pass->depthAttachment)
+              depthTarget = {getManagedTexView(pass->depthAttachment->resource, frame).getBaseTex(), pass->depthAttachment->mipLevel,
+                             pass->depthAttachment->layer};
+          else
+              depthTarget = {nullptr, 0, 0};
+
+          d3d::set_render_target(depthTarget, pass->depthReadOnly ? DepthAccess::SampledRO : DepthAccess::RW,
+                                 nau::ConstSpan<RenderTarget>(colorTargets.data(), colorTargets.size()));
       }
-
-      RenderTarget depthTarget;
-      if (pass->depthAttachment)
-        depthTarget = {getManagedTexView(pass->depthAttachment->resource, frame).getBaseTex(), pass->depthAttachment->mipLevel,
-          pass->depthAttachment->layer};
-      else
-        depthTarget = {nullptr, 0, 0};
-
-      d3d::set_render_target(depthTarget, pass->depthReadOnly ? DepthAccess::SampledRO : DepthAccess::RW,
-        nau::ConstSpan<RenderTarget>(colorTargets.data(), colorTargets.size()));
-    }
     else
     {
       // NOTE: this will become end_render_pass once we move to native RPs,
@@ -422,7 +424,7 @@ void NodeExecutor::bindBlob(int bind_idx, const intermediate::Binding &binding, 
   {
     // TODO: should we try and reset things to zero when unbinding?
     const auto blob = getBlobView(*binding.resource, frame);
-    bindSetter(bind_idx, *static_cast<const eastl::remove_reference_t<ProjectedType> *>((binding.projector)(blob.data)));
+    bindSetter(bind_idx, *static_cast<const std::remove_reference_t<ProjectedType>*>((binding.projector)(blob.data)));
   }
 }
 

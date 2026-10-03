@@ -1,12 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/controller/animation_controller.h"
 
-#include "nau/animation/playback/animation_instance.h"
+#include <algorithm>
+#include <string>
 
-#include <EASTL/algorithm.h>
+#include "nau/animation/playback/animation_instance.h"
 
 namespace nau::animation
 {
@@ -20,8 +20,8 @@ namespace nau::animation
     {
     }
 
-    AnimationController::AnimInstanceDescriptor::AnimInstanceDescriptor(const eastl::string& animName)
-        : name(animName)
+    AnimationController::AnimInstanceDescriptor::AnimInstanceDescriptor(const std::string& animName) :
+        name(animName)
     {
     }
 
@@ -87,7 +87,7 @@ namespace nau::animation
 
     AnimationInstance* AnimationController::getAnimInstance(TAnimDescrParam animationId)
     {
-        auto it = eastl::find_if(m_animations.begin(), m_animations.end(), [animationId](const auto& animInstancePtr)
+        auto it = std::find_if(m_animations.begin(), m_animations.end(), [animationId](const auto& animInstancePtr)
         {
             return *animInstancePtr.get() == animationId;
         });

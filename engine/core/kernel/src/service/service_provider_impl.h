@@ -3,6 +3,11 @@
 
 #pragma once
 
+#include <list>
+#include <span>
+#include <unordered_map>
+#include <vector>
+
 #include "nau/rtti/rtti_impl.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service.h"
@@ -46,9 +51,9 @@ namespace nau
 
         void addClass(IClassDescriptor::Ptr&& descriptor) override;
 
-        eastl::vector<IClassDescriptor::Ptr> findClasses(const rtti::TypeInfo& type) override;
+        std::vector<IClassDescriptor::Ptr> findClasses(const rtti::TypeInfo& type) override;
 
-        eastl::vector<IClassDescriptor::Ptr> findClasses(eastl::span<const rtti::TypeInfo*>, bool anyType) override;
+        std::vector<IClassDescriptor::Ptr> findClasses(std::span<const rtti::TypeInfo*>, bool anyType) override;
 
         bool hasApiInternal(const rtti::TypeInfo&) override;
 
@@ -73,15 +78,15 @@ namespace nau
         template <typename T>
         T& getInitializationInstance(T* instance);
 
-        eastl::list<ServiceAccessor::Ptr> m_accessors;
-        eastl::unordered_map<rtti::TypeIndex, ServiceInstanceEntry> m_instances;
-        eastl::vector<IClassDescriptor::Ptr> m_classDescriptors;
-        eastl::unordered_map<const IServiceInitialization*, IServiceInitialization*> m_initializationProxy;
-        eastl::vector<const IServiceInitialization*> m_initializedServices;
+        std::list<ServiceAccessor::Ptr> m_accessors;
+        std::unordered_map<rtti::TypeIndex, ServiceInstanceEntry> m_instances;
+        std::vector<IClassDescriptor::Ptr> m_classDescriptors;
+        std::unordered_map<const IServiceInitialization*, IServiceInitialization*> m_initializationProxy;
+        std::vector<const IServiceInitialization*> m_initializedServices;
         Error::Ptr m_initializationError;
         Error::Ptr m_shutdownError;
         uint64_t m_completedServiceTasks = 0;
-        eastl::vector<const async::Task<>*> m_activeLifecycleTasks;
+        std::vector<const async::Task<>*> m_activeLifecycleTasks;
         const std::atomic<bool>* m_stopToken = nullptr;
         std::shared_mutex m_mutex;
         bool m_isDisposed = false;

@@ -26,15 +26,14 @@
 
 #pragma once
 
-#include "renderer/backend/Macros.h"
-#include "renderer/backend/CommandBuffer.h"
-#include "base/CCEventListenerCustom.h"
-
-#include "nau/3d/dag_drv3d.h"
+#include <utility>
+#include <vector>
 
 #include "CCStdC.h"
-
-#include <vector>
+#include "base/CCEventListenerCustom.h"
+#include "nau/3d/dag_drv3d.h"
+#include "renderer/backend/CommandBuffer.h"
+#include "renderer/backend/Macros.h"
 
 DAGOR_CC_BACKEND_BEGIN
 
@@ -198,8 +197,7 @@ private:
     Viewport _viewPort;
     math::IVector2 _bbSize = {0,0};
 
-    eastl::vector<eastl::pair<shaders::RenderState, shaders::DriverRenderStateId>> cachedRS;
-
+    std::vector<std::pair<shaders::RenderState, shaders::DriverRenderStateId>> cachedRS;
 };
 
 DAGOR_CC_BACKEND_END

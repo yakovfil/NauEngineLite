@@ -3,19 +3,24 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/bonus/tuple_vector.h>
-#include <EASTL/unordered_set.h>
-#include <EASTL/unordered_map.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
 #include <daECS/core/ecsHash.h>
 #include <daECS/core/entityId.h>
-#include "nau/utils/init_on_demand.h"
-#include "nau/kernel/kernel_config.h"
 #include <nau/utils/enum/enum_reflection.h>
+
+#include <cstddef>
+#include <cstdlib>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "daECS/core/internal/componentTypeBoxedConstructor.h"
 #include "daECS/core/internal/typesAndLimits.h"
+#include "nau/kernel/kernel_config.h"
+#include "nau/utils/init_on_demand.h"
+#include "nau/utils/tuple_vector.h"
 
 #define CONCATENATE(x, y) x##y
 #define MAKE_UNIQUE(x, y) CONCATENATE(x, y)
@@ -81,48 +86,48 @@ namespace ecs
     typedef ResourceRequestCb resource_request_cb_t;
 };  // namespace ecs
 
-#define ECS_DECLARE_BASE_TYPE(class_type, class_name, boxed, non_trivial_move, no_creator_class)                                    \
-    namespace ecs                                                                                                                   \
-    {                                                                                                                               \
-        template <>                                                                                                                 \
-        struct ComponentTypeInfo<class_type>                                                                                        \
-        {                                                                                                                           \
-            static constexpr const char* type_name = class_name;                                                                    \
-            static constexpr component_type_t type = ECS_HASH(class_name).hash;                                                     \
-            static constexpr bool is_pod_class = no_creator_class;                                                                  \
-            static constexpr bool is_boxed = boxed;                                                                                 \
-            static constexpr bool is_non_trivial_move = non_trivial_move;                                                           \
-            static constexpr bool is_create_on_templ_inst = IsCreatedOnTemplInstantiate<class_type>::create_on_templ_instantiate;   \
-            static constexpr size_t size = sizeof(eastl::type_select<is_boxed, class_type*, class_type>::type);                     \
-            static constexpr size_t ref_alignment =                                                                                 \
-                ecs_data_alignment(sizeof(eastl::type_select<is_defined<class_type>, class_type, char>::type));                     \
-            static constexpr size_t ptr_alignment = boxed ? sizeof(void*) : ref_alignment;                                          \
-            static constexpr bool can_be_tracked =                                                                                  \
-                is_defined<class_type>                                                                                              \
-                    ? (is_pod_class || TypeReplicatable<eastl::type_select<is_defined<class_type>, class_type, char>::type>::value) \
-                    : true;                                                                                                         \
-        };                                                                                                                          \
-        template <>                                                                                                                 \
-        struct ComponentTypeInfo<const class_type> : ComponentTypeInfo<class_type>                                                  \
-        {                                                                                                                           \
-        };                                                                                                                          \
-        template <>                                                                                                                 \
-        struct ComponentTypeInfo<class_type&> : ComponentTypeInfo<class_type>                                                       \
-        {                                                                                                                           \
-        };                                                                                                                          \
-        template <>                                                                                                                 \
-        struct ComponentTypeInfo<const class_type&> : ComponentTypeInfo<class_type>                                                 \
-        {                                                                                                                           \
-        };                                                                                                                          \
+#define ECS_DECLARE_BASE_TYPE(class_type, class_name, boxed, non_trivial_move, no_creator_class)                                  \
+    namespace ecs                                                                                                                 \
+    {                                                                                                                             \
+        template <>                                                                                                               \
+        struct ComponentTypeInfo<class_type>                                                                                      \
+        {                                                                                                                         \
+            static constexpr const char* type_name = class_name;                                                                  \
+            static constexpr component_type_t type = ECS_HASH(class_name).hash;                                                   \
+            static constexpr bool is_pod_class = no_creator_class;                                                                \
+            static constexpr bool is_boxed = boxed;                                                                               \
+            static constexpr bool is_non_trivial_move = non_trivial_move;                                                         \
+            static constexpr bool is_create_on_templ_inst = IsCreatedOnTemplInstantiate<class_type>::create_on_templ_instantiate; \
+            static constexpr size_t size = sizeof(std::conditional<is_boxed, class_type*, class_type>::type);                     \
+            static constexpr size_t ref_alignment =                                                                               \
+                ecs_data_alignment(sizeof(std::conditional<is_defined<class_type>, class_type, char>::type));                     \
+            static constexpr size_t ptr_alignment = boxed ? sizeof(void*) : ref_alignment;                                        \
+            static constexpr bool can_be_tracked =                                                                                \
+                is_defined<class_type>                                                                                            \
+                    ? (is_pod_class || TypeReplicatable<std::conditional<is_defined<class_type>, class_type, char>::type>::value) \
+                    : true;                                                                                                       \
+        };                                                                                                                        \
+        template <>                                                                                                               \
+        struct ComponentTypeInfo<const class_type> : ComponentTypeInfo<class_type>                                                \
+        {                                                                                                                         \
+        };                                                                                                                        \
+        template <>                                                                                                               \
+        struct ComponentTypeInfo<class_type&> : ComponentTypeInfo<class_type>                                                     \
+        {                                                                                                                         \
+        };                                                                                                                        \
+        template <>                                                                                                               \
+        struct ComponentTypeInfo<const class_type&> : ComponentTypeInfo<class_type>                                               \
+        {                                                                                                                         \
+        };                                                                                                                        \
     }
 
 #define ECS_DECLARE_TYPE_ALIAS(class_type, class_alias)                                            \
     ECS_DECLARE_BASE_TYPE(class_type, #class_alias, sizeof(class_type) > ECS_BOXED_THRESHOLD_SIZE, \
-                          !eastl::is_trivially_move_assignable<class_type>::value, eastl::is_trivially_move_assignable<class_type>::value);
+                          !std::is_trivially_move_assignable<class_type>::value, std::is_trivially_move_assignable<class_type>::value);
 
 #define ECS_DECLARE_TYPE(class_type)                                                              \
     ECS_DECLARE_BASE_TYPE(class_type, #class_type, sizeof(class_type) > ECS_BOXED_THRESHOLD_SIZE, \
-                          !eastl::is_trivially_move_assignable<class_type>::value, eastl::is_trivially_move_assignable<class_type>::value);
+                          !std::is_trivially_move_assignable<class_type>::value, std::is_trivially_move_assignable<class_type>::value);
 
 #define ECS_DECLARE_EXISTING_TYPE_ALIAS_EXISTING(class_alias, current_class)                                                           \
     ECS_DECLARE_BASE_TYPE(class_alias, (ecs::ComponentTypeInfo<current_class>::type_name),                                             \
@@ -159,15 +164,15 @@ namespace ecs
 #define ECS_REGISTER_RELOCATABLE_TYPE ECS_REGISTER_BOXED_TYPE
 
 // for POD types
-#define ECS_REGISTER_TYPE(klass, io)                            \
-    static_assert(sizeof(klass) <= ECS_BOXED_THRESHOLD_SIZE); \
-    static_assert(eastl::is_trivially_move_assignable<klass>::value);\
+#define ECS_REGISTER_TYPE(klass, io)                                \
+    static_assert(sizeof(klass) <= ECS_BOXED_THRESHOLD_SIZE);       \
+    static_assert(std::is_trivially_move_assignable<klass>::value); \
     ECS_REGISTER_TYPE_BASE(klass, #klass, io, nullptr, nullptr, 0)
 
 namespace ecs
 {
 
-    typedef eastl::string string;
+    typedef std::string string;
 
     // special type = Tag. It has zero size, which is otherwise not possible
     struct Tag
@@ -188,8 +193,8 @@ namespace ecs
 #define ECS_ASSUME_ALIGNED_PTR(Type, ptr) (ASSUME_ALIGNED((ptr), ecs::ComponentTypeInfo<Type>::ptr_alignment))
 #define ECS_ASSUME_ALIGNED_REF(Type, ptr) (ASSUME_ALIGNED((ptr), ecs::ComponentTypeInfo<Type>::ref_alignment))
 
-#define ECS_MAYBE_VALUE(T) (eastl::is_scalar<T>::value || eastl::is_same<T, ecs::EntityId>::value)
-#define ECS_MAYBE_VALUE_T(T) typename eastl::type_select<ECS_MAYBE_VALUE(T), T, const T&>::type
+#define ECS_MAYBE_VALUE(T) (std::is_scalar<T>::value || std::is_same<T, ecs::EntityId>::value)
+#define ECS_MAYBE_VALUE_T(T) typename std::conditional<ECS_MAYBE_VALUE(T), T, const T&>::type
 
     template <typename T>
     struct PtrComponentType
@@ -197,29 +202,29 @@ namespace ecs
         static constexpr bool is_boxed = ComponentTypeInfo<T>::is_boxed;
         typedef T& __restrict ref_type;
         typedef const T& __restrict cref_type;
-        typedef typename eastl::type_select<is_boxed, T* __restrict* __restrict, T* __restrict>::type ptr_type;
-        typedef typename eastl::type_select<is_boxed, const T* __restrict const* __restrict, const T* __restrict>::type cptr_type;
+        typedef typename std::conditional<is_boxed, T* __restrict* __restrict, T* __restrict>::type ptr_type;
+        typedef typename std::conditional<is_boxed, const T* __restrict const* __restrict, const T* __restrict>::type cptr_type;
 
         template <class U = ref_type>
-        static typename eastl::disable_if<is_boxed, U>::type ref(ptr_type p)
+        static typename std::enable_if<!is_boxed, U>::type ref(ptr_type p)
         {
             return *(T* __restrict)ECS_ASSUME_ALIGNED_REF(T, p);
         }
 
         template <class U = ref_type>
-        static typename eastl::enable_if<is_boxed, U>::type ref(ptr_type p)
+        static typename std::enable_if<is_boxed, U>::type ref(ptr_type p)
         {
             return *(T* __restrict)ECS_ASSUME_ALIGNED_REF(T, *p);
         }
 
         template <class U = cref_type>
-        static typename eastl::disable_if<is_boxed, U>::type ref(cptr_type p)
+        static typename std::enable_if<!is_boxed, U>::type ref(cptr_type p)
         {
             return *(const T* __restrict)ECS_ASSUME_ALIGNED_REF(T, p);
         }
 
         template <class U = cref_type>
-        static typename eastl::enable_if<is_boxed, U>::type ref(cptr_type p)
+        static typename std::enable_if<is_boxed, U>::type ref(cptr_type p)
         {
             return *(const T* __restrict)ECS_ASSUME_ALIGNED_REF(T, *p);
         }
@@ -365,7 +370,7 @@ namespace ecs
         bool copy(void* to, const void* from, ecs::component_index_t, ecs::EntityId) const override
         {
             NAU_ASSERT_RETURN(from && to && *(const T**)from, false);
-            if(!eastl::is_copy_constructible<T>::value)
+            if (!std::is_copy_constructible<T>::value)
             {
                 *(void**)to = nullptr;
                 return false;
@@ -397,7 +402,7 @@ namespace ecs
         {
             T* t = *(T**)p;
             NAU_FAST_ASSERT(t);
-            eastl::destroy_at(t);
+            std::destroy_at(t);
             deallocateOne(t);
         }
 
@@ -417,23 +422,15 @@ namespace ecs
         }
 
     protected:
-        mutable eastl::unordered_set<void*> allocator;  // TODO Replace with FixedBlockAllocator. Allocators
+        // Match ChildComponent's storage: boxed values can transfer into an archetype.
         void* allocateOne() const
         {
-            auto ptr = new std::byte[sizeof(T)];
-            allocator.insert(ptr);
-            return ptr;// allocator.allocateOneBlock();
+            static_assert(alignof(T) <= alignof(std::max_align_t));
+            return std::malloc(sizeof(T));
         }
         void deallocateOne(void* p) const
         {
-            if(allocator.count(p))
-            {
-                delete[] (std::byte*)p;
-                allocator.erase(p);
-            }
-            //TODO Replace with FixedBlockAllocator.
-            //if(!allocator.freeOneBlock(p))  // block wasn't allocated in allocator. probably in InitComponent and then moved.
-            //    memfree_anywhere(p);        // BEWARE! this deallocate must match allocateOne AND the one in ChildComponent
+            std::free(p);
         }
     };
 
@@ -469,7 +466,7 @@ namespace ecs
         void destroy(void* p) override
         {
             NAU_FAST_ASSERT(p);
-            eastl::destroy_at((T*)p);
+            std::destroy_at((T*)p);
             ECS_DEBUG_FILL_MEM_WITH_PATTERN(p, sizeof(T), 0x7ffddddd);
         }
 
@@ -605,19 +602,20 @@ namespace ecs
 
     protected:
         ComponentTypes() = default;  // only allow to be part of EntityManager
-        EA_NON_COPYABLE(ComponentTypes)
+        ComponentTypes(const ComponentTypes&) = delete;
+        ComponentTypes& operator=(const ComponentTypes&) = delete;
         friend class EntityManager;
         void initialize();
         void clear();
         static_assert(sizeof(ComponentType) == 4);
-        eastl::tuple_vector<ComponentSerializer*, component_type_t, ComponentType,
-                            ComponentTypeManager*,  // ctm
-                            void*,                  // user_data
-                            eastl::string,          // name
-                            create_ctm_t,
-                            destroy_ctm_t>
+        nau::TupleVector<ComponentSerializer*, component_type_t, ComponentType,
+                         ComponentTypeManager*,  // ctm
+                         void*,                  // user_data
+                         std::string,            // name
+                         create_ctm_t,
+                         destroy_ctm_t>
             types;
-        eastl::unordered_map<component_type_t, type_index_t> typesIndex;  // hash to index.
+        std::unordered_map<component_type_t, type_index_t> typesIndex;  // hash to index.
     };
 
     inline ComponentTypeManager* ComponentTypes::getTypeManager(type_index_t t) const
@@ -662,7 +660,7 @@ namespace ecs
 
     inline const char* ComponentTypes::getTypeNameById(type_index_t t) const
     {
-        return (t < types.size()) ? types.get<eastl::string>()[t].c_str() : nullptr;
+        return (t < types.size()) ? types.get<std::string>()[t].c_str() : nullptr;
     }
 
     inline const char* ComponentTypes::findTypeName(component_type_t tp) const
@@ -689,7 +687,7 @@ namespace ecs
 #undef ECS_DEBUG_FILL_MEM_WITH_PATTERN
 
 ECS_DECLARE_TYPE(ecs::EntityId);
-ECS_DECLARE_RELOCATABLE_TYPE(ecs::string);
+ECS_DECLARE_BOXED_TYPE(ecs::string);
 
 NAU_DECLARE_ENUM(::ecs::ComponentTypeFlags,
                  COMPONENT_TYPE_TRIVIAL,

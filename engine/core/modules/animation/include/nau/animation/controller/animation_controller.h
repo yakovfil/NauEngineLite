@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "nau/animation/interfaces/animatable.h"
+#include "nau/animation/playback/animation_instance.h"
 #include "nau/async/task.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/nau_object.h"
-#include "nau/animation/playback/animation_instance.h"
-
-#include <EASTL/string.h>
 
 namespace nau::animation
 {
@@ -38,12 +39,12 @@ namespace nau::animation
             AnimInstanceDescriptor() = default;
             AnimInstanceDescriptor(const AnimationInstance& animInstance);
             AnimInstanceDescriptor(nau::string animName);
-            AnimInstanceDescriptor(const eastl::string& animName);
+            AnimInstanceDescriptor(const std::string& animName);
 
             friend bool operator==(const AnimInstanceDescriptor&, const AnimInstanceDescriptor&) = default;
 
             // todo: hash it
-            eastl::string name;
+            std::string name;
         };
 
         using TAnimDescr = AnimInstanceDescriptor;
@@ -129,7 +130,7 @@ namespace nau::animation
          */
         AnimationInstance* getAnimInstance(TAnimDescrParam animationId);
 
-        virtual const eastl::string_view getControllerTypeName() const = 0;
+        virtual const std::string_view getControllerTypeName() const = 0;
 
     protected:
         virtual void onLoaded() { }

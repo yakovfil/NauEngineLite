@@ -1,8 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./asset_manager_impl.h"
+
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <variant>
+#include <vector>
 
 #include "nau/assets/import_settings_provider.h"
 #include "nau/async/multi_task_source.h"
@@ -30,7 +35,7 @@ namespace nau
         // this is required because container can be registered through AssetDescriptorFactory::addAssetContainer,
         // in this case resolveAssetContent won't be able to find/resolve asset path (because there is actually no scheme resolvers)
         // auto [assetPathOnly, innerPath] = AssetQuery::cutAssetPath(assetPath);
-        if (auto iter = m_assets.find_as(assetPath.getSchemeAndContainerPath()); iter != m_assets.end())
+        if (auto iter = m_assets.find(assetPath.getSchemeAndContainerPath()); iter != m_assets.end())
         {
             auto& asset = iter->second;
             return asset->getInnerAsset(assetPath.getAssetInnerPath());
@@ -45,7 +50,7 @@ namespace nau
 
         // ATTENTION: m_assets keeps asset container by resolved path.
         // That must guarantee that we can obtain single asset accesed by differrent paths
-        auto iter = m_assets.find_as(resolvedContent.assetPath.getSchemeAndContainerPath());
+        auto iter = m_assets.find(resolvedContent.assetPath.getSchemeAndContainerPath());
         if (iter == m_assets.end())
         {
             AssetDescriptorImpl::ContainerLoaderFunc loaderFunc = [this, resolvedContent]() -> Task<IAssetContainer::Ptr>
@@ -101,7 +106,7 @@ namespace nau
             nau::Ptr<AssetDescriptorImpl> newAsset = rtti::createInstance<AssetDescriptorImpl>(assetPath.getSchemeAndContainerPath(), std::move(loaderFunc));
 
             [[maybe_unused]] bool emplaceOk = false;
-            eastl::tie(iter, emplaceOk) = m_assets.emplace(resolvedContent.assetPath.getSchemeAndContainerPath(), std::move(newAsset));
+            std::tie(iter, emplaceOk) = m_assets.emplace(resolvedContent.assetPath.getSchemeAndContainerPath(), std::move(newAsset));
             NAU_ASSERT(emplaceOk);
         }
 
@@ -118,7 +123,7 @@ namespace nau
             // this is required because container can be registered through AssetDescriptorFactory::addAssetContainer,
             // in this case resolveAssetContent won't be able to find/resolve asset path (because there is actually no scheme resolvers)
             // auto [assetPathOnly, innerPath] = AssetQuery::cutAssetPath(assetPath);
-            if (auto iter = m_assets.find_as(assetPath.getSchemeAndContainerPath()); iter != m_assets.end())
+            if (auto iter = m_assets.find(assetPath.getSchemeAndContainerPath()); iter != m_assets.end())
             {
                 auto& asset = iter->second;
                 return asset->getInnerAsset(assetPath.getAssetInnerPath());
@@ -189,7 +194,7 @@ namespace nau
     {
         shared_lock_(m_mutex);
         // TODO: wrong code. Must search by resolved path
-        auto it = m_assets.find_as(assetPath);
+        auto it = m_assets.find(assetPath);
         if (it != m_assets.end())
         {
             return it->second;
@@ -240,7 +245,7 @@ namespace nau
         return AssetPath{std::move(contentData.assetPath)};
     }
 
-    IAssetDescriptor::Ptr AssetManagerImpl::createAssetDescriptor(IAssetContainer& container, eastl::string_view assetInnerPath)
+    IAssetDescriptor::Ptr AssetManagerImpl::createAssetDescriptor(IAssetContainer& container, std::string_view assetInnerPath)
     {
         lock_(m_mutex);
 
@@ -269,7 +274,7 @@ namespace nau
 
         lock_(m_mutex);
 
-        const bool containerExists = m_assets.find_as(assetPath) != m_assets.end();
+        const bool containerExists = m_assets.find(assetPath) != m_assets.end();
         NAU_ASSERT(!containerExists, "Container already exists:({})", assetPath.toString());
         if (containerExists)
         {
@@ -294,7 +299,7 @@ namespace nau
     {
         lock_(m_mutex);
 
-        auto iter = m_assets.find_as(assetPath);
+        auto iter = m_assets.find(assetPath);
         NAU_ASSERT(iter != m_assets.end(), "Container doesn't exists:({})", assetPath.toString());
         if (iter == m_assets.end())
         {
@@ -305,7 +310,7 @@ namespace nau
         m_assets.erase(iter);
     }
 
-    IAssetContainerLoader* AssetManagerImpl::findContainerLoader(const eastl::string& kind)
+    IAssetContainerLoader* AssetManagerImpl::findContainerLoader(const std::string& kind)
     {
         // BE AWARE: findFileContainerLoader requires that m_mutex is locked
         // prior findFileContainerLoader is called
@@ -313,10 +318,10 @@ namespace nau
         {
             for (IAssetContainerLoader* const loader : getServiceProvider().getAll<IAssetContainerLoader>())
             {
-                eastl::vector<eastl::string_view> supportedAssetKinds = loader->getSupportedAssetKind();
+                std::vector<std::string_view> supportedAssetKinds = loader->getSupportedAssetKind();
                 for (auto assetKind : supportedAssetKinds)
                 {
-                    m_containerLoaders.emplace(eastl::string(assetKind), loader);
+                    m_containerLoaders.emplace(std::string(assetKind), loader);
                 }
             }
         }
@@ -329,7 +334,7 @@ namespace nau
         }
 
         const auto& [key, value] = strings::cut(kind, '/');
-        loaderEntry = m_containerLoaders.find(eastl::string(key));
+        loaderEntry = m_containerLoaders.find(std::string(key));
         if (loaderEntry != m_containerLoaders.end())
         {
             return loaderEntry->second;
@@ -346,7 +351,7 @@ namespace nau
         {
             for (IAssetContentProvider* const contentProvider : getServiceProvider().getAll<IAssetContentProvider>())
             {
-                eastl::vector<eastl::string_view> supportedAssetSchemes = contentProvider->getSupportedSchemes();
+                std::vector<std::string_view> supportedAssetSchemes = contentProvider->getSupportedSchemes();
                 for (auto assetScheme : supportedAssetSchemes)
                 {
                     [[maybe_unused]] auto [iter, emplaceOk] = m_schemeHandlers.emplace(assetScheme, SchemeHandler{contentProvider});
@@ -356,7 +361,7 @@ namespace nau
 
             for (IAssetPathResolver* const pathResolver : getServiceProvider().getAll<IAssetPathResolver>())
             {
-                eastl::vector<eastl::string_view> supportedAssetSchemes = pathResolver->getSupportedSchemes();
+                std::vector<std::string_view> supportedAssetSchemes = pathResolver->getSupportedSchemes();
                 for (auto assetScheme : supportedAssetSchemes)
                 {
                     [[maybe_unused]] auto [iter, emplaceOk] = m_schemeHandlers.emplace(assetScheme, SchemeHandler{pathResolver});
@@ -371,7 +376,7 @@ namespace nau
 
         do
         {
-            auto iter = m_schemeHandlers.find_as(resolvedAssetPath.getScheme());
+            auto iter = m_schemeHandlers.find(resolvedAssetPath.getScheme());
             if (iter == m_schemeHandlers.end())
             {
                 NAU_LOG_ERROR("Can not resolve scheme ({}) handler", resolvedAssetPath.getScheme());
@@ -379,13 +384,13 @@ namespace nau
             }
 
             const SchemeHandler& handler = iter->second;
-            if (eastl::holds_alternative<IAssetPathResolver*>(handler))
+            if (std::holds_alternative<IAssetPathResolver*>(handler))
             {
-                IAssetPathResolver* const pathResolver = eastl::get<IAssetPathResolver*>(handler);
+                IAssetPathResolver* const pathResolver = std::get<IAssetPathResolver*>(handler);
                 NAU_FATAL(pathResolver);
 
                 AssetPath nextAssetPath;
-                eastl::tie(nextAssetPath, contentInfo) = pathResolver->resolvePath(resolvedAssetPath);
+                std::tie(nextAssetPath, contentInfo) = pathResolver->resolvePath(resolvedAssetPath);
 
                 if (!nextAssetPath)
                 {
@@ -397,8 +402,8 @@ namespace nau
             }
             else
             {
-                NAU_FATAL(eastl::holds_alternative<IAssetContentProvider*>(handler));
-                contentProvider = eastl::get<IAssetContentProvider*>(handler);
+                NAU_FATAL(std::holds_alternative<IAssetContentProvider*>(handler));
+                contentProvider = std::get<IAssetContentProvider*>(handler);
 
                 NAU_FATAL(contentProvider);
             }
@@ -431,7 +436,7 @@ namespace nau
         return factoryEntry != m_assetViewFactories.end() ? factoryEntry->second : nullptr;
     }
 
-    const eastl::vector<IAssetListener*>& AssetManagerImpl::getAssetListeners()
+    const std::vector<IAssetListener*>& AssetManagerImpl::getAssetListeners()
     {
         {
             shared_lock_(m_mutex);

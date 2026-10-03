@@ -2,20 +2,27 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "backendDebug.h"
-#include "textureVisualization.h"
-
-#include <EASTL/array.h>
-#include <EASTL/string.h>
-#include <EASTL/queue.h>
-#include <EASTL/numeric.h>
-
-#include "dabfg/runtime/runtime.h"
-#include "dabfg/frontend/nodeTracker.h"
-#include "nau/utils/dag_stlqsort.h"
-#include "nau/gui/dag_imgui.h"
-#include "render/dabfg/graphLayouter.h"
 #include <imgui.h>
+
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <numeric>
+#include <queue>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "backendDebug.h"
+#include "dabfg/frontend/nodeTracker.h"
+#include "dabfg/runtime/runtime.h"
+#include "nau/gui/dag_imgui.h"
+#include "nau/utils/dag_stlqsort.h"
+#include "nau/utils/inline_vector.h"
+#include "render/dabfg/graphLayouter.h"
+#include "textureVisualization.h"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 
@@ -25,10 +32,10 @@
 template <class V, class T1, typename U = typename V::value_type>
 inline int find_value_idx(const V &v, T1 const &val)
 {
-  for (const U *p = v.cbegin(), *e = v.cend(); p < e; p++)
-    if (*p == val)
-      return (intptr_t)(p - v.cbegin());
-  return -1;
+    for (auto p = v.cbegin(), e = v.cend(); p < e; p++)
+        if (*p == val)
+            return (intptr_t)(p - v.cbegin());
+    return -1;
 }
 
 
@@ -52,8 +59,8 @@ static UniqueTex copiedTexture;
 template <class T, class... Ts>
 static void hashPack(size_t &hash, T first, const Ts &...other)
 {
-  hash ^= eastl::hash<T>{}(first) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-  (hashPack(hash, other), ...);
+    hash ^= std::hash<T>{}(first) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    (hashPack(hash, other), ...);
 }
 
 namespace dabfg
@@ -71,19 +78,20 @@ enum class EdgeType
 
 struct EdgeTypeDebugInfo
 {
-  eastl::string idName;
-  eastl::string readableName;
-  // Color string as per dotfile format
-  eastl::string dotColor;
-  uint32_t imguiColor;
-  bool visible = true;
+    std::string idName;
+    std::string readableName;
+    // Color string as per dotfile format
+    std::string dotColor;
+    uint32_t imguiColor;
+    bool visible = true;
 };
 
-static eastl::array<EdgeTypeDebugInfo, static_cast<size_t>(EdgeType::VISIBLE_COUNT)> edge_type_debug_infos{
-  EdgeTypeDebugInfo{"EXPLICIT_PREVIOUS", "Precedes", "red", IM_COL32(255, 0, 0, 255)},
-  EdgeTypeDebugInfo{"EXPLICIT_FOLLOW", "Follows", "blue", IM_COL32(0, 0, 255, 255)},
-  EdgeTypeDebugInfo{"IMPLICIT_RES_DEP", "Uses Resource Of", "purple", IM_COL32(255, 0, 255, 255)},
-  EdgeTypeDebugInfo{"IMPLICIT_MOD_CHAIN", "Modification Chain", "darkviolet", IM_COL32(148, 0, 211, 255)}};
+static std::array<EdgeTypeDebugInfo, static_cast<size_t>(EdgeType::VISIBLE_COUNT)> edge_type_debug_infos{
+    EdgeTypeDebugInfo{ "EXPLICIT_PREVIOUS",           "Precedes",        "red", IM_COL32(255, 0,   0, 255)},
+    EdgeTypeDebugInfo{   "EXPLICIT_FOLLOW",            "Follows",       "blue",   IM_COL32(0, 0, 255, 255)},
+    EdgeTypeDebugInfo{  "IMPLICIT_RES_DEP",   "Uses Resource Of",     "purple", IM_COL32(255, 0, 255, 255)},
+    EdgeTypeDebugInfo{"IMPLICIT_MOD_CHAIN", "Modification Chain", "darkviolet", IM_COL32(148, 0, 211, 255)}
+};
 
 static const EdgeTypeDebugInfo &infoForEdgeType(EdgeType type) { return edge_type_debug_infos[static_cast<size_t>(type)]; }
 
@@ -94,25 +102,25 @@ struct EdgeData
   ResNameId resId;
 };
 
-static eastl::vector<eastl::vector<EdgeData>> labeled_graph;
-static eastl::vector<NodeNameId> nodeIds;
-static eastl::vector<ResNameId> resIds;
-static eastl::vector<eastl::string_view> nodeNames;
-static eastl::vector<eastl::string_view> resNames;
+static std::vector<std::vector<EdgeData>> labeled_graph;
+static std::vector<NodeNameId> nodeIds;
+static std::vector<ResNameId> resIds;
+static std::vector<std::string_view> nodeNames;
+static std::vector<std::string_view> resNames;
 
 // Used for imgui visualization
-static eastl::vector<eastl::vector<uint32_t>> node_table;
+static std::vector<std::vector<uint32_t>> node_table;
 // We need fake nodes and fake edges when visualizing with imgui,
 // which changes the adjacency list.
 struct VisualizedEdge
 {
   float thickness = 0.0f;
-  eastl::fixed_vector<EdgeType, 4> types;
-  eastl::fixed_vector<ResNameId, 8> resIds;
+  nau::InlineVector<EdgeType, 4> types;
+  nau::InlineVector<ResNameId, 8> resIds;
   NodeIdx source;
   NodeIdx destination;
 };
-static eastl::vector<eastl::vector<eastl::pair<uint32_t, VisualizedEdge>>> visualized_adjacency_list;
+static std::vector<std::vector<std::pair<uint32_t, VisualizedEdge>>> visualized_adjacency_list;
 
 bool visualization_data_generated() { return visualized_adjacency_list.size() >= nodeIds.size(); }
 
@@ -130,12 +138,15 @@ static struct DebugVisualizer
   InternalRegistry *registry = nullptr;
   const DependencyData *depData = nullptr;
 
-  void collectValidNodes(eastl::span<const NodeNameId> node_execution_order)
+  void collectValidNodes(std::span<const NodeNameId> node_execution_order)
   {
-    nodeIds.assign(node_execution_order.begin(), node_execution_order.end());
+      if (node_execution_order.empty())
+          nodeIds.clear();
+      else
+          nodeIds.assign(node_execution_order.data(), node_execution_order.data() + node_execution_order.size());
   }
 
-  void generateDependencyEdges(eastl::span<const NodeNameId> node_execution_order)
+  void generateDependencyEdges(std::span<const NodeNameId> node_execution_order)
   {
     resIds.clear();
     labeled_graph.clear();
@@ -163,12 +174,17 @@ static struct DebugVisualizer
       if (lifetime.introducedBy == NodeNameId::Invalid || executionTimeForNode[lifetime.introducedBy] == CULLED_OUT_NODE)
         continue;
 
-      eastl::fixed_vector<NodeNameId, 32> modifiers(lifetime.modificationChain.begin(), lifetime.modificationChain.end());
+      nau::InlineVector<NodeNameId, 32> modifiers(lifetime.modificationChain.begin(), lifetime.modificationChain.end());
 
-      eastl::erase_if(modifiers, [&](NodeNameId id) { return executionTimeForNode[id] == CULLED_OUT_NODE; });
+      modifiers.erase(std::remove_if(modifiers.begin(), modifiers.end(), [&](NodeNameId id)
+      {
+          return executionTimeForNode[id] == CULLED_OUT_NODE;
+      }),
+                      modifiers.end());
 
-      eastl::sort(modifiers.begin(), modifiers.end(), [&executionTimeForNode](NodeNameId first, NodeNameId second) {
-        return executionTimeForNode[first] < executionTimeForNode[second];
+      std::sort(modifiers.begin(), modifiers.end(), [&executionTimeForNode](NodeNameId first, NodeNameId second)
+      {
+          return executionTimeForNode[first] < executionTimeForNode[second];
       });
 
       if (!modifiers.empty())
@@ -203,19 +219,19 @@ static struct DebugVisualizer
   }
 
   template <class EnumType>
-  eastl::string_view getName(EnumType res_id)
+  std::string_view getName(EnumType res_id)
   {
     return registry->knownNames.getName(res_id);
   }
 
   template <class EnumType>
-  eastl::vector<eastl::string_view> gatherNames(eastl::span<const EnumType> ids)
+  std::vector<std::string_view> gatherNames(std::span<const EnumType> ids)
   {
-    eastl::vector<eastl::string_view> names;
-    names.reserve(ids.size());
-    for (auto id : ids)
-      names.push_back(getName(id));
-    return names;
+      std::vector<std::string_view> names;
+      names.reserve(ids.size());
+      for (auto id : ids)
+          names.push_back(getName(id));
+      return names;
   }
 } visualizer;
 
@@ -236,8 +252,8 @@ static void generate_planarized_layout()
     }
 
     // NOTE: the graph is already submitted in topsort order to debug vis
-    eastl::vector<NodeIdx> reversedTopsort(nodeIds.size());
-    eastl::iota(reversedTopsort.rbegin(), reversedTopsort.rend(), 0);
+    std::vector<NodeIdx> reversedTopsort(nodeIds.size());
+    std::iota(reversedTopsort.rbegin(), reversedTopsort.rend(), 0);
     auto layout = layouter->layout(adjList, reversedTopsort, true);
 
     node_table = std::move(layout.nodeLayout);
@@ -257,10 +273,10 @@ static void generate_planarized_layout()
           EdgeData edge = labeled_graph[prevFrom][edgeIdx];
           if (edge.type == EdgeType::INVISIBLE)
             continue;
-          if (eastl::find(visEdge.types.begin(), visEdge.types.end(), edge.type) == visEdge.types.end())
-            visEdge.types.push_back(edge.type);
+          if (std::find(visEdge.types.begin(), visEdge.types.end(), edge.type) == visEdge.types.end())
+              visEdge.types.push_back(edge.type);
           if (edge.resId != ResNameId::Invalid &&
-              eastl::find(visEdge.resIds.begin(), visEdge.resIds.end(), edge.resId) == visEdge.resIds.end())
+              std::find(visEdge.resIds.begin(), visEdge.resIds.end(), edge.resId) == visEdge.resIds.end())
           {
             visEdge.thickness += 5.0;
             visEdge.resIds.push_back(edge.resId);
@@ -277,20 +293,22 @@ static void generate_planarized_layout()
   }
 }
 
-void update_graph_visualization(InternalRegistry &registry, const DependencyData &deps,
-  eastl::span<const NodeNameId> node_execution_order)
+void update_graph_visualization(InternalRegistry& registry, const DependencyData& deps, std::span<const NodeNameId> node_execution_order)
 {
   visualizer.registry = &registry;
   visualizer.depData = &deps;
 
   if (debugTextureCopyNode)
   {
-    eastl::vector<NodeNameId> new_node_execution_order;
-    new_node_execution_order.assign(node_execution_order.begin(), node_execution_order.end());
-    NodeNameId debugNodeNameId = registry.knownNames.getNameId<NodeNameId>(registry.knownNames.root(), "debug_texture_copy_node");
-    erase_item_by_value(new_node_execution_order, debugNodeNameId);
-    visualizer.collectValidNodes(new_node_execution_order);
-    visualizer.generateDependencyEdges(new_node_execution_order);
+      std::vector<NodeNameId> new_node_execution_order;
+      if (node_execution_order.empty())
+          new_node_execution_order.clear();
+      else
+          new_node_execution_order.assign(node_execution_order.data(), node_execution_order.data() + node_execution_order.size());
+      NodeNameId debugNodeNameId = registry.knownNames.getNameId<NodeNameId>(registry.knownNames.root(), "debug_texture_copy_node");
+      erase_item_by_value(new_node_execution_order, debugNodeNameId);
+      visualizer.collectValidNodes(new_node_execution_order);
+      visualizer.generateDependencyEdges(new_node_execution_order);
   }
   else
   {
@@ -313,82 +331,81 @@ void invalidate_graph_visualization()
 
 void reset_texture_visualization() { debugTextureCopyNode = {}; }
 
-void Runtime::dumpGraph(const eastl::string &filename) const
+void Runtime::dumpGraph(const std::string& filename) const
 {
-  eastl::vector<eastl::string> nodeLabels;
-  nodeLabels.reserve(labeled_graph.size());
-  for (size_t i = 0; i < labeled_graph.size(); ++i)
-    nodeLabels.emplace_back(eastl::string("node_%d", i));
+    std::vector<std::string> nodeLabels;
+    nodeLabels.reserve(labeled_graph.size());
+    for (size_t i = 0; i < labeled_graph.size(); ++i)
+        nodeLabels.emplace_back(std::string("node_%d", i));
 
-
-  //FullFileSaveCB cb(filename.c_str(), DF_WRITE | DF_CREATE);
-  //
-  //const eastl::string GRAPH_BEGIN = "digraph dabfg {\n";
-  //cb.write(GRAPH_BEGIN.data(), GRAPH_BEGIN.size());
-  //
-  //for (size_t i = 0; i < labeled_graph.size(); ++i)
-  //{
-  //  eastl::string nodeDecl(0, "  %s [label=\"%s\"]\n", nodeLabels[i], registry.knownNames.getName(nodeIds[i]));
-  //  cb.write(nodeDecl.c_str(), nodeDecl.size() - 1);
-  //}
-  //
-  //
-  //for (size_t i = 0; i < labeled_graph.size(); ++i)
-  //{
-  //  for (size_t j = 0; j < labeled_graph[i].size(); ++j)
-  //  {
-  //    eastl::string edge(eastl::basic_string::Ctor, "  %s -> %s [color=\"%s\"]\n", nodeLabels[i], nodeLabels[labeled_graph[i][j].destination],
-  //      infoForEdgeType(labeled_graph[i][j].type).dotColor);
-  //
-  //    cb.write(edge.c_str(), edge.size() - 1);
-  //  }
-  //}
-  //
-  //// Hacky (graphviz-wise) way to add a legend to a graph.
-  //{
-  //  const eastl::string LEGEND_BEGIN = "  subgraph cluster_01 {\n"
-  //                                     "    label = \"Legend\";\n"
-  //                                     "    node [shape=point] {\n"
-  //                                     "      rank=same;";
-  //  cb.write(LEGEND_BEGIN.data(), LEGEND_BEGIN.size());
-  //
-  //  for (const auto &edgeTypeInfo : edge_type_debug_infos)
-  //  {
-  //    for (size_t i = 0; i < 2; ++i)
-  //    {
-  //      String node(0, "      %s%d [style = invis];\n", edgeTypeInfo.idName, i);
-  //      cb.write(node.str(), node.size() - 1);
-  //    }
-  //  }
-  //
-  //  const eastl::string LEGEND_MIDDLE = "    }\n";
-  //  cb.write(LEGEND_MIDDLE.data(), LEGEND_MIDDLE.size());
-  //
-  //  for (const auto &edgeTypeInfo : edge_type_debug_infos)
-  //  {
-  //    String edge(0, "    %s0 -> %s1 [label=\"%s\" color=\"%s\"]\n", edgeTypeInfo.idName, edgeTypeInfo.idName,
-  //      edgeTypeInfo.readableName, edgeTypeInfo.dotColor);
-  //    cb.write(edge.str(), edge.size() - 1);
-  //  }
-  //
-  //  const eastl::string LEGEND_END = "  }\n";
-  //  cb.write(LEGEND_END.data(), LEGEND_END.size());
-  //}
-  //
-  //const eastl::string GRAPH_END = "}\n";
-  //cb.write(GRAPH_END.data(), GRAPH_END.size() - 1);
+    // FullFileSaveCB cb(filename.c_str(), DF_WRITE | DF_CREATE);
+    //
+    // const std::string GRAPH_BEGIN = "digraph dabfg {\n";
+    // cb.write(GRAPH_BEGIN.data(), GRAPH_BEGIN.size());
+    //
+    // for (size_t i = 0; i < labeled_graph.size(); ++i)
+    //{
+    //   std::string nodeDecl(0, "  %s [label=\"%s\"]\n", nodeLabels[i], registry.knownNames.getName(nodeIds[i]));
+    //   cb.write(nodeDecl.c_str(), nodeDecl.size() - 1);
+    // }
+    //
+    //
+    // for (size_t i = 0; i < labeled_graph.size(); ++i)
+    //{
+    //   for (size_t j = 0; j < labeled_graph[i].size(); ++j)
+    //   {
+    //     std::string edge(std::basic_string::Ctor, "  %s -> %s [color=\"%s\"]\n", nodeLabels[i], nodeLabels[labeled_graph[i][j].destination],
+    //       infoForEdgeType(labeled_graph[i][j].type).dotColor);
+    //
+    //     cb.write(edge.c_str(), edge.size() - 1);
+    //   }
+    // }
+    //
+    //// Hacky (graphviz-wise) way to add a legend to a graph.
+    //{
+    //  const std::string LEGEND_BEGIN = "  subgraph cluster_01 {\n"
+    //                                     "    label = \"Legend\";\n"
+    //                                     "    node [shape=point] {\n"
+    //                                     "      rank=same;";
+    //  cb.write(LEGEND_BEGIN.data(), LEGEND_BEGIN.size());
+    //
+    //  for (const auto &edgeTypeInfo : edge_type_debug_infos)
+    //  {
+    //    for (size_t i = 0; i < 2; ++i)
+    //    {
+    //      String node(0, "      %s%d [style = invis];\n", edgeTypeInfo.idName, i);
+    //      cb.write(node.str(), node.size() - 1);
+    //    }
+    //  }
+    //
+    //  const std::string LEGEND_MIDDLE = "    }\n";
+    //  cb.write(LEGEND_MIDDLE.data(), LEGEND_MIDDLE.size());
+    //
+    //  for (const auto &edgeTypeInfo : edge_type_debug_infos)
+    //  {
+    //    String edge(0, "    %s0 -> %s1 [label=\"%s\" color=\"%s\"]\n", edgeTypeInfo.idName, edgeTypeInfo.idName,
+    //      edgeTypeInfo.readableName, edgeTypeInfo.dotColor);
+    //    cb.write(edge.str(), edge.size() - 1);
+    //  }
+    //
+    //  const std::string LEGEND_END = "  }\n";
+    //  cb.write(LEGEND_END.data(), LEGEND_END.size());
+    //}
+    //
+    // const std::string GRAPH_END = "}\n";
+    // cb.write(GRAPH_END.data(), GRAPH_END.size() - 1);
 }
 } // namespace dabfg
 
 static bool frame_graph_console_handler(const char *argv[], int argc)
 {
   int found = 0;
-  //CONSOLE_CHECK_NAME("dabfg", "dump_graph", 1, 1)
+  // CONSOLE_CHECK_NAME("dabfg", "dump_graph", 1, 1)
   //{
-  //  const eastl::string FILENAME = "dabfg.dot";
-  //  dabfg::Runtime::get().dumpGraph(FILENAME);
-  //  console::print_d("Frame graph saved to %s", FILENAME.c_str());
-  //}
+  //   const std::string FILENAME = "dabfg.dot";
+  //   dabfg::Runtime::get().dumpGraph(FILENAME);
+  //   console::print_d("Frame graph saved to %s", FILENAME.c_str());
+  // }
   return found;
 }
 
@@ -423,8 +440,8 @@ static void visualize_framegraph_dependencies()
   bool focusedResourceChanged = false;
   static int focusedNodeId = -1;
   static dabfg::ResNameId focusedResId = dabfg::ResNameId::Invalid;
-  static eastl::string nodeSearchInput;
-  static eastl::string resourceSearchInput;
+  static std::string nodeSearchInput;
+  static std::string resourceSearchInput;
   bool searchBoxHovered = !ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
 
   ImGui::SameLine();
@@ -591,7 +608,7 @@ static void visualize_framegraph_dependencies()
         nodeLeftAnchors[nodeId] = nodeRectMin + ImVec2(0, nodeSize.y / 2);
         nodeRightAnchors[nodeId] = nodeRectMax - ImVec2(0, nodeSize.y / 2);
 
-        currentMaxWidth = eastl::max(currentMaxWidth, nodeSize.x);
+        currentMaxWidth = std::max(currentMaxWidth, nodeSize.x);
       }
       else
       {
@@ -613,7 +630,7 @@ static void visualize_framegraph_dependencies()
 
       bool hasFocusedResId = false;
       if (focusedResId != dabfg::ResNameId::Invalid)
-        hasFocusedResId = eastl::find(edge.resIds.begin(), edge.resIds.end(), focusedResId) != edge.resIds.end();
+        hasFocusedResId = std::find(edge.resIds.begin(), edge.resIds.end(), focusedResId) != edge.resIds.end();
       if (focusedResourceChanged && hasFocusedResId && spline.P0.x < focusedResourceLeftmostEdgeStart.x)
       {
         focusedResourceLeftmostEdgeStart = spline.P0;

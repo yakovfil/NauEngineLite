@@ -1,14 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
+#include <functional>
 #include <string>
-
-#include "EASTL/unordered_map.h"
-#include "EASTL/vector.h"
-#include "nau/string/string.h"
+#include <unordered_map>
+#include <vector>
 
 #include "fmt/chrono.h"
+#include "nau/string/string.h"
 
 using namespace std::string_literals;  // Necessary for operator "s"
 
@@ -18,12 +17,12 @@ namespace nau::test
     {
 #define TEST_STRINGS(test_strings)                               \
     {                                                            \
-        for(int i = 0; i < 10; i++)                              \
+        for (int i = 0; i < 10; i++)                             \
         {                                                        \
             EXPECT_EQ(test_strings[i], test_strings[i]);         \
             auto copy = test_strings[i];                         \
             EXPECT_EQ(test_strings[i], copy);                    \
-            if(i != 9)                                           \
+            if (i != 9)                                          \
             {                                                    \
                 ASSERT_NE(test_strings[i], test_strings[i + 1]); \
                 ASSERT_LT(test_strings[i], test_strings[i + 1]); \
@@ -49,7 +48,7 @@ namespace nau::test
 
         nau::string s09 = u8"🤝";
 
-        eastl::vector<nau::string> test_strings1 = {s00, s01, s02, s03, s04, s05, s06, s07, s08, s09};
+        std::vector<nau::string> test_strings1 = {s00, s01, s02, s03, s04, s05, s06, s07, s08, s09};
         TEST_STRINGS(test_strings1);
 
         nau::string s10 = u8"a";
@@ -66,7 +65,7 @@ namespace nau::test
 
         nau::string s19 = u8"a🤝";
 
-        eastl::vector<nau::string> test_strings2 = {s10, s11, s12, s13, s14, s15, s16, s17, s18, s19};
+        std::vector<nau::string> test_strings2 = {s10, s11, s12, s13, s14, s15, s16, s17, s18, s19};
         TEST_STRINGS(test_strings2);
 
         nau::string s20 = u8"🤝aм好ツ";
@@ -83,7 +82,7 @@ namespace nau::test
 
         nau::string s29 = u8"🤝aм好ツ🤝";
 
-        eastl::vector<nau::string> test_strings3 = {s20, s21, s22, s23, s24, s25, s26, s27, s28, s29};
+        std::vector<nau::string> test_strings3 = {s20, s21, s22, s23, s24, s25, s26, s27, s28, s29};
         TEST_STRINGS(test_strings3);
     }
 
@@ -91,7 +90,7 @@ namespace nau::test
     {
         nau::string str = u8"TEST: pусские, 🤝  и ツ♫你好 symbols";
 
-        for(int i = 0; i < str.length(); i++)
+        for (int i = 0; i < str.length(); i++)
         {
             EXPECT_EQ(str[i], U"TEST: pусские, 🤝  и ツ♫你好 symbols"[i]);
         }
@@ -131,12 +130,12 @@ namespace nau::test
 
     TEST(NauString, hashEastl)
     {
-        using EastlU8String = eastl::basic_string<char8_t>;
+        using EastlU8String = std::basic_string<char8_t>;
         const auto text = u8"text_1";
 
-        const size_t hash1 = eastl::hash<nau::string>{}(nau::string{text});
-        const size_t hash2 = eastl::hash<nau::string>{}(nau::string{text});
-        const size_t hash3 = eastl::hash<EastlU8String>{}(EastlU8String{text});
+        const size_t hash1 = std::hash<nau::string>{}(nau::string{text});
+        const size_t hash2 = std::hash<nau::string>{}(nau::string{text});
+        const size_t hash3 = std::hash<EastlU8String>{}(EastlU8String{text});
 
         ASSERT_EQ(hash1, hash2);
         ASSERT_EQ(hash1, hash3);
@@ -144,7 +143,7 @@ namespace nau::test
 
     TEST(NauString, hashEastl_2)
     {
-        eastl::unordered_map<nau::string, unsigned> values;
+        std::unordered_map<nau::string, unsigned> values;
 
         values[nau::string{u8"one"}] = 11;
         values[nau::string{u8"two"}] = 22;

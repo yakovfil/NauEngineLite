@@ -27,7 +27,7 @@ THE SOFTWARE.
 #define __AUTORELEASEPOOL_H__
 
 #include <vector>
-#include <EASTL/string.h>
+#include <string>
 #include "base/CCRef.h"
 
 /**
@@ -59,7 +59,7 @@ public:
      *
      * @param name The name of created autorelease pool.
      */
-    AutoreleasePool(const eastl::string &name);
+    AutoreleasePool(const std::string &name);
     
     /**
      * @js NA
@@ -134,7 +134,7 @@ private:
      * is in the pool.
      */
     std::vector<Ref*> _managedObjectArray;
-    eastl::string _name;
+    std::string _name;
     
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
     /**

@@ -90,7 +90,7 @@ ECS_REQUIRE_NOT(ecs::Tag client__canDestroyServerEntity)
 inline void replication_destruction_logerr_es_event_handler(const ecs::EventEntityDestroyed &, ecs::EntityId eid,
   const net::Object &replication)
 {
-  if (EASTL_UNLIKELY(!replication.meantToBeDestroyed()))
+  if (NAU_UNLIKELY(!replication.meantToBeDestroyed()))
   {
     if (!net::Object::remove_from_pending_destroys(eid))
       logerr("Only server has the authority to destroy network entities, destroying %d(%s).", ecs::entity_id_t(eid),

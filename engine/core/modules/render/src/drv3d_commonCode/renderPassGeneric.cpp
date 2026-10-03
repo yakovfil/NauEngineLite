@@ -1,8 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-
-//#include <util/dag_string.h>
+#include <vector>
+// #include <util/dag_string.h>
 #include "renderPassGeneric.h"
 #include "nau/3d/dag_drv3d.h"
 //#include <debug/dag_debug.h>
@@ -15,14 +15,14 @@ namespace rp_impl
 RenderPass *activeRP = nullptr;
 RenderPassArea activeRenderArea;
 int32_t subpass = 0;
-eastl::vector<RenderPassTarget> targets;
+std::vector<RenderPassTarget> targets;
 
 struct MSAAResolvePair
 {
   int32_t src;
   int32_t dst;
 };
-eastl::vector<MSAAResolvePair> msaaResolves;
+std::vector<MSAAResolvePair> msaaResolves;
 
 }; // namespace rp_impl
 
@@ -194,7 +194,7 @@ void render_pass_generic::next_subpass()
 {
   NAU_ASSERT(rp_impl::activeRP);
 
-  eastl::vector<uint32_t> &seq = rp_impl::activeRP->sequence;
+  std::vector<uint32_t>& seq = rp_impl::activeRP->sequence;
   NAU_ASSERT(rp_impl::subpass + 1 < seq.size(), "trying to run non existent subpass {} of rp {}", rp_impl::subpass,
     rp_impl::activeRP->getDebugName());
 

@@ -3,14 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/fixed_vector.h>
-#include <EASTL/unique_ptr.h>
 #include <generic/dag_span.h>
 #include <generic/dag_tabExt.h>
 #include <osApiWrappers/dag_critSec.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <memory>
+
 #include "keyMapPools.h"
+#include "nau/utils/inline_vector.h"
 
 namespace drv3d_generic
 {
@@ -29,7 +31,7 @@ struct PodPool
   };
 
   Entry *entries = nullptr;                                   //[_max]
-  eastl::fixed_vector<eastl::unique_ptr<Entry[]>, 1> garbage; // entries to be deleted
+  nau::InlineVector<std::unique_ptr<Entry[]>, 1> garbage;     // entries to be deleted
 #if DAGOR_DBGLEVEL > 0
   const char *debugName = nullptr;
 #endif

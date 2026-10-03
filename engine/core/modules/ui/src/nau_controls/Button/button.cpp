@@ -1,31 +1,32 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/button.h"
-#include "states/normal_state/normal_state.h"
-#include "states/normal_state/normal_state_size.h"
-#include "states/normal_state/normal_state_color.h"
-#include "states/hovered_state/hovered_state.h"
-#include "states/hovered_state/hovered_state_size.h"
-#include "states/hovered_state/hovered_state_color.h"
-#include "states/pressed_state/pressed_state.h"
-#include "states/pressed_state/pressed_state_size.h"
-#include "states/pressed_state/pressed_state_color.h"
-#include "states/disable_state/disable_state.h"
-#include "states/disable_state/disable_state_size.h"
-#include "states/disable_state/disable_state_color.h"
 
-#include "states/disable_state/disable_combo_state.h"
-#include "states/normal_state/normal_combo_state.h"
-#include "states/pressed_state/pressed_combo_state.h"
-#include "states/hovered_state/hovered_combo_state.h"
+#include <cocos/base/CCDirector.h>
+
+#include <memory>
 
 #include "2d/CCCamera.h"
-#include "base/CCEventListenerMouse.h"
 #include "base/CCEventDispatcher.h"
-#include <cocos/base/CCDirector.h>
+#include "base/CCEventListenerMouse.h"
 #include "nau/effects/node_animation.h"
+#include "states/disable_state/disable_combo_state.h"
+#include "states/disable_state/disable_state.h"
+#include "states/disable_state/disable_state_color.h"
+#include "states/disable_state/disable_state_size.h"
+#include "states/hovered_state/hovered_combo_state.h"
+#include "states/hovered_state/hovered_state.h"
+#include "states/hovered_state/hovered_state_color.h"
+#include "states/hovered_state/hovered_state_size.h"
+#include "states/normal_state/normal_combo_state.h"
+#include "states/normal_state/normal_state.h"
+#include "states/normal_state/normal_state_color.h"
+#include "states/normal_state/normal_state_size.h"
+#include "states/pressed_state/pressed_combo_state.h"
+#include "states/pressed_state/pressed_state.h"
+#include "states/pressed_state/pressed_state_color.h"
+#include "states/pressed_state/pressed_state_size.h"
 
 namespace nau::ui
 {
@@ -124,16 +125,16 @@ bool NauButton::init(
         addChild(m_sprite);
     }
 
-    m_stateCache[UIState::normal] = eastl::make_unique<NormalComboState>();
+    m_stateCache[UIState::normal] = std::make_unique<NormalComboState>();
     m_stateCache[UIState::normal]->initialize(this, data);
-        
-    m_stateCache[nau::ui::UIState::hovered] = eastl::make_unique<HoveredComboState>();
+
+    m_stateCache[nau::ui::UIState::hovered] = std::make_unique<HoveredComboState>();
     m_stateCache[nau::ui::UIState::hovered]->initialize(this, data);
 
-    m_stateCache[nau::ui::UIState::pressed] = eastl::make_unique<PressedComboState>();
+    m_stateCache[nau::ui::UIState::pressed] = std::make_unique<PressedComboState>();
     m_stateCache[nau::ui::UIState::pressed]->initialize(this, data);
 
-    m_stateCache[nau::ui::UIState::disabled] = eastl::make_unique<DisableComboState>();
+    m_stateCache[nau::ui::UIState::disabled] = std::make_unique<DisableComboState>();
     m_stateCache[nau::ui::UIState::disabled]->initialize(this, data);
 
     m_currentStateType = nau::ui::UIState::normal;

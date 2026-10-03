@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 // clang-format off
+#include <algorithm>
+#include <iterator>
+#include <vector>
 #include "nau/dxil/compiled_shader_header.h"
 #include "nau/dxil/compiler.h"
 
@@ -30,13 +33,16 @@ namespace
 {
 struct WrappedBlob final : public IDxcBlobEncoding
 {
-  WrappedBlob(const eastl::vector<uint8_t> &s) : source{s} {}
-  const eastl::vector<uint8_t> &source;
-  ULONG STDMETHODCALLTYPE AddRef()
-  {
-    // never do anything, stack managed
-    return 1;
-  }
+    WrappedBlob(const std::vector<uint8_t>& s) :
+        source{s}
+    {
+    }
+    const std::vector<uint8_t>& source;
+    ULONG STDMETHODCALLTYPE AddRef()
+    {
+        // never do anything, stack managed
+        return 1;
+    }
   ULONG STDMETHODCALLTYPE Release()
   {
     // never do anything, stack managed
@@ -273,26 +279,28 @@ static const SemanticInfo semantic_remap[26] = //
 
 const SemanticInfo *dxil::getSemanticInfoFromIndex(uint32_t index)
 {
-  auto at = eastl::begin(semantic_remap) + index;
-  if (at >= eastl::end(semantic_remap))
-    return nullptr;
-  return at;
+    auto at = std::begin(semantic_remap) + index;
+    if (at >= std::end(semantic_remap))
+        return nullptr;
+    return at;
 }
 // NOTE: for something like TEXCOORD1 the input has to be "TEXCOOORD" for name and 1 for index
 uint32_t dxil::getIndexFromSementicAndSemanticIndex(const char *name, uint32_t index)
 {
-  auto ref = eastl::find_if(eastl::begin(semantic_remap), eastl::end(semantic_remap),
-    [=](const SemanticInfo &info) { return info.index == index && 0 == strcmp(name, info.name); });
+    auto ref = std::find_if(std::begin(semantic_remap), std::end(semantic_remap),
+                            [=](const SemanticInfo& info)
+    {
+        return info.index == index && 0 == strcmp(name, info.name);
+    });
 
-  if (ref != eastl::end(semantic_remap))
-  {
-    return ref - eastl::begin(semantic_remap);
-  }
+    if (ref != std::end(semantic_remap))
+    {
+        return ref - std::begin(semantic_remap);
+    }
   return ~uint32_t(0);
 }
 
-ShaderHeaderCompileResult dxil::compileHeaderFromReflectionData(ShaderStage stage, const eastl::vector<uint8_t> &reflection,
-  uint32_t max_const_count, uint32_t bone_const_used, void *dxc_lib)
+ShaderHeaderCompileResult dxil::compileHeaderFromReflectionData(ShaderStage stage, const std::vector<uint8_t>& reflection, uint32_t max_const_count, uint32_t bone_const_used, void* dxc_lib)
 {
   ShaderHeaderCompileResult result = {};
 #if _TARGET_PC_WIN

@@ -1,10 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
 
 #include "nau/dispatch/dispatch_args.h"
 #include "nau/kernel/kernel_config.h"
@@ -21,10 +20,10 @@ namespace nau::scripts
     template <typename R, typename... P>
     struct GlobalFunction<R(P...)>
     {
-        const eastl::string name;
+        const std::string name;
 
         template <typename Text>
-        requires(std::is_constructible_v<eastl::string, Text>)
+        requires(std::is_constructible_v<std::string, Text>)
         GlobalFunction(Text&& inName) :
             name(std::forward<Text>(inName))
         {

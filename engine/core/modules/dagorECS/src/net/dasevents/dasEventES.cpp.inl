@@ -1,4 +1,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
+#include "nau/utils/sorted_vector.h"
+#include <algorithm>
+#include <bitset>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include "nau/utils/fixed_function.h"
 #include <daECS/net/dasEvents.h>
 #include <dasModules/aotEcsEvents.h>
 #include <ecs/core/entityManager.h>
@@ -43,7 +52,7 @@ struct DasEventStat
   bool operator<(const DasEventStat &rhs) const { return type < rhs.type; }
 };
 
-using DasEventStats = eastl::vector_set<DasEventStat>;
+using DasEventStats = nau::SortedVectorSet<DasEventStat>;
 static DasEventStats txDasEventsStats;
 static DasEventStats rxDasEventsStats;
 
@@ -56,8 +65,8 @@ void trace_das_event(DasEventStats &dasEventStats, ecs::event_type_t event_type,
   {
     item->bytes += bytes * packages;
     item->packets += packages;
-    item->maxBytes = eastl::max(item->maxBytes, bytes);
-    item->minBytes = eastl::min(item->minBytes, bytes);
+    item->maxBytes = std::max(item->maxBytes, bytes);
+    item->minBytes = std::min(item->minBytes, bytes);
   }
   else
   {
@@ -77,11 +86,11 @@ void dump_das_event_stat(DasEventStats &dasEventStats, const char *prefix)
     totalBytes += rec.bytes;
     totalPackets += rec.packets;
     const auto name = g_entity_mgr->getEventsDb().findEventName(rec.type);
-    maxNameLen = eastl::max(strlen(name), maxNameLen);
+    maxNameLen = std::max(strlen(name), maxNameLen);
   }
-  eastl::sort(dasEventStats.begin(), dasEventStats.end(),
+  std::sort(dasEventStats.begin(), dasEventStats.end(),
     [](const DasEventStat &a, const DasEventStat &b) { return a.bytes > b.bytes; });
-  const int limitLog = eastl::min(30, (int)dasEventStats.size());
+  const int limitLog = std::min(30, (int)dasEventStats.size());
   NAU_CORE_DEBUG_LF("das_net: dumping %s %d dasevents of total %d records, %d KBytes, %d packets:", prefix, limitLog, dasEventStats.size(),
     totalBytes >> 10, totalPackets);
   NAU_CORE_DEBUG_LF("  #N  %*s msg_size_bytes(avg/min/max) kilobytes(%%) packets(%%)", maxNameLen, "name");
@@ -123,7 +132,7 @@ enum
 static constexpr int SERVER_CONN_ID = 0;
 static uint64_t lastDasEventsGeneration = 0;
 
-static ska::flat_hash_map<ecs::event_type_t, /*conn_id:send*/ eastl::bitset<DAS_NET_EVENTS_MAX_PLAYERS>,
+static ska::flat_hash_map<ecs::event_type_t, /*conn_id:send*/ std::bitset<DAS_NET_EVENTS_MAX_PLAYERS>,
   ska::power_of_two_std_hash<ecs::EventsDB::event_id_t>>
   remoteEventWithError;
 
@@ -157,7 +166,7 @@ static bind_dascript::DasEvent *deserialize_das_event(const danet::BitStream &bs
 {
   const int connectionId = (int)msg->connection->getId();
   ecs::event_type_t eventType;
-  if (EASTL_UNLIKELY(!bs.Read(eventType)))
+  if (NAU_UNLIKELY(!bs.Read(eventType)))
   {
     logerr("das_net: failed to read event received from connection '%d'", connectionId);
     return nullptr;
@@ -168,7 +177,7 @@ static bind_dascript::DasEvent *deserialize_das_event(const danet::BitStream &bs
     return nullptr; // error was already shown, just ignore this event
 
   const ecs::EventsDB::event_id_t eventId = g_entity_mgr->getEventsDb().findEvent(eventType);
-  if (EASTL_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
+  if (NAU_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
   {
     remoteEventWithError[eventType].set(connectionId);
     logmessage(get_dasevent_error_level(eventType), "das_net: unknown event type <0x%X> received from connection '%d'", eventType,
@@ -177,7 +186,7 @@ static bind_dascript::DasEvent *deserialize_das_event(const danet::BitStream &bs
   }
 
   const ecs::EventsDB::event_scheme_hash_t schemeHash = g_entity_mgr->getEventsDb().getEventSchemeHash(eventId);
-  if (EASTL_UNLIKELY(schemeHash == ecs::EventsDB::invalid_event_scheme_hash))
+  if (NAU_UNLIKELY(schemeHash == ecs::EventsDB::invalid_event_scheme_hash))
   {
     remoteEventWithError[eventType].set(connectionId);
     logmessage(get_dasevent_error_level(eventType), "das_net: no scheme to deserialize event '%s' <0x%X>",
@@ -241,13 +250,13 @@ static bool serialize_das_event(ecs::Event &evt, danet::BitStream &bs)
 {
   const ecs::event_type_t eventType = evt.getType();
   const auto eventId = g_entity_mgr->getEventsDb().findEvent(eventType);
-  if (EASTL_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
+  if (NAU_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
   {
     logwarn("das_net: unknown event type <0x%X>", eventType);
     return false;
   }
   const ecs::EventsDB::event_scheme_hash_t schemeHash = g_entity_mgr->getEventsDb().getEventSchemeHash(eventId);
-  if (EASTL_UNLIKELY(schemeHash == ecs::EventsDB::invalid_event_scheme_hash))
+  if (NAU_UNLIKELY(schemeHash == ecs::EventsDB::invalid_event_scheme_hash))
   {
     logwarn("das_net: no event <0x%X> scheme to serialize event", eventType);
     return false;
@@ -304,22 +313,22 @@ void all_client_connections_filter(Tab<net::IConnection *> &out_conns)
 }
 
 void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId eid, bind_dascript::DasEvent *evt,
-  const char *event_name, eastl::optional<nau::ConstSpan<net::IConnection *>> explicitConnections,
-  eastl::fixed_function<sizeof(void *), eastl::string()> debug_msg)
+  const char *event_name, std::optional<nau::ConstSpan<net::IConnection *>> explicitConnections,
+  nau::FixedFunction<sizeof(void *), std::string()> debug_msg)
 {
   if (has_network())
   {
     const ecs::event_type_t eventType = evt->getType();
     const ecs::EventsDB::event_id_t eventId = g_entity_mgr->getEventsDb().findEvent(eventType);
-    if (EASTL_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
+    if (NAU_UNLIKELY(eventId == ecs::EventsDB::invalid_event_id))
     {
       logerr("das_net: unregistered event '%s' <0x%X>", evt->getName(), eventType);
       return;
     }
     invalidate_das_events_gen("send event gen");
     const auto routingAndReliability = bind_dascript::get_dasevent_routing_reliability(eventType);
-    const uint8_t routing = eastl::get<0>(routingAndReliability);
-    const PacketReliability reliability = eastl::get<1>(routingAndReliability);
+    const uint8_t routing = std::get<0>(routingAndReliability);
+    const PacketReliability reliability = std::get<1>(routingAndReliability);
     if (explicitConnections && routing != net::ROUTING_SERVER_TO_CLIENT)
       logerr("%s: explicit filters only work with ROUTING_SERVER_TO_CLIENT '%s' <0x%X>", debug_msg(), event_name, eventType);
     if (routing != bind_dascript::DASEVENT_NO_ROUTING && routing != bind_dascript::DASEVENT_NATIVE_ROUTING)
@@ -339,7 +348,7 @@ void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId 
           }
           else
           {
-            connections = *eastl::move(explicitConnections);
+            connections = *std::move(explicitConnections);
             if (auto conn = net::get_replay_connection())
             {
 #if _DEBUG
@@ -354,7 +363,7 @@ void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId 
 #endif
             }
           }
-          DasEventMsg evMsg(eastl::move(bs));
+          DasEventMsg evMsg(std::move(bs));
           net::MessageNetDesc md = evMsg.getMsgClass();
           md.rcptFilter = &net::direct_connection_rcptf;
           md.reliability = reliability;
@@ -363,7 +372,7 @@ void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId 
           {
             evMsg.connection = conn; // conn can be nullptr here, it's okay for send_net_msg
             // Note: yes, move is called within loop, it's ugly but it works (in network)
-            sendCount += send_net_msg(sendToEid, eastl::move(evMsg), &md);
+            sendCount += send_net_msg(sendToEid, std::move(evMsg), &md);
           }
           NAU_UNUSED(sendCount);
           TRACE_TX_DAS_EVENT_STAT(eventType, evMsg.get<0>(), sendCount);
@@ -375,10 +384,10 @@ void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId 
       {
         if (serialize_das_event(*evt, bs))
         {
-          ClientDasEventMsg evMsg(eastl::move(bs));
+          ClientDasEventMsg evMsg(std::move(bs));
           net::MessageNetDesc md = evMsg.getMsgClass();
           md.reliability = reliability;
-          const int sendCount = send_net_msg(sendToEid, eastl::move(evMsg), &md);
+          const int sendCount = send_net_msg(sendToEid, std::move(evMsg), &md);
           NAU_UNUSED(sendCount);
           TRACE_TX_DAS_EVENT_STAT(eventType, evMsg.get<0>(), sendCount);
         }
@@ -392,10 +401,10 @@ void send_dasevent(ecs::EntityManager *mgr, bool broadcast, const ecs::EntityId 
         {
           if (serialize_das_event(*evt, bs))
           {
-            ClientControlledEntityDasEventMsg evMsg(eastl::move(bs));
+            ClientControlledEntityDasEventMsg evMsg(std::move(bs));
             net::MessageNetDesc md = evMsg.getMsgClass();
             md.reliability = reliability;
-            const int sendCount = send_net_msg(sendToEid, eastl::move(evMsg), &md);
+            const int sendCount = send_net_msg(sendToEid, std::move(evMsg), &md);
             NAU_UNUSED(sendCount);
             TRACE_TX_DAS_EVENT_STAT(eventType, evMsg.get<0>(), sendCount);
           }
@@ -428,7 +437,7 @@ static void base_das_event_msg_handler(const EventName *msg, CB send_event)
   {
     TRACE_RX_DAS_EVENT_STAT(evt->getType(), bs);
     send_event((ecs::Event &)*evt);
-    if (EASTL_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
+    if (NAU_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
       g_entity_mgr->getEventsDb().destroy(*evt);
     if ((char *)evt != buf)
       framemem_ptr()->free(evt);
@@ -459,7 +468,7 @@ static void base_client_das_event_msg_handler(const EventName *msg, CB send_even
   {
     TRACE_RX_DAS_EVENT_STAT(evt->getType(), bs);
     send_event((ecs::Event &)*evt);
-    if (EASTL_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
+    if (NAU_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
       g_entity_mgr->getEventsDb().destroy(*evt);
     if ((char *)evt != buf)
       framemem_ptr()->free(evt);
@@ -489,7 +498,7 @@ static void base_client_controlled_das_event_msg_handler(const EventName *msg, C
   {
     TRACE_RX_DAS_EVENT_STAT(evt->getType(), bs);
     send_event((ecs::Event &)*evt);
-    if (EASTL_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
+    if (NAU_UNLIKELY(evt->getFlags() & ecs::EVFLG_DESTROY)) // we have to do it, as it can be that there is immediate strategy.
       g_entity_mgr->getEventsDb().destroy(*evt);
     if ((char *)evt != buf)
       framemem_ptr()->free(evt);
@@ -577,7 +586,7 @@ static void invalidate_dasevents_cache_on_connect_to_server_es_event_handler(con
   NAU_CORE_DEBUG_LF("das_net: we just connected to server. Lock dasevents registration. Send net version 0x%X", netVersion);
   net::invalidate_das_events_gen("connected gen");
   DasEventHandshakeMsg evMsg(netVersion);
-  send_net_msg(net::get_msg_sink(), eastl::move(evMsg));
+  send_net_msg(net::get_msg_sink(), std::move(evMsg));
 }
 
 static void invalidate_dasevents_on_network_destroyed_es_event_handler(const EventOnNetworkDestroyed &)

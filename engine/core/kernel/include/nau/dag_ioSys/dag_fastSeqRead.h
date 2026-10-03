@@ -2,10 +2,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
-#include <EASTL/string.h>
 #include <nau/dag_ioSys/dag_baseIo.h>
 #include <nau/kernel/kernel_config.h>
+
+#include <span>
+#include <string>
 
 #include "nau/debug/dag_except.h"
 
@@ -52,7 +53,7 @@ namespace nau::iosys
 
         virtual void read(void* ptr, int size) override
         {
-            if(tryRead(ptr, size) != size)
+            if (tryRead(ptr, size) != size)
                 NAU_THROW(LoadException("read error", file.pos));
         }
         virtual int tryRead(void* ptr, int size) override;
@@ -78,7 +79,7 @@ namespace nau::iosys
         void assignFile(void* handle, unsigned base_ofs, int size, const char* tgt_name, int min_chunk_size, int max_back_seek = 0);
 
         //! assigns set of ranges from where data will be read; any read outside these areas results in lockup
-        void setRangesOfInterest(eastl::span<Range> r)
+        void setRangesOfInterest(std::span<Range> r)
         {
             ranges = r;
         }
@@ -110,8 +111,8 @@ namespace nau::iosys
 
         unsigned pendMask, doneMask;
         int readAheadPos, lastSweepPos, maxBackSeek;
-        eastl::span<Range> ranges;
-        eastl::string targetFilename;
+        std::span<Range> ranges;
+        std::string targetFilename;
         int64_t curThreadId = -1;
 
         void waitForDone(int wait_mask);
@@ -148,6 +149,6 @@ namespace nau::iosys
             return file.handle;
         }
 
-        eastl::string targetFilename;
+        std::string targetFilename;
     };
 }  // namespace nau::iosys

@@ -1,9 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/slider.h"
 
+#include <string>
 
 namespace nau::ui
 {
@@ -24,7 +24,7 @@ namespace nau::ui
         return nullptr;
     }
 
-    void NauSlider::setTrackSprite(const eastl::string& filename)
+    void NauSlider::setTrackSprite(const std::string& filename)
     {
         if (m_track)
         {
@@ -50,7 +50,7 @@ namespace nau::ui
         }      
     }
 
-    void NauSlider::setThumbSprite(const eastl::string& filename)
+    void NauSlider::setThumbSprite(const std::string& filename)
     {
         if (m_thumb)
         {

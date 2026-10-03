@@ -3,8 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/functional.h>
+#include <functional>
+#include <span>
+#include <type_traits>
+#include <utility>
 
+#include "nau/utils/enum_utils.h"
 #include "render/daBfg/detail/bfg.h"
 #include "render/daBfg/nodeHandle.h"
 
@@ -31,7 +35,7 @@ namespace dabfg
 class NameSpace
 {
   friend NameSpace root();
-  friend struct eastl::hash<NameSpace>;
+  friend struct std::hash<NameSpace>;
 
   NameSpace();
   NameSpace(dabfg::NameSpaceNameId nid);
@@ -73,23 +77,30 @@ public:
     // inlined, therefore no perf loss, except for type erasure later
     // down the line.
     auto uid = detail::register_node(nameId, name, source_location,
-      [declCb = eastl::forward<F>(declaration_callback)](NodeNameId nodeId, InternalRegistry *r) {
-        using ExecCb = eastl::invoke_result_t<F, Registry>;
-        if constexpr (eastl::is_invocable_v<ExecCb, multiplexing::Index>)
+                                     [declCb = std::forward<F>(declaration_callback)](NodeNameId nodeId, InternalRegistry* r)
+    {
+        using ExecCb = std::invoke_result_t<F, Registry>;
+        if constexpr (std::is_invocable_v<ExecCb, multiplexing::Index>)
         {
-          return declCb({nodeId, r});
+            return declCb({nodeId, r});
         }
-        else if constexpr (eastl::is_void_v<ExecCb>)
+        else if constexpr (std::is_void_v<ExecCb>)
         {
-          Registry(nodeId, r).executionHas(SideEffects::None);
-          declCb({nodeId, r});
-          return [](multiplexing::Index) { ; };
+            Registry(nodeId, r).executionHas(SideEffects::None);
+            declCb({nodeId, r});
+            return [](multiplexing::Index)
+            {
+                ;
+            };
         }
         else
         {
-          return [execCb = declCb({nodeId, r})](multiplexing::Index) { execCb(); };
+            return [execCb = declCb({nodeId, r})](multiplexing::Index)
+            {
+                execCb();
+            };
         }
-      });
+    });
     return {uid};
   }
 
@@ -141,17 +152,17 @@ public:
    *
    * \param res_names A list of resource names to assign, looked up in this namespace.
    */
-  void updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names);
+  void updateExternallyConsumedResourceSet(std::span<const char* const> res_names);
 
-  /// \copydoc updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names)
+  /// \copydoc updateExternallyConsumedResourceSet(std::span<const char *const> res_names)
   void updateExternallyConsumedResourceSet(std::initializer_list<const char *> res_names)
   {
-    updateExternallyConsumedResourceSet(eastl::span<const char *const>(res_names.begin(), res_names.size()));
+      updateExternallyConsumedResourceSet(std::span<const char* const>(res_names.begin(), res_names.size()));
   }
 
   /**
    * \brief Marks a single resource as being externally consumed.
-   * See dabfg::updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names)
+   * See dabfg::updateExternallyConsumedResourceSet(std::span<const char *const> res_names)
    *
    * \param res_name Name of the resource to mark, looked up in this namespace.
    */
@@ -159,7 +170,7 @@ public:
 
   /**
    * \brief Unmarks a single resource as being externally consumed.
-   * See dabfg::updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names)
+   * See dabfg::updateExternallyConsumedResourceSet(std::span<const char *const> res_names)
    *
    * \param res_name Name of the resource to unmark, looked up in this namespace.
    */
@@ -175,7 +186,7 @@ private:
 
 } // namespace dabfg
 
-namespace eastl
+namespace std
 {
 
 template <>
@@ -183,8 +194,8 @@ struct hash<dabfg::NameSpace>
 {
   size_t operator()(dabfg::NameSpace ns) const
   {
-    return eastl::hash<eastl::underlying_type_t<dabfg::NameSpaceNameId>>{}(eastl::to_underlying(ns.nameId));
+      return std::hash<std::underlying_type_t<dabfg::NameSpaceNameId>>{}(nau::to_underlying(ns.nameId));
   }
 };
 
-} // namespace eastl
+}  // namespace std

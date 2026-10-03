@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <string>
+
 #include "cocos/2d/CCSprite.h"
-#include "nau/ui/elements/node.h"
 #include "nau/math/math.h"
 #include "nau/ui/elements/draw_node.h"
+#include "nau/ui/elements/node.h"
 
 namespace nau::ui
 {
@@ -98,7 +100,7 @@ public:
      * @param [in] filename Path to the image file.
      * @return              `true` on success, `false` otherwise.
      */
-    virtual bool initWithFile(const eastl::string& filename);
+    virtual bool initWithFile(const std::string& filename);
 
     /**
      * @brief Initializes the sprite with the image file.
@@ -107,7 +109,7 @@ public:
      * @param [in] rect     Image area rectangle.
      * @return              `true` on success, `false` otherwise.
      */
-    virtual bool initWithFile(const eastl::string& filename, const cocos2d::Rect& rect);
+    virtual bool initWithFile(const std::string& filename, const cocos2d::Rect& rect);
 
     using cocos2d::Sprite::updateTransform;
     using cocos2d::Sprite::getDescription;

@@ -3,11 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <utility>
+
 #include "nau/3d/dag_drv3d.h"
 //#include <math/integer/dag_IPoint2.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
+#include <optional>
+#include <span>
+#include <type_traits>
 //#include <generic/dag_span.h>
 
 template <typename ElementType>
@@ -30,7 +32,7 @@ public:
   }
 
   template <typename T>
-  void readElems(eastl::span<T> dst, uint32_t row, uint32_t offset_in_elems, uint32_t elems_count) const
+  void readElems(std::span<T> dst, uint32_t row, uint32_t offset_in_elems, uint32_t elems_count) const
   {
     NAU_ASSERT(dst.size() >= elems_count);
     readElems(dst.data(), row, offset_in_elems * sizeof(T), elems_count * sizeof(T));
@@ -38,7 +40,7 @@ public:
 
   // copies data from image to dst. dst should have enougth space to store row_count * widthInElems * bytesPerElement bytes
   template <typename T>
-  void readRows(eastl::span<T> dst, uint32_t first_row, uint32_t row_count) const
+  void readRows(std::span<T> dst, uint32_t first_row, uint32_t row_count) const
   {
     const uint32_t bytesPerRow = widthInElems * bytesPerElement;
     NAU_ASSERT(dst.size() * sizeof(T) >= row_count * bytesPerRow && bytesPerRow % sizeof(T) == 0);
@@ -47,7 +49,7 @@ public:
 
   // copies data from image to dst. dst should have enougth space to store whole image contents
   template <typename T>
-  void readRows(eastl::span<T> dst) const
+  void readRows(std::span<T> dst) const
   {
     readRows(dst, 0, heightInElems);
   }
@@ -129,7 +131,7 @@ public:
   }
 
   template <typename T>
-  void writeElems(const eastl::span<T> &src, uint32_t row, uint32_t offset_in_elems, uint32_t elems_count)
+  void writeElems(const std::span<T>& src, uint32_t row, uint32_t offset_in_elems, uint32_t elems_count)
   {
     NAU_ASSERT(src.size() >= elems_count);
     writeElems(src.data(), row, offset_in_elems * sizeof(T), elems_count * sizeof(T));
@@ -137,7 +139,7 @@ public:
 
   // copies data from src to image. src should have enougth space to store row_count * widthInElems * bytesPerElement
   template <typename T>
-  void writeRows(const eastl::span<T> &src, uint32_t first_row, uint32_t row_count)
+  void writeRows(const std::span<T>& src, uint32_t first_row, uint32_t row_count)
   {
     const uint32_t bytesPerRow = widthInElems * bytesPerElement;
     NAU_ASSERT(src.size() * sizeof(T) >= row_count * bytesPerRow && bytesPerRow % sizeof(T) == 0);
@@ -146,7 +148,7 @@ public:
 
   // copies data from src to image. src should have enougth space to store whole image content
   template <typename T>
-  void writeRows(const eastl::span<T> &src)
+  void writeRows(const std::span<T>& src)
   {
     writeRows(src, 0, heightInElems);
   }
@@ -187,7 +189,7 @@ private:
 
 // provides per-elemen access to image. ElementType size should be equal to image element size
 template <typename ElementType>
-class Image2DView : public eastl::conditional_t<eastl::is_const_v<ElementType>, Image2DReadOnly, Image2D>
+class Image2DView : public std::conditional_t<std::is_const_v<ElementType>, Image2DReadOnly, Image2D>
 {
 public:
   const ElementType &at(uint32_t x, uint32_t y) const
@@ -218,9 +220,12 @@ public:
   ElementType &operator[](const nau::math::IVector2 p) { return at(p); }
 
 private:
-  using BaseType = eastl::conditional_t<eastl::is_const_v<ElementType>, Image2DReadOnly, Image2D>;
+    using BaseType = std::conditional_t<std::is_const_v<ElementType>, Image2DReadOnly, Image2D>;
 
-  ElementType *row(uint32_t y) { return reinterpret_cast<ElementType *>(BaseType::data + y * BaseType::getByteStride()); }
+    ElementType* row(uint32_t y)
+    {
+        return reinterpret_cast<ElementType*>(BaseType::data + y * BaseType::getByteStride());
+    }
 
   const ElementType *row(uint32_t y) const
   {
@@ -243,7 +248,7 @@ protected:
       "Image2DView template parameter is inscompatible with underlying format");
   }
 
-  static constexpr bool isReadOnly = eastl::is_const_v<ElementType>;
+  static constexpr bool isReadOnly = std::is_const_v<ElementType>;
 
   // for cast<T>
   friend Image2DReadOnly;
@@ -258,35 +263,34 @@ class LockedImage : public ImageView
   {}
 
   public:
+      static LockedImage lock_texture(BaseTexture* tex, std::optional<int> layer, int level, unsigned flags)
+      {
+          NAU_ASSERT(!ImageView::isReadOnly || (flags & TEXLOCK_READWRITE) == TEXLOCK_READ,
+                     "Attempt to create read-only texture wrapper with TEXLOCK_WRITE flag");
+          NAU_ASSERT(ImageView::isReadOnly || (flags & TEXLOCK_READWRITE) != TEXLOCK_READ,
+                     "Attempt to create read-write texture wrapper with readonly lock flag");
 
-  static LockedImage lock_texture(BaseTexture *tex, eastl::optional<int> layer, int level, unsigned flags)
-  {
-    NAU_ASSERT(!ImageView::isReadOnly || (flags & TEXLOCK_READWRITE) == TEXLOCK_READ,
-      "Attempt to create read-only texture wrapper with TEXLOCK_WRITE flag");
-    NAU_ASSERT(ImageView::isReadOnly || (flags & TEXLOCK_READWRITE) != TEXLOCK_READ,
-      "Attempt to create read-write texture wrapper with readonly lock flag");
+          uint8_t* pixels = nullptr;
+          int strideBytes = 0u;
+          int ret = 0;
 
-    uint8_t *pixels = nullptr;
-    int strideBytes = 0u;
-    int ret = 0;
+          if (layer.has_value())
+              ret = tex->lockimg((void**)&pixels, strideBytes, *layer, level, flags);
+          else
+              ret = tex->lockimg((void**)&pixels, strideBytes, level, flags);
 
-    if (layer.has_value())
-      ret = tex->lockimg((void **)&pixels, strideBytes, *layer, level, flags);
-    else
-      ret = tex->lockimg((void **)&pixels, strideBytes, level, flags);
-
-    if (ret && pixels)
-    {
-      TextureInfo texInfo{};
-      tex->getinfo(texInfo, level);
-      return LockedImage{pixels, texInfo.w, texInfo.h, uint32_t(strideBytes), texInfo.cflg & TEXFMT_MASK, tex};
-    }
-    return LockedImage{nullptr, 0, 0, 0, 0, nullptr};
-  }
+          if (ret && pixels)
+          {
+              TextureInfo texInfo{};
+              tex->getinfo(texInfo, level);
+              return LockedImage{pixels, texInfo.w, texInfo.h, uint32_t(strideBytes), texInfo.cflg & TEXFMT_MASK, tex};
+          }
+          return LockedImage{nullptr, 0, 0, 0, 0, nullptr};
+      }
 
   static LockedImage lock_texture(BaseTexture *tex, int level, unsigned flags)
   {
-    return lock_texture(tex, eastl::nullopt, level, flags);
+      return lock_texture(tex, std::nullopt, level, flags);
   }
 
 
@@ -311,7 +315,10 @@ class LockedImage : public ImageView
 
   explicit operator bool() const { return lockedTexture != nullptr; }
 
-  void close() { LockedImage tmp(eastl::move(*this)); }
+  void close()
+  {
+      LockedImage tmp(std::move(*this));
+  }
 
 private:
   BaseTexture *lockedTexture{nullptr};
@@ -328,17 +335,17 @@ using LockedImage2DView = LockedImage<Image2DView<T>>;
 template <typename T>
 LockedImage2DView<T> lock_texture(BaseTexture *tex, int layer, int level, unsigned flags)
 {
-  if (eastl::is_const_v<T>)
-    flags |= TEXLOCK_READ;
-  return LockedImage2DView<T>::lock_texture(tex, layer, level, flags);
+    if (std::is_const_v<T>)
+        flags |= TEXLOCK_READ;
+    return LockedImage2DView<T>::lock_texture(tex, layer, level, flags);
 }
 
 template <typename T>
 LockedImage2DView<T> lock_texture(BaseTexture *tex, int level, unsigned flags)
 {
-  if (eastl::is_const_v<T>)
-    flags |= TEXLOCK_READ;
-  return LockedImage2DView<T>::lock_texture(tex, level, flags);
+    if (std::is_const_v<T>)
+        flags |= TEXLOCK_READ;
+    return LockedImage2DView<T>::lock_texture(tex, level, flags);
 }
 
 // read-write access to image, no per-element access

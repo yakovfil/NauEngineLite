@@ -25,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
+#include <string>
 #include "2d/CCSprite.h"
 #include <algorithm>
 #include <stddef.h> // offsetof
@@ -1175,7 +1176,7 @@ void Sprite::addChild(Node *child, int zOrder, int tag)
     Node::addChild(child, zOrder, tag);
 }
 
-void Sprite::addChild(Node *child, int zOrder, const eastl::string &name)
+void Sprite::addChild(Node *child, int zOrder, const std::string &name)
 {
     CCASSERT(child != nullptr, "Argument must be non-nullptr");
     if (child == nullptr)
@@ -1588,7 +1589,7 @@ void Sprite::setSpriteFrame(const std::string &spriteFrameName)
     SpriteFrameCache *cache = SpriteFrameCache::getInstance();
     SpriteFrame *spriteFrame = cache->getSpriteFrameByName(spriteFrameName);
 
-    CCASSERT(spriteFrame, eastl::string("Invalid spriteFrameName :").append(spriteFrameName).c_str());
+    CCASSERT(spriteFrame, std::string("Invalid spriteFrameName :").append(spriteFrameName).c_str());
 
     setSpriteFrame(spriteFrame);
 }
@@ -1726,7 +1727,7 @@ void Sprite::updateBlendFunc()
     }
 }
 
-eastl::string Sprite::getDescription() const
+std::string Sprite::getDescription() const
 {
     char textureDescriptor[100];
     if (_renderMode == RenderMode::QUAD_BATCHNODE)

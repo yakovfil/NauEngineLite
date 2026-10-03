@@ -2,16 +2,19 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include <functional>
 
-//#include <memory/dag_mem.h>
-//#include "nau/generic/dag_tabSort.h"
-#include <EASTL/span.h>
-#include <EASTL/unordered_map.h>
-#include "nau/osApiWrappers/dag_localConv.h"
-#include "nau/util/common.h"
+#include "nau/memory/heap_byte_allocator.h"
+// #include <memory/dag_mem.h>
+// #include "nau/generic/dag_tabSort.h"
 #include <stdint.h>
 #include <string.h>
 
+#include <span>
+#include <unordered_map>
+
+#include "nau/osApiWrappers/dag_localConv.h"
+#include "nau/util/common.h"
 #include "nau/utils/span.h"
 
 /// Fast string map (add string/strId, get strId by string)
@@ -28,11 +31,11 @@ public:
 
 
 public:
-  NauFastStrMapT(eastl::allocator* mem = NULL, bool ignore_case = false) :
-      fastMap(mem ? *mem : *tmpmem),
-      ignoreCase(ignore_case)
-  {
-  }
+    NauFastStrMapT(nau::HeapByteAllocator* mem = NULL, bool ignore_case = false) :
+        stringAllocator(mem ? mem : tmpmem),
+        ignoreCase(ignore_case)
+    {
+    }
 
   //NauFastStrMapT(const FastStrMapT &m) : fastMap(m.fastMap), ignoreCase(false)
   //{
@@ -66,7 +69,7 @@ public:
       {
         naustr = name;
       }
-      eastl::hash<nau::string> hasher;
+      std::hash<nau::string> hasher;
       size_t hash = hasher(naustr);
 
       return hash;
@@ -98,9 +101,8 @@ public:
       }
 
       Entry val = {
-          str_dup(str, &fastMap.get_allocator()), 
-          id
-      };
+          str_dup(str, stringAllocator),
+          id};
 
       stored_str = val.name;
       fastMap[hash] = val;
@@ -135,9 +137,8 @@ public:
       }
 
       Entry val = {
-          str_dup(str, &fastMap.get_allocator()), 
-          id
-      };
+          str_dup(str, stringAllocator),
+          id};
 
       fastMap[hash] = val;
 
@@ -170,9 +171,8 @@ public:
       }
 
       Entry val = {
-          str_dup(str, &fastMap.get_allocator()), 
-          id
-      };
+          str_dup(str, stringAllocator),
+          id};
 
       fastMap[hash] = val;
 
@@ -205,9 +205,9 @@ public:
         return false;
     }
 
-    memfree((void *)fastMap[hash].name, fastMap.get_allocator());
+    memfree((void*)fastMap[hash].name, stringAllocator);
 
-    fastMap.remove(hash);
+    fastMap.erase(hash);
     return true;
 
     //int idx = getStrIndex(str);
@@ -250,7 +250,7 @@ public:
   }
 
   /// Returns non-modifiable slice of entries
-  eastl::span<const Entry> getMapRaw() const
+  std::span<const Entry> getMapRaw() const
   {
       return fastMap;
   }
@@ -279,8 +279,9 @@ public:
 
 protected:
   //TabSortedFast<Entry> fastMap;
-  eastl::unordered_map<size_t, Entry> fastMap;
-  bool ignoreCase;
+    nau::HeapByteAllocator* stringAllocator;
+    std::unordered_map<size_t, Entry> fastMap;
+    bool ignoreCase;
 };
 
 #ifdef _TARGET_STATIC_LIB

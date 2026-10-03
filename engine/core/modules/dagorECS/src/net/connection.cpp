@@ -1,21 +1,28 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/serialize.h>
+#include <daECS/core/component.h>
+#include <daECS/core/entityManager.h>
+#include <daECS/core/template.h>
 #include <daECS/net/connection.h>
 #include <daECS/net/object.h>
-#include <daECS/core/entityManager.h>
-#include <daECS/core/component.h>
-#include <util/dag_stlqsort.h>
-#include "objectReplica.h"
-#include <EASTL/utility.h>
-#include <EASTL/algorithm.h>
-#include <math/dag_adjpow2.h>
-#include <generic/dag_tab.h>
+#include <daECS/net/serialize.h>
 #include <daNet/bitStream.h>
+#include <generic/dag_tab.h>
+#include <math/dag_adjpow2.h>
 #include <math/random/dag_random.h>
 #include <memory/dag_framemem.h>
-#include "utils.h"
+#include <util/dag_stlqsort.h>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "encryption.h"
-#include <daECS/core/template.h>
+#include "nau/utils/dynamic_bit_vector.h"
+#include "objectReplica.h"
+#include "utils.h"
 
 #define SCOPE_QUERYING_ENABLED 0 // Currently not used, hence disabled
 
@@ -121,15 +128,17 @@ struct PendingReplicationPacketInfo
   sequence_t waitSequence; // sequence we waiting for
   // To consider: profile actual numbers of number of entities/revs in real battle and use fixed_vector<> with proper fixed capacity as
   // necessary
-  eastl::vector<eastl::pair<unsigned /*replicaHandle*/, unsigned /*revcount*/>> pendingReplicas;
-  eastl::vector<CompRevision> compRevisions;
+  std::vector<std::pair<unsigned /*replicaHandle*/, unsigned /*revcount*/>> pendingReplicas;
+  std::vector<CompRevision> compRevisions;
   PendingReplicationPacketInfo() = default;
   PendingReplicationPacketInfo(sequence_t seq) : waitSequence(seq) {}
 };
 
-Connection::Connection(ConnectionId id_, scope_query_cb_t &&scope_query) :
-  id(id_), scopeQuery(eastl::move(scope_query)), reliabilitySys(grnd()) // randomize initial local sequence in order to avoid relying
-                                                                        // on lack of sequence oveflowing
+Connection::Connection(ConnectionId id_, scope_query_cb_t&& scope_query) :
+    id(id_),
+    scopeQuery(std::move(scope_query)),
+    reliabilitySys(grnd())  // randomize initial local sequence in order to avoid relying
+                            // on lack of sequence oveflowing
 {
   NAU_ASSERT(id != net::INVALID_CONNECTION_ID);
   NAU_ASSERT(SCOPE_QUERYING_ENABLED || !scopeQuery);
@@ -170,8 +179,8 @@ ObjectReplica *Connection::addObjectInScope(Object &obj)
   if (numReplicas >= MaxReplicas)
     return NULL;
   uint32_t eidIndex = obj.getEid().index();
-  if (eidIndex > eastl::numeric_limits<decltype(entityIndexToReplicaIndex)::key_type>::max())
-    return NULL;
+  if (eidIndex > std::numeric_limits<decltype(entityIndexToReplicaIndex)::key_type>::max())
+      return NULL;
 
   // allocate new replica
   repl = replicas[numReplicas++];
@@ -188,7 +197,7 @@ ObjectReplica *Connection::addObjectInScope(Object &obj)
     obj.replicasLinkList->prevRepl = repl;
   obj.replicasLinkList = repl;
 
-  uint32_t replIndex = (uint32_t)eastl::distance(replicaRefs.begin(), repl);
+  uint32_t replIndex = (uint32_t)std::distance(replicaRefs.begin(), repl);
   NAU_ASSERT(MaxReplicas <= (USHRT_MAX + 1) || replIndex <= USHRT_MAX);
   G_VERIFY(entityIndexToReplicaIndex.emplace(eidIndex, replIndex).second); // shall not exist already
 
@@ -218,8 +227,8 @@ void Connection::pushToNonDirty(ObjectReplica *repl)
   numDirtyReplicas--;
   if (repl->arrayIndex != numDirtyReplicas)
   {
-    eastl::swap(replicas[repl->arrayIndex], replicas[numDirtyReplicas]);
-    eastl::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numDirtyReplicas]->arrayIndex);
+      std::swap(replicas[repl->arrayIndex], replicas[numDirtyReplicas]);
+      std::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numDirtyReplicas]->arrayIndex);
   }
 }
 
@@ -229,8 +238,8 @@ void Connection::pushToDirty(ObjectReplica *repl)
   NAU_ASSERT(!repl->isFree());
   if (repl->arrayIndex < numDirtyReplicas) // already in dirty segment
     return;
-  eastl::swap(replicas[repl->arrayIndex], replicas[numDirtyReplicas]);
-  eastl::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numDirtyReplicas]->arrayIndex);
+  std::swap(replicas[repl->arrayIndex], replicas[numDirtyReplicas]);
+  std::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numDirtyReplicas]->arrayIndex);
   numDirtyReplicas++;
   NAU_ASSERT(numDirtyReplicas <= numReplicas);
 }
@@ -242,8 +251,8 @@ void Connection::freeObjectReplica(ObjectReplica *repl)
   if (repl->arrayIndex < numDirtyReplicas)
     pushToNonDirty(repl);
   numReplicas--;
-  eastl::swap(replicas[repl->arrayIndex], replicas[numReplicas]);
-  eastl::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numReplicas]->arrayIndex);
+  std::swap(replicas[repl->arrayIndex], replicas[numReplicas]);
+  std::swap(replicas[repl->arrayIndex]->arrayIndex, replicas[numReplicas]->arrayIndex);
   repl->flags = ObjectReplica::Free;
   CompVersMap().swap(repl->remoteCompVers); // clear
   repl->gen++;                              // invalidate all handles to this replica
@@ -286,7 +295,7 @@ void Connection::setReplicatingFrom()
     return;
 
   replicatingType = REPLICATING_FROM;
-  static_assert(MaxReplicas <= eastl::numeric_limits<decltype(ObjectReplica::arrayIndex)>::max());
+  static_assert(MaxReplicas <= std::numeric_limits<decltype(ObjectReplica::arrayIndex)>::max());
   replicaRefs.resize(MaxReplicas);
   replicas.resize(MaxReplicas);
   int i = 0;
@@ -442,10 +451,10 @@ bool Connection::writeDestructionPacket(danet::BitStream &bs, danet::BitStream &
 void Connection::writeReplayKeyFrame(danet::BitStream &bs, danet::BitStream &tmpbs)
 {
   // Step 1. Save current network state
-  eastl::vector<ecs::template_t> serverTemplatesIdxSaved;
-  eastl::vector<ecs::template_t> serverIdxToTemplatesSaved;
-  eastl::bitvector<> componentsSyncedSaved;
-  eastl::vector<uint16_t> serverTemplateComponentsCountSaved;
+  std::vector<ecs::template_t> serverTemplatesIdxSaved;
+  std::vector<ecs::template_t> serverIdxToTemplatesSaved;
+  nau::DynamicBitVector<> componentsSyncedSaved;
+  std::vector<uint16_t> serverTemplateComponentsCountSaved;
   ecs::template_t syncedTemplateSaved = 0;
   InternedStrings objectKeysSaved;
 
@@ -453,8 +462,8 @@ void Connection::writeReplayKeyFrame(danet::BitStream &bs, danet::BitStream &tmp
   serverIdxToTemplates.swap(serverIdxToTemplatesSaved);
   componentsSynced.swap(componentsSyncedSaved);
   serverTemplateComponentsCount.swap(serverTemplateComponentsCountSaved);
-  eastl::swap(objectKeys, objectKeysSaved);
-  eastl::swap(syncedTemplate, syncedTemplateSaved);
+  std::swap(objectKeys, objectKeysSaved);
+  std::swap(syncedTemplate, syncedTemplateSaved);
 
   // Step 2. Sync all entities as fresh entities
   BitSize_t blockSizePos = bs.GetWriteOffset();
@@ -484,11 +493,11 @@ void Connection::writeReplayKeyFrame(danet::BitStream &bs, danet::BitStream &tmp
   serverIdxToTemplates.swap(serverIdxToTemplatesSaved);
   componentsSynced.swap(componentsSyncedSaved);
   serverTemplateComponentsCount.swap(serverTemplateComponentsCountSaved);
-  eastl::swap(objectKeys, objectKeysSaved);
-  eastl::swap(syncedTemplate, syncedTemplateSaved);
+  std::swap(objectKeys, objectKeysSaved);
+  std::swap(syncedTemplate, syncedTemplateSaved);
 
   // Step 4. Serialize exist network templates
-  eastl::bitvector<> componentsSyncedTmp;
+  nau::DynamicBitVector<> componentsSyncedTmp;
   blockSizePos = bs.GetWriteOffset();
   serializeBlockCount = 0;
   bs.Write(serializeBlockCount);
@@ -554,7 +563,7 @@ bool Connection::readReplayKeyFrame(const danet::BitStream &bs, const on_object_
     uint16_t size;
     REPL_VER(bs.Read(key));
     REPL_VER(bs.Read(size));
-    eastl::string str(size, '\0');
+    std::string str(size, '\0');
     REPL_VER(bs.Read(str.data(), size));
     if (objectKeys.strings.size() <= key)
       objectKeys.strings.resize(key + 1);
@@ -678,7 +687,7 @@ bool Connection::writeReplicationPacket(danet::BitStream &bs, danet::BitStream &
     else
     {
       uint32_t revcount = pendingPacketRepl.compRevisions.size() - prevCompRevsSize;
-      pendingPacketRepl.pendingReplicas.push_back(eastl::make_pair(MAKE_REPLICA_HANDLE(repl), revcount));
+      pendingPacketRepl.pendingReplicas.push_back(std::make_pair(MAKE_REPLICA_HANDLE(repl), revcount));
 
       // Update to new version immediately until nack or timeout occurs (optimistic replication)
       for (auto &crev : make_span_const(&pendingPacketRepl.compRevisions[prevCompRevsSize], revcount))
@@ -698,7 +707,7 @@ bool Connection::writeReplicationPacket(danet::BitStream &bs, danet::BitStream &
   if (!pendingPacketRepl.compRevisions.empty())
   {
     bs.Write(!exist); // term bit
-    pendingReplInfo.push_back(eastl::move(pendingPacketRepl));
+    pendingReplInfo.push_back(std::move(pendingPacketRepl));
     return true;
   }
   else
@@ -748,9 +757,9 @@ bool Connection::readDestructionPacket(const danet::BitStream &bs, const on_obje
     REPL_VER(read_server_eid(serverEid, bs));
     const ecs::EntityId resolvedEid(serverEid);
 #if _DEBUG
-    if (EASTL_LIKELY(g_entity_mgr->doesEntityExist(resolvedEid)))
+    if (NAU_LIKELY(g_entity_mgr->doesEntityExist(resolvedEid)))
 #else
-    if (EASTL_LIKELY(g_entity_mgr->destroyEntity(resolvedEid)))
+    if (NAU_LIKELY(g_entity_mgr->destroyEntity(resolvedEid)))
 #endif
     {
       if (Object *obj = Object::getByEid(resolvedEid)) // entity destruction is always deferred, so this get after destroy is fine
@@ -800,7 +809,7 @@ bool Connection::readConstructionPacket(const danet::BitStream &bs, float compre
     REPL_VER(bs.ReadCompressed(blockSizeBytes));
     NAU_ASSERT(blockSizeBytes > 0);
     BitSize_t startPos = bs.GetReadOffset();
-    if (EASTL_LIKELY(g_entity_mgr->getEntityTemplateId(resolvedEid) == ecs::INVALID_TEMPLATE_INDEX))
+    if (NAU_LIKELY(g_entity_mgr->getEntityTemplateId(resolvedEid) == ecs::INVALID_TEMPLATE_INDEX))
     {
       ecs::EntityId eid = deserializeConstruction(bs, serverEid, blockSizeBytes, compression_ratio,
         [this, obj_constructed_cb, serverEid](ecs::EntityId) { obj_constructed_cb(*this, serverEid); });
@@ -849,7 +858,7 @@ bool Connection::readReplicationPacket(const danet::BitStream &bs)
     else // attrs update for missing local object (assume that creation packet is not received yet, and save it for future apply)
     {
       auto it = delayedAttrsUpdate.insert(DelayedAttrsUpdateRec{serverEid}).first;
-      eastl::vector<uint8_t, MidmemAlloc> &tab = it->data.emplace_back();
+      std::vector<uint8_t, MidmemAlloc>& tab = it->data.emplace_back();
       clear_and_resize(tab, blockSizeBytes);
       G_VERIFY(bs.ReadBits(&tab[0], BYTES_TO_BITS(blockSizeBytes)));
     }
@@ -917,17 +926,17 @@ void Connection::onReplicationAckPacketNotify(sequence_t seq, bool lost)
   for (auto &curPendInfo : pendingReplInfo)
     if (curPendInfo.waitSequence == seq)
     {
-      if (EASTL_UNLIKELY(lost))
-      {
-        uint32_t curOffs = 0;
-        for (auto &pendRepl : curPendInfo.pendingReplicas)
+        if (NAU_UNLIKELY(lost))
         {
-          if (ObjectReplica *replica = GET_REPLICA_BY_HANDLE(pendRepl.first))
-            onEntityReplicationLost(*replica, make_span_const(&curPendInfo.compRevisions[curOffs], pendRepl.second));
-          curOffs += pendRepl.second;
+            uint32_t curOffs = 0;
+            for (auto& pendRepl : curPendInfo.pendingReplicas)
+            {
+                if (ObjectReplica* replica = GET_REPLICA_BY_HANDLE(pendRepl.first))
+                    onEntityReplicationLost(*replica, make_span_const(&curPendInfo.compRevisions[curOffs], pendRepl.second));
+                curOffs += pendRepl.second;
+            }
+            NAU_ASSERT(curOffs == curPendInfo.compRevisions.size());
         }
-        NAU_ASSERT(curOffs == curPendInfo.compRevisions.size());
-      }
 
       pendingReplInfo.erase(&curPendInfo);
       return;

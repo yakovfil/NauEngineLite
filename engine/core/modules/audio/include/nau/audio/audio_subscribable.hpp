@@ -1,12 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#pragma once 
+#pragma once
+
+#include <unordered_map>
 
 #include "audio_common.hpp"
-
-#include <EASTL/unordered_map.h>
-
 
 NAU_AUDIO_BEGIN
 
@@ -23,7 +22,7 @@ protected:
     virtual void notifyAll();
 
 private:
-    eastl::unordered_map<uint64_t, Callback> m_watchers;
+    std::unordered_map<uint64_t, Callback> m_watchers;
 };
 
 template <typename Callback>

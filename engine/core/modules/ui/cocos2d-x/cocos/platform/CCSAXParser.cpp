@@ -23,6 +23,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "platform/CCSAXParser.h"
 
 #include <vector> // because its based on windows 8 build :P
@@ -81,7 +82,7 @@ bool SAXParser::init(const char* /*encoding*/)
 bool SAXParser::parse(const char* xmlData, size_t dataLength)
 {
     if(xmlData != nullptr && dataLength > 0) {
-        eastl::string mutableData(xmlData, dataLength);
+        std::string mutableData(xmlData, dataLength);
         return this->parseIntrusive(&mutableData.front(), dataLength);
     }
     return false;

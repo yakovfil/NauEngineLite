@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <EASTL/vector.h>
+#include <functional>
+#include <map>
+#include <vector>
 
+#include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/math/dag_bounds3.h"
-#include "graphics_assets/material_asset.h"
 #include "render_entity.h"
 #include "render_list.h"
-
 
 namespace nau
 {
@@ -32,7 +33,7 @@ namespace nau
         nau::math::BSphere3 worldSphere;
         nau::math::BSphere3 localSphere;
 
-        eastl::map<uint64_t, MaterialOverrideInfo> overrideInfo;
+        std::map<uint64_t, MaterialOverrideInfo> overrideInfo;
         bool toDelete = false;
 
         // RenderParameters
@@ -53,9 +54,9 @@ namespace nau
         virtual void removeInstance(InstanceID instID) = 0;
         virtual bool contains(InstanceID instID) const = 0;
         virtual RenderEntity createRenderEntity() = 0;
-        virtual RenderList::Ptr createRenderList(const nau::math::Vector3& viewerPosition, 
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) = 0;
+        virtual RenderList::Ptr createRenderList(const nau::math::Vector3& viewerPosition,
+                                                 std::function<bool(const InstanceInfo&)>& filterFunc,
+                                                 std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) = 0;
 
     protected:
         RenderTags tags;

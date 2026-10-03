@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
 #include <nau/core_defines.h>
@@ -10,14 +9,7 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/algorithm.h>
-#include <EASTL/list.h>
-#include <EASTL/map.h>
-#include <EASTL/span.h>
-#include <EASTL/string_view.h>
-#include <EASTL/tuple.h>
-#include <EASTL/vector.h>
-
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -34,9 +26,11 @@
 #include <optional>
 #include <random>
 #include <regex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 

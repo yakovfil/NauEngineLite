@@ -38,7 +38,7 @@
 #include "math/CCMath.h"
 #include "2d/CCComponentContainer.h"
 #include "2d/CCComponent.h"
-#include <EASTL/string.h>
+#include <string>
 
 NS_CC_BEGIN
 
@@ -152,7 +152,7 @@ public:
      * @js NA
      * @lua NA
      */
-    virtual eastl::string getDescription() const;
+    virtual std::string getDescription() const;
 
     /// @} end of initializers
 
@@ -745,7 +745,7 @@ public:
      * @param localZOrder   Z order for drawing priority. Please refer to `setLocalZOrder(int)`.
      * @param tag           An integer to identify the node easily. Please refer to `setTag(int)`.
      * 
-     * Please use `addChild(Node* child, int localZOrder, const eastl::string &name)` instead.
+     * Please use `addChild(Node* child, int localZOrder, const std::string &name)` instead.
      */
      virtual void addChild(Node* child, int localZOrder, int tag);
     /**
@@ -758,7 +758,7 @@ public:
      * @param name      A string to identify the node easily. Please refer to `setName(int)`.
      *
      */
-    virtual void addChild(Node* child, int localZOrder, const eastl::string &name);
+    virtual void addChild(Node* child, int localZOrder, const std::string &name);
     /**
      * Gets a child from the container with its tag.
      *
@@ -789,7 +789,7 @@ public:
      *
      * @since v3.2
      */
-    virtual Node* _getChildByName(const eastl::string& name) const;
+    virtual Node* _getChildByName(const std::string& name) const;
     /**
      * Gets a child from the container with its name that can be cast to Type T.
      *
@@ -798,7 +798,7 @@ public:
      * @return a Node with the given name that can be cast to Type T.
     */
     template <typename T>
-    T getChildByName(const eastl::string& name) const { return static_cast<T>(_getChildByName(name)); }
+    T getChildByName(const std::string& name) const { return static_cast<T>(_getChildByName(name)); }
     /** Search the children of the receiving node to perform processing for nodes which share a name.
      *
      * @param name The name to search for, supports c++11 regular expression.
@@ -826,7 +826,7 @@ public:
      *
      * @since v3.2
      */
-    virtual void enumerateChildren(const eastl::string &name, std::function<bool(Node* node)> callback) const;
+    virtual void enumerateChildren(const std::string &name, std::function<bool(Node* node)> callback) const;
     /**
      * Returns the array of the node's children.
      *
@@ -899,7 +899,7 @@ public:
      * @param name       A string that identifies a child node.
      * @param cleanup   True if all running actions and callbacks on the child node will be cleanup, false otherwise.
      */
-    virtual void removeChildByName(const eastl::string &name, bool cleanup = true);
+    virtual void removeChildByName(const std::string &name, bool cleanup = true);
     /**
      * Removes all children from the container with a cleanup.
      *
@@ -972,13 +972,13 @@ public:
      * 
      * @since v3.2
      */
-    virtual const eastl::string& getName() const;
+    virtual const std::string& getName() const;
     /** Changes the name that is used to identify the node easily.
      * @param name A string that identifies the node.
      *
      * @since v3.2
      */
-    virtual void setName(const eastl::string& name);
+    virtual void setName(const std::string& name);
 
     
     /**
@@ -1191,7 +1191,7 @@ public:
      * @js NA
      * @lua NA
      */
-    bool isScheduled(const eastl::string &key) const;
+    bool isScheduled(const std::string &key) const;
 
     /**
      * Schedules the "update" method.
@@ -1268,7 +1268,7 @@ public:
      * @param key           The key of the lambda function. To be used if you want to unschedule it.
      * @lua NA
      */
-    void scheduleOnce(const std::function<void(float)>& callback, float delay, const eastl::string &key);
+    void scheduleOnce(const std::function<void(float)>& callback, float delay, const std::string &key);
 
     /**
      * Schedules a custom selector, the scheduled selector will be ticked every frame.
@@ -1286,7 +1286,7 @@ public:
      * @param key           The key of the lambda function. To be used if you want to unschedule it.
      * @lua NA
      */
-    void schedule(const std::function<void(float)>& callback, const eastl::string &key);
+    void schedule(const std::function<void(float)>& callback, const std::string &key);
 
     /**
      * Schedules a lambda function. The scheduled lambda function will be called every "interval" seconds
@@ -1296,7 +1296,7 @@ public:
      * @param key           The key of the lambda function. To be used if you want to unschedule it
      * @lua NA
      */
-    void schedule(const std::function<void(float)>& callback, float interval, const eastl::string &key);
+    void schedule(const std::function<void(float)>& callback, float interval, const std::string &key);
 
     /**
      * Schedules a lambda function.
@@ -1308,7 +1308,7 @@ public:
      * @param key       The key of the lambda function. To be used if you want to unschedule it.
      * @lua NA
      */
-    void schedule(const std::function<void(float)>& callback, float interval, unsigned int repeat, float delay, const eastl::string &key);
+    void schedule(const std::function<void(float)>& callback, float interval, unsigned int repeat, float delay, const std::string &key);
 
     /**
      * Unschedules a custom selector.
@@ -1325,7 +1325,7 @@ public:
      * @param key      The key of the lambda function to be unscheduled.
      * @lua NA
      */
-    void unschedule(const eastl::string &key);
+    void unschedule(const std::string &key);
 
     /**
      * Unschedule all scheduled selectors and lambda functions: custom selectors, and the 'update' selector and lambda functions.
@@ -1509,7 +1509,7 @@ public:
      * @param name A given name of component.
      * @return The Component by name.
      */
-    Component* getComponent(const eastl::string& name);
+    Component* getComponent(const std::string& name);
 
     /**
      * Adds a component.
@@ -1525,7 +1525,7 @@ public:
      * @param name A given name of component.
      * @return True if removed success.
      */
-    virtual bool removeComponent(const eastl::string& name);
+    virtual bool removeComponent(const std::string& name);
 
     /** 
      * Removes a component by its pointer.
@@ -1702,8 +1702,8 @@ protected:
     virtual void disableCascadeColor();
     virtual void updateColor() {}
     
-    bool doEnumerate(eastl::string name, std::function<bool (Node *)> callback) const;
-    bool doEnumerateRecursive(const Node* node, const eastl::string &name, std::function<bool (Node *)> callback) const;
+    bool doEnumerate(std::string name, std::function<bool (Node *)> callback) const;
+    bool doEnumerateRecursive(const Node* node, const std::string &name, std::function<bool (Node *)> callback) const;
     
     //check whether this camera mask is visible by the current visiting camera
     bool isVisitableByVisitingCamera() const;
@@ -1714,7 +1714,7 @@ protected:
     void updateRotation3D();
     
 private:
-    void addChildHelper(Node* child, int localZOrder, int tag, const eastl::string &name, bool setTag);
+    void addChildHelper(Node* child, int localZOrder, int tag, const std::string &name, bool setTag);
     virtual void* getPointer(const std::type_info&);
     
 protected:
@@ -1785,7 +1785,7 @@ protected:
     Director* _director;            //cached director pointer to improve rendering performance
     int _tag;                       ///< a tag. Can be any number you assigned just to identify this node
     
-    eastl::string _name;              ///<a string label, an user defined string to identify this node
+    std::string _name;              ///<a string label, an user defined string to identify this node
     size_t _hashOfName;             ///<hash value of _name, used for speed in getChildByName
 
     void *_userData;                ///< A user assigned void pointer, Can be point to any cpp object

@@ -4,34 +4,44 @@
 #pragma once
 
 #include <daECS/core/component.h>
-#include <EASTL/vector.h>
+#include <daECS/utility/dag_vector.h>
 #include <nau/math/math.h>
+
+#include <utility>
+#include <vector>
 
 namespace ecs
 {
 class EntityComponentRef;
 class EntityManager;
-type_index_t find_component_type_index(component_type_t, ecs::EntityManager * = nullptr);
+NAU_DAGORECS_EXPORT type_index_t find_component_type_index(component_type_t, ecs::EntityManager * = nullptr);
+
+// Boolean components require addressable, contiguous bool values (not bit proxies).
+template <typename T>
+using ListStorage = std::conditional_t<std::is_same_v<T, bool>, dag::Vector<bool>, std::vector<T>>;
 
 template <typename T>
-class List : protected eastl::vector<T>
+class List : protected ListStorage<T>
 {
 public:
-  typedef eastl::vector<T> base_type;
-  typedef typename base_type::iterator iterator;
-  typedef typename base_type::reference reference;
-  typedef typename base_type::const_iterator const_iterator;
+    typedef ListStorage<T> base_type;
+    typedef typename base_type::iterator iterator;
+    typedef typename base_type::reference reference;
+    typedef typename base_type::const_iterator const_iterator;
 
-  using typename base_type::value_type;
-  // Warn: only RO methods are allowed to be reused from vector, RW methods have to call changeGen()
-  using base_type::capacity;
-  using base_type::cbegin;
-  using base_type::cend;
-  using base_type::empty;
-  using base_type::reserve;
-  using base_type::shrink_to_fit;
+    using typename base_type::value_type;
+    // Warn: only RO methods are allowed to be reused from vector, RW methods have to call changeGen()
+    using base_type::capacity;
+    using base_type::cbegin;
+    using base_type::cend;
+    using base_type::empty;
+    using base_type::reserve;
+    using base_type::shrink_to_fit;
 
-  uint32_t size() const { return uint32_t(base_type::size()); }
+    uint32_t size() const
+    {
+        return uint32_t(base_type::size());
+    }
   iterator begin()
   {
     changeGen();
@@ -84,7 +94,7 @@ public:
   T &push_back(T &&v)
   {
     changeGen();
-    base_type::emplace_back(eastl::move(v));
+    base_type::emplace_back(std::move(v));
     return base_type::back();
   }
 
@@ -113,7 +123,7 @@ public:
   iterator insert(const_iterator position, T &&v)
   {
     changeGen();
-    return base_type::insert(position, eastl::move(v));
+    return base_type::insert(position, std::move(v));
   }
 
   iterator insert(const_iterator position, size_t n, const T &v)
@@ -127,7 +137,7 @@ public:
     NAU_ASSERT(v.is<T>(), "Wrong type passed to ecs::List");
 
     changeGen();
-    return base_type::insert(position, eastl::move(v.get<T>()));
+    return base_type::insert(position, std::move(v.get<T>()));
   }
 
   template <class InputIterator>
@@ -141,14 +151,14 @@ public:
   reference emplace_back(Args &&...args)
   {
     changeGen();
-    return base_type::emplace_back(eastl::forward<Args>(args)...);
+    return base_type::emplace_back(std::forward<Args>(args)...);
   }
 
   template <class... Args>
   iterator emplace(const_iterator position, Args &&...args)
   {
     changeGen();
-    return base_type::emplace(position, eastl::forward<Args>(args)...);
+    return base_type::emplace(position, std::forward<Args>(args)...);
   }
 
   void pop_back()
@@ -230,9 +240,9 @@ public:
 
   List(EntityManager *emgr = nullptr)
   {
-    if (EASTL_UNLIKELY(componentTypeIndex == INVALID_COMPONENT_TYPE_INDEX)) // To consider: make INVALID_COMPONENT_TYPE_INDEX 0 for
-                                                                            // faster comparisions like these
-      componentTypeIndex = find_component_type_index(ComponentTypeInfo<T>::type, emgr);
+      if (NAU_UNLIKELY(componentTypeIndex == INVALID_COMPONENT_TYPE_INDEX))  // To consider: make INVALID_COMPONENT_TYPE_INDEX 0 for
+                                                                             // faster comparisions like these
+          componentTypeIndex = find_component_type_index(ComponentTypeInfo<T>::type, emgr);
   }
 
   List(const List &a) : base_type(static_cast<const base_type &>(a)) {}
@@ -245,9 +255,9 @@ public:
   } // do not change generation
   inline List &operator=(List &&a)
   {
-    ((base_type &)*this) = (base_type &&) eastl::move(a);
-    changeGen();
-    return *this;
+      ((base_type&)*this) = (base_type&&)std::move(a);
+      changeGen();
+      return *this;
   } // do not change generation
 
 protected:

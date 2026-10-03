@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include <EASTL/set.h>
+#include <map>
+#include <set>
+#include <string_view>
+#include <vector>
 
 #include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/platform/windows/utils/uid.h"
 
-
 namespace nau
 {
     using RenderTag = size_t;
-    using RenderTags = eastl::set<RenderTag>;
+    using RenderTags = std::set<RenderTag>;
 
     struct RenderEntity
     {
@@ -46,7 +48,7 @@ namespace nau
 
         uint32_t startInstance;
         uint32_t instancesCount;
-        eastl::vector<InstanceData> instanceData;
+        std::vector<InstanceData> instanceData;
 
         nau::Ptr<nau::MaterialAssetView> material;
 
@@ -56,7 +58,7 @@ namespace nau
         RenderTags tags;
 
         nau::math::Matrix4 worldTransform;
-        eastl::map<eastl::string_view, ConstBufferStructData> cbStructsData;
+        std::map<std::string_view, ConstBufferStructData> cbStructsData;
 
         void render(nau::math::Matrix4 viewProj) const;
         void renderInstanced(nau::math::Matrix4 viewProj, Sbuffer* instanceData) const;
@@ -64,7 +66,7 @@ namespace nau
         void renderZPrepass(const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const;
         void renderZPrepassInstanced(const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const;
     private:
-        void prepareZPrepass(eastl::string_view pipeline, const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const;
+        void prepareZPrepass(std::string_view pipeline, const math::Matrix4& viewProj, MaterialAssetView* zPrepassMat) const;
     };
 
 } // namespace nau

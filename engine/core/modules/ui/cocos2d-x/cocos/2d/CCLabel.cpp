@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "2d/CCLabel.h"
 #include <algorithm>
 #include <stddef.h> // offsetof
@@ -232,7 +233,7 @@ Label* Label::create()
     return ret;
 }
 
-Label* Label::createWithSystemFont(const eastl::string& text, const std::string& font, float fontSize, const Size& dimensions /* = Size::ZERO */, TextHAlignment hAlignment /* = TextHAlignment::LEFT */, TextVAlignment vAlignment /* = TextVAlignment::TOP */)
+Label* Label::createWithSystemFont(const std::string& text, const std::string& font, float fontSize, const Size& dimensions /* = Size::ZERO */, TextHAlignment hAlignment /* = TextHAlignment::LEFT */, TextVAlignment vAlignment /* = TextVAlignment::TOP */)
 {
     auto ret = new (std::nothrow) Label(hAlignment,vAlignment);
 
@@ -251,7 +252,7 @@ Label* Label::createWithSystemFont(const eastl::string& text, const std::string&
     return nullptr;
 }
 
-Label* Label::createWithTTF(const eastl::string& text, const std::string& fontFile, float fontSize, const Size& dimensions /* = Size::ZERO */, TextHAlignment hAlignment /* = TextHAlignment::LEFT */, TextVAlignment vAlignment /* = TextVAlignment::TOP */)
+Label* Label::createWithTTF(const std::string& text, const std::string& fontFile, float fontSize, const Size& dimensions /* = Size::ZERO */, TextHAlignment hAlignment /* = TextHAlignment::LEFT */, TextVAlignment vAlignment /* = TextVAlignment::TOP */)
 {
     auto ret = new (std::nothrow) Label(hAlignment,vAlignment);
 
@@ -265,7 +266,7 @@ Label* Label::createWithTTF(const eastl::string& text, const std::string& fontFi
     return nullptr;
 }
 
-Label* Label::createWithTTF(const TTFConfig& ttfConfig, const eastl::string& text, TextHAlignment hAlignment /* = TextHAlignment::CENTER */, int maxLineWidth /* = 0 */)
+Label* Label::createWithTTF(const TTFConfig& ttfConfig, const std::string& text, TextHAlignment hAlignment /* = TextHAlignment::CENTER */, int maxLineWidth /* = 0 */)
 {
     auto ret = new (std::nothrow) Label(hAlignment);
 
@@ -279,7 +280,7 @@ Label* Label::createWithTTF(const TTFConfig& ttfConfig, const eastl::string& tex
     return nullptr;
 }
 
-Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::string& text, const TextHAlignment& hAlignment, int maxLineWidth)
+Label* Label::createWithBMFont(const std::string& bmfontPath, const std::string& text, const TextHAlignment& hAlignment, int maxLineWidth)
 {
     auto ret = new (std::nothrow) Label(hAlignment);
 
@@ -296,7 +297,7 @@ Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::strin
     return nullptr;
 }
 
-Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const Rect& imageRect, bool imageRotated)
+Label* Label::createWithBMFont(const std::string& bmfontPath, const std::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const Rect& imageRect, bool imageRotated)
 {
     auto ret = new (std::nothrow) Label(hAlignment);
 
@@ -313,7 +314,7 @@ Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::strin
     return nullptr;
 }
 
-Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const std::string& subTextureKey)
+Label* Label::createWithBMFont(const std::string& bmfontPath, const std::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const std::string& subTextureKey)
 {
     auto ret = new (std::nothrow) Label(hAlignment);
 
@@ -330,7 +331,7 @@ Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::strin
     return nullptr;
 }
 
-Label* Label::createWithBMFont(const std::string& bmfontPath, const eastl::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const Vec2& imageOffset)
+Label* Label::createWithBMFont(const std::string& bmfontPath, const std::string& text, const TextHAlignment& hAlignment, int maxLineWidth, const Vec2& imageOffset)
 {
     return createWithBMFont(bmfontPath, text, hAlignment, maxLineWidth, Rect(imageOffset.x, imageOffset.y, 0, 0), false);
 }
@@ -394,7 +395,7 @@ bool Label::setCharMap(const std::string& plistFile)
 }
 
 
-bool Label::initWithTTF(const eastl::string& text,
+bool Label::initWithTTF(const std::string& text,
                         const std::string& fontFilePath, float fontSize,
                         const Size& dimensions,
                         TextHAlignment /*hAlignment*/, TextVAlignment /*vAlignment*/)
@@ -412,7 +413,7 @@ bool Label::initWithTTF(const eastl::string& text,
     return false;
 }
 
-bool Label::initWithTTF(const TTFConfig& ttfConfig, const eastl::string& text, TextHAlignment /*hAlignment*/, int maxLineWidth)
+bool Label::initWithTTF(const TTFConfig& ttfConfig, const std::string& text, TextHAlignment /*hAlignment*/, int maxLineWidth)
 {
     if (FileUtils::getInstance()->isFileExist(ttfConfig.fontFilePath) && setTTFConfig(ttfConfig))
     {
@@ -925,7 +926,7 @@ bool Label::setBMFontFilePath(const std::string& bmfontFilePath, const Vec2& ima
     return setBMFontFilePath(bmfontFilePath, Rect(imageOffset.x, imageOffset.y, 0, 0), false);
 }
 
-void Label::setString(const eastl::string& text)
+void Label::setString(const std::string& text)
 {
     nau::string newText = text;
     if (newText != _utf8Text)
@@ -1136,7 +1137,7 @@ bool Label::alignText()
     return ret;
 }
 
-bool Label::computeHorizontalKernings(const eastl::u32string& stringToRender)
+bool Label::computeHorizontalKernings(const std::u32string& stringToRender)
 {
     if (_horizontalKernings)
     {
@@ -2322,11 +2323,11 @@ void Label::updateColor()
     }
 }
 
-eastl::string Label::getDescription() const
+std::string Label::getDescription() const
 {
     char tmp[50];
     sprintf(tmp, "<Label | Tag = %d, Label = >", _tag);
-    eastl::string ret = tmp;
+    std::string ret = tmp;
     ret += _utf8Text.tostring();
 
     return ret;

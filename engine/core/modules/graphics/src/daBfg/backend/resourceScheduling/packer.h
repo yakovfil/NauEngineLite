@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
-#include <EASTL/fixed_function.h>
+#include <span>
+
+#include "nau/utils/fixed_function.h"
 
 // A packer is an algorithm that decides where to place resources in
 // memory based on their size and lifetime.
@@ -39,7 +40,7 @@ struct PackerInput
 
   // List of all resources to be packed. Resources can also wrap around,
   // i.e. finish their lifetime before starting it.
-  eastl::span<Resource const> resources;
+  std::span<Resource const> resources;
   // Length of resource lifetime timeline, i.e. moment after which
   // lifetimes wrap around.
   uint32_t timelineSize;
@@ -57,12 +58,12 @@ struct PackerOutput
   // to facilitate the maxHeapSize constraint.
   constexpr static uint64_t NOT_SCHEDULED = static_cast<uint64_t>(-2);
   // WARNING: references memory stored inside the packer object
-  eastl::span<uint64_t> offsets;
+  std::span<uint64_t> offsets;
   uint64_t heapSize;
 };
 
 // Packer objects are not meant to be cached and reused.
-using Packer = eastl::fixed_function<64, PackerOutput(PackerInput)>;
+using Packer = nau::FixedFunction<64, PackerOutput(PackerInput)>;
 
 enum PackerType : int
 {

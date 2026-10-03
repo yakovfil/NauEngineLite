@@ -3,8 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
+#include <type_traits>
+#include <utility>
+
 #include "nau/math/dag_color.h"
+#include "nau/memory/heap_byte_allocator.h"
 #include "nau/util/common.h"
 
 // 32-bit BGRA pixels - compatible with nau::math::E3DCOLOR
@@ -59,53 +62,53 @@ struct TexPixelRg
 // PixelRg - PixelRg operators
 
 template <typename T, typename U>
-auto operator*(const TexPixelRg<T> &lhs, const TexPixelRg<U> &rhs) -> TexPixelRg<decltype(eastl::declval<T>() * eastl::declval<U>())>
+auto operator*(const TexPixelRg<T>& lhs, const TexPixelRg<U>& rhs) -> TexPixelRg<decltype(std::declval<T>() * std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() * eastl::declval<U>())>{lhs.r * rhs.r, lhs.g * rhs.g};
+    return TexPixelRg<decltype(std::declval<T>() * std::declval<U>())>{lhs.r * rhs.r, lhs.g * rhs.g};
 }
 
 template <typename T, typename U>
-auto operator/(const TexPixelRg<T> &lhs, const TexPixelRg<U> &rhs) -> TexPixelRg<decltype(eastl::declval<T>() / eastl::declval<U>())>
+auto operator/(const TexPixelRg<T>& lhs, const TexPixelRg<U>& rhs) -> TexPixelRg<decltype(std::declval<T>() / std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() / eastl::declval<U>())>{lhs.r / rhs.r, lhs.g / rhs.g};
+    return TexPixelRg<decltype(std::declval<T>() / std::declval<U>())>{lhs.r / rhs.r, lhs.g / rhs.g};
 }
 
 template <typename T, typename U>
-auto operator+(const TexPixelRg<T> &lhs, const TexPixelRg<U> &rhs) -> TexPixelRg<decltype(eastl::declval<T>() + eastl::declval<U>())>
+auto operator+(const TexPixelRg<T>& lhs, const TexPixelRg<U>& rhs) -> TexPixelRg<decltype(std::declval<T>() + std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() + eastl::declval<U>())>{lhs.r + rhs.r, lhs.g + rhs.g};
+    return TexPixelRg<decltype(std::declval<T>() + std::declval<U>())>{lhs.r + rhs.r, lhs.g + rhs.g};
 }
 
 template <typename T, typename U>
-auto operator-(const TexPixelRg<T> &lhs, const TexPixelRg<U> &rhs) -> TexPixelRg<decltype(eastl::declval<T>() - eastl::declval<U>())>
+auto operator-(const TexPixelRg<T>& lhs, const TexPixelRg<U>& rhs) -> TexPixelRg<decltype(std::declval<T>() - std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() - eastl::declval<U>())>{lhs.r - rhs.r, lhs.g - rhs.g};
+    return TexPixelRg<decltype(std::declval<T>() - std::declval<U>())>{lhs.r - rhs.r, lhs.g - rhs.g};
 }
 
 // PixelRg - any operators
 
 template <typename T, typename U>
-auto operator*(const TexPixelRg<T> &lhs, const U &rhs) -> TexPixelRg<decltype(eastl::declval<T>() * eastl::declval<U>())>
+auto operator*(const TexPixelRg<T>& lhs, const U& rhs) -> TexPixelRg<decltype(std::declval<T>() * std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() * eastl::declval<U>())>{lhs.r * rhs, lhs.g * rhs};
+    return TexPixelRg<decltype(std::declval<T>() * std::declval<U>())>{lhs.r * rhs, lhs.g * rhs};
 }
 
 template <typename T, typename U>
-auto operator/(const TexPixelRg<T> &lhs, const U &rhs) -> TexPixelRg<decltype(eastl::declval<T>() / eastl::declval<U>())>
+auto operator/(const TexPixelRg<T>& lhs, const U& rhs) -> TexPixelRg<decltype(std::declval<T>() / std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() / eastl::declval<U>())>{lhs.r / rhs, lhs.g / rhs};
+    return TexPixelRg<decltype(std::declval<T>() / std::declval<U>())>{lhs.r / rhs, lhs.g / rhs};
 }
 
 template <typename T, typename U>
-auto operator+(const TexPixelRg<T> &lhs, const U &rhs) -> TexPixelRg<decltype(eastl::declval<T>() + eastl::declval<U>())>
+auto operator+(const TexPixelRg<T>& lhs, const U& rhs) -> TexPixelRg<decltype(std::declval<T>() + std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() + eastl::declval<U>())>{lhs.r + rhs, lhs.g + rhs};
+    return TexPixelRg<decltype(std::declval<T>() + std::declval<U>())>{lhs.r + rhs, lhs.g + rhs};
 }
 
 template <typename T, typename U>
-auto operator-(const TexPixelRg<T> &lhs, const U &rhs) -> TexPixelRg<decltype(eastl::declval<T>() - eastl::declval<U>())>
+auto operator-(const TexPixelRg<T>& lhs, const U& rhs) -> TexPixelRg<decltype(std::declval<T>() - std::declval<U>())>
 {
-  return TexPixelRg<decltype(eastl::declval<T>() - eastl::declval<U>())>{lhs.r - rhs, lhs.g - rhs};
+    return TexPixelRg<decltype(std::declval<T>() - std::declval<U>())>{lhs.r - rhs, lhs.g - rhs};
 }
 
 // Tex image quasi-format
@@ -120,7 +123,7 @@ struct TexImage
 struct NAU_RENDER_EXPORT TexImage32 : public TexImage
 {
   inline TexPixel32 *getPixels() { return (TexPixel32 *)(this + 1); }
-  static inline TexImage32* create(int w, int h, eastl::allocator* mem = NULL)
+  static inline TexImage32* create(int w, int h, nau::HeapByteAllocator* mem = NULL)
   {
       if (!mem)
         mem = tmpmem;
@@ -134,25 +137,25 @@ struct NAU_RENDER_EXPORT TexImage32 : public TexImage
 struct TexImage8a : public TexImage
 {
   inline TexPixel8a *getPixels() { return (TexPixel8a *)(this + 1); }
-  static TexImage8a *create(int w, int h, eastl::allocator *mem = NULL);
+  static TexImage8a* create(int w, int h, nau::HeapByteAllocator* mem = NULL);
 };
 
 struct TexImage8 : public TexImage // uint8_t pixels
 {
   inline unsigned char *getPixels() { return (unsigned char *)(this + 1); }
-  static TexImage8 *create(int w, int h, eastl::allocator *mem = NULL);
+  static TexImage8* create(int w, int h, nau::HeapByteAllocator* mem = NULL);
 };
 
 struct TexImageR : public TexImage // real pixels
 {
   inline float *getPixels() { return (float *)(this + 1); }
-  static TexImageR *create(int w, int h, eastl::allocator *mem = NULL);
+  static TexImageR* create(int w, int h, nau::HeapByteAllocator* mem = NULL);
 };
 
 struct TexImageF : public TexImage // Color3 pixels
 {
   inline nau::math::Color3 *getPixels() { return (nau::math::Color3 *)(this + 1); }
-  static TexImageF *create(int w, int h, eastl::allocator *mem = NULL);
+  static TexImageF* create(int w, int h, nau::HeapByteAllocator* mem = NULL);
 };
 
 template <typename T>
@@ -162,7 +165,7 @@ struct TexImageAny : public TexImage // any pixel
 
   const T *getPixels() const { return (T *)(this + 1); }
 
-  static TexImageAny<T> *create(int w, int h, eastl::allocator *mem = NULL)
+  static TexImageAny<T>* create(int w, int h, nau::HeapByteAllocator* mem = NULL)
   {
     if (!mem)
       mem = tmpmem;

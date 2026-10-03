@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "nau/dispatch/class_descriptor.h"
 #include "nau/dispatch/dispatch.h"
 #include "nau/meta/class_info.h"
@@ -44,9 +47,9 @@ namespace nau::nau_detail
         std::is_base_of_v<IRefCounted, T> || HasClassCreateInstance<T> || std::is_constructible_v<T>;
 
     template <typename T>
-    eastl::string getTypeName()
+    std::string getTypeName()
     {
-        eastl::string name;
+        std::string name;
 
         if constexpr (meta::ClassHasName<T>)
         {
@@ -329,7 +332,7 @@ namespace nau::nau_detail
 
         std::string getName() const override
         {
-            eastl::string name = nau_detail::getTypeName<InterfaceType>();
+            std::string name = nau_detail::getTypeName<InterfaceType>();
             return std::string{name.data(), name.size()};
         }
 
@@ -487,7 +490,7 @@ namespace nau::nau_detail
         ClassDescriptorImpl()
         {
             using namespace nau::meta;
-            m_attributes = eastl::make_unique<RuntimeAttributeContainer>(makeRuntimeAttributeContainer<T>());
+            m_attributes = std::make_unique<RuntimeAttributeContainer>(makeRuntimeAttributeContainer<T>());
         }
 
         const rtti::TypeInfo& getClassTypeInfo() const override
@@ -497,7 +500,7 @@ namespace nau::nau_detail
 
         std::string getClassName() const override
         {
-            eastl::string name = nau_detail::getTypeName<T>();
+            std::string name = nau_detail::getTypeName<T>();
             return std::string{name.data(), name.size()};
         }
 
@@ -544,7 +547,7 @@ namespace nau::nau_detail
 
         const InterfaceInfoTuple m_interfaces;
         const ClassConstructorMethod m_ctorMethod;
-        eastl::unique_ptr<meta::RuntimeAttributeContainer> m_attributes;
+        std::unique_ptr<meta::RuntimeAttributeContainer> m_attributes;
     };
 
 }  // namespace nau::nau_detail

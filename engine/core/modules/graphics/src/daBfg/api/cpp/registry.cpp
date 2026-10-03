@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "render/daBfg/registry.h"
+
+#include <utility>
+
 #include "dabfg/frontend/internalRegistry.h"
 #include "nau/diag/logging.h"
-
 
 namespace dabfg
 {
@@ -94,7 +96,7 @@ detail::ResUid Registry::registerTexture2dImpl(const char *name, dabfg::External
   const auto resId = registry->knownNames.addNameId<ResNameId>(nameSpaceId, name);
   auto &res = registry->resources.get(resId);
 
-  res.creationInfo = eastl::move(p);
+  res.creationInfo = std::move(p);
   res.type = ResourceType::Texture;
 
   registry->nodes[nodeId].createdResources.insert(resId);

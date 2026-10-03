@@ -5,7 +5,7 @@
 
 #include "nau/3d/dag_texMgr.h"
 //#include <debug/daNAU_ASSERT.h>
-#include <EASTL/vector_map.h>
+#include "nau/utils/sorted_vector.h"
 
 class TextureIDPair
 {
@@ -157,6 +157,6 @@ private:
     TEXTUREID texId;
   };
   using TexRecKey = uint32_t;
-  eastl::vector_map<TexRecKey, TextureRecord> aliases;
+  nau::SortedVectorMap<TexRecKey, TextureRecord> aliases;
   TexRecKey getKey(uint16_t w, uint16_t h) { return (w << 16) | h; }
 };

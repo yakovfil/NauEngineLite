@@ -3,15 +3,16 @@
 
 #pragma once
 
-#include "nau/rtti/rtti_impl.h"
+#include <vector>
+
+#include "graphics_assets/material_asset.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_resPtr.h"
 #include "nau/assets/asset_ref.h"
 #include "nau/assets/mesh_asset_accessor.h"
 #include "nau/async/task_base.h"
-#include "graphics_assets/material_asset.h"
 #include "nau/math/dag_bounds3.h"
-
+#include "nau/rtti/rtti_impl.h"
 
 namespace nau
 {
@@ -44,7 +45,7 @@ namespace nau
 
         nau::math::BBox3 m_localBBox;
 
-        eastl::vector<MaterialSlot> m_materialSlots;
+        std::vector<MaterialSlot> m_materialSlots;
     };
 
 
@@ -76,8 +77,8 @@ namespace nau
 
         nau::math::BSphere3 m_localBSphere;
 
-        eastl::vector<StaticMeshLod> lods;
-        eastl::vector<float> m_lodsScreenSpaceError;
+        std::vector<StaticMeshLod> lods;
+        std::vector<float> m_lodsScreenSpaceError;
         float cullDistance;
     };
 }

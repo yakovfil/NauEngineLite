@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/assets/asset_view.h"
+#include "nau/assets/ui_asset_accessor.h"
 #include "nau/async/task.h"
 #include "nau/scene/scene.h"
-#include "nau/assets/ui_asset_accessor.h"
 
 namespace nau::ui
 {
@@ -26,6 +28,6 @@ namespace nau::ui::data
         void createUi(Canvas* uiCanvas) const;
 
     private:
-        eastl::vector<UiElementAssetData> m_uiElementsData;
+        std::vector<UiElementAssetData> m_uiElementsData;
     };
 } // namespace nau::ui

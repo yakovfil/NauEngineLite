@@ -6,6 +6,8 @@
  * @brief Defines the MemSectionPtr class
  */
 #pragma once
+#include <string>
+
 #include "nau/memory/mem_section.h"
 
 namespace nau
@@ -17,7 +19,7 @@ namespace nau
     {
     public:
         MemSectionPtr() = default;
-        MemSectionPtr(const eastl::string kind, MemSection* ptr);
+        MemSectionPtr(const std::string kind, MemSection* ptr);
         ~MemSectionPtr();
         MemSectionPtr(const MemSectionPtr&) = delete;
         MemSectionPtr& operator=(const MemSectionPtr&) = delete;
@@ -43,7 +45,7 @@ namespace nau
          *
          * @return A reference to the string representing the kind of the memory section.
          */
-        [[nodiscard]] const eastl::string& getKind() const;
+        [[nodiscard]] const std::string& getKind() const;
 
         /**
          * @brief Checks if the memory section pointer is valid.
@@ -54,7 +56,7 @@ namespace nau
 
     private:
         MemSection* m_ptr = nullptr;
-        eastl::string m_kind;
+        std::string m_kind;
     };
 
-} // namespace nau
+}  // namespace nau

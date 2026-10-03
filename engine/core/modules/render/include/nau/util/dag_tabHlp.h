@@ -6,7 +6,7 @@
 #include <stdint.h>
 //#include <memory/dag_memBase.h>
 
-#include <EASTL/allocator.h>
+#include "nau/memory/heap_byte_allocator.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -71,8 +71,7 @@ inline const T *data_bin_search(const T &k, const T *p, intptr_t n, const Predic
 }
 
 template <class T, class Predicate>
-inline intptr_t tab_sorted_insert(T *&data, uint32_t &total, uint32_t &num, eastl::allocator *mem, const T &val, int step,
-  const Predicate &predicate)
+inline intptr_t tab_sorted_insert(T*& data, uint32_t& total, uint32_t& num, nau::HeapByteAllocator* mem, const T& val, int step, const Predicate& predicate)
 {
   (void)(predicate); // to make vc happy
   if (!data || num <= 0)
@@ -99,14 +98,10 @@ inline intptr_t tab_sorted_insert(T *&data, uint32_t &total, uint32_t &num, east
   return dag_tab_insert(data, total, num, mem, a + 1, 1, sizeof(T), &val, step);
 }
 
-
-NAU_RENDER_EXPORT void *dag_tab_insert2(void *ptr, uint32_t &total, uint32_t &used, eastl::allocator *mem, intptr_t at, intptr_t n, intptr_t sz,
-  intptr_t step, uint32_t &out_idx);
-
+NAU_RENDER_EXPORT void* dag_tab_insert2(void* ptr, uint32_t& total, uint32_t& used, nau::HeapByteAllocator* mem, intptr_t at, intptr_t n, intptr_t sz, intptr_t step, uint32_t& out_idx);
 
 template <typename T>
-intptr_t dag_tab_insert(T *&ptr, uint32_t &total, uint32_t &used, eastl::allocator *mem, intptr_t at, intptr_t n, intptr_t sz, const T *p,
-  intptr_t step)
+intptr_t dag_tab_insert(T*& ptr, uint32_t& total, uint32_t& used, nau::HeapByteAllocator* mem, intptr_t at, intptr_t n, intptr_t sz, const T* p, intptr_t step)
 {
   uint32_t out_idx;
   ptr = (T *)dag_tab_insert2(ptr, total, used, mem, at, n, sz, step, out_idx);

@@ -1,9 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/physics/jolt/jolt_physics_material.h"
 
+#include <optional>
+#include <string_view>
+#include <utility>
 
 namespace nau::physics::jolt
 {
@@ -19,30 +21,31 @@ namespace nau::physics::jolt
 
     void JoltPhysicsMaterial::setEngineMaterial(nau::physics::IPhysicsMaterial::Ptr engineMaterial)
     {
-        m_engineMaterial = eastl::move(engineMaterial);
+        m_engineMaterial = std::move(engineMaterial);
     }
 
-    NauJoltPhysicsMaterialImpl::NauJoltPhysicsMaterialImpl(eastl::string_view name,
-        eastl::optional<TFloat> friction, eastl::optional<TFloat> restitution)
-        : m_name(name)
-        , m_friction(friction)
-        , m_restitution(restitution)
+    NauJoltPhysicsMaterialImpl::NauJoltPhysicsMaterialImpl(std::string_view name,
+                                                           std::optional<TFloat> friction,
+                                                           std::optional<TFloat> restitution) :
+        m_name(name),
+        m_friction(friction),
+        m_restitution(restitution)
     {
         m_joltMaterial = new JoltPhysicsMaterial();
         m_joltMaterial->setEngineMaterial(this);
     }
 
-    eastl::string_view NauJoltPhysicsMaterialImpl::getName() const
+    std::string_view NauJoltPhysicsMaterialImpl::getName() const
     {
         return m_name;
     }
 
-    eastl::optional<TFloat> NauJoltPhysicsMaterialImpl::getFriction() const
+    std::optional<TFloat> NauJoltPhysicsMaterialImpl::getFriction() const
     {
         return m_friction;
     }
 
-    eastl::optional<TFloat> NauJoltPhysicsMaterialImpl::getRestitution() const
+    std::optional<TFloat> NauJoltPhysicsMaterialImpl::getRestitution() const
     {
         return m_restitution;
     }

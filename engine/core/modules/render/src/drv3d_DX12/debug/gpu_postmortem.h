@@ -3,10 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "call_stack.h"
+#include <span>
+#include <unordered_map>
+#include <variant>
 
-#include <EASTL/variant.h>
-#include <EASTL/unordered_map.h>
+#include "call_stack.h"
 
 #if HAS_GF_AFTERMATH
 #include <GFSDK_Aftermath.h>
@@ -31,31 +32,34 @@ template <typename NoT, typename... Ts>
 class TracerSet
 {
 public:
-  using StorageType = eastl::variant<NoT, Ts...>;
-  using DefaultType = NoT;
+    using StorageType = std::variant<NoT, Ts...>;
+    using DefaultType = NoT;
 
-  template <typename... Is>
-  static bool load(StorageType &store, Is &&...is)
-  {
-    for (auto loader : {try_load<Ts, Is...>...})
+    template <typename... Is>
+    static bool load(StorageType& store, Is&&... is)
     {
-      if (loader(is..., store))
-      {
-        return true;
-      }
-    }
+        for (auto loader : {try_load<Ts, Is...>...})
+        {
+            if (loader(is..., store))
+            {
+                return true;
+            }
+        }
 
-    store = DefaultType{};
-    return false;
-  }
+        store = DefaultType{};
+        return false;
+    }
 
   template <typename... Is>
   static bool on_device_setup(StorageType &store, ID3D12Device *device, Is &&...is)
   {
-    if (eastl::visit([&](auto &tracer) { return tracer.onDeviceSetup(device, is...); }, store))
-    {
-      return true;
-    }
+      if (std::visit([&](auto& tracer)
+      {
+          return tracer.onDeviceSetup(device, is...);
+      }, store))
+      {
+          return true;
+      }
 
     using LoaderEntry = bool (*)(Is && ..., StorageType &);
     // Note that entry 0 in the variant i NoT and so we have to adjust for that.
@@ -67,10 +71,13 @@ public:
       auto loader = loaderTable[index];
       if (loader(is..., store))
       {
-        if (eastl::visit([&](auto &tracer) { return tracer.onDeviceSetup(device, is...); }, store))
-        {
-          return true;
-        }
+          if (std::visit([&](auto& tracer)
+          {
+              return tracer.onDeviceSetup(device, is...);
+          }, store))
+          {
+              return true;
+          }
       }
     }
 
@@ -106,42 +113,60 @@ public:
   void teardown() { tracer = gpu_postmortem::NullTrace{}; }
   void onDeviceShutdown()
   {
-    eastl::visit([=](auto &tracer) { tracer.onDeviceShutdown(); }, tracer);
+      std::visit([=](auto& tracer)
+      {
+          tracer.onDeviceShutdown();
+      }, tracer);
   }
   void beginCommandBuffer(ID3D12Device3 *device, ID3D12GraphicsCommandList *cmd)
   {
     // This if isAnyActive makes this a bit cheaper to execute when no trace instance is active.
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tracer) { tracer.beginCommandBuffer(device, cmd); }, tracer);
+        std::visit([=](auto& tracer)
+        {
+            tracer.beginCommandBuffer(device, cmd);
+        }, tracer);
     }
   }
   void endCommandBuffer(ID3D12GraphicsCommandList *cmd)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tracer) { tracer.endCommandBuffer(cmd); }, tracer);
+        std::visit([=](auto& tracer)
+        {
+            tracer.endCommandBuffer(cmd);
+        }, tracer);
     }
   }
-  void beginEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text, eastl::span<const char> full_path)
+  void beginEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> text, std::span<const char> full_path)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tracer) { tracer.beginEvent(cmd, text, full_path); }, tracer);
+        std::visit([=](auto& tracer)
+        {
+            tracer.beginEvent(cmd, text, full_path);
+        }, tracer);
     }
   }
-  void endEvent(ID3D12GraphicsCommandList *cmd, eastl::span<const char> full_path)
+  void endEvent(ID3D12GraphicsCommandList* cmd, std::span<const char> full_path)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tracer) { tracer.endEvent(cmd, full_path); }, tracer);
+        std::visit([=](auto& tracer)
+        {
+            tracer.endEvent(cmd, full_path);
+        }, tracer);
     }
   }
-  void marker(ID3D12GraphicsCommandList *cmd, eastl::span<const char> text)
+  void marker(ID3D12GraphicsCommandList* cmd, std::span<const char> text)
   {
     if (isAnyActive())
     {
-      eastl::visit([=](auto &tracer) { tracer.marker(cmd, text); }, tracer);
+        std::visit([=](auto& tracer)
+        {
+            tracer.marker(cmd, text);
+        }, tracer);
     }
   }
   void draw(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd, const PipelineStageStateBase &vs,
@@ -150,11 +175,12 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit(
-        [&](auto &tracer) {
-          tracer.draw(debug_info, cmd, vs, ps, pipeline_base, pipeline, count, instance_count, start, first_instance, topology);
+        std::visit(
+            [&](auto& tracer)
+        {
+            tracer.draw(debug_info, cmd, vs, ps, pipeline_base, pipeline, count, instance_count, start, first_instance, topology);
         },
-        tracer);
+            tracer);
     }
   }
   void drawIndexed(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd, const PipelineStageStateBase &vs,
@@ -163,12 +189,13 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit(
-        [&](auto &tracer) {
-          tracer.drawIndexed(debug_info, cmd, vs, ps, pipeline_base, pipeline, count, instance_count, index_start, vertex_base,
-            first_instance, topology);
+        std::visit(
+            [&](auto& tracer)
+        {
+            tracer.drawIndexed(debug_info, cmd, vs, ps, pipeline_base, pipeline, count, instance_count, index_start, vertex_base,
+                               first_instance, topology);
         },
-        tracer);
+            tracer);
     }
   }
   void drawIndirect(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd, const PipelineStageStateBase &vs,
@@ -176,7 +203,10 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.drawIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, buffer); }, tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.drawIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, buffer);
+        }, tracer);
     }
   }
   void drawIndexedIndirect(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd,
@@ -185,8 +215,10 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.drawIndexedIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, buffer); },
-        tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.drawIndexedIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, buffer);
+        }, tracer);
     }
   }
   void dispatchIndirect(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd,
@@ -194,7 +226,10 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.dispatchIndirect(debug_info, cmd, state, pipeline, buffer); }, tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.dispatchIndirect(debug_info, cmd, state, pipeline, buffer);
+        }, tracer);
     }
   }
   void dispatch(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd, const PipelineStageStateBase &stage,
@@ -202,7 +237,10 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.dispatch(debug_info, cmd, stage, pipeline, x, y, z); }, tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.dispatch(debug_info, cmd, stage, pipeline, x, y, z);
+        }, tracer);
     }
   }
   void dispatchMesh(const call_stack::CommandData &debug_info, D3DGraphicsCommandList *cmd, const PipelineStageStateBase &vs,
@@ -210,7 +248,10 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.dispatchMesh(debug_info, cmd, vs, ps, pipeline_base, pipeline, x, y, z); }, tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.dispatchMesh(debug_info, cmd, vs, ps, pipeline_base, pipeline, x, y, z);
+        }, tracer);
     }
   }
   void dispatchMeshIndirect(const call_stack::CommandData &debug_info, D3DGraphicsCommandList *cmd, const PipelineStageStateBase &vs,
@@ -219,32 +260,47 @@ public:
   {
     if (isAnyActive())
     {
-      eastl::visit(
-        [&](auto &tracer) { tracer.dispatchMeshIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, args, count, max_count); },
-        tracer);
+        std::visit(
+            [&](auto& tracer)
+        {
+            tracer.dispatchMeshIndirect(debug_info, cmd, vs, ps, pipeline_base, pipeline, args, count, max_count);
+        },
+            tracer);
     }
   }
   void blit(const call_stack::CommandData &debug_info, ID3D12GraphicsCommandList2 *cmd)
   {
     if (isAnyActive())
     {
-      eastl::visit([&](auto &tracer) { tracer.blit(debug_info, cmd); }, tracer);
+        std::visit([&](auto& tracer)
+        {
+            tracer.blit(debug_info, cmd);
+        }, tracer);
     }
   }
 
   void onDeviceRemoved(D3DDevice *device, HRESULT reason, call_stack::Reporter &reporter)
   {
-    eastl::visit([&](auto &tracer) { tracer.onDeviceRemoved(device, reason, reporter); }, tracer);
+      std::visit([&](auto& tracer)
+      {
+          tracer.onDeviceRemoved(device, reason, reporter);
+      }, tracer);
   }
-  bool isAnyActive() const { return !eastl::holds_alternative<gpu_postmortem::NullTrace>(tracer); }
+  bool isAnyActive() const
+  {
+      return !std::holds_alternative<gpu_postmortem::NullTrace>(tracer);
+  }
   template <typename T>
   bool isActive() const
   {
-    return eastl::holds_alternative<T>(tracer);
+      return std::holds_alternative<T>(tracer);
   }
   bool sendGPUCrashDump(const char *type, const void *data, uintptr_t size)
   {
-    return eastl::visit([=](auto &tracer) { return tracer.sendGPUCrashDump(type, data, size); }, tracer);
+      return std::visit([=](auto& tracer)
+      {
+          return tracer.sendGPUCrashDump(type, data, size);
+      }, tracer);
   }
 };
 } // namespace debug

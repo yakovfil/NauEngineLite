@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerFocus.h"
 #include "base/CCEventFocus.h"
 #include "base/ccMacros.h"
@@ -31,7 +32,7 @@
 NS_CC_BEGIN
 
 
-const eastl::string EventListenerFocus::LISTENER_ID = "__cc_focus_event";
+const std::string EventListenerFocus::LISTENER_ID = "__cc_focus_event";
 
 
 EventListenerFocus::EventListenerFocus()

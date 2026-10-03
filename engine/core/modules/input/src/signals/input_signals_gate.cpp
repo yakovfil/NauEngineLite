@@ -3,6 +3,9 @@
 
 #include "input_signals_gate.h"
 
+#include <memory>
+#include <string>
+
 #include "nau/service/service_provider.h"
 
 namespace nau
@@ -14,7 +17,7 @@ namespace nau
             NAU_FAILURE();
             return;
         }
-        m_inputs.push_back(eastl::shared_ptr<IInputSignal>(source));
+        m_inputs.push_back(std::shared_ptr<IInputSignal>(source));
     }
 
     IInputSignal* InputSignalGate::getInput(unsigned idx)
@@ -51,10 +54,10 @@ namespace nau
 
     void InputSignalGate::serializeProperties(DataBlock* blk) const
     {
-        eastl::string name(DataSignal);
+        std::string name(DataSignal);
         for (size_t i = 0; i < m_inputs.size(); ++i)
         {
-            m_inputs[i]->serialize(blk->addBlock((name + eastl::to_string(i)).c_str()));
+            m_inputs[i]->serialize(blk->addBlock((name + std::to_string(i)).c_str()));
         }
         blk->addInt(DataSignals, (int)m_inputs.size());
     }
@@ -65,16 +68,16 @@ namespace nau
         if (count > 0)
         {
             auto& insys = getServiceProvider().get<nau::IInputSystem>();
-            eastl::string name(DataSignal);
+            std::string name(DataSignal);
             for (int i = 0; i < count; ++i)
             {
-                auto* signalBlk = blk->getBlockByNameEx((name + eastl::to_string(i)).c_str());
+                auto* signalBlk = blk->getBlockByNameEx((name + std::to_string(i)).c_str());
                 if (signalBlk != nullptr)
                 {
                     auto* type = signalBlk->getStr(DataType);
                     IInputSignal* signal = insys.createSignal(type);
                     signal->deserialize(signalBlk);
-                    m_inputs.push_back(eastl::shared_ptr<IInputSignal>(signal));
+                    m_inputs.push_back(std::shared_ptr<IInputSignal>(signal));
                 }
             }
         }

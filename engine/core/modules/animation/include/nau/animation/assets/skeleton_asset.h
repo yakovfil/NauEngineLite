@@ -5,18 +5,20 @@
 
 #include <ozz/animation/runtime/skeleton.h>
 
+#include <string>
+#include <vector>
+
 #include "nau/assets/asset_view.h"
 #include "nau/async/task.h"
 #include "nau/math/math.h"
 #include "nau/rtti/rtti_impl.h"
-
 
 namespace nau
 {
     struct SkeletonJoint
     {
         unsigned parentIndex;
-        eastl::string jointName;
+        std::string jointName;
     };
 
     class NAU_ANIMATION_EXPORT SkeletonAssetView : public IAssetView
@@ -25,16 +27,16 @@ namespace nau
     public:
         static async::Task<nau::Ptr<SkeletonAssetView>> createFromAssetAccessor(nau::Ptr<> accessor);
 
-        const eastl::vector<math::Matrix4>& getInverseBindTransforms() const;
-        const eastl::vector<math::Matrix4>& getDefaultPoseTransforms() const;
+        const std::vector<math::Matrix4>& getInverseBindTransforms() const;
+        const std::vector<math::Matrix4>& getDefaultPoseTransforms() const;
 
         const ozz::animation::Skeleton& getSkeleton() const;
-        const eastl::vector<SkeletonJoint>& getJoints() const;
+        const std::vector<SkeletonJoint>& getJoints() const;
 
     private:
-        eastl::vector<SkeletonJoint> joints;
-        eastl::vector<math::Matrix4> inverseBindTransforms;
-        eastl::vector<math::Matrix4> defaultPoseTransforms;
+        std::vector<SkeletonJoint> joints;
+        std::vector<math::Matrix4> inverseBindTransforms;
+        std::vector<math::Matrix4> defaultPoseTransforms;
 
         ozz::animation::Skeleton skeleton;
     };

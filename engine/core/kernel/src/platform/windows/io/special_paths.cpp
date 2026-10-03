@@ -6,9 +6,14 @@
 #include <ShlObj.h>
 #include <tchar.h>
 
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+
 #include "nau/diag/assertion.h"
 #include "nau/diag/logging.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/memory/stack_allocator.h"
 #include "nau/platform/windows/diag/win_error.h"
 #include "nau/string/string_conv.h"
@@ -34,7 +39,7 @@ namespace nau::io
             }
         };
 
-        eastl::optional<KNOWNFOLDERID> knownFolderEnum2Id(KnownFolder folder)
+        std::optional<KNOWNFOLDERID> knownFolderEnum2Id(KnownFolder folder)
         {
             if (folder == KnownFolder::UserDocuments)
             {
@@ -49,7 +54,7 @@ namespace nau::io
                 return FOLDERID_Profile;
             }
 
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         std::filesystem::path getKnownFolderPathById(KNOWNFOLDERID folderId)
@@ -133,13 +138,12 @@ namespace nau::io
 
             pathStr.remove_suffix(pathStr.size() - sepPos);
 
-
             return pathStr;
         }
 
     }  // namespace
 
-    eastl::u8string getNativeTempFilePath(eastl::u8string_view prefixFileName)
+    std::u8string getNativeTempFilePath(std::u8string_view prefixFileName)
     {
         wchar_t tempDirectoryPathBuffer[MAX_PATH];
         wchar_t tempFilePathBuffer[MAX_PATH];
@@ -166,7 +170,7 @@ namespace nau::io
         namespace fs = std::filesystem;
 
         static std::shared_mutex knownFoldersMutex;
-        static eastl::unordered_map<KnownFolder, fs::path> knownFolders;
+        static std::unordered_map<KnownFolder, fs::path> knownFolders;
 
         {
             shared_lock_(knownFoldersMutex);
@@ -203,7 +207,7 @@ namespace nau::io
             return getExecutableLocation();
         }
 
-        const eastl::optional<KNOWNFOLDERID> folderId = knownFolderEnum2Id(folder);
+        const std::optional<KNOWNFOLDERID> folderId = knownFolderEnum2Id(folder);
         if (!folderId)
         {
             return {};

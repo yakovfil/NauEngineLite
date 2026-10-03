@@ -3,6 +3,10 @@
 
 #include "nau/assets/asset_path.h"
 
+#include <string>
+#include <string_view>
+#include <tuple>
+
 #include "nau/assets/asset_manager.h"
 #include "nau/service/service_provider.h"
 #include "nau/string/string_conv.h"
@@ -12,18 +16,18 @@ namespace nau
 {
     namespace
     {
-        inline eastl::tuple<size_t, size_t> getSchemePosAndSize(eastl::string_view assetFullPath)
+        inline std::tuple<size_t, size_t> getSchemePosAndSize(std::string_view assetFullPath)
         {
             const size_t pos = assetFullPath.find(':');
             return {0, pos};
         }
 
-        inline eastl::tuple<size_t, size_t> getContainerPathPosAndSize(eastl::string_view assetFullPath)
+        inline std::tuple<size_t, size_t> getContainerPathPosAndSize(std::string_view assetFullPath)
         {
             const size_t pos1 = assetFullPath.find(':');
             size_t pos2 = assetFullPath.find('+');
 
-            if (pos2 == eastl::string::npos)
+            if (pos2 == std::string::npos)
             {
                 pos2 = assetFullPath.size();
             }
@@ -31,17 +35,17 @@ namespace nau
             return {pos1 + 1, (pos2 - pos1) - 1};
         }
 
-        inline eastl::tuple<size_t, size_t> getAssetInnerPathPosAndSize(eastl::string_view assetFullPath)
+        inline std::tuple<size_t, size_t> getAssetInnerPathPosAndSize(std::string_view assetFullPath)
         {
             const size_t pos = assetFullPath.find('+');
-            if (pos == eastl::string::npos)
+            if (pos == std::string::npos)
             {
-                return {eastl::string_view::npos, eastl::string_view::npos};
+                return {std::string_view::npos, std::string_view::npos};
             }
 
             static const std::regex re(R"-(\[(.*)\]$)-", std::regex_constants::ECMAScript | std::regex_constants::icase);
 
-            const eastl::string_view innerPath{assetFullPath.data() + pos + 1, assetFullPath.size() - pos - 1};
+            const std::string_view innerPath{assetFullPath.data() + pos + 1, assetFullPath.size() - pos - 1};
 
             std::cmatch match;
             if (std::regex_match(innerPath.data(), innerPath.data() + innerPath.size(), match, re))
@@ -56,22 +60,22 @@ namespace nau
 
             // TODO: commented because logger in tests (without application) is broken.
             // NAU_LOG_WARNING("Invalid asset inner path:({})", innerPathSv);
-            return {eastl::string_view::npos, eastl::string_view::npos};
+            return {std::string_view::npos, std::string_view::npos};
         }
 
-        inline bool schemeIsValid(eastl::string_view scheme)
+        inline bool schemeIsValid(std::string_view scheme)
         {
             return !scheme.empty();
         }
 
-        inline bool containerPathIsValid(eastl::string_view path)
+        inline bool containerPathIsValid(std::string_view path)
         {
             return !path.empty();
         }
 
     }  // namespace
 
-    bool AssetPath::isValid(eastl::string_view assetPath)
+    bool AssetPath::isValid(std::string_view assetPath)
     {
         if (assetPath.empty())
         {
@@ -92,7 +96,7 @@ namespace nau
 
     AssetPath::AssetPath(AssetPath&&) = default;
 
-    AssetPath::AssetPath(eastl::string_view fullAssetPath) :
+    AssetPath::AssetPath(std::string_view fullAssetPath) :
         m_assetFullPath(fullAssetPath)
     {
         if (!m_assetFullPath.empty())
@@ -105,7 +109,7 @@ namespace nau
             }
             else if (strings::trim(getAssetInnerPath()).empty())
             {
-                if (const size_t pos = m_assetFullPath.find('+'); pos != eastl::string::npos)
+                if (const size_t pos = m_assetFullPath.find('+'); pos != std::string::npos)
                 {
                     m_assetFullPath.resize(pos);
                 }
@@ -117,7 +121,7 @@ namespace nau
         }
     }
 
-    AssetPath::AssetPath(eastl::string_view scheme, eastl::string_view assetContainerPath, eastl::string_view assetInnerPath) :
+    AssetPath::AssetPath(std::string_view scheme, std::string_view assetContainerPath, std::string_view assetInnerPath) :
         AssetPath(strings::toStringView(::fmt::format("{}:{}+[{}]", scheme, assetContainerPath, assetInnerPath)))
     {
     }
@@ -125,7 +129,7 @@ namespace nau
     AssetPath& AssetPath::operator=(const AssetPath&) = default;
     AssetPath& AssetPath::operator=(AssetPath&&) = default;
 
-    eastl::string_view AssetPath::getScheme() const
+    std::string_view AssetPath::getScheme() const
     {
         if (m_assetFullPath.empty())
         {
@@ -137,7 +141,7 @@ namespace nau
         return {m_assetFullPath.data() + pos, size};
     }
 
-    eastl::string_view AssetPath::getContainerPath() const
+    std::string_view AssetPath::getContainerPath() const
     {
         if (m_assetFullPath.empty())
         {
@@ -149,7 +153,7 @@ namespace nau
         return {m_assetFullPath.data() + pos, size};
     }
 
-    eastl::string_view AssetPath::getSchemeAndContainerPath() const
+    std::string_view AssetPath::getSchemeAndContainerPath() const
     {
         if (m_assetFullPath.empty())
         {
@@ -158,7 +162,7 @@ namespace nau
         NAU_ASSERT(isValid(m_assetFullPath));
 
         const size_t pos = m_assetFullPath.find('+');
-        if (pos == eastl::string::npos)
+        if (pos == std::string::npos)
         {
             // has no asset inner path - just return full path as is.
             return {m_assetFullPath};
@@ -167,7 +171,7 @@ namespace nau
         return {m_assetFullPath.data(), pos};
     }
 
-    eastl::string_view AssetPath::getAssetInnerPath() const
+    std::string_view AssetPath::getAssetInnerPath() const
     {
         if (m_assetFullPath.empty())
         {
@@ -176,18 +180,18 @@ namespace nau
         NAU_ASSERT(isValid(m_assetFullPath));
 
         const auto [pos, size] = getAssetInnerPathPosAndSize(m_assetFullPath);
-        if (pos == eastl::string_view::npos)
+        if (pos == std::string_view::npos)
         {
             // has not asset inner path
             return {};
         }
 
-        NAU_FATAL(size != eastl::string_view::npos);
+        NAU_FATAL(size != std::string_view::npos);
 
         return {m_assetFullPath.data() + pos, size};
     }
 
-    AssetPath& AssetPath::setScheme(eastl::string_view newScheme)
+    AssetPath& AssetPath::setScheme(std::string_view newScheme)
     {
         if (!static_cast<bool>(*this))
         {
@@ -207,7 +211,7 @@ namespace nau
         return *this;
     }
 
-    AssetPath& AssetPath::setContainerPath(eastl::string_view newPath)
+    AssetPath& AssetPath::setContainerPath(std::string_view newPath)
     {
         if (!static_cast<bool>(*this))
         {
@@ -227,7 +231,7 @@ namespace nau
         return *this;
     }
 
-    AssetPath& AssetPath::setAssetInnerPath(eastl::string_view newInnerPath)
+    AssetPath& AssetPath::setAssetInnerPath(std::string_view newInnerPath)
     {
         if (!static_cast<bool>(*this))
         {
@@ -239,7 +243,7 @@ namespace nau
         {
             // clear inner path
             const size_t pos = m_assetFullPath.find('+');
-            if (pos != eastl::string_view::npos)
+            if (pos != std::string_view::npos)
             {
                 m_assetFullPath.resize(pos);
             }
@@ -247,7 +251,7 @@ namespace nau
         else
         {
             const auto [pos, size] = getAssetInnerPathPosAndSize(m_assetFullPath);
-            if (pos == eastl::string_view::npos)
+            if (pos == std::string_view::npos)
             {
                 // has not asset inner path
                 const std::string innerPathStr = ::fmt::format("+[{}]", newInnerPath);
@@ -267,12 +271,12 @@ namespace nau
         return m_assetFullPath.empty();
     }
 
-    bool AssetPath::hasScheme(eastl::string_view scheme) const
+    bool AssetPath::hasScheme(std::string_view scheme) const
     {
         return strings::icaseEqual(getScheme(), scheme);
     }
 
-    eastl::string AssetPath::toString() const
+    std::string AssetPath::toString() const
     {
         return m_assetFullPath;
     }
@@ -303,7 +307,7 @@ namespace nau
         const auto& left = m_assetFullPath;
         const auto& right = other.m_assetFullPath;
 
-        return eastl::string::compare(left.begin(), left.end(), right.begin(), right.end()) <=> 0;
+        return left.compare(right) <=> 0;
     }
 
     bool AssetPath::operator==(const AssetPath& other) const
@@ -314,7 +318,7 @@ namespace nau
         return left == right;
     }
 
-    bool AssetPath::operator==(eastl::string_view right) const
+    bool AssetPath::operator==(std::string_view right) const
     {
         return m_assetFullPath == right;
     }
@@ -326,7 +330,7 @@ namespace nau
 
     std::string toString(const AssetPath& assetPath)
     {
-        eastl::string str = assetPath.toString();
+        std::string str = assetPath.toString();
         return str.empty() ? std::string{} : std::string{str.data(), str.size()};
     }
 

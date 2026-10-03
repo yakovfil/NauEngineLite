@@ -4,11 +4,15 @@
 
 #pragma once
 
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/disposable.h"
 #include "nau/scripts/script_manager.h"
 #include "nau/service/service.h"
-
 
 namespace nau::scripts
 {
@@ -24,23 +28,23 @@ namespace nau::scripts
     private:
         static int luaRequire(lua_State* l) noexcept;
 
-        Result<Ptr<>> executeScriptFromBytes(const char* scriptName, eastl::span<const std::byte> scriptCode) override;
+        Result<Ptr<>> executeScriptFromBytes(const char* scriptName, std::span<const std::byte> scriptCode) override;
 
         Result<Ptr<>> executeScriptFromFile(const io::FsPath& path) override;
 
         void registerClass(IClassDescriptor::Ptr classDescriptor) override;
 
-        Result<Ptr<IDispatch>> createScriptInstance(eastl::string_view scriptClass) override;
+        Result<Ptr<IDispatch>> createScriptInstance(std::string_view scriptClass) override;
 
         void addScriptSearchPath(io::FsPath path) override;
 
-        void addScriptFileExtension(eastl::string_view ext) override;
+        void addScriptFileExtension(std::string_view ext) override;
 
         async::Task<> preInitService() override;
 
         void dispose() override;
 
-        Result<> invokeGlobal(eastl::string_view method, DispatchArguments args, Functor<void (const nau::Ptr<>& result)>) override;
+        Result<> invokeGlobal(std::string_view method, DispatchArguments args, Functor<void(const nau::Ptr<>& result)>) override;
 
         lua_State* getLua() const;
 
@@ -48,8 +52,8 @@ namespace nau::scripts
 
 
         lua_State* m_luaState = nullptr;
-        eastl::vector<io::FsPath> m_searchPaths;
-        eastl::string m_scriptFileExtension = ".lua";
+        std::vector<io::FsPath> m_searchPaths;
+        std::string m_scriptFileExtension = ".lua";
     };
 
 }  // namespace nau::scripts

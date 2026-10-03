@@ -3,8 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/3d/tql.h"
+#include <memory>
+#include <vector>
+
 #include "nau/3d/dag_drv3d.h"
+#include "nau/3d/tql.h"
 //#include <generic/dag_smallTab.h>
 #include "nau/generic/dag_bitset.h"
 #include "nau/dxil/compiled_shader_header.h"
@@ -156,7 +159,7 @@ public:
   uint16_t height = 0;
   uint16_t depth = 0;
 
-  eastl::vector<uint8_t> texCopy; //SmallTab<uint8_t, MidmemAlloc> texCopy; //< ddsx::Header + ddsx data; sysCopyQualityId stored in hdr.hqPartLevel
+  std::vector<uint8_t> texCopy;  // SmallTab<uint8_t, MidmemAlloc> texCopy; //< ddsx::Header + ddsx data; sysCopyQualityId stored in hdr.hqPartLevel
 
   struct ReloadDataHandler
   {
@@ -167,7 +170,7 @@ public:
     }
   };
 
-  eastl::unique_ptr<IReloadData, ReloadDataHandler> rld;
+  std::unique_ptr<IReloadData, ReloadDataHandler> rld;
 
   SamplerState samplerState;
 

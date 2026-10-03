@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/scene_component.h"
-
-#include <EASTL/vector.h>
 
 namespace nau::animation
 {
@@ -19,13 +20,13 @@ namespace nau::animation
     public:
         AnimationManagerImguiController(AnimationManager& owner);
 
-        void drawGui(const eastl::vector<scene::ObjectWeakRef<AnimationComponent>>& animComponents);
+        void drawGui(const std::vector<scene::ObjectWeakRef<AnimationComponent>>& animComponents);
 
     private:
         int m_selectedAnimComponentIndex = -1;
         int m_selectedTrackIndex = -1;
         int m_selectedSkeletonComponentIndex = -1;
-        eastl::string m_name;
+        std::string m_name;
     };
 
 }  // namespace nau::animation

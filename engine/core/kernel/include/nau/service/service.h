@@ -1,9 +1,8 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/vector.h>
+#include <vector>
 
 #include "nau/async/task_base.h"
 #include "nau/kernel/kernel_config.h"
@@ -17,7 +16,6 @@ namespace nau
     {
         NAU_INTERFACE(nau::IServiceInitialization, IRttiObject)
 
-
         virtual async::Task<> preInitService()
         {
             return async::Task<>::makeResolved();
@@ -28,7 +26,7 @@ namespace nau
             return async::Task<>::makeResolved();
         }
 
-        virtual eastl::vector<const rtti::TypeInfo*> getServiceDependencies() const
+        virtual std::vector<const rtti::TypeInfo*> getServiceDependencies() const
         {
             return {};
         }

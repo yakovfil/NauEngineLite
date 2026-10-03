@@ -4,12 +4,16 @@
 
 #pragma once
 
-#include "nau/math/transform.h"
-#include "render_pipeline/render_scene.h"
-#include "render_pipeline/render_manager.h"
-#include "render_pipeline/static_mesh_instance_group.h"
-#include "nau/scene/components/static_mesh_component.h"
+#include <functional>
+#include <memory>
+#include <utility>
+#include <vector>
 
+#include "nau/math/transform.h"
+#include "nau/scene/components/static_mesh_component.h"
+#include "render_pipeline/render_manager.h"
+#include "render_pipeline/render_scene.h"
+#include "render_pipeline/static_mesh_instance_group.h"
 
 namespace nau
 {
@@ -22,22 +26,22 @@ namespace nau
     public:
         using Ptr = nau::Ptr<StaticMeshManager>;
 
-        async::Task<eastl::unique_ptr<nau::MeshHandle>> addStaticMesh(StaticMeshAssetRef ref, const nau::math::Matrix4& matrix);
+        async::Task<std::unique_ptr<nau::MeshHandle>> addStaticMesh(StaticMeshAssetRef ref, const nau::math::Matrix4& matrix);
 
         void render(nau::math::Matrix4 viewProj); // temporal, for testing only
 
         // Inherited via IRenderManager
         RenderList::Ptr getRenderList(const nau::math::Vector3& viewerPosition,
-            eastl::function<bool(const InstanceInfo&)>& filterFunc,
-            eastl::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
+                                      std::function<bool(const InstanceInfo&)>& filterFunc,
+                                      std::function<bool(const nau::MaterialAssetView::Ptr)>& materialFilter) override;
 
         void update() override;
 
     protected:
-        async::Task<eastl::shared_ptr<StaticMeshInstanceGroup>> findOrCreateGroup(StaticMeshAssetRef ref);
+        async::Task<std::shared_ptr<StaticMeshInstanceGroup>> findOrCreateGroup(StaticMeshAssetRef ref);
 
-        eastl::vector<eastl::weak_ptr<StaticMeshInstanceGroup>> m_meshGroups;
-        eastl::vector<eastl::pair<StaticMeshAssetRef, eastl::weak_ptr<StaticMeshInstanceGroup>>> m_assetRefToGroup;
+        std::vector<std::weak_ptr<StaticMeshInstanceGroup>> m_meshGroups;
+        std::vector<std::pair<StaticMeshAssetRef, std::weak_ptr<StaticMeshInstanceGroup>>> m_assetRefToGroup;
 
         RenderScene::Ptr m_sceneOwner;
 
@@ -76,7 +80,7 @@ namespace nau
         friend class StaticMeshManager;
 
         InstanceInfo m_instInfo;
-        eastl::shared_ptr<StaticMeshInstanceGroup> m_group;
+        std::shared_ptr<StaticMeshInstanceGroup> m_group;
 
         uint32_t m_generation;
         StaticMeshManager::Ptr m_manager;

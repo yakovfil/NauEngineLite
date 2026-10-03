@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "nau/animation/data/frame_event.h"
+#include <vector>
 
-#include <EASTL/vector.h>
+#include "nau/animation/data/frame_event.h"
 
 namespace nau::animation
 {
@@ -24,6 +24,6 @@ namespace nau::animation
         /**
          * @brief A collection of events to be triggered at this frame.
          */
-        eastl::vector<FrameEvent> events;
+        std::vector<FrameEvent> events;
     };
 }

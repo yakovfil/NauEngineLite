@@ -23,12 +23,13 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventCustom.h"
 #include "base/CCEvent.h"
 
 NS_CC_BEGIN
 
-EventCustom::EventCustom(const eastl::string& eventName)
+EventCustom::EventCustom(const std::string& eventName)
 : Event(Type::CUSTOM)
 , _userData(nullptr)
 , _eventName(eventName)

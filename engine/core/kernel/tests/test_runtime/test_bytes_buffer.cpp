@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_cancellation.cpp
 
-
 #include <cstddef>
+#include <memory>
+
 #include "helpers/buffer_test_utils.h"
 #include "helpers/runtime_guard.h"
 #include "nau/async/task.h"
@@ -34,13 +35,13 @@ namespace nau::test
 
         const uint8_t* const charPtr = reinterpret_cast<const uint8_t*>(buffer.data());
 
-        for(size_t i = offset; i < fillSize; ++i)
+        for (size_t i = offset; i < fillSize; ++i)
         {
             const uint8_t expectedValue = static_cast<uint8_t>((i + contentOffset) % std::numeric_limits<uint8_t>::max());
 
             const uint8_t bufferValue = charPtr[i];
 
-            if(bufferValue != expectedValue)
+            if (bufferValue != expectedValue)
             {
                 return testing::AssertionFailure() << std::format("Value mismatch at position [{}]. Expected [{} , {}], but [{}, '{}']", i, static_cast<int>(expectedValue), expectedValue, static_cast<int>(bufferValue), bufferValue);
             }
@@ -366,20 +367,19 @@ namespace nau::test
 
         std::vector<Task<>> tasks;
 
-        for(size_t i = 0; i < ConcurrentCount; ++i)
+        for (size_t i = 0; i < ConcurrentCount; ++i)
         {
             tasks.emplace_back(async::run([](ReadOnlyBuffer readBuffer) mutable
-                                          {
-                                              for(size_t x = 0; x < 90; ++x)
-                                              {
-                                                  [[maybe_unused]]
-                                                  BufferView temp{readBuffer, x};
-                                              }
-                                          },
-                                          Executor::getDefault(), readBuffer));
+            {
+                for (size_t x = 0; x < 90; ++x)
+                {
+                    [[maybe_unused]]
+                    BufferView temp{readBuffer, x};
+                }
+            }, Executor::getDefault(), readBuffer));
         }
 
-        for(auto& t : tasks)
+        for (auto& t : tasks)
         {
             async::wait(t);
         }
@@ -412,7 +412,6 @@ namespace nau::test
             {
                 return ::realloc(ptr, size);
             }
-
 
             void deallocate(void* ptr) override
             {
@@ -470,7 +469,7 @@ namespace nau::test
     TEST(TestBytesBuffer, Allocator)
     {
         bool allocatorFried = false;
-        IMemAllocator::Ptr allocator = eastl::make_shared<TestAllocator>([&allocatorFried]
+        IMemAllocator::Ptr allocator = std::make_shared<TestAllocator>([&allocatorFried]
         {
             allocatorFried = true;
         });
@@ -479,7 +478,7 @@ namespace nau::test
             BytesBuffer buffer(100, std::move(allocator));
             fillBufferWithDefaultContent(buffer);
         }
-        
+
         ASSERT_FALSE(allocator);
         ASSERT_TRUE(allocatorFried);
     }

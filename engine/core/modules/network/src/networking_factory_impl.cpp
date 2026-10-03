@@ -3,9 +3,13 @@
 
 #include "networking_factory_impl.h"
 
+#include <map>
+#include <memory>
+#include <string>
+
 namespace nau
 {
-    eastl::map<eastl::string, NetworkingFactoryImpl::TCreateMethod> NetworkingFactoryImpl::s_methods;
+    std::map<std::string, NetworkingFactoryImpl::TCreateMethod> NetworkingFactoryImpl::s_methods;
 
     async::Task<> NetworkingFactoryImpl::preInitService()
     {
@@ -17,7 +21,7 @@ namespace nau
         return async::Task<>::makeResolved();
     }
 
-    eastl::unique_ptr<INetworking> NetworkingFactoryImpl::create(const eastl::string& name)
+    std::unique_ptr<INetworking> NetworkingFactoryImpl::create(const std::string& name)
     {
         return NetworkingFactoryImpl::Create(name);
     }

@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <EASTL/unique_ptr.h>
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+
+#include <memory>
 
 #include "nau/physics/jolt/jolt_physics_assets.h"
 #include "nau/physics/physics_collider.h"

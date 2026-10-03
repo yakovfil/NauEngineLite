@@ -24,8 +24,6 @@ set(NAU_MINIMAL_KERNEL_COMMON_SOURCES
   memory/aligned_allocator.cpp
   memory/aligned_allocator_debug.cpp
   memory/bytes_buffer.cpp
-  memory/eastl_aliases.cpp
-  memory/eastl_new.cpp
   memory/frame_allocator.cpp
   memory/general_allocator.cpp
   memory/heap_allocator.cpp

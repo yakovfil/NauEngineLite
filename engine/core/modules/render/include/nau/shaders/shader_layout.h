@@ -11,8 +11,9 @@
 #include "nau/shaders/dag_shaderHash.h"
 //#include <math/integer/dag_IPoint4.h>
 //#include <math/dag_Tnau::math::Matrix4.h>
+#include <array>
+
 #include "nau/util/dag_bindump_ext.h"
-#include <EASTL/array.h>
 
 #define USE_16BIT_BLK 1
 
@@ -218,7 +219,7 @@ struct IntPair
 struct ShRef
 {
   uint16_t vprId, fshId, stcodeId, stblkcodeId, renderStateNo;
-  eastl::array<uint16_t, 3> threadGroupSizes;
+  std::array<uint16_t, 3> threadGroupSizes;
 };
 } // namespace detail
 

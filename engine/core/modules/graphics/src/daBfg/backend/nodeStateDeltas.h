@@ -3,8 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "dabfg/backend/intermediateRepresentation.h"
+#include <optional>
+#include <variant>
 
+#include "dabfg/backend/intermediateRepresentation.h"
 
 // sd stands for state deltas
 namespace dabfg::sd
@@ -12,9 +14,9 @@ namespace dabfg::sd
 
 struct ShaderBlockLayersInfoDelta
 {
-  eastl::optional<int> objectLayer;
-  eastl::optional<int> frameLayer;
-  eastl::optional<int> sceneLayer;
+    std::optional<int> objectLayer;
+    std::optional<int> frameLayer;
+    std::optional<int> sceneLayer;
 };
 
 // This more akin to "commands" that tell the executor that some state
@@ -23,19 +25,19 @@ struct ShaderBlockLayersInfoDelta
 
 struct StopVrs
 {};
-using VrsStateDelta = eastl::variant<StopVrs, intermediate::VrsState>;
+using VrsStateDelta = std::variant<StopVrs, intermediate::VrsState>;
 struct FinishRenderPass
 {};
-using RenderPassDelta = eastl::variant<FinishRenderPass, intermediate::RenderPass>;
+using RenderPassDelta = std::variant<FinishRenderPass, intermediate::RenderPass>;
 
 struct NodeStateDelta
 {
-  eastl::optional<bool> wire;
-  eastl::optional<VrsStateDelta> vrs;
-  eastl::optional<RenderPassDelta> pass;
-  eastl::optional<shaders::UniqueOverrideStateId> shaderOverrides;
-  intermediate::BindingsMap bindings;
-  ShaderBlockLayersInfoDelta shaderBlockLayers;
+    std::optional<bool> wire;
+    std::optional<VrsStateDelta> vrs;
+    std::optional<RenderPassDelta> pass;
+    std::optional<shaders::UniqueOverrideStateId> shaderOverrides;
+    intermediate::BindingsMap bindings;
+    ShaderBlockLayersInfoDelta shaderBlockLayers;
 };
 
 using NodeStateDeltas = IdIndexedMapping<intermediate::NodeIndex, NodeStateDelta>;

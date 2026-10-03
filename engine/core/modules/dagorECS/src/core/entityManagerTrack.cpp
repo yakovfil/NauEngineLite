@@ -2,50 +2,55 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/core/componentTypes.h>
-#include "entityManagerEvent.h"
+#include <daECS/core/coreEvents.h>
 #include <daECS/core/entitySystem.h>
 #include <daECS/core/internal/trackComponentAccess.h>
-#include <daECS/core/coreEvents.h>
-#include "tokenize_const_string.h"
+
+#include <algorithm>
+#include <limits>
+#include <vector>
+
 #include "ecsQueryManager.h"
+#include "entityManagerEvent.h"
+#include "tokenize_const_string.h"
 
 namespace ecs
 {
 
 __forceinline void EntityManager::onChangeEvents(const TrackedChangesTemp &process)
 {
-    eastl::vector<uint64_t, /* framemem_allocator TODO Allocators.*/ EASTLAllocatorType> processList(process.size());
-  uint32_t i = 0;
-  for (auto p : process)
-    processList[i++] = p;
-  eastl::sort(processList.begin(), processList.end());
+    std::vector<uint64_t, std::allocator<uint64_t>> processList(process.size());
+    uint32_t i = 0;
+    for (auto p : process)
+        processList[i++] = p;
+    std::sort(processList.begin(), processList.end());
 
-  QueryView qv(*this);
-  QueryView::ComponentsData componentData[MAX_ONE_EID_QUERY_COMPONENTS];
-  qv.componentData = componentData;
-  EventComponentChanged evt;
-  for (auto p : processList)
-  {
-    const EntityId eid = get_eid_from_scheduled(p);
-    const es_index_type esIndex = es_index_type(get_second_from_scheduled(p));
-    const uint32_t idx = eid.index();
-    DAECS_EXT_ASSERT(idx < entDescs.allocated_size());
-    auto entDesc = entDescs[idx]; // intenionally create copy. entDescs can change during the loop
-    if (entDesc.generation != eid.generation())
-      continue;
-    DAECS_EXT_ASSERT(entDesc.archetype < archetypes.size());
-    if (fillEidQueryView(eid, entDesc, esListQueries[esIndex], qv))
+    QueryView qv(*this);
+    QueryView::ComponentsData componentData[MAX_ONE_EID_QUERY_COMPONENTS];
+    qv.componentData = componentData;
+    EventComponentChanged evt;
+    for (auto p : processList)
     {
-      const EntitySystemDesc &es = *esList[esIndex];
-      qv.userData = es.userData;
-      if (PROFILE_ES(es, evt))
-      {
-        TIME_SCOPE_ES(es);
-        es.ops.onEvent(evt, qv);
-      }
-      else
-        es.ops.onEvent(evt, qv);
-    }
+        const EntityId eid = get_eid_from_scheduled(p);
+        const es_index_type esIndex = es_index_type(get_second_from_scheduled(p));
+        const uint32_t idx = eid.index();
+        DAECS_EXT_ASSERT(idx < entDescs.allocated_size());
+        auto entDesc = entDescs[idx];  // intenionally create copy. entDescs can change during the loop
+        if (entDesc.generation != eid.generation())
+            continue;
+        DAECS_EXT_ASSERT(entDesc.archetype < archetypes.size());
+        if (fillEidQueryView(eid, entDesc, esListQueries[esIndex], qv))
+        {
+            const EntitySystemDesc& es = *esList[esIndex];
+            qv.userData = es.userData;
+            if (PROFILE_ES(es, evt))
+            {
+                TIME_SCOPE_ES(es);
+                es.ops.onEvent(evt, qv);
+            }
+            else
+                es.ops.onEvent(evt, qv);
+        }
   }
 }
 
@@ -58,8 +63,8 @@ bool Templates::isReplicatedComponent(template_t t, component_index_t cidx) cons
   const auto replAt = &replicatedComponents[at], replEnd = replAt + cnt;
   if (cnt < 16) // linear search is faster on small lists. for 16 expected comparisons are 4 + 4 branches, so similar to 8 linear. But
                 // instruction cache locality and we prefer to have one branch
-    return eastl::find(replAt, replEnd, cidx) != replEnd;
-  return eastl::binary_search(replAt, replEnd, cidx);
+      return std::find(replAt, replEnd, cidx) != replEnd;
+  return std::binary_search(replAt, replEnd, cidx);
 }
 
 __forceinline void EntityManager::preprocessTrackedChange(EntityId eid, archetype_t archetype, component_index_t cidx,
@@ -321,37 +326,11 @@ bool EntityManager::trackChangedArchetype(uint32_t archetypeId, component_index_
   }
   else
   {
-    switch (dataComponent.componentTypeName) // practicality beats purity. Specialize for most common slow types
-    {
-      case ecs::ComponentTypeInfo<ecs::string>::type:
-        static_assert(!ecs::ComponentTypeInfo<ecs::string>::is_boxed);
-        compare_data<ecs::string>(to_process, archetypeId, compOffset, oldCompOffset, cidx);
-        break;
-      case ecs::ComponentTypeInfo<ecs::Object>::type:
-        static_assert(!ecs::ComponentTypeInfo<ecs::Object>::is_boxed);
-        compare_data<ecs::Object>(to_process, archetypeId, compOffset, oldCompOffset, cidx);
-        break;
-      case ecs::ComponentTypeInfo<ecs::Array>::type:
-        static_assert(!ecs::ComponentTypeInfo<ecs::Array>::is_boxed);
-        compare_data<ecs::Array>(to_process, archetypeId, compOffset, oldCompOffset, cidx);
-        break;
-      case ecs::ComponentTypeInfo<ecs::EidList>::type:
-      case ecs::ComponentTypeInfo<ecs::IntList>::type:
-      case ecs::ComponentTypeInfo<ecs::FloatList>::type:
-        static_assert(!ecs::ComponentTypeInfo<ecs::EidList>::is_boxed && !ecs::ComponentTypeInfo<ecs::IntList>::is_boxed &&
-                        !ecs::ComponentTypeInfo<ecs::FloatList>::is_boxed);
-        static_assert(
-          sizeof(ecs::EidList::value_type) == sizeof(ecs::IntList::value_type) && sizeof(ecs::EidList) == sizeof(ecs::IntList));
-        compare_data<ecs::IntList>(to_process, archetypeId, compOffset, oldCompOffset, cidx);
-        break;
-      default:
-      {
-        const ComponentTypeManager *ctm = componentTypes.getTypeManager(componentType);
-        if (!ctm)
+      // Standard-library owners are boxed; compare values through their type manager.
+      const ComponentTypeManager* ctm = componentTypes.getTypeManager(componentType);
+      if (!ctm)
           return true;
-        compare_data<uint8_t, 0, true>(to_process, archetypeId, compOffset, oldCompOffset, cidx, componentSize, ctm);
-      }
-    }
+      compare_data<uint8_t, 0, true>(to_process, archetypeId, compOffset, oldCompOffset, cidx, componentSize, ctm);
   }
   return true;
 }
@@ -435,14 +414,14 @@ inline unsigned EntityManager::trackScheduledChanges()
   if (!tei)
     return 0;
   FRAMEMEM_REGION;
-  TrackedChangesTemp toProcess = {eastl::max((uint32_t)8, (uint32_t)lastTrackedCount)}; // not less than two cache-lines, and use
-                                                                                        // lastTrackedCount as guesstimate
+  TrackedChangesTemp toProcess = {std::max((uint32_t)8, (uint32_t)lastTrackedCount)};  // not less than two cache-lines, and use
+                                                                                       // lastTrackedCount as guesstimate
   {
     TIME_PROFILE_DEV(ecs_track_archetypes);
     for (auto scheduled : archetypeTrackingQueue)
     {
       static_assert(sizeof(archetype_t) + sizeof(component_index_t) <= sizeof(scheduled));
-      const archetype_t archetype = (scheduled & eastl::numeric_limits<archetype_t>::max());
+      const archetype_t archetype = (scheduled & std::numeric_limits<archetype_t>::max());
       const component_index_t cidx = (scheduled >> (8 * sizeof(archetype_t)));
       DAECS_EXT_ASSERT(archetypes.getArchetypeComponentId(archetype, cidx) != INVALID_ARCHETYPE_COMPONENT_ID);
       DAECS_EXT_ASSERT(dataComponents.isTracked(cidx));
@@ -493,7 +472,7 @@ void EntityManager::sheduleArchetypeTracking(const ArchetypesQuery &archDesc)
 {
   // if constrained mode, lock mutex/use lockless
   ScopedMTMutexT<nau::threading::SpinLock> lock(isConstrainedMTMode(), archetypeTrackingMutex);
-  const size_t index = &archDesc - archetypeQueries.begin();
+  const size_t index = &archDesc - archetypeQueries.data();
   if (queryScheduled.test(index, false))
     return;
   queryScheduled.set(index, true);

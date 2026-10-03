@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // strings.cpp
 
-
 #include "nau/string/string_utils.h"
+
+#include <iterator>
+#include <string_view>
+#include <utility>
 
 #include "nau/string/string_conv.h"
 
@@ -13,77 +16,38 @@ namespace nau::str_detail
     namespace
     {
         template <typename T>
-        eastl::basic_string_view<T> splitNextImpl(eastl::basic_string_view<T> str, eastl::basic_string_view<T> current, eastl::basic_string_view<T> separators)
-        {
-            using StringView = eastl::basic_string_view<T>;
-
-            if(str.empty())
-            {
-                return {};
-            }
-
-            size_t offset = current.empty() ? 0 : (current.data() - str.data()) + current.size();
-
-            if(offset == str.size())
-            {
-                return {};
-            }
-
-            do
-            {
-                const auto pos = str.find_first_of(separators, offset);
-
-                if(pos == StringView::npos)
-                {
-                    break;
-                }
-
-                if(pos != offset)
-                {
-                    return StringView(str.data() + offset, pos - offset);
-                }
-
-                ++offset;
-            } while(offset < str.size());
-
-            return offset == str.size() ? StringView{} : StringView(str.data() + offset, str.size() - offset);
-        }
-
-        template <typename T>
         std::basic_string_view<T> splitNextImpl(std::basic_string_view<T> str, std::basic_string_view<T> current, std::basic_string_view<T> separators)
         {
             using StringView = std::basic_string_view<T>;
 
-            if(str.empty())
+            if (str.empty())
             {
                 return {};
             }
 
             size_t offset = current.empty() ? 0 : (current.data() - str.data()) + current.size();
 
-            if(offset == str.size())
+            if (offset == str.size())
             {
                 return {};
             }
 
             do
             {
-                // DEBUG_CHECK(offset < str.size())
-
                 const auto pos = str.find_first_of(separators, offset);
 
-                if(pos == StringView::npos)
+                if (pos == StringView::npos)
                 {
                     break;
                 }
 
-                if(pos != offset)
+                if (pos != offset)
                 {
                     return StringView(str.data() + offset, pos - offset);
                 }
 
                 ++offset;
-            } while(offset < str.size());
+            } while (offset < str.size());
 
             return offset == str.size() ? StringView{} : StringView(str.data() + offset, str.size() - offset);
         }
@@ -95,9 +59,9 @@ namespace nau::str_detail
 
             size_t spaces = 0;
 
-            for(auto r = str.rbegin(); r != str.rend(); ++r)
+            for (auto r = str.rbegin(); r != str.rend(); ++r)
             {
-                if(*r != Space)
+                if (*r != Space)
                 {
                     break;
                 }
@@ -114,9 +78,9 @@ namespace nau::str_detail
 
             auto iter = str.begin();
 
-            for(; iter != str.end(); ++iter)
+            for (; iter != str.end(); ++iter)
             {
-                if(*iter != Space)
+                if (*iter != Space)
                 {
                     break;
                 }
@@ -126,7 +90,7 @@ namespace nau::str_detail
 
             // DEBUG_CHECK(offset >= 0)
 
-            if(offset == str.length())
+            if (offset == str.length())
             {
                 return {};
             }
@@ -135,59 +99,7 @@ namespace nau::str_detail
         }
 
         template <typename T>
-        eastl::basic_string_view<T> trimEndImpl(eastl::basic_string_view<T> str)
-        {
-            constexpr T Space = TYPED_STR(T, ' ');
-
-            size_t spaces = 0;
-
-            for(auto r = str.rbegin(); r != str.rend(); ++r)
-            {
-                if(*r != Space)
-                {
-                    break;
-                }
-                ++spaces;
-            }
-
-            return spaces == 0 ? str : eastl::basic_string_view<T>{str.data(), str.length() - spaces};
-        }
-
-        template <typename T>
-        eastl::basic_string_view<T> trimStartImpl(eastl::basic_string_view<T> str)
-        {
-            constexpr T Space = TYPED_STR(T, ' ');
-
-            auto iter = str.begin();
-
-            for(; iter != str.end(); ++iter)
-            {
-                if(*iter != Space)
-                {
-                    break;
-                }
-            }
-
-            const auto offset = eastl::distance(str.begin(), iter);
-
-            // DEBUG_CHECK(offset >= 0)
-
-            if(offset == str.length())
-            {
-                return {};
-            }
-
-            return offset == 0 ? str : eastl::basic_string_view<T>{str.data() + offset, (str.length() - offset)};
-        }
-
-        template <typename T>
         std::basic_string_view<T> trimIMpl(std::basic_string_view<T> str)
-        {
-            return trimStartImpl(trimEndImpl(str));
-        }
-
-        template <typename T>
-        eastl::basic_string_view<T> trimIMpl(eastl::basic_string_view<T> str)
         {
             return trimStartImpl(trimEndImpl(str));
         }
@@ -207,11 +119,6 @@ namespace nau::str_detail
 
     }  // namespace
 
-    eastl::string_view splitNext(eastl::string_view str, eastl::string_view current, eastl::string_view separators)
-    {
-        return splitNextImpl(str, current, separators);
-    }
-
     std::string_view splitNext(std::string_view str, std::string_view current, std::string_view separators)
     {
         return splitNextImpl(str, current, separators);
@@ -224,7 +131,7 @@ namespace nau::str_detail
 
     nau::string_view splitNext(nau::string_view str, nau::string_view current, nau::string_view separators)
     {
-        if(str.empty() || separators.empty())
+        if (str.empty() || separators.empty())
         {
             return {};
         }
@@ -233,16 +140,16 @@ namespace nau::str_detail
 
         size_t offset = current.empty() ? 0 : (current.data() - str.data()) + current.size();
 
-        if(offset == str.size())
+        if (offset == str.size())
         {
             return {};
         }
 
         const auto findSeparatorPos = [&, strSize = str.size(), separator = separators[0]](size_t offset)
         {
-            for(size_t i = offset; i < strSize; ++i)
+            for (size_t i = offset; i < strSize; ++i)
             {
-                if(str[i] == separator)
+                if (str[i] == separator)
                 {
                     return i;
                 }
@@ -255,18 +162,18 @@ namespace nau::str_detail
         {
             const auto pos = findSeparatorPos(offset);
 
-            if(pos == nau::string_view::npos)
+            if (pos == nau::string_view::npos)
             {
                 break;
             }
 
-            if(pos != offset)
+            if (pos != offset)
             {
                 return nau::string_view{str, pos - offset, offset};
             }
 
             ++offset;
-        } while(offset < str.size());
+        } while (offset < str.size());
 
         return offset == str.size() ? nau::string_view{} : nau::string_view{str, str.size() - offset, offset};
     }
@@ -278,13 +185,13 @@ namespace nau::strings
 
     std::pair<std::string_view, std::string_view> cut(std::string_view str, char separator)
     {
-        if(str.size() < 2)
+        if (str.size() < 2)
         {
             return {};
         }
 
         const auto index = str.find(separator);
-        if(index == std::string_view::npos)
+        if (index == std::string_view::npos)
         {
             return {};
         }
@@ -295,17 +202,10 @@ namespace nau::strings
         return {left, right};
     }
 
-    eastl::pair<eastl::string_view, eastl::string_view> cut(eastl::string_view str, char separator)
+    std::pair<std::u8string_view, std::u8string_view> cut(std::u8string_view str, char8_t separator)
     {
         auto [left, right] = strings::cut(toStringView(str), separator);
-        return {toStringView(left), toStringView(right)};
-    }
-
-    eastl::pair<eastl::u8string_view, eastl::u8string_view> cut(eastl::u8string_view str, char8_t separator)
-    {
-        auto [left, right] = strings::cut(toStringView(str), separator);
-        return eastl::pair{toU8StringView(left), toU8StringView(right)};
-
+        return std::pair{toU8StringView(left), toU8StringView(right)};
     }
 
     std::string_view trimEnd(std::string_view str)
@@ -334,21 +234,6 @@ namespace nau::strings
     }
 
     std::wstring_view trim(std::wstring_view str)
-    {
-        return str_detail::trimIMpl(str);
-    }
-
-    eastl::string_view trimEnd(eastl::string_view str)
-    {
-        return str_detail::trimEndImpl(str);
-    }
-
-    eastl::string_view trimStart(eastl::string_view str)
-    {
-        return str_detail::trimStartImpl(str);
-    }
-
-    eastl::string_view trim(eastl::string_view str)
     {
         return str_detail::trimIMpl(str);
     }

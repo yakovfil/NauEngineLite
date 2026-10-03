@@ -4,6 +4,8 @@
 #include <nau/rtti/rtti_impl.h>
 
 #include <chrono>
+#include <utility>
+#include <vector>
 
 #include "daECS/core/componentTypes.h"
 #include "daECS/core/coreEvents.h"
@@ -155,10 +157,10 @@ namespace nau::test
             map[ECS_HASH("test_color")] = IVector4{};
             map[ECS_HASH("test_p2")] = Point2();
             // map[ECS_HASH("int_component2")] = 10;
-            templ = create_template(eastl::move(map), {}, "theTemplate");
+            templ = create_template(std::move(map), {}, "theTemplate");
             ecs::ComponentsInitializer map2;
         }
-        eastl::vector<ecs::EntityId> eid;
+        std::vector<ecs::EntityId> eid;
         for(int j = 0; j < CREATE_RUNS; ++j)
         {
             TestData validData;
@@ -181,7 +183,7 @@ namespace nau::test
             // init[ECS_HASH("int_variable")] = i;
             // if (i%2 == 0)
             //   init[ECS_HASH("vel")] = Point3(0,0,0);
-            eid.push_back(g_entity_mgr->createEntitySync("theTemplate",  eastl::move(attrs), std::move(map)));
+            eid.push_back(g_entity_mgr->createEntitySync("theTemplate", std::move(attrs), std::move(map)));
         }
         updateResourcesState(resourceManager);
         validateEntities(eid, 0, 0);

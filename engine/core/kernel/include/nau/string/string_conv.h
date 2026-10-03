@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/utils/strings.h
 
-
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-
+#include <string>
 #include <string_view>
 
 #include "nau/kernel/kernel_config.h"
@@ -16,20 +13,20 @@ namespace nau::strings
 {
 
     NAU_KERNEL_EXPORT
-    eastl::wstring utf8ToWString(eastl::u8string_view text);
+    std::wstring utf8ToWString(std::u8string_view text);
 
     NAU_KERNEL_EXPORT
-    eastl::u8string wstringToUtf8(eastl::wstring_view text);
+    std::u8string wstringToUtf8(std::wstring_view text);
 
-    inline eastl::wstring utf8ToWString(eastl::string_view text)
+    inline std::wstring utf8ToWString(std::string_view text)
     {
-        return utf8ToWString(eastl::u8string_view{reinterpret_cast<const char8_t*>(text.data()), text.size()});
+        return utf8ToWString(std::u8string_view{reinterpret_cast<const char8_t*>(text.data()), text.size()});
     }
 
-    inline eastl::string_view toStringView(const eastl::u8string_view str)
+    inline std::string_view toStringView(const std::u8string_view str)
     {
         static_assert(sizeof(char) == sizeof(char8_t));
-        if(str.empty())
+        if (str.empty())
         {
             return {};
         }
@@ -38,10 +35,10 @@ namespace nau::strings
         return {charPtr, str.size()};
     }
 
-    inline std::string_view toStringView(const eastl::string_view str)
+    inline std::string_view toStringView(const std::string_view str)
     {
         static_assert(sizeof(char) == sizeof(char8_t));
-        if(str.empty())
+        if (str.empty())
         {
             return {};
         }
@@ -49,10 +46,9 @@ namespace nau::strings
         return {str.data(), str.size()};
     }
 
-    inline eastl::string_view toStringView(const std::string_view str)
+    inline std::wstring_view toStringView(const std::wstring_view str)
     {
-        static_assert(sizeof(char) == sizeof(char8_t));
-        if(str.empty())
+        if (str.empty())
         {
             return {};
         }
@@ -60,47 +56,15 @@ namespace nau::strings
         return {str.data(), str.size()};
     }
 
-    inline std::wstring_view toStringView(const eastl::wstring_view str)
-    {
-        if(str.empty())
-        {
-            return {};
-        }
-
-        return {str.data(), str.size()};
-    }
-
-    inline eastl::wstring_view toStringView(const std::wstring_view str)
-    {
-        if(str.empty())
-        {
-            return {};
-        }
-
-        return {str.data(), str.size()};
-    }
-
-    inline eastl::u8string_view toU8StringView(const std::string_view str)
+    inline std::u8string_view toU8StringView(const std::string_view str)
     {
         static_assert(sizeof(char) == sizeof(char8_t));
-        if(str.empty())
+        if (str.empty())
         {
             return {};
         }
 
-        return eastl::u8string_view{reinterpret_cast<const char8_t*>(str.data()), str.size()};
+        return std::u8string_view{reinterpret_cast<const char8_t*>(str.data()), str.size()};
     }
-
-    inline eastl::u8string_view toU8StringView(const eastl::string_view str)
-    {
-        static_assert(sizeof(char) == sizeof(char8_t));
-        if(str.empty())
-        {
-            return {};
-        }
-
-        return eastl::u8string_view{reinterpret_cast<const char8_t*>(str.data()), str.size()};
-    }
-
 
 }  // namespace nau::strings

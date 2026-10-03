@@ -4,6 +4,9 @@
 
 #include "multiplexingInternal.h"
 
+#include <algorithm>
+
+#include "nau/utils/enum_utils.h"
 
 namespace dabfg
 {
@@ -18,7 +21,7 @@ intermediate::MultiplexingIndex multiplexing_index_to_ir(multiplexing::Index fro
 uint32_t multiplexing_extents_to_ir(multiplexing::Extents extents)
 {
   multiplexing::Index lastIndex{extents.superSamples - 1, extents.subSamples - 1, extents.viewports - 1};
-  return eastl::to_underlying(multiplexing_index_to_ir(lastIndex, extents)) + 1;
+  return nau::to_underlying(multiplexing_index_to_ir(lastIndex, extents)) + 1;
 }
 
 multiplexing::Index multiplexing_index_from_ir(intermediate::MultiplexingIndex backMultiplexingIndex, multiplexing::Extents extents)
@@ -30,7 +33,7 @@ multiplexing::Index multiplexing_index_from_ir(intermediate::MultiplexingIndex b
 
 bool multiplexing::mode_has_flag(Mode mode, Mode flag)
 {
-  return (eastl::to_underlying(mode) & eastl::to_underlying(flag)) == eastl::to_underlying(flag);
+    return (nau::to_underlying(mode) & nau::to_underlying(flag)) == nau::to_underlying(flag);
 }
 
 bool multiplexing::operator==(const Extents &fst, const Extents &snd)
@@ -74,14 +77,14 @@ auto multiplexing::extents_for_node(Mode mode, Extents extents) -> Extents
 
 auto multiplexing::clamp(Index idx, Extents extents) -> Index
 {
-  using eastl::min;
-  return Index{min(idx.superSample, extents.superSamples - 1), min(idx.subSample, extents.subSamples - 1),
-    min(idx.viewport, extents.viewports - 1)};
+    using std::min;
+    return Index{min(idx.superSample, extents.superSamples - 1), min(idx.subSample, extents.subSamples - 1),
+                 min(idx.viewport, extents.viewports - 1)};
 }
 
 bool multiplexing::less_multiplexed(Mode fst, Mode snd)
 {
-  return (eastl::to_underlying(fst) & eastl::to_underlying(snd)) == eastl::to_underlying(fst) && fst != snd;
+    return (nau::to_underlying(fst) & nau::to_underlying(snd)) == nau::to_underlying(fst) && fst != snd;
 }
 
 } // namespace dabfg

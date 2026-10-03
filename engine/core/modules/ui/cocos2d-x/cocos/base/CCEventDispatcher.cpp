@@ -22,6 +22,8 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  ****************************************************************************/
+#include <string>
+#include <vector>
 #include "base/CCEventDispatcher.h"
 #include <algorithm>
 
@@ -594,7 +596,7 @@ void EventDispatcher::addEventListenerWithFixedPriority(EventListener* listener,
     addEventListener(listener);
 }
 
-EventListenerCustom* EventDispatcher::addCustomEventListener(const eastl::string &eventName, const std::function<void(EventCustom*)>& callback)
+EventListenerCustom* EventDispatcher::addCustomEventListener(const std::string &eventName, const std::function<void(EventCustom*)>& callback)
 {
     EventListenerCustom *listener = EventListenerCustom::create(eventName, callback);
     addEventListenerWithFixedPriority(listener, 1);
@@ -939,7 +941,7 @@ void EventDispatcher::dispatchEvent(Event* event)
     updateListeners(event);
 }
 
-void EventDispatcher::dispatchCustomEvent(const eastl::string &eventName, void *optionalUserData)
+void EventDispatcher::dispatchCustomEvent(const std::string &eventName, void *optionalUserData)
 {
     EventCustom ev(eventName);
     ev.setUserData(optionalUserData);
@@ -965,7 +967,7 @@ void EventDispatcher::dispatchTouchEvent(EventTouch* event)
     
     bool isNeedsMutableSet = (oneByOneListeners && allAtOnceListeners);
     
-    const eastl::vector<Touch*>& originalTouches = event->getTouches();
+    const std::vector<Touch*>& originalTouches = event->getTouches();
     std::vector<Touch*> mutableTouches(originalTouches.size());
     std::copy(originalTouches.begin(), originalTouches.end(), mutableTouches.begin());
 
@@ -1483,7 +1485,7 @@ void EventDispatcher::removeEventListenersForType(EventListener::Type listenerTy
     }
 }
 
-void EventDispatcher::removeCustomEventListeners(const eastl::string& customEventName)
+void EventDispatcher::removeCustomEventListeners(const std::string& customEventName)
 {
     removeEventListenersForListenerID(customEventName);
 }

@@ -3,6 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <vector>
+
 #include "nau/3d/dag_resId.h"
 #include "nau/3d/ddsxTex.h"
 #include "nau/startup/dag_globalSettings.h"
@@ -12,10 +14,10 @@
 template <class V, class T1, typename U = typename V::value_type>
 inline int find_value_idx(const V &v, T1 const &val)
 {
-  for (const U *p = v.cbegin(), *e = v.cend(); p < e; p++)
-    if (*p == val)
-      return (intptr_t)(p - v.cbegin());
-  return -1;
+    for (const U *p = v.data(), *e = v.data() + v.size(); p < e; p++)
+        if (*p == val)
+            return (intptr_t)(p - v.data());
+    return -1;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -28,7 +30,7 @@ namespace tql
 {
 static constexpr int IMPLICIT_STUBS = 4;
 
-extern eastl::vector<BaseTexture *> texStub;
+extern std::vector<BaseTexture*> texStub;
 
 extern bool streaming_enabled;
 extern int mem_quota_kb;

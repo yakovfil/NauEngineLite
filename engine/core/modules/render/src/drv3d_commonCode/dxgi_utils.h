@@ -5,13 +5,11 @@
 
 #if _TARGET_PC_WIN
 
-#include "nau/supp/dag_comPtr.h"
+    #include <optional>
+    #include <utility>
 
-#include <EASTL/utility.h>
-#include <EASTL/optional.h>
-
-#include "nau/string/string.h"
-
+    #include "nau/string/string.h"
+    #include "nau/supp/dag_comPtr.h"
 
 struct IDXGIAdapter;
 struct IDXGIOutput;
@@ -30,8 +28,8 @@ ComPtr<IDXGIOutput> get_output_monitor_by_name_or_default(IDXGIAdapter *pAdapter
 /* Returns with the primary monitor's pointer if it's available. */
 ComPtr<IDXGIOutput> get_default_monitor(IDXGIAdapter *pAdapter);
 
-bool resolutions_have_same_ratio(eastl::pair<uint32_t, uint32_t> l_res, eastl::pair<uint32_t, uint32_t> r_res);
+bool resolutions_have_same_ratio(std::pair<uint32_t, uint32_t> l_res, std::pair<uint32_t, uint32_t> r_res);
 
-eastl::optional<eastl::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXGIOutput *dxgi_output);
+std::optional<std::pair<uint32_t, uint32_t>> get_recommended_resolution(IDXGIOutput* dxgi_output);
 
 #endif

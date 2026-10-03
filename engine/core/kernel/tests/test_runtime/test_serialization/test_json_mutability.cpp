@@ -1,6 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
+#include <string_view>
+
 #include "nau/serialization/json.h"
 #include "nau/serialization/json_utils.h"
 
@@ -105,7 +108,7 @@ namespace nau::test
     {
         using namespace nau::serialization;
 
-        eastl::u8string_view json1 =
+        std::u8string_view json1 =
             u8R"--(
             {
                 "id": 111,
@@ -120,7 +123,7 @@ namespace nau::test
             }
         )--";
 
-        eastl::u8string_view json2 =
+        std::u8string_view json2 =
             u8R"--(
             {
                 "id_2": 222,
@@ -162,7 +165,7 @@ namespace nau::test
         ASSERT_TRUE(containsField(jsonValue, "data_2"));
         ASSERT_TRUE(containsField(jsonValue, "values"));
 
-        {   // merged collection
+        {  // merged collection
             const Json::Value& valuesValue = jsonValue["values"];
             ASSERT_EQ(valuesValue.type(), Json::ValueType::arrayValue);
             ASSERT_EQ(valuesValue.size(), 4);
@@ -172,7 +175,7 @@ namespace nau::test
             ASSERT_EQ(valuesValue[3].asInt(), 4);
         }
 
-        {   // merged sub object
+        {  // merged sub object
             const Json::Value& data1Value = jsonValue["data_1"];
             ASSERT_TRUE(containsField(data1Value, "id"));
             ASSERT_TRUE(containsField(data1Value, "type"));
@@ -186,7 +189,7 @@ namespace nau::test
 
         // Debug code: uncomment to see actual value1 (merged) content.
 #if 0
-        eastl::string buffer;
+        std::string buffer;
         io::InplaceStringWriter<char> writer{buffer};
         auto res = serialization::jsonWrite(writer, value1, JsonSettings{.pretty = true});
         if (!res)

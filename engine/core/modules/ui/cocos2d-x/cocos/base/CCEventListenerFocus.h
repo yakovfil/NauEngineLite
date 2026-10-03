@@ -27,6 +27,7 @@
 #ifndef __cocos2d_libs__CCEventListenerFocus__
 #define __cocos2d_libs__CCEventListenerFocus__
 
+#include <string>
 #include "base/CCEventListener.h"
 
 /**
@@ -46,7 +47,7 @@ namespace ui {
 class CC_DLL EventListenerFocus : public EventListener
 {
 public:
-    static const eastl::string LISTENER_ID;
+    static const std::string LISTENER_ID;
     
     /** Create a focus event listener.
      *

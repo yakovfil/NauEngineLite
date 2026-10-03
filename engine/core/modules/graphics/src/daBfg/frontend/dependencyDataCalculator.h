@@ -3,33 +3,34 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include "dabfg/common/graphDumper.h"
+#include "dabfg/frontend/dependencyData.h"
 #include "dabfg/frontend/internalRegistry.h"
 #include "dabfg/frontend/nameResolver.h"
-#include "dabfg/common/graphDumper.h"
-#include <EASTL/fixed_vector.h>
-
-#include "dabfg/frontend/dependencyData.h"
-
 
 namespace dabfg
 {
 
-class DependencyDataCalculator
-{
-public:
-  DependencyDataCalculator(InternalRegistry &reg, const NameResolver &nameRes) : registry{reg}, nameResolver{nameRes} {}
+    class DependencyDataCalculator
+    {
+    public:
+        DependencyDataCalculator(InternalRegistry& reg, const NameResolver& nameRes) :
+            registry{reg},
+            nameResolver{nameRes}
+        {
+        }
 
-  DependencyData depData;
+        DependencyData depData;
 
-  void recalculate();
+        void recalculate();
 
-private:
-  InternalRegistry &registry;
-  const NameResolver &nameResolver;
+    private:
+        InternalRegistry& registry;
+        const NameResolver& nameResolver;
 
-  void recalculateResourceLifetimes();
-  void resolveRenaming();
-  void updateRenamedResourceProperties();
-};
+        void recalculateResourceLifetimes();
+        void resolveRenaming();
+        void updateRenamedResourceProperties();
+    };
 
-} // namespace dabfg
+}  // namespace dabfg

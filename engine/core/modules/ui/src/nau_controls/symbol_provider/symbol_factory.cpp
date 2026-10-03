@@ -1,33 +1,35 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/symbol_factory.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "../src/nau_controls/rich_text/rich_text_helper.h"
+#include "../src/nau_controls/rich_text/rich_text_lexer.h"
 #include "2d/CCFontAtlas.h"
 #include "base/ccUTF8.h"
-
-#include "EASTL/string.h"
-
-#include "symbol_provider.h"
 #include "bm_font_symbol_provider.h"
+#include "symbol_provider.h"
 #include "ttf_provider.h"
-#include "../src/nau_controls/rich_text/rich_text_lexer.h"
-#include "../src/nau_controls/rich_text/rich_text_helper.h"
 
 namespace nau::ui
 {
     SymbolFactory::SymbolFactory() {}
 
     SymbolFactory::SymbolFactory(SymbolFactory&& other) noexcept
-    : m_providers(eastl::move(other.m_providers)) 
+        :
+        m_providers(std::move(other.m_providers))
     {}
 
     SymbolFactory& SymbolFactory::operator=(SymbolFactory&& other) noexcept 
     {
         if (this != &other) 
         {
-            m_providers = eastl::move(other.m_providers);
+            m_providers = std::move(other.m_providers);
         }
         return *this;
     }
@@ -41,15 +43,15 @@ namespace nau::ui
     {
         std::string extension = getFileExtension(fontFileName);
 
-        eastl::shared_ptr<ISymbolProvider> provider;
+        std::shared_ptr<ISymbolProvider> provider;
 
         if (extension == ".fnt") 
         {
-            provider = eastl::make_shared<BMFontSymbolProvider>(fontFileName);
+            provider = std::make_shared<BMFontSymbolProvider>(fontFileName);
         }
         else if (extension == ".ttf") 
         {
-            provider = eastl::make_shared<TTFProvider>(fontFileName);
+            provider = std::make_shared<TTFProvider>(fontFileName);
         }
         else 
         {
@@ -75,7 +77,7 @@ namespace nau::ui
             return;
         }
 
-        auto it = eastl::find_if(m_providers.begin(), m_providers.end(), [&fontName](const eastl::shared_ptr<ISymbolProvider>& provider) 
+        auto it = std::find_if(m_providers.begin(), m_providers.end(), [&fontName](const std::shared_ptr<ISymbolProvider>& provider)
         {
             return provider->getName() == fontName;
         });
@@ -90,7 +92,7 @@ namespace nau::ui
     {
         if (!font.empty())
         {
-            eastl::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
+            std::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
 
             if (providerByKey && providerByKey->getSymbol(utf32Code, symbolDefinition))
             {
@@ -119,7 +121,7 @@ namespace nau::ui
     {
         if (!font.empty())
         {
-            eastl::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
+            std::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
 
             if (providerByKey && providerByKey->hasSymbol(utf32Code))
             {
@@ -144,7 +146,7 @@ namespace nau::ui
         return false;
     }
 
-    bool SymbolFactory::warmUpSymbosCache(const eastl::u32string& text) const
+    bool SymbolFactory::warmUpSymbosCache(const std::u32string& text) const
     {
         for (const auto& provider : m_providers)
         {
@@ -161,7 +163,7 @@ namespace nau::ui
     {
         if (!font.empty())
         {
-            eastl::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
+            std::shared_ptr<ISymbolProvider> providerByKey = getProvider(font);
 
             if (providerByKey && providerByKey->hasSymbol(utf32Code))
             {
@@ -194,7 +196,7 @@ namespace nau::ui
         return nullptr;
     }
 
-    int* SymbolFactory::getHorizontalKerning(const eastl::u32string& text, int& outNumLetters) const
+    int* SymbolFactory::getHorizontalKerning(const std::u32string& text, int& outNumLetters) const
     {
         return nullptr;
     }
@@ -242,7 +244,7 @@ namespace nau::ui
         }
     }
 
-    eastl::shared_ptr<ISymbolProvider> SymbolFactory::getProvider(const std::u32string& fontName) const
+    std::shared_ptr<ISymbolProvider> SymbolFactory::getProvider(const std::u32string& fontName) const
     {
         if (!fontName.empty())
         {

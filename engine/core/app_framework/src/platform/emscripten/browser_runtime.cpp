@@ -8,6 +8,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
+#include <string>
 
 #include "nau/app/application_lifecycle.h"
 #include "nau/app/application_services.h"
@@ -112,7 +114,7 @@ namespace nau
             })(); }, &stopRequested, &wakeSequence, &watchdogFailed, timeout, &documentVisible);
         }
 
-        void publish(const char* state, const char* phase, const eastl::string& message, int steps, int sequence, bool complete)
+        void publish(const char* state, const char* phase, const std::string& message, int steps, int sequence, bool complete)
         {
             MAIN_THREAD_EM_ASM({
                 Module.nauRuntime.deliver({state:UTF8ToString($0), phase:UTF8ToString($1),
@@ -127,13 +129,13 @@ namespace
 {
     struct BrowserLoop
     {
-        eastl::unique_ptr<Application> app;
+        std::unique_ptr<Application> app;
         ApplicationLifecycle& lifecycle;
         WorkQueue* queue;
         int timeout;
         bool cooperative;
         int sequence = 1, steps = 0;
-        eastl::string failure;
+        std::string failure;
         const char* failurePhase = nullptr;
         browser_detail::StepDeadline deadline;
         int64_t lastProgress = nowMs(), lastPublish = lastProgress;
@@ -141,7 +143,7 @@ namespace
         uint64_t previousProgress;
         bool wasVisible = true, alive = true;
 
-        BrowserLoop(eastl::unique_ptr<Application> application, int timeoutMs, bool yield) :
+        BrowserLoop(std::unique_ptr<Application> application, int timeoutMs, bool yield) :
             app(std::move(application)),
             lifecycle(app->as<ApplicationLifecycle&>()),
             queue(nullptr),
@@ -192,8 +194,8 @@ namespace
                 const auto diagnostic = error->getDiagMessage();
                 if (failure.empty())
                     failure = diagnostic;
-                else if (failure.find(diagnostic) == eastl::string::npos)
-                    failure += eastl::string("\n") + diagnostic;
+                else if (failure.find(diagnostic) == std::string::npos)
+                    failure += std::string("\n") + diagnostic;
             }
             if (stopRequested.load() || !failure.empty())
                 app->stop();
@@ -215,8 +217,8 @@ namespace
                 const auto diagnostic = error->getDiagMessage();
                 if (failure.empty())
                     failure = diagnostic;
-                else if (failure.find(diagnostic) == eastl::string::npos)
-                    failure += eastl::string("\n") + diagnostic;
+                else if (failure.find(diagnostic) == std::string::npos)
+                    failure += std::string("\n") + diagnostic;
             }
             if (visible && alive && now - lastProgress >= timeout && failure.empty())
             {

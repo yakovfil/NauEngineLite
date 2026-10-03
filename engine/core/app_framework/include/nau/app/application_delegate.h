@@ -1,12 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
-
 #include <chrono>
+#include <memory>
+#include <string>
 
 #include "nau/app/application_init_delegate.h"
 #include "nau/async/task_base.h"
@@ -18,11 +16,11 @@ namespace nau
      */
     struct ApplicationDelegate : ApplicationInitDelegate
     {
-        using Ptr = eastl::unique_ptr<ApplicationDelegate>;
+        using Ptr = std::unique_ptr<ApplicationDelegate>;
 
         /**
          */
-        virtual eastl::string getModulesListString() const = 0;
+        virtual std::string getModulesListString() const = 0;
 
         /**
          */
@@ -44,5 +42,5 @@ namespace nau
 
     /**
      */
-    ApplicationDelegate::Ptr createDefaultApplicationDelegate(eastl::string dynModulesList);
+    ApplicationDelegate::Ptr createDefaultApplicationDelegate(std::string dynModulesList);
 }  // namespace nau

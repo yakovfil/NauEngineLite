@@ -9,5 +9,6 @@ class IGenLoad;
 
 
 // load PSD file (RGBX/RGBA)
-TexImage32 *load_psd32(const char *fn, eastl::allocator *mem, bool *out_used_alpha);
-TexImage32 *load_psd32(IGenLoad &crd, eastl::allocator *mem, bool *out_used_alpha);
+TexImage32* load_psd32(const char* fn, nau::HeapByteAllocator* mem, bool* out_used_alpha);
+TexImage32* load_psd32(IGenLoad& crd, nau::HeapByteAllocator* mem, bool* out_used_alpha);
+#include "nau/memory/heap_byte_allocator.h"

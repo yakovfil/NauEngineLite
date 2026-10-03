@@ -1,12 +1,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <daECS/net/message.h>
-#include <EASTL/functional.h>
-#include <EASTL/vector_set.h>
+#include <daECS/net/msgSink.h>
+#include <ioSys/dag_dataBlock.h>
 #include <math/dag_adjpow2.h>
 #include <startup/dag_globalSettings.h>
-#include <ioSys/dag_dataBlock.h>
-#include <daECS/net/msgSink.h>
 #include <util/dag_globDef.h>
+
+#include <algorithm>
+#include <functional>
+
+#include "nau/utils/sorted_vector.h"
 
 namespace net
 {
@@ -14,13 +17,13 @@ namespace net
 extern void clear_net_msg_handlers();
 extern void register_net_msg_handler(const net::MessageClass &klass, net::msg_handler_t handler);
 
-struct MessageClassPtrLess : public eastl::binary_function<const MessageClass *, const MessageClass *, bool>
+struct MessageClassPtrLess
 {
-  EA_CPP14_CONSTEXPR bool operator()(const MessageClass *a, const MessageClass *b) const { return a->classHash < b->classHash; }
+  constexpr bool operator()(const MessageClass *a, const MessageClass *b) const { return a->classHash < b->classHash; }
 };
 MessageClass *MessageClass::classLinkList = NULL;
 int MessageClass::numClassIdBits = -1;
-typedef eastl::vector_set<const MessageClass *, MessageClassPtrLess> MessageClassesesVec;
+typedef nau::SortedVectorSet<const MessageClass*, MessageClassPtrLess> MessageClassesesVec;
 static MessageClassesesVec incomingMessageClasses;
 
 nau::Span<net::IConnection *> broadcast_rcptf(Tab<net::IConnection *> &, ecs::EntityId, const IMessage &)
@@ -83,7 +86,7 @@ uint32_t MessageClass::init(bool server)
     if (cls->msgSinkHandler && !outgoing)
       register_net_msg_handler(*cls, cls->msgSinkHandler);
     if (cls->debugClassName)
-      maxMesageClassLen = eastl::max(maxMesageClassLen, strlen(cls->debugClassName));
+        maxMesageClassLen = std::max(maxMesageClassLen, strlen(cls->debugClassName));
     ++nmc;
   }
   for (int i = 0; i < incomingMessageClasses.size(); ++i)
@@ -91,9 +94,9 @@ uint32_t MessageClass::init(bool server)
   for (int i = 0; i < outgoingMessageClasses.size(); ++i)
     const_cast<MessageClass *>(outgoingMessageClasses[i])->classId = i; // for sending
   incomingMessageClasses.shrink_to_fit();
-  int numMessageClasses = (int)eastl::max(incomingMessageClasses.size(), outgoingMessageClasses.size()); // To consider: use different
-                                                                                                         // number bits for incoming &
-                                                                                                         // outgoing messages
+  int numMessageClasses = (int)std::max(incomingMessageClasses.size(), outgoingMessageClasses.size());  // To consider: use different
+                                                                                                        // number bits for incoming &
+                                                                                                        // outgoing messages
   NAU_ASSERT(numMessageClasses >= 1);
 #if _DEBUG
   if (numClassIdBits < 0 && maxMesageClassLen && dgs_get_settings()->getBlockByNameEx("net")->getBool("debugDumpMessageClasses", true))

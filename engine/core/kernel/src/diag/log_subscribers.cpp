@@ -5,6 +5,10 @@
 #include <nau/async/task_collection.h>
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
 // #include "nau/diag/assertion.h"
 #include "file_helper.h"
@@ -47,10 +51,10 @@ namespace nau::diag
 {
     namespace
     {
-        eastl::string tagsToString(const eastl::vector<eastl::string>& tags)
+        std::string tagsToString(const std::vector<std::string>& tags)
         {
             // TODO use format
-            eastl::string output;
+            std::string output;
             if (tags.size() > 0)
             {
                 output = tags[0];
@@ -62,18 +66,18 @@ namespace nau::diag
             return output;
         }
 
-        eastl::string timeToString(time_t time)
+        std::string timeToString(time_t time)
         {
             // TODO use format
-            eastl::string timeString{64};
-            strftime((char*)timeString.data(), 64, "%F %H:%M:%S", std::localtime(&time));
+            std::string timeString(64, '\0');
+            timeString.resize(strftime(timeString.data(), timeString.size(), "%F %H:%M:%S", std::localtime(&time)));
             return timeString;
         }
     }  // namespace
 
     struct DefaultMessageFormatter
     {
-        static eastl::string format(const LoggerMessage& message)
+        static std::string format(const LoggerMessage& message)
         {
             return (const char*)nau::string::format(u8"[{}][{}][{}][{}]: {}\n",
                                                     message.index,
@@ -101,19 +105,19 @@ namespace nau::diag
         spdlog::details::file_helper m_file;
         nau::threading::SpinLock m_mutex;
         async::TaskCollection m_fileWriteTasks;
-        eastl::vector<LoggerMessage> m_pendingMessages;
+        std::vector<LoggerMessage> m_pendingMessages;
 
-        eastl::string fileNameFormat(eastl::string_view filename)
+        std::string fileNameFormat(std::string_view filename)
         {
-            eastl::string dateString{64};
+            std::string dateString(64, '\0');
             time_t time = std::time({});
-            strftime((char*)dateString.data(), 64, "%F.%H-%M-%S", std::localtime(&time));
+            dateString.resize(strftime(dateString.data(), dateString.size(), "%F.%H-%M-%S", std::localtime(&time)));
 
-            return eastl::string((const char*)nau::string::format(u8"{}.{}.log", filename, dateString.data()).c_str());
+            return std::string((const char*)nau::string::format(u8"{}.{}.log", filename, dateString.data()).c_str());
         }
 
     public:
-        FileLogSubscriber(eastl::string_view filename, const spdlog::file_event_handlers& event_handlers = {}) :
+        FileLogSubscriber(std::string_view filename, const spdlog::file_event_handlers& event_handlers = {}) :
             m_file(fileNameFormat(filename), event_handlers)
         {
         }
@@ -139,7 +143,7 @@ namespace nau::diag
             {
                 m_pendingMessages.emplace_back(message);
 
-                auto writeToFile = [](spdlog::details::file_helper* file, eastl::vector<LoggerMessage> messages) -> nau::async::Task<>
+                auto writeToFile = [](spdlog::details::file_helper* file, std::vector<LoggerMessage> messages) -> nau::async::Task<>
                 {
                     BackgroundWorkService* const workService = hasServiceProvider() ? getServiceProvider().find<BackgroundWorkService>() : nullptr;
                     if (workService)
@@ -193,11 +197,11 @@ namespace nau::diag
 
     ILogSubscriber::Ptr createConioOutputLogSubscriber()
     {
-        return eastl::make_unique<ConioLogSubscriber>();
+        return std::make_unique<ConioLogSubscriber>();
     }
 
-    ILogSubscriber::Ptr createFileOutputLogSubscriber(eastl::string_view filename)
+    ILogSubscriber::Ptr createFileOutputLogSubscriber(std::string_view filename)
     {
-        return eastl::make_unique<FileLogSubscriber>(filename);
+        return std::make_unique<FileLogSubscriber>(filename);
     }
 }  // namespace nau::diag

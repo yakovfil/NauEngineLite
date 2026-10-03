@@ -4,15 +4,12 @@
 
 #pragma once
 
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <string>
+#include <string_view>
 
 #include "2d/CCNode.h"
-#include "nau/ui/elements/node.h"
-
 #include "nau/math/math.h"
-
-
+#include "nau/ui/elements/node.h"
 
 namespace nau::ui {
 
@@ -36,9 +33,9 @@ enum class RescalePolicy
 class NAU_UI_EXPORT Canvas : public nau::ui::Node
 {
 public:
-    static const eastl::string DEFAULT_NAME;
+    static const std::string DEFAULT_NAME;
 
-    Canvas(const eastl::string&);
+    Canvas(const std::string&);
     ~Canvas();
 
     /**
@@ -63,11 +60,10 @@ public:
      * @return              A pointer to the created canvas object.
      */
     static Canvas* create(
-        const eastl::string& name, 
-        math::vec2 size = {0.f, 0.f}, 
+        const std::string& name,
+        math::vec2 size = {0.f, 0.f},
         RescalePolicy rescale = RescalePolicy::NoRescale);
 
-   
     /**
      * @brief Changes the canvas reference size.
      * 
@@ -105,7 +101,10 @@ public:
      * 
      * @return Canvas name.
      */
-    const eastl::string& getCanvasName() const { return m_canvasName; }
+    const std::string& getCanvasName() const
+    {
+        return m_canvasName;
+    }
 
     /**
      * @brief Retrieves a GUI element attached to the canvas.
@@ -115,8 +114,8 @@ public:
      * @param [in] name Name of the element to retrieve.
      * @return          A pointer to the canvas element or `NULL` if the element has not been found or in case types mismatch.
      */
-    template<typename TUIElement>
-    TUIElement* getUIElement(const eastl::string& name) 
+    template <typename TUIElement>
+    TUIElement* getUIElement(const std::string& name)
     {
         nau::ui::Node* searchResult = getNestedNodeByName(name);
         if (searchResult) 
@@ -145,7 +144,7 @@ private:
     // the window and rescale policy
     math::vec2 m_size = {0.f, 0.f};
 
-    eastl::string m_canvasName {}; 
+    std::string m_canvasName{};
 };
 
 }

@@ -3,20 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/deque.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/vector.h>
-#include "nau/util/dag_generationRefId.h"
-#include "nau/memory/mem_allocator.h"
+#include <deque>
+#include <utility>
+#include <vector>
 
+#include "nau/memory/mem_allocator.h"
+#include "nau/util/dag_generationRefId.h"
+#include "nau/utils/dynamic_bit_vector.h"
 
 // template class containing referenced by weak reference with generation data
 // only available functions doesReferenceExist, destroyReference, allocateOne
 //  ReferenceType has to be GenerationRefId or has GENERATION_BITS, static make, .generation(), .index(), and default constructor
 
-template <class ReferenceType, class DataType,
-  class GenerationType = typename eastl::type_select<ReferenceType::GENERATION_BITS <= 8, uint8_t, uint16_t>::type,
-  int MinimumFreeIndices = 16>
+template <class ReferenceType, class DataType, class GenerationType = typename std::conditional<ReferenceType::GENERATION_BITS <= 8, uint8_t, uint16_t>::type, int MinimumFreeIndices = 16>
 class GenerationReferencedData
 {
 public:
@@ -75,7 +74,7 @@ public:
     {
       idx = freeIndices.front();
       freeIndices.pop_front();
-      new (dataList + idx /*, _NEW_INPLACE*/) DataType(eastl::forward<Args>(args)...);
+      new(dataList + idx /*, _NEW_INPLACE*/) DataType(std::forward<Args>(args)...);
       aliveList.set(idx, true);
       return ReferenceType::make(idx, genList[idx]);
     }
@@ -90,7 +89,7 @@ public:
     if (oldCapacity < genList.capacity())
       growCapacity(oldSize, genList.capacity());
 
-    new (dataList + idx /*, _NEW_INPLACE*/) DataType(eastl::forward<Args>(args)...);
+    new(dataList + idx /*, _NEW_INPLACE*/) DataType(std::forward<Args>(args)...);
     aliveList.set(idx, true);
     return ReferenceType::make(idx, initialGen);
   }
@@ -139,10 +138,10 @@ public:
 
   void swap(GenerationReferencedData &r)
   {
-    eastl::swap(dataList, r.dataList);
-    eastl::swap(genList, r.genList);
-    eastl::swap(aliveList, r.aliveList);
-    eastl::swap(freeIndices, r.freeIndices);
+      std::swap(dataList, r.dataList);
+      std::swap(genList, r.genList);
+      std::swap(aliveList, r.aliveList);
+      std::swap(freeIndices, r.freeIndices);
   }
 
 protected:
@@ -153,8 +152,8 @@ protected:
     {
       if (aliveList.test(i, false))
       {
-        new (newData + i /*, _NEW_INPLACE*/) DataType(eastl::move(dataList[i]));
-        dataList[i].~DataType(); //-V595
+          new(newData + i /*, _NEW_INPLACE*/) DataType(std::move(dataList[i]));
+          dataList[i].~DataType();  //-V595
       }
     }
 
@@ -173,7 +172,7 @@ protected:
   }
 
   DataType *dataList;
-  eastl::vector<generation_type> genList;
-  eastl::bitvector<> aliveList;
-  eastl::deque<uint32_t> freeIndices;
+  std::vector<generation_type> genList;
+  nau::DynamicBitVector<> aliveList;
+  std::deque<uint32_t> freeIndices;
 };

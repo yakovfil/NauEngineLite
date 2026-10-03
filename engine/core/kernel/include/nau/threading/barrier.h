@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/threading/barrier.h
 
-
 #pragma once
-
 #include <atomic>
-#include "EASTL/chrono.h"
-#include "EASTL/compare.h"
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <optional>
@@ -27,7 +24,7 @@ namespace nau::threading
 
         Barrier(const Barrier&) = delete;
 
-        bool enter(std::optional<eastl::chrono::milliseconds> timeout = std::nullopt);
+        bool enter(std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
     private:
         const size_t m_total;

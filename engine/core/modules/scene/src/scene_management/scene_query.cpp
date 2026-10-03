@@ -4,6 +4,7 @@
 #include "nau/scene/scene_query.h"
 
 #include <regex>
+#include <string_view>
 
 #include "nau/memory/stack_allocator.h"
 #include "nau/string/string_conv.h"
@@ -33,7 +34,7 @@ namespace nau::scene
         return typeHashCode != 0;
     }
 
-    SceneQuery::SceneQuery(eastl::string_view queryString)
+    SceneQuery::SceneQuery(std::string_view queryString)
     {
         parse(strings::toStringView(queryString), *this).ignore();
     }
@@ -108,7 +109,7 @@ namespace nau::scene
 
         std::string resultQueryString;
 
-        const auto appendQueryProperty = [&resultQueryString](eastl::string_view key, eastl::string_view value)
+        const auto appendQueryProperty = [&resultQueryString](std::string_view key, std::string_view value)
         {
             if (!resultQueryString.empty())
             {

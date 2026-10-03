@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/utility.h>
 #include <stdint.h>
 
+#include <utility>
+
+#include "nau/utils/enum_utils.h"
 
 namespace dabfg
 {
@@ -64,7 +66,10 @@ enum class Stage : uint8_t
   ALL_INDIRECTION = PRE_RASTER | COMPUTE | RAYTRACE,
 };
 
-constexpr inline Stage operator|(Stage a, Stage b) { return static_cast<Stage>(eastl::to_underlying(a) | eastl::to_underlying(b)); }
+constexpr inline Stage operator|(Stage a, Stage b)
+{
+    return static_cast<Stage>(nau::to_underlying(a) | nau::to_underlying(b));
+}
 
 constexpr inline Stage &operator|=(Stage &a, Stage b)
 {
@@ -72,7 +77,10 @@ constexpr inline Stage &operator|=(Stage &a, Stage b)
   return a;
 }
 
-constexpr inline Stage operator&(Stage a, Stage b) { return static_cast<Stage>(eastl::to_underlying(a) & eastl::to_underlying(b)); }
+constexpr inline Stage operator&(Stage a, Stage b)
+{
+    return static_cast<Stage>(nau::to_underlying(a) & nau::to_underlying(b));
+}
 
 constexpr inline bool stagesSubsetOf(Stage subset, Stage superset) { return (subset & superset) == subset; }
 

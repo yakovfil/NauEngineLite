@@ -5,8 +5,12 @@
 
 #include <memory.h>
 #include <nau/diag/assertion.h>
-#include <EASTL/functional.h>
-#include <EASTL/optional.h>
+
+#include <functional>
+#include <optional>
+#include <type_traits>
+#include <utility>
+
 #include "componentType.h"
 
 namespace ecs
@@ -80,11 +84,11 @@ public:
   template <class T, typename U = ECS_MAYBE_VALUE_T(T)>
   U getOr(const T &def) const
   {
-    static_assert(!eastl::is_same<T, ecs::string>::value, "Generic \"getOr\" is not strings, use non-generic method for that");
-    if (isNull())
-      return def;
-    NAU_ASSERT_RETURN(is<T>(), def);
-    return *(const T *)getTypedData<T>();
+      static_assert(!std::is_same<T, ecs::string>::value, "Generic \"getOr\" is not strings, use non-generic method for that");
+      if (isNull())
+          return def;
+      NAU_ASSERT_RETURN(is<T>(), def);
+      return *(const T*)getTypedData<T>();
   }
   template <typename T>
   ChildComponent &operator=(const T &v)
@@ -96,22 +100,22 @@ public:
       componentTypeSize = ComponentTypeInfo<T>::size;
       if (isAttrBoxedType<T>())
       {
-        // value.data = (void*)(new typename eastl::remove_reference<T>::type(v));
-        // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
-        value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
-        if (!eastl::is_scalar<T>::value)
-          memset(value.data, 0, sizeof(T));
-        new (value.data/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(v);
+          // value.data = (void*)(new typename std::remove_reference<T>::type(v));
+          // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
+          value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
+          if (!std::is_scalar<T>::value)
+              memset(value.data, 0, sizeof(T));
+          new(value.data /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(v);
       }
       else
       {
-        if (!eastl::is_scalar<T>::value)
-          memset(value.buffer, 0, sizeof(T));
-        new (value.buffer/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(v);
+          if (!std::is_scalar<T>::value)
+              memset(value.buffer, 0, sizeof(T));
+          new(value.buffer /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(v);
       }
     }
     else
-      getRW<typename eastl::remove_reference<T>::type>() = v;
+        getRW<typename std::remove_reference<T>::type>() = v;
     return *this;
   }
 
@@ -123,23 +127,23 @@ public:
     componentTypeSize = ComponentTypeInfo<T>::size;
     if (isAttrBoxedType<T>())
     {
-      // value.data = (void*)(new typename eastl::remove_reference<T>::type(v));
-      // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
-      value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
-      if (!eastl::is_scalar<T>::value)
-        memset(value.data, 0, sizeof(T));
-      new (value.data/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(eastl::forward<Args>(args)...);
+        // value.data = (void*)(new typename std::remove_reference<T>::type(v));
+        // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
+        value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
+        if (!std::is_scalar<T>::value)
+            memset(value.data, 0, sizeof(T));
+        new(value.data /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(std::forward<Args>(args)...);
     }
     else
     {
-      if (!eastl::is_scalar<T>::value)
-        memset(value.buffer, 0, sizeof(T));
-      new (value.buffer/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(eastl::forward<Args>(args)...);
+        if (!std::is_scalar<T>::value)
+            memset(value.buffer, 0, sizeof(T));
+        new(value.buffer /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(std::forward<Args>(args)...);
     }
   }
 
-  template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T &&>::value, void>>
-  ChildComponent &operator=(T &&v)
+  template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
+  ChildComponent& operator=(T&& v)
   {
     NAU_ASSERT_RETURN(is<T>() || isNull(), *this);
     if (isNull())
@@ -148,23 +152,23 @@ public:
       componentTypeSize = ComponentTypeInfo<T>::size;
       if (isAttrBoxedType<T>())
       {
-        // value.data = (void*)(new typename eastl::remove_reference<T>::type(eastl::move(v)));
-        // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
-        value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
-        if (!eastl::is_scalar<T>::value)
-          memset(value.data, 0, sizeof(T));
-        new (value.data/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(eastl::move(v));
+          // value.data = (void*)(new typename std::remove_reference<T>::type(std::move(v)));
+          // do it same way, as free in BoxedCreator, as data can be MOVED to it. may be make allocator part of type to remove it?
+          value.data = malloc(sizeof(T) /*, midmem_ptr TODO Allocators.*/);
+          if (!std::is_scalar<T>::value)
+              memset(value.data, 0, sizeof(T));
+          new(value.data /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(std::move(v));
       }
       else
       {
-        if (!eastl::is_scalar<T>::value)
-          memset(value.buffer, 0, sizeof(T));
-        new (value.buffer/*, _NEW_INPLACE*/) typename eastl::remove_reference<T>::type(eastl::move(v));
+          if (!std::is_scalar<T>::value)
+              memset(value.buffer, 0, sizeof(T));
+          new(value.buffer /*, _NEW_INPLACE*/) typename std::remove_reference<T>::type(std::move(v));
       }
     }
     else
     {
-      getRW<typename eastl::remove_cv_t<eastl::remove_reference_t<T>>>() = eastl::move(v);
+        getRW<typename std::remove_cv_t<std::remove_reference_t<T>>>() = std::move(v);
     }
     return *this;
   }
@@ -179,10 +183,10 @@ public:
   {
     (*this) = t;
   }
-  template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T &&>::value, void>>
-  ChildComponent(T &&t)
+  template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
+  ChildComponent(T&& t)
   {
-    (*this) = eastl::move(t);
+      (*this) = std::move(t);
   }
 
   static const ChildComponent &get_null() { return null_attr; }
@@ -219,7 +223,7 @@ protected:
   {
     return isAttrBoxedType<T>() ? value.data : value.buffer;
   }
-  friend void serialize_child_component(const ChildComponent &comp, class SerializerCb &serializer);
+  friend NAU_DAGORECS_EXPORT void serialize_child_component(const ChildComponent &comp, class SerializerCb &serializer);
 
   bool isAttrBoxedBySize() const { return is_child_comp_boxed_by_size(componentTypeSize); }
   const void *getRawData() const { return isAttrBoxedBySize() ? value.data : value.buffer; }
@@ -264,9 +268,9 @@ inline ChildComponent::ChildComponent(ChildComponent &&a)
 
 inline ChildComponent &ChildComponent::operator=(ChildComponent &&a)
 {
-  if (EASTL_UNLIKELY(this == &a))
-    return *this;
-  free();
+    if (NAU_UNLIKELY(this == &a))
+        return *this;
+    free();
 #if !_ECS_CODEGEN
   static_assert(offsetof(ChildComponent, value) == 0);
 #endif
@@ -276,6 +280,6 @@ inline ChildComponent &ChildComponent::operator=(ChildComponent &&a)
   return *this;
 }
 
-using MaybeChildComponent = eastl::optional<ChildComponent>;
+using MaybeChildComponent = std::optional<ChildComponent>;
 
 }; // namespace ecs

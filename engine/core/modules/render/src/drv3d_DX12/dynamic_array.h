@@ -3,36 +3,43 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/unique_ptr.h>
-#include <EASTL/span.h>
-
+#include <memory>
+#include <span>
+#include <utility>
 
 template <typename T>
 class DynamicArray
 {
-  eastl::unique_ptr<T[]> ptr;
-  size_t count = 0;
+    std::unique_ptr<T[]> ptr;
+    size_t count = 0;
 
 public:
   DynamicArray() = default;
   DynamicArray(const DynamicArray &) = delete;
   DynamicArray(DynamicArray &&) = default;
   DynamicArray(T *p, size_t sz) : ptr{p}, count{sz} {}
-  DynamicArray(eastl::unique_ptr<T[]> &&p, size_t sz) : ptr{eastl::forward<eastl::unique_ptr<T[]>>(p)}, count{sz} {}
-  explicit DynamicArray(size_t sz) : DynamicArray{eastl::make_unique<T[]>(sz), sz} {}
+  DynamicArray(std::unique_ptr<T[]>&& p, size_t sz) :
+      ptr{std::forward<std::unique_ptr<T[]>>(p)},
+      count{sz}
+  {
+  }
+  explicit DynamicArray(size_t sz) :
+      DynamicArray{std::make_unique<T[]>(sz), sz}
+  {
+  }
   DynamicArray &operator=(const DynamicArray &) = delete;
   DynamicArray &operator=(DynamicArray &&other)
   {
-    eastl::swap(ptr, other.ptr);
-    eastl::swap(count, other.count);
-    return *this;
+      std::swap(ptr, other.ptr);
+      std::swap(count, other.count);
+      return *this;
   }
 
   void adopt(T *new_ptr, size_t new_sz)
   {
-    eastl::unique_ptr<T[]> newPtr{new_ptr};
-    eastl::swap(ptr, newPtr);
-    count = new_sz;
+      std::unique_ptr<T[]> newPtr{new_ptr};
+      std::swap(ptr, newPtr);
+      count = new_sz;
   }
 
   T *release()
@@ -55,7 +62,7 @@ public:
       return true;
     }
 
-    auto newBlock = eastl::make_unique<T[]>(new_size);
+    auto newBlock = std::make_unique<T[]>(new_size);
     if (!newBlock)
     {
       return false;
@@ -64,9 +71,9 @@ public:
     auto moveCount = Vectormath::min(count, new_size);
     for (uint32_t i = 0; i < moveCount; ++i)
     {
-      newBlock[i] = eastl::move(ptr[i]);
+        newBlock[i] = std::move(ptr[i]);
     }
-    eastl::swap(ptr, newBlock);
+    std::swap(ptr, newBlock);
     count = new_size;
     return true;
   }
@@ -77,15 +84,24 @@ public:
   bool empty() const { return !ptr || 0 == count; }
   T *data() { return ptr.get(); }
   const T *data() const { return ptr.get(); }
-  eastl::span<T> asSpan() { return {data(), size()}; }
-  eastl::span<const T> asSpan() const { return {data(), size()}; }
-  eastl::span<T> releaseAsSpan()
+  std::span<T> asSpan()
+  {
+      return {data(), size()};
+  }
+  std::span<const T> asSpan() const
+  {
+      return {data(), size()};
+  }
+  std::span<T> releaseAsSpan()
   {
     auto retValue = asSpan();
     release();
     return retValue;
   }
-  static DynamicArray fromSpan(eastl::span<T> span) { return {span.data(), span.size()}; }
+  static DynamicArray fromSpan(std::span<T> span)
+  {
+      return {span.data(), span.size()};
+  }
   T *begin() { return ptr.get(); }
   const T *begin() const { return ptr.get(); }
   const T *cbegin() const { return begin(); }

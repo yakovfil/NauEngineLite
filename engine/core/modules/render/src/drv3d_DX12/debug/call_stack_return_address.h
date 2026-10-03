@@ -3,16 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <string>
+#include <unordered_map>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 //#include <debug/dag_log.h>
-#include <EASTL/string_view.h>
-
+#include <string_view>
 
 #if COMMANDS_STORE_RETURN_ADDRESS
 
-#include <osApiWrappers/dag_stackHlp.h>
-#include <drv_returnAddrStore.h>
-#include <eastl/hash_map.h>
+    #include <drv_returnAddrStore.h>
+    #include <osApiWrappers/dag_stackHlp.h>
+
+    #include <unordered_map>
 
 namespace drv3d_dx12
 {
@@ -57,9 +60,9 @@ public:
 class Reporter
 {
   // cache of return address pointers to avoid looking it up over and over again
-  eastl::hash_map<const void *, eastl::string> addressCache;
+  std::unordered_map<const void*, std::string> addressCache;
 
-  const eastl::string &doResolve(const CommandData &data)
+  const std::string& doResolve(const CommandData& data)
   {
     auto ref = addressCache.find(data.returnAddress);
     if (end(addressCache) == ref)
@@ -93,7 +96,10 @@ public:
     buffer.append(str.data(), str.length());
   }
 
-  eastl::string_view resolve(const CommandData &data) { return doResolve(data); }
+  std::string_view resolve(const CommandData& data)
+  {
+      return doResolve(data);
+  }
 };
 } // namespace return_address
 } // namespace call_stack

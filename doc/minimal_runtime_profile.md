@@ -40,12 +40,7 @@ module set is `NAU_MINIMAL_MODULES=PlatformApp`; unsupported selections fail.
 Targets are `NauKernel`, `NauFrameworkMinimal`, `PlatformApp` and `PlatformAppApi`.
 The sample and tests reuse generated static module registration.
 
-Bundled directories: EABase, EASTL, tiny-utf8, fmt, utfcpp, ModifiedSonyMath,
-jsoncpp, wyhash and fast_float. Focused tests additionally use googletest.
-The explicit common/platform manifest in `NauMinimalKernelSources.cmake` now
-excludes proven-unused compression and Dagor IO groups; see
-[source-selection evidence](minimal_kernel_sources.md). Missing required dependency
-CMake files fail with a source-restoration diagnostic; no replacement is fetched.
+The active dependency boundary is the toolchain C++20 standard library plus tiny-utf8, fmt, utfcpp, ModifiedSonyMath, jsoncpp, wyhash and fast_float. EASTL and EABase are not active minimal-runtime dependencies. Nau adapters retain frame, stack, pool, alignment, inline-storage and bounded-callback contracts where standard containers alone do not express the required behavior. Focused tests additionally use googletest. The explicit common/platform manifest in `NauMinimalKernelSources.cmake` now excludes proven-unused compression and Dagor IO groups; see [source-selection evidence](minimal_kernel_sources.md). Missing required dependency CMake files fail with a source-restoration diagnostic; no replacement is fetched.
 
 The framework explicitly compiles application_impl/setup, background_work_service,
 global_properties_impl, logging_service, platform_window_service,

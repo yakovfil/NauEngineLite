@@ -3,8 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/utility.h>
-#include <EASTL/vector.h>
+#include <utility>
+#include <vector>
 //#include <osApiWrappers/dag_lockProfiler.h>
 #include "nau/3d/dag_drv3d.h"
 
@@ -16,19 +16,19 @@
 
 struct TileMapperAccel
 {
-  eastl::vector<D3D12_TILED_RESOURCE_COORDINATE> trcs;
-  eastl::vector<D3D12_TILE_REGION_SIZE> trss;
-  eastl::vector<UINT> offsets;
-  eastl::vector<UINT> counts;
-  eastl::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
-  ID3D12Resource *tex = nullptr;
-  ID3D12Heap *heap = nullptr;
-  size_t heapBase = 0;
+    std::vector<D3D12_TILED_RESOURCE_COORDINATE> trcs;
+    std::vector<D3D12_TILE_REGION_SIZE> trss;
+    std::vector<UINT> offsets;
+    std::vector<UINT> counts;
+    std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
+    ID3D12Resource* tex = nullptr;
+    ID3D12Heap* heap = nullptr;
+    size_t heapBase = 0;
 
-  void beginTileMapping(ID3D12Resource *tex, ID3D12Heap *heap, size_t heap_base, size_t mapping_count);
-  void addTileMappings(const TileMapping *mapping, size_t mapping_count);
-  void endTileMapping(ID3D12CommandQueue *queue);
-  void clear();
+    void beginTileMapping(ID3D12Resource* tex, ID3D12Heap* heap, size_t heap_base, size_t mapping_count);
+    void addTileMappings(const TileMapping* mapping, size_t mapping_count);
+    void endTileMapping(ID3D12CommandQueue* queue);
+    void clear();
 };
 
 #else
@@ -85,7 +85,10 @@ public:
   DeviceQueue(DeviceQueue &&) = default;
   DeviceQueue &operator=(DeviceQueue &&) = default;
 
-  DeviceQueue(ComPtr<ID3D12CommandQueue> q) : queue{eastl::move(q)} {}
+  DeviceQueue(ComPtr<ID3D12CommandQueue> q) :
+      queue{std::move(q)}
+  {
+  }
 
   ID3D12CommandQueue *getHandle() const { return queue.Get(); }
   void enqueueCommands(uint32_t count, ID3D12CommandList *const *cmds) { queue->ExecuteCommandLists(count, cmds); }
@@ -260,7 +263,7 @@ inline DAGOR_NOINLINE bool wait_for_frame_progress_with_event_slow_path(DeviceQu
   {
     return true;
   }
-  if (EASTL_UNLIKELY(WAIT_FAILED == result))
+  if (NAU_UNLIKELY(WAIT_FAILED == result))
   {
     NAU_LOG_WARNING("DX12: While waiting for frame progress {} - {}, WaitForSingleObject({:p}, INFINITE) "
             "failed with {:#08x}, trying to continue with alternatives",
@@ -277,9 +280,9 @@ inline DAGOR_NOINLINE bool wait_for_frame_progress_with_event_slow_path(DeviceQu
 
 __forceinline bool wait_for_frame_progress_with_event(DeviceQueueGroup &qs, uint64_t progress, HANDLE event, const char *what)
 {
-  if (EASTL_LIKELY(qs.checkFrameProgress() >= progress))
-    return true;
-  return wait_for_frame_progress_with_event_slow_path(qs, progress, event, what);
+    if (NAU_LIKELY(qs.checkFrameProgress() >= progress))
+        return true;
+    return wait_for_frame_progress_with_event_slow_path(qs, progress, event, what);
 }
 
 } // namespace drv3d_dx12

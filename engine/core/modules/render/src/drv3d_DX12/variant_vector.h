@@ -3,12 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/numeric_limits.h>
-#include <EASTL/optional.h>
-#include <EASTL/span.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/numeric.h>
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <numeric>
+#include <optional>
+#include <span>
+#include <type_traits>
+#include <utility>
 //#include <perfMon/dag_statDrv.h>
 //#include <osApiWrappers/dag_lockProfiler.h>
 #include <atomic>
@@ -42,12 +45,12 @@ template <typename... Types>
 class SelectIndexType<TypePack<Types...>>
 {
 private:
-  using Type32Bits =
-    typename eastl::conditional<(sizeof...(Types) <= eastl::numeric_limits<uint32_t>::max()), uint32_t, uint64_t>::type;
-  using Type16Bits =
-    typename eastl::conditional<(sizeof...(Types) <= eastl::numeric_limits<uint16_t>::max()), uint16_t, Type32Bits>::type;
-  using Type8Bits =
-    typename eastl::conditional<(sizeof...(Types) <= eastl::numeric_limits<uint8_t>::max()), uint8_t, Type16Bits>::type;
+    using Type32Bits =
+        typename std::conditional<(sizeof...(Types) <= std::numeric_limits<uint32_t>::max()), uint32_t, uint64_t>::type;
+    using Type16Bits =
+        typename std::conditional<(sizeof...(Types) <= std::numeric_limits<uint16_t>::max()), uint16_t, Type32Bits>::type;
+    using Type8Bits =
+        typename std::conditional<(sizeof...(Types) <= std::numeric_limits<uint8_t>::max()), uint8_t, Type16Bits>::type;
 
 public:
   using Type = Type8Bits;
@@ -57,9 +60,9 @@ template <typename T, typename P0>
 struct ExtendedVariant
 {
   T &cmd;
-  eastl::span<P0> p0;
+  std::span<P0> p0;
 
-  ExtendedVariant(T& inCmd, eastl::span<P0> inP0) :
+  ExtendedVariant(T& inCmd, std::span<P0> inP0) :
       cmd(inCmd),
       p0(inP0)
   {
@@ -73,13 +76,13 @@ template <typename T, typename P0, typename P1>
 struct ExtendedVariant2
 {
   T &cmd;
-  eastl::span<P0> p0;
-  eastl::span<P1> p1;
+  std::span<P0> p0;
+  std::span<P1> p1;
 
-  ExtendedVariant2(T& inCmd, eastl::span<P0> inP0, eastl::span<P1> inP1) :
-    cmd(inCmd),
-    p0(inP0),
-    p1(inP1)
+  ExtendedVariant2(T& inCmd, std::span<P0> inP0, std::span<P1> inP1) :
+      cmd(inCmd),
+      p0(inP0),
+      p1(inP1)
   {
 
   }
@@ -122,9 +125,9 @@ struct MemoryWriter
   template <typename T>
   T &writeMove(T &&data)
   {
-    auto obj = ::new (TypeMemoryRequirement<T>::align_pointer(at)) T{eastl::forward<T>(data)};
-    at = reinterpret_cast<uint8_t *>(obj + 1);
-    return *obj;
+      auto obj = ::new(TypeMemoryRequirement<T>::align_pointer(at)) T{std::forward<T>(data)};
+      at = reinterpret_cast<uint8_t*>(obj + 1);
+      return *obj;
   }
 
   template <typename T>
@@ -167,7 +170,7 @@ struct MemoryWriter
     auto p = reinterpret_cast<T *>(TypeMemoryRequirement<T>::align_pointer(at));
     for (size_t i = 0; i < count; ++i)
     {
-      ::new (&p[i]) T{eastl::move(data[i])};
+        ::new(&p[i]) T{std::move(data[i])};
     }
     at = reinterpret_cast<uint8_t *>(&p[count]);
     return p;
@@ -186,20 +189,20 @@ struct MemoryWriter
   }
 
   template <typename T>
-  T *writeArray(eastl::span<T> data)
+  T* writeArray(std::span<T> data)
   {
     auto p = reinterpret_cast<T *>(TypeMemoryRequirement<T>::align_pointer(at));
     auto s = p;
     for (auto &&s : data)
     {
-      ::new (p++) T{eastl::move(data)};
+        ::new(p++) T{std::move(data)};
     }
     at = reinterpret_cast<uint8_t *>(p);
     return s;
   }
 
   template <typename T>
-  T *writeArray(eastl::span<const T> data)
+  T* writeArray(std::span<const T> data)
   {
     auto p = reinterpret_cast<T *>(TypeMemoryRequirement<T>::align_pointer(at));
     auto s = p;
@@ -227,7 +230,7 @@ struct MemoryInterpreter
   }
 
   template <typename T>
-  eastl::span<T> asArray(size_t sz)
+  std::span<T> asArray(size_t sz)
   {
     auto s = reinterpret_cast<T *>(TypeMemoryRequirement<T>::align_pointer(at));
     at = reinterpret_cast<uint8_t *>(s + sz);
@@ -250,7 +253,7 @@ struct MemoryInterpreterConst
   }
 
   template <typename T>
-  eastl::span<const T> asArray(size_t sz)
+  std::span<const T> asArray(size_t sz)
   {
     auto obj = reinterpret_cast<const T *>(TypeMemoryRequirement<T>::align_pointer(at));
     at = reinterpret_cast<const uint8_t *>(obj + sz);
@@ -283,25 +286,31 @@ protected:
   void recordVisitOf(size_t index) { ++visitCount[index]; }
 
 public:
-  void resetMetrics() { eastl::fill(eastl::begin(visitCount), eastl::end(visitCount), 0); }
+    void resetMetrics()
+    {
+        std::fill(std::begin(visitCount), std::end(visitCount), 0);
+    }
 
   template <typename T>
   void resetMetricsFor()
   {
-    using DT = typename eastl::decay<T>::type;
-    using ThisTypesPack = TypePack<Types...>;
-    visitCount[TypeIndexOf<DT, ThisTypesPack>::value] = 0;
+      using DT = typename std::decay<T>::type;
+      using ThisTypesPack = TypePack<Types...>;
+      visitCount[TypeIndexOf<DT, ThisTypesPack>::value] = 0;
   }
 
   template <typename T>
   size_t getVisitCountFor() const
   {
-    using DT = typename eastl::decay<T>::type;
-    using ThisTypesPack = TypePack<Types...>;
-    return visitCount[TypeIndexOf<DT, ThisTypesPack>::value];
+      using DT = typename std::decay<T>::type;
+      using ThisTypesPack = TypePack<Types...>;
+      return visitCount[TypeIndexOf<DT, ThisTypesPack>::value];
   }
 
-  size_t getTotalVisitCount() const { return eastl::accumulate(eastl::begin(visitCount), eastl::end(visitCount), size_t{0}); }
+  size_t getTotalVisitCount() const
+  {
+      return std::accumulate(std::begin(visitCount), std::end(visitCount), size_t{0});
+  }
 
   template <typename T>
   size_t getAllVisitCounts(T clb) const
@@ -547,8 +556,14 @@ protected:
       auto p1 = d.rawReserveArray<P1>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        g(
-          i, [t = p0 + i](auto v) { ::new (t) P0{eastl::move(v)}; }, [t = p1 + i](auto v) { ::new (t) P1{eastl::move(v)}; });
+          g(
+              i, [t = p0 + i](auto v)
+          {
+              ::new(t) P0{std::move(v)};
+          }, [t = p1 + i](auto v)
+          {
+              ::new(t) P1{std::move(v)};
+          });
       }
     }
     static size_t copyOp(MemoryWriter d, MemoryInterpreterConst s)
@@ -585,8 +600,14 @@ protected:
       auto p1 = d.rawReserveArray<P1>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        g(
-          i, [t = p0 + i](auto v) { ::new (t) P0{eastl::move(v)}; }, [t = p1 + i](auto v) { ::new (t) P1{eastl::move(v)}; });
+          g(
+              i, [t = p0 + i](auto v)
+          {
+              ::new(t) P0{std::move(v)};
+          }, [t = p1 + i](auto v)
+          {
+              ::new(t) P1{std::move(v)};
+          });
       }
     }
 
@@ -608,11 +629,14 @@ protected:
   {
     static size_t moveOp(MemoryWriter d, MemoryInterpreter s)
     {
-      d.writeMove<T>(eastl::move(s.as<T>()));
-      return TypeMemoryRequirement<T>::value;
+        d.writeMove<T>(std::move(s.as<T>()));
+        return TypeMemoryRequirement<T>::value;
     }
 
-    static void moveContruct(MemoryWriter d, T &&value) { d.writeMove<T>(eastl::forward<T>(value)); }
+    static void moveContruct(MemoryWriter d, T&& value)
+    {
+        d.writeMove<T>(std::forward<T>(value));
+    }
   };
 
   template <typename T>
@@ -667,11 +691,11 @@ protected:
     static void moveContruct(MemoryWriter d, T &&value, V0 *p0, size_t p0_count)
     {
       d.rawWrite<size_t>(&p0_count);
-      d.writeMove<T>(eastl::forward<T>(value));
+      d.writeMove<T>(std::forward<T>(value));
       auto dp0 = d.rawReserveArray<P0>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        ::new (reinterpret_cast<void *>(&dp0[i])) P0{eastl::forward<V0>(p0[i])};
+          ::new(reinterpret_cast<void*>(&dp0[i])) P0{std::forward<V0>(p0[i])};
       }
     }
 
@@ -680,22 +704,22 @@ protected:
     {
       MemoryWriter d{dst};
       d.rawWrite<size_t>(&p0_count);
-      d.writeMove<T>(eastl::forward<T>(value));
+      d.writeMove<T>(std::forward<T>(value));
       auto dp0 = d.rawReserveArray<P0>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        ::new (reinterpret_cast<void *>(&dp0[i])) T{eastl::move(g0(i))};
+          ::new(reinterpret_cast<void*>(&dp0[i])) T{std::move(g0(i))};
       }
     }
 
     static size_t moveOp(MemoryWriter d, MemoryInterpreter s)
     {
       auto p0Count = d.rawWrite<size_t>(&s.as<size_t>());
-      d.writeMove<T>(eastl::move(s.as<T>()));
+      d.writeMove<T>(std::move(s.as<T>()));
       auto sP0 = d.rawReserveArray<P0>(p0Count);
       for (auto &&p0 : s.asArray<P0>(p0Count))
       {
-        ::new (sP0++) P0{eastl::move(p0)};
+          ::new(sP0++) P0{std::move(p0)};
       }
       return TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<T>::value + TypeMemoryRequirement<P0>::array_of(p0Count);
     }
@@ -723,8 +747,14 @@ protected:
       auto p1 = d.rawReserveArray<P1>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        g(
-          i, [t = p0 + i](auto v) { ::new (t) P0{eastl::move(v)}; }, [t = p1 + i](auto v) { ::new (t) P1{eastl::move(v)}; });
+          g(
+              i, [t = p0 + i](auto v)
+          {
+              ::new(t) P0{std::move(v)};
+          }, [t = p1 + i](auto v)
+          {
+              ::new(t) P1{std::move(v)};
+          });
       }
     }
 
@@ -747,7 +777,7 @@ protected:
     {
       d.rawWrite<size_t>(&p0_count);
       d.rawWrite<size_t>(&p1_count);
-      d.writeMove<T>(eastl::forward<T>(value));
+      d.writeMove<T>(std::forward<T>(value));
       d.writeArray<P0>(p0, p0_count);
       d.writeArray<P1>(p1, p1_count);
     }
@@ -757,13 +787,19 @@ protected:
     {
       d.rawWrite<size_t>(&p0_count);
       d.rawWrite<size_t>(&p0_count);
-      d.writeMove<T>(eastl::forward<T>(value));
+      d.writeMove<T>(std::forward<T>(value));
       auto p0 = d.rawReserveArray<P0>(p0_count);
       auto p1 = d.rawReserveArray<P1>(p0_count);
       for (size_t i = 0; i < p0_count; ++i)
       {
-        g(
-          i, [t = p0 + i](auto v) { ::new (t) P0{eastl::move(v)}; }, [t = p1 + i](auto v) { ::new (t) P1{eastl::move(v)}; });
+          g(
+              i, [t = p0 + i](auto v)
+          {
+              ::new(t) P0{std::move(v)};
+          }, [t = p1 + i](auto v)
+          {
+              ::new(t) P1{std::move(v)};
+          });
       }
     }
 
@@ -771,7 +807,7 @@ protected:
     {
       auto p0Count = d.rawWrite<size_t>(&s.as<size_t>());
       auto p1Count = d.rawWrite<size_t>(&s.as<size_t>());
-      d.writeMove<T>(eastl::move(s.as<T>()));
+      d.writeMove<T>(std::move(s.as<T>()));
       d.rawWriteArray<P0>(s.asArray<P0>(p0Count).data(), p0Count);
       d.rawWriteArray<P1>(s.asArray<P1>(p1Count).data(), p1Count);
       return TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<T>::value +
@@ -782,9 +818,9 @@ protected:
   // Builds an optimized handler that tries to simplifies stuff if they are trivial
   // Second param is to prevent full specialization, as its not allowed in class scope
   template <typename T, bool>
-  struct TypeHandler : TypeHandlerDestructor<T, eastl::is_trivially_destructible<T>::value>,
-                       TypeHandlerCopyConstructor<T, eastl::is_trivially_copy_constructible<T>::value>,
-                       TypeHandlerMoveConstructor<T, eastl::is_trivially_move_constructible<T>::value>
+  struct TypeHandler : TypeHandlerDestructor<T, std::is_trivially_destructible<T>::value>,
+                       TypeHandlerCopyConstructor<T, std::is_trivially_copy_constructible<T>::value>,
+                       TypeHandlerMoveConstructor<T, std::is_trivially_move_constructible<T>::value>
   {
     static size_t sizeOp(MemoryInterpreterConst) { return TypeMemoryRequirement<T>::value; }
 
@@ -807,12 +843,12 @@ protected:
 
   template <typename T, typename P0, bool B>
   struct TypeHandler<ExtendedVariant<T, P0>, B>
-    : TypeHandlerDestructor<ExtendedVariant<T, P0>,
-        eastl::is_trivially_destructible<T>::value && eastl::is_trivially_destructible<P0>::value>,
-      TypeHandlerCopyConstructor<ExtendedVariant<T, P0>,
-        eastl::is_trivially_copy_constructible<T>::value && eastl::is_trivially_copy_constructible<P0>::value>,
-      TypeHandlerMoveConstructor<ExtendedVariant<T, P0>,
-        eastl::is_trivially_move_constructible<T>::value && eastl::is_trivially_move_constructible<P0>::value>
+      : TypeHandlerDestructor<ExtendedVariant<T, P0>,
+                              std::is_trivially_destructible<T>::value && std::is_trivially_destructible<P0>::value>,
+        TypeHandlerCopyConstructor<ExtendedVariant<T, P0>,
+                                   std::is_trivially_copy_constructible<T>::value && std::is_trivially_copy_constructible<P0>::value>,
+        TypeHandlerMoveConstructor<ExtendedVariant<T, P0>,
+                                   std::is_trivially_move_constructible<T>::value && std::is_trivially_move_constructible<P0>::value>
   {
     static size_t callOp(MemoryInterpreterConst m)
     {
@@ -847,15 +883,9 @@ protected:
 
   template <typename T, typename P0, typename P1, bool B>
   struct TypeHandler<ExtendedVariant2<T, P0, P1>, B>
-    : TypeHandlerDestructor<ExtendedVariant2<T, P0, P1>, eastl::is_trivially_destructible<T>::value &&
-                                                           eastl::is_trivially_destructible<P0>::value &&
-                                                           eastl::is_trivially_destructible<P1>::value>,
-      TypeHandlerCopyConstructor<ExtendedVariant2<T, P0, P1>, eastl::is_trivially_copy_constructible<T>::value &&
-                                                                eastl::is_trivially_copy_constructible<P0>::value &&
-                                                                eastl::is_trivially_copy_constructible<P1>::value>,
-      TypeHandlerMoveConstructor<ExtendedVariant2<T, P0, P1>, eastl::is_trivially_move_constructible<T>::value &&
-                                                                eastl::is_trivially_move_constructible<P0>::value &&
-                                                                eastl::is_trivially_move_constructible<P1>::value>
+      : TypeHandlerDestructor<ExtendedVariant2<T, P0, P1>, std::is_trivially_destructible<T>::value && std::is_trivially_destructible<P0>::value && std::is_trivially_destructible<P1>::value>,
+        TypeHandlerCopyConstructor<ExtendedVariant2<T, P0, P1>, std::is_trivially_copy_constructible<T>::value && std::is_trivially_copy_constructible<P0>::value && std::is_trivially_copy_constructible<P1>::value>,
+        TypeHandlerMoveConstructor<ExtendedVariant2<T, P0, P1>, std::is_trivially_move_constructible<T>::value && std::is_trivially_move_constructible<P0>::value && std::is_trivially_move_constructible<P1>::value>
   {
     static size_t sizeOp(MemoryInterpreterConst m)
     {
@@ -943,13 +973,13 @@ protected:
   template <typename U, typename T>
   static size_t callOp(MemoryInterpreter m, U &&u)
   {
-    return TypeHandler<T, true>::callOp(m, eastl::forward<U>(u));
+      return TypeHandler<T, true>::callOp(m, std::forward<U>(u));
   }
 
   template <typename U, typename T>
   static size_t callOpAndIndex(MemoryInterpreter m, size_t index, U &&u)
   {
-    return TypeHandler<T, true>::callOpAndIndex(m, index, eastl::forward<U>(u));
+      return TypeHandler<T, true>::callOpAndIndex(m, index, std::forward<U>(u));
   }
 
   template <typename T>
@@ -996,7 +1026,7 @@ protected:
     MetricsCollectorType::recordVisitOf(typeIndex);
     using CallType = size_t (*)(MemoryInterpreter, U &&);
     static const CallType callList[] = {&callOp<U, Types>...};
-    return TypeMemoryRequirement<IndexType>::value + callList[typeIndex](m, eastl::forward<U>(u));
+    return TypeMemoryRequirement<IndexType>::value + callList[typeIndex](m, std::forward<U>(u));
   }
   template <typename U>
   size_t callAtAndIndex(DataStoreType *pos, size_t index, U &&u)
@@ -1006,151 +1036,151 @@ protected:
     MetricsCollectorType::recordVisitOf(typeIndex);
     using CallType = size_t (*)(MemoryInterpreter, size_t, U &&);
     static const CallType callList[] = {&callOpAndIndex<U, Types>...};
-    return TypeMemoryRequirement<IndexType>::value + callList[typeIndex](m, index, eastl::forward<U>(u));
+    return TypeMemoryRequirement<IndexType>::value + callList[typeIndex](m, index, std::forward<U>(u));
   }
 
   template <typename T>
   static void copyConstructAt(DataStoreType *pos, const T &value)
   {
-    using DT = typename eastl::decay<T>::type;
-    using UsedTypeHandler = TypeHandler<DT, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::size != 0);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<DT, ThisTypesPack>::value);
-    UsedTypeHandler::copyConstruct(m, value);
+      using DT = typename std::decay<T>::type;
+      using UsedTypeHandler = TypeHandler<DT, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::size != 0);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<DT, ThisTypesPack>::value);
+      UsedTypeHandler::copyConstruct(m, value);
   }
 
   template <typename T>
   static void moveConstructAt(DataStoreType *pos, T &&value)
   {
-    using DT = typename eastl::decay<T>::type;
-    using UsedTypeHandler = TypeHandler<DT, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<DT, ThisTypesPack>::value);
-    UsedTypeHandler::moveContruct(m, eastl::forward<DT>(value));
+      using DT = typename std::decay<T>::type;
+      using UsedTypeHandler = TypeHandler<DT, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<DT, ThisTypesPack>::value);
+      UsedTypeHandler::moveContruct(m, std::forward<DT>(value));
   }
 
   template <typename T, typename P0>
   static void copyConstructAt(DataStoreType *pos, const T &value, const P0 *p0, size_t p0_count)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
-    UsedTypeHandler::copyConstruct(m, value, p0, p0_count);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
+      UsedTypeHandler::copyConstruct(m, value, p0, p0_count);
   }
 
   template <typename T, typename P0>
   static void moveConstructAt(DataStoreType *pos, T &&value, P0 *p0, size_t p0_count)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
-    UsedTypeHandler::moveContruct(m, eastl::forward<DT>(value), p0, p0_count);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
+      UsedTypeHandler::moveContruct(m, std::forward<DT>(value), p0, p0_count);
   }
 
   template <typename T, typename P0, typename G0>
   static void copyConstructDataGeneratorAt(DataStoreType *pos, const T &value, size_t p0_count, G0 g0)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
-    UsedTypeHandler::copyConstructDataGenerator(m, value, p0_count, g0);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
+      UsedTypeHandler::copyConstructDataGenerator(m, value, p0_count, g0);
   }
 
   template <typename T, typename P0, typename G0>
   static void moveConstructDataGeneratorAt(DataStoreType *pos, T &&value, size_t p0_count, G0 g0)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
-    UsedTypeHandler::moveContructDataGenerator(m, eastl::forward<DT>(value), p0_count, g0);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using UsedTypeHandler = TypeHandler<ExtendedVariant<DT, DP0>, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<ExtendedVariant<DT, DP0>, ThisTypesPack>::value);
+      UsedTypeHandler::moveContructDataGenerator(m, std::forward<DT>(value), p0_count, g0);
   }
 
   template <typename T>
   static size_t calculateTotalSpaceForTypeSize()
   {
-    using DT = typename eastl::decay<T>::type;
-    return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<T>::value;
+      using DT = typename std::decay<T>::type;
+      return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<T>::value;
   }
 
   template <typename T, typename P0>
   static size_t calculateTotalSpaceForExtenedVariant(size_t p0_count)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<DT>::value +
-           TypeMemoryRequirement<DP0>::array_of(p0_count);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<DT>::value +
+             TypeMemoryRequirement<DP0>::array_of(p0_count);
   }
 
   template <typename T, typename P0, typename P1>
   static size_t calculateTotalSpaceForExtenedVariant2(size_t p0_count, size_t p1_count)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using DP1 = typename eastl::decay<P1>::type;
-    return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<size_t>::value +
-           TypeMemoryRequirement<DT>::value + TypeMemoryRequirement<DP0>::array_of(p0_count) +
-           TypeMemoryRequirement<DP1>::array_of(p1_count);
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using DP1 = typename std::decay<P1>::type;
+      return TypeMemoryRequirement<IndexType>::value + TypeMemoryRequirement<size_t>::value + TypeMemoryRequirement<size_t>::value +
+             TypeMemoryRequirement<DT>::value + TypeMemoryRequirement<DP0>::array_of(p0_count) +
+             TypeMemoryRequirement<DP1>::array_of(p1_count);
   }
 
   template <typename T, typename P0, typename P1, typename G>
   static void moveConstructExtended2DataGenerator(DataStoreType *pos, T &&value, size_t p0_count, G g)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using DP1 = typename eastl::decay<P1>::type;
-    using EXT = ExtendedVariant2<DT, DP0, DP1>;
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using DP1 = typename std::decay<P1>::type;
+      using EXT = ExtendedVariant2<DT, DP0, DP1>;
 
-    using UsedTypeHandler = TypeHandler<EXT, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<EXT, ThisTypesPack>::value);
-    UsedTypeHandler::moveContructDataGenerator(m, &value, p0_count, g);
+      using UsedTypeHandler = TypeHandler<EXT, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<EXT, ThisTypesPack>::value);
+      UsedTypeHandler::moveContructDataGenerator(m, &value, p0_count, g);
   }
 
   template <typename T, typename P0, typename P1, typename G>
   static void copyConstructExtended2DataGenerator(DataStoreType *pos, const T &value, size_t p0_count, G g)
   {
-    using DT = typename eastl::decay<T>::type;
-    using DP0 = typename eastl::decay<P0>::type;
-    using DP1 = typename eastl::decay<P1>::type;
-    using EXT = ExtendedVariant2<DT, DP0, DP1>;
+      using DT = typename std::decay<T>::type;
+      using DP0 = typename std::decay<P0>::type;
+      using DP1 = typename std::decay<P1>::type;
+      using EXT = ExtendedVariant2<DT, DP0, DP1>;
 
-    using UsedTypeHandler = TypeHandler<EXT, true>;
-    // Prevents creation of meta types
-    static_assert(UsedTypeHandler::is_valid);
-    MemoryWriter m{pos};
-    m.write<IndexType>(TypeIndexOf<EXT, ThisTypesPack>::value);
-    UsedTypeHandler::copyConstructDataGenerator(m, &value, p0_count, g);
+      using UsedTypeHandler = TypeHandler<EXT, true>;
+      // Prevents creation of meta types
+      static_assert(UsedTypeHandler::is_valid);
+      MemoryWriter m{pos};
+      m.write<IndexType>(TypeIndexOf<EXT, ThisTypesPack>::value);
+      UsedTypeHandler::copyConstructDataGenerator(m, &value, p0_count, g);
   }
 };
 
 namespace drv3d_dx12
 {
 #if _TARGET_PC_WIN
-extern eastl::add_pointer_t<decltype(::WaitOnAddress)> WaitOnAddress;
-extern eastl::add_pointer_t<decltype(::WakeByAddressAll)> WakeByAddressAll;
-extern eastl::add_pointer_t<decltype(::WakeByAddressSingle)> WakeByAddressSingle;
+    extern std::add_pointer_t<decltype(::WaitOnAddress)> WaitOnAddress;
+    extern std::add_pointer_t<decltype(::WakeByAddressAll)> WakeByAddressAll;
+    extern std::add_pointer_t<decltype(::WakeByAddressSingle)> WakeByAddressSingle;
 #endif
 } // namespace drv3d_dx12
 
@@ -1283,7 +1313,7 @@ private:
   alignas(false_sharing_avoidance_alignment) std::atomic<size_t> committedCount{0};
   // Free memory counter, consumer adds memory that it consumed to this
   alignas(false_sharing_avoidance_alignment) std::atomic<size_t> freeCount{0};
-  alignas(false_sharing_avoidance_alignment) eastl::unique_ptr<DataStoreType[]> store;
+  alignas(false_sharing_avoidance_alignment) std::unique_ptr<DataStoreType[]> store;
   OperationMode mode = OperationMode::VECTOR;
 
   void vectorGrow(size_t new_size)
@@ -1294,7 +1324,7 @@ private:
     }
 
     size_t newSize = Vectormath::max(new_size, size * 2);
-    eastl::unique_ptr<DataStoreType[]> newStore;
+    std::unique_ptr<DataStoreType[]> newStore;
     newStore.reset(new DataStoreType[newSize]);
 
     size_t pos = 0;
@@ -1426,14 +1456,14 @@ public:
     template <typename U>
     void visit(U &&u)
     {
-      parent->callAt(&parent->store[index], eastl::forward<U>(u));
+        parent->callAt(&parent->store[index], std::forward<U>(u));
     }
 
     template <typename U>
     bool isType() const
     {
-      typedef typename eastl::decay<U>::type DecayedU;
-      return parent->store[index] == TypeIndexOf<DecayedU, ThisTypesPack>::value;
+        typedef typename std::decay<U>::type DecayedU;
+        return parent->store[index] == TypeIndexOf<DecayedU, ThisTypesPack>::value;
     }
 
     size_t getIndex() const { return index; }
@@ -1505,7 +1535,7 @@ public:
       // bigger as the rest of available memory before we need to wrap around. With this we can
       // store the whole object as normal and the wrapping logic still works without problems as we
       // only index into the front of each element.
-      store = eastl::make_unique<DataStoreType[]>(ring_size + (ring_size * appendix_numerator) / appendix_denominator);
+      store = std::make_unique<DataStoreType[]>(ring_size + (ring_size * appendix_numerator) / appendix_denominator);
       size = ring_size;
     }
   }
@@ -1530,7 +1560,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructAt<T>(&store[allocResult % size], eastl::forward<T>(v));
+    this->template moveConstructAt<T>(&store[allocResult % size], std::forward<T>(v));
 
     commitSpace(allocResult, sizeNeeded, wake_executor);
     return {Iterator{*this, allocResult}};
@@ -1613,7 +1643,7 @@ public:
     if (exePos != readyPos)
     {
       auto exeIndex = exePos % size;
-      auto len = callAt(&store[exeIndex], eastl::forward<U>(visitor));
+      auto len = callAt(&store[exeIndex], std::forward<U>(visitor));
       destroyAt(&store[exeIndex]);
       freeCount.store(exePos + len, std::memory_order_release);
       notify_all(freeCount);
@@ -1631,7 +1661,7 @@ public:
     if (exePos != readyPos)
     {
       auto exeIndex = exePos % size;
-      auto len = callAtAndIndex(&store[exeIndex], exeIndex, eastl::forward<U>(visitor));
+      auto len = callAtAndIndex(&store[exeIndex], exeIndex, std::forward<U>(visitor));
       destroyAt(&store[exeIndex]);
       freeCount.store(exePos + len, std::memory_order_release);
       notify_all(freeCount);
@@ -1671,7 +1701,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructAt<T, P0>(&store[allocResult % size], eastl::forward<T>(v), p0, p0_count);
+    this->template moveConstructAt<T, P0>(&store[allocResult % size], std::forward<T>(v), p0, p0_count);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};
@@ -1685,7 +1715,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template copyConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], eastl::move(v), p0_count, g0);
+    this->template copyConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], std::move(v), p0_count, g0);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};
@@ -1699,7 +1729,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], eastl::forward<T>(v), p0_count, g0);
+    this->template moveConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], std::forward<T>(v), p0_count, g0);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};
@@ -1783,7 +1813,7 @@ private:
   alignas(false_sharing_avoidance_alignment) std::atomic<size_t> freeCount{0};
   // if a consumer enters the wait queue this will be greater than zero, producers will then notify the consumers on next commit
   alignas(false_sharing_avoidance_alignment) std::atomic<size_t> consumerWaiting{0};
-  alignas(false_sharing_avoidance_alignment) eastl::unique_ptr<DataStoreType[]> store;
+  alignas(false_sharing_avoidance_alignment) std::unique_ptr<DataStoreType[]> store;
 
   size_t calculateFreeSize(size_t alloc_pos, size_t free_pos) const
   {
@@ -1890,14 +1920,14 @@ public:
     template <typename U>
     void visit(U &&u)
     {
-      parent->callAt(&parent->store[index], eastl::forward<U>(u));
+        parent->callAt(&parent->store[index], std::forward<U>(u));
     }
 
     template <typename U>
     bool isType() const
     {
-      typedef typename eastl::decay<U>::type DecayedU;
-      return parent->store[index] == TypeIndexOf<DecayedU, ThisTypesPack>::value;
+        typedef typename std::decay<U>::type DecayedU;
+        return parent->store[index] == TypeIndexOf<DecayedU, ThisTypesPack>::value;
     }
 
     size_t getIndex() const { return index; }
@@ -1959,7 +1989,7 @@ public:
     // bigger as the rest of available memory before we need to wrap around. With this we can
     // store the whole object as normal and the wrapping logic still works without problems as we
     // only index into the front of each element.
-    store = eastl::make_unique<DataStoreType[]>(ring_size + (ring_size * appendix_numerator) / appendix_denominator);
+    store = std::make_unique<DataStoreType[]>(ring_size + (ring_size * appendix_numerator) / appendix_denominator);
     size = ring_size;
   }
 
@@ -1983,7 +2013,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructAt<T>(&store[allocResult % size], eastl::forward<T>(v));
+    this->template moveConstructAt<T>(&store[allocResult % size], std::forward<T>(v));
 
     commitSpace(allocResult, sizeNeeded, wake_executor);
     return {Iterator{*this, allocResult}};
@@ -2066,7 +2096,7 @@ public:
     if (exePos != readyPos)
     {
       auto exeIndex = exePos % size;
-      auto len = callAt(&store[exeIndex], eastl::forward<U>(visitor));
+      auto len = callAt(&store[exeIndex], std::forward<U>(visitor));
       destroyAt(&store[exeIndex]);
       freeCount.store(exePos + len, std::memory_order_release);
       notify_all(freeCount);
@@ -2084,7 +2114,7 @@ public:
     if (exePos != readyPos)
     {
       auto exeIndex = exePos % size;
-      auto len = callAtAndIndex(&store[exeIndex], exeIndex, eastl::forward<U>(visitor));
+      auto len = callAtAndIndex(&store[exeIndex], exeIndex, std::forward<U>(visitor));
       destroyAt(&store[exeIndex]);
       freeCount.store(exePos + len, std::memory_order_release);
       notify_all(freeCount);
@@ -2134,7 +2164,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructAt<T, P0>(&store[allocResult % size], eastl::forward<T>(v), p0, p0_count);
+    this->template moveConstructAt<T, P0>(&store[allocResult % size], std::forward<T>(v), p0, p0_count);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};
@@ -2148,7 +2178,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template copyConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], eastl::move(v), p0_count, g0);
+    this->template copyConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], std::move(v), p0_count, g0);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};
@@ -2162,7 +2192,7 @@ public:
 
     auto allocResult = allocateSpace(sizeNeeded);
 
-    this->template moveConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], eastl::forward<T>(v), p0_count, g0);
+    this->template moveConstructDataGeneratorAt<T, P0, G0>(&store[allocResult % size], std::forward<T>(v), p0_count, g0);
 
     commitSpace(allocResult, sizeNeeded);
     return {Iterator{*this, allocResult}};

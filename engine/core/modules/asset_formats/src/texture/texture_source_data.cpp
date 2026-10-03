@@ -4,6 +4,8 @@
 
 #include "texture_source_data.h"
 
+#include <span>
+
 #include "./texture_utils.h"
 #include "nau/service/service_provider.h"
 #include "texture_asset_container.h"
@@ -271,7 +273,7 @@ namespace nau
         return isCompressed() ? m_compressedFormat : m_format;
     }
 
-    void TextureSourceData::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination) const
+    void TextureSourceData::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination) const
     {
         struct Mip
         {

@@ -3,14 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
+#include <utility>
+
 #include "nau/3d/dag_resPtr.h"
 //#include <debug/daNAU_ASSERT.h>
 
 template <typename T>
 struct DynLinearAllocBuffer
 {
-  DynLinearAllocBuffer(eastl::string name) : resName(eastl::move(name)) {}
+    DynLinearAllocBuffer(std::string name) :
+        resName(std::move(name))
+    {
+    }
 
   DynLinearAllocBuffer(DynLinearAllocBuffer &&) = default;
   DynLinearAllocBuffer &operator=(DynLinearAllocBuffer &&) = default;
@@ -66,11 +71,11 @@ struct DynLinearAllocBuffer
   Sbuffer *getBuffer() const { return handle.getBuf(); }
 
 private:
-  eastl::string resName;
-  UniqueBufHolder handle;
+    std::string resName;
+    UniqueBufHolder handle;
 
-  uint32_t elemOffset = 0;
-  uint32_t allocatedElems = 0;
+    uint32_t elemOffset = 0;
+    uint32_t allocatedElems = 0;
 
-  uint32_t updateFrame = 0;
+    uint32_t updateFrame = 0;
 };

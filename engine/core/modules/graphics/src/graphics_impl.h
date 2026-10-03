@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <optional>
+#include <span>
+#include <vector>
+
 #include "graphics_scene.h"
 #include "nau/app/main_loop/game_system.h"
 #include "nau/async/work_queue.h"
@@ -14,8 +20,8 @@
 #include "nau/render/environmentRenderer.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/scene_processor.h"
-#include "render/daBfg/bfg.h"
 #include "nau/scene/world.h"
+#include "render/daBfg/bfg.h"
 #include "render_window/render_window_impl.h"
 
 namespace nau
@@ -48,14 +54,14 @@ namespace nau
 
         async::Task<bool> renderFrame() override;
 
-        async::Task<> activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, async::Task<> barrier) override;
-        async::Task<> deactivateComponentsAsync(Uid worldUid, eastl::span<const scene::DeactivatedComponentData> components) override;
+        async::Task<> activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, async::Task<> barrier) override;
+        async::Task<> deactivateComponentsAsync(Uid worldUid, std::span<const scene::DeactivatedComponentData> components) override;
 
         async::Task<bool> update(std::chrono::milliseconds dt) override;
 
-        eastl::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override
+        std::optional<std::chrono::milliseconds> getFixedUpdateTimeStep() override
         {
-            return eastl::nullopt;
+            return std::nullopt;
         }
 
         void syncSceneState() override;
@@ -74,8 +80,8 @@ namespace nau
         async::Task<> registerWindow(void* hwnd) override;
 
         WeakPtr<nau::render::IRenderWindow> getDefaultRenderWindow() override;
-        void getRenderWindows(eastl::vector<WeakPtr<nau::render::IRenderWindow>>& windows) override;
-        
+        void getRenderWindows(std::vector<WeakPtr<nau::render::IRenderWindow>>& windows) override;
+
         void setObjectHighlight(nau::Uid uid, bool flag) override;
 
         async::Task<> closeWindow(void* hwnd) override;
@@ -100,16 +106,16 @@ namespace nau
         nau::FrameAllocator m_frameAllocator;
 
         nau::Uid m_defaultWorld = nau::NullUid;
-        eastl::map<nau::Uid, eastl::shared_ptr<GraphicsScene>> m_worldToGraphicScene;
+        std::map<nau::Uid, std::shared_ptr<GraphicsScene>> m_worldToGraphicScene;
         Ptr<nau::render::RenderWindowImpl> m_defaultRenderWindow;
-        eastl::map<SWAPID, Ptr<nau::render::RenderWindowImpl>> m_renderWindows;
+        std::map<SWAPID, Ptr<nau::render::RenderWindowImpl>> m_renderWindows;
         uint32_t m_renderWindowsIds = 0;
 
-        eastl::map<void*, SWAPID> m_hwndToSwapChain = {};
+        std::map<void*, SWAPID> m_hwndToSwapChain = {};
 
         WorkQueue::Ptr m_preRenderWorkQueue = WorkQueue::create();
         std::mutex m_preRenderJobsMutex;
-        eastl::vector<AsyncAction> m_preRenderJobs;
+        std::vector<AsyncAction> m_preRenderJobs;
 
         std::atomic<bool> m_isDisposed{false};
         async::TaskSource<> m_renderStopedSignal;

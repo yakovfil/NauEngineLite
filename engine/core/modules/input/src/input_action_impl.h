@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/set.h>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
 
 #include "nau/input_system.h"
 
@@ -12,11 +15,11 @@ namespace nau
     {
     public:
         InputActionImpl(nau::Functor<void(IInputSignal*)> actionCallback) :
-            m_actionCallback(eastl::move(actionCallback))
+            m_actionCallback(std::move(actionCallback))
         {
         }
 
-        virtual eastl::string getName() const override
+        virtual std::string getName() const override
         {
             return m_name;
         }
@@ -34,11 +37,11 @@ namespace nau
         virtual void serialize(DataBlock* blk) const override;
         virtual bool deserialize(const DataBlock* blk) override;
 
-        virtual void addContextTag(const eastl::string& tag) override;
-        virtual void removeContextTag(const eastl::string& tag) override;
-        virtual bool isContextTag(const eastl::string& tag) const override;
+        virtual void addContextTag(const std::string& tag) override;
+        virtual void removeContextTag(const std::string& tag) override;
+        virtual bool isContextTag(const std::string& tag) const override;
 
-        void setName(const eastl::string& name)
+        void setName(const std::string& name)
         {
             m_name = name;
         }
@@ -48,16 +51,16 @@ namespace nau
         }
         void setSignal(IInputSignal* signal)
         {
-            m_signal = eastl::shared_ptr<IInputSignal>(signal);
+            m_signal = std::shared_ptr<IInputSignal>(signal);
         }
 
     private:
         Type m_type = Type::Trigger;
-        eastl::string m_name;
+        std::string m_name;
         IInputSignal::State m_prevState = IInputSignal::State::Low;
-        eastl::shared_ptr<IInputSignal> m_signal;
+        std::shared_ptr<IInputSignal> m_signal;
         nau::Functor<void(IInputSignal*)> m_actionCallback;
-        eastl::set<eastl::string> m_tags;
+        std::set<std::string> m_tags;
     };
 
 }  // namespace nau

@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <string>
+
 #include "nau/animation/playback/animation.h"
 #include "nau/assets/asset_ref.h"
 #include "nau/utils/enum/enum_reflection.h"
-
-#include <EASTL/string.h>
 
 namespace nau::animation
 {
@@ -40,7 +40,7 @@ namespace nau::animation
          * @param [in] animation    Animation object.
          * @param [in] creationData Optional creation data.
          */
-        AnimationInstance(const eastl::string& name, nau::Ptr<Animation> animation, const AnimationInstanceCreationData* creationData = nullptr);
+        AnimationInstance(const std::string& name, nau::Ptr<Animation> animation, const AnimationInstanceCreationData* creationData = nullptr);
 
         /**
          * @brief Initialization constructor.
@@ -48,7 +48,7 @@ namespace nau::animation
          * @param [in] name         Name of the animation.
          * @param [in] assetRef     Animation asset.
          */
-        AnimationInstance(const eastl::string& name, AnimationAssetRef&& assetRef);
+        AnimationInstance(const std::string& name, AnimationAssetRef&& assetRef);
 
         /**
          * @brief Initialization constructor.
@@ -56,14 +56,14 @@ namespace nau::animation
          * @param [in] name         Name of the instance.
          * @param [in] assetRef     Animation asset.
          */
-        AnimationInstance(const eastl::string& name, const AnimationAssetRef& assetRef);
+        AnimationInstance(const std::string& name, const AnimationAssetRef& assetRef);
 
         /**
          * @brief Copy constructor.
          * 
          * @param [in] source Instance to copy.
          */
-        AnimationInstance(const eastl::string& name, const AnimationInstance& source);
+        AnimationInstance(const std::string& name, const AnimationInstance& source);
 
         /**
          * @brief Loads animation from the animation asset.
@@ -207,7 +207,7 @@ namespace nau::animation
          * 
          * @return Instance name.
          */
-        const eastl::string& getName() const;
+        const std::string& getName() const;
         AnimationAssetRef getAssetRef() const;
 
     protected:
@@ -240,7 +240,7 @@ namespace nau::animation
          */
         PlayMode m_playMode = PlayMode::Once;
         bool m_isLoaded = false; ///< Indicates whether the animation asset has been loaded.
-        eastl::string m_name;
+        std::string m_name;
     };
 
 }  // namespace nau::animation

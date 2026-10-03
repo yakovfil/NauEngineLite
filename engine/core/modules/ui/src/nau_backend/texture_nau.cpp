@@ -23,8 +23,11 @@
  THE SOFTWARE.
  ****************************************************************************/
 
-
 #include "texture_nau.h"
+
+#include <memory>
+#include <optional>
+#include <span>
 
 #include "base/CCDirector.h"
 #include "base/CCEventDispatcher.h"
@@ -48,7 +51,7 @@ bool requiresConversion(cocos2d::backend::PixelFormat format)
             return false;
     }
 }
-eastl::unique_ptr<uint8_t[]> convertData(cocos2d::backend::PixelFormat format, uint8_t* data, std::size_t width, std::size_t height)
+std::unique_ptr<uint8_t[]> convertData(cocos2d::backend::PixelFormat format, uint8_t* data, std::size_t width, std::size_t height)
 {
     switch (format)
     {
@@ -61,7 +64,7 @@ eastl::unique_ptr<uint8_t[]> convertData(cocos2d::backend::PixelFormat format, u
                 std::byte b : 4;
                 std::byte a : 4;
             };
-            eastl::unique_ptr<uint8_t[]> newData{new uint8_t[width * height * sizeof(element)]};
+            std::unique_ptr<uint8_t[]> newData{new uint8_t[width * height * sizeof(element)]};
 
             memcpy_s(newData.get(), width * height * sizeof(element), data, width * height * sizeof(element));
 
@@ -87,7 +90,7 @@ eastl::unique_ptr<uint8_t[]> convertData(cocos2d::backend::PixelFormat format, u
                 uint8_t b : 8;
                 uint8_t a : 8;
             };
-            eastl::unique_ptr<uint8_t[]> newData{new uint8_t[width * height * sizeof(element)]};
+            std::unique_ptr<uint8_t[]> newData{new uint8_t[width * height * sizeof(element)]};
 
             for (int i = 0; i < width * height; ++i)
             {
@@ -171,7 +174,7 @@ void Texture2DNau::updateSamplerDescriptor(const cocos2d::backend::SamplerDescri
 
 template <size_t dataLength = 4>
 void writeDataToTexture(Texture* texture, uint8_t* data,  //
-                        eastl::optional<int> layer,
+                        std::optional<int> layer,
                         std::size_t level,
                         std::size_t width,
                         std::size_t height,
@@ -186,7 +189,7 @@ void writeDataToTexture(Texture* texture, uint8_t* data,  //
     auto image = LockedImage<Image2DView<element>>::lock_texture(texture, layer, level, TEXLOCK_WRITE);
     for (int row = yoffset; row < yoffset + height; ++row)
     {
-        image.writeElems(eastl::span(reinterpret_cast<element*>(data) + (row - yoffset) * width, width), row, xoffset, width);
+        image.writeElems(std::span(reinterpret_cast<element*>(data) + (row - yoffset) * width, width), row, xoffset, width);
     }
 }
 
@@ -194,7 +197,7 @@ void Texture2DNau::updateData(uint8_t* data, std::size_t width, std::size_t heig
 {
     ::TextureInfo info;
     _textureInfo.texture->getinfo(info, level);
-    eastl::unique_ptr<uint8_t[]> convertedData;
+    std::unique_ptr<uint8_t[]> convertedData;
     if (requiresConversion(_textureFormat))
     {
         convertedData = convertData(_textureFormat, data, width, height);
@@ -205,22 +208,22 @@ void Texture2DNau::updateData(uint8_t* data, std::size_t width, std::size_t heig
     switch (desc.bytesPerElement)
     {
         case 1:
-            writeDataToTexture<1>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<1>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         case 2:
-            writeDataToTexture<2>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<2>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         case 3:
-            writeDataToTexture<3>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<3>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         case 4:
-            writeDataToTexture<4>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<4>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         case 5:
-            writeDataToTexture<5>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<5>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         case 16:
-            writeDataToTexture<16>(_textureInfo.texture, data, eastl::nullopt, level, width, height, 0, 0);
+            writeDataToTexture<16>(_textureInfo.texture, data, std::nullopt, level, width, height, 0, 0);
             break;
         default:
             NAU_FAILURE_ALWAYS("Unsupported formate {}.", get_tex_format_name(desc.dagorTextureFormat));
@@ -238,7 +241,7 @@ void Texture2DNau::updateSubData(std::size_t xoffset, std::size_t yoffset, std::
     ::TextureInfo info;
     _textureInfo.texture->getinfo(info, level);
 
-    eastl::unique_ptr<uint8_t[]> convertedData;
+    std::unique_ptr<uint8_t[]> convertedData;
     if (requiresConversion(_textureFormat))
     {
         convertedData = convertData(_textureFormat, data, width, height);
@@ -249,22 +252,22 @@ void Texture2DNau::updateSubData(std::size_t xoffset, std::size_t yoffset, std::
     switch (desc.bytesPerElement)
     {
         case 1:
-            writeDataToTexture<1>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<1>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         case 2:
-            writeDataToTexture<2>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<2>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         case 3:
-            writeDataToTexture<3>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<3>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         case 4:
-            writeDataToTexture<4>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<4>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         case 5:
-            writeDataToTexture<5>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<5>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         case 16:
-            writeDataToTexture<16>(_textureInfo.texture, data, eastl::nullopt, level, width, height, xoffset, yoffset);
+            writeDataToTexture<16>(_textureInfo.texture, data, std::nullopt, level, width, height, xoffset, yoffset);
             break;
         default:
             NAU_FAILURE_ALWAYS("Unsupported formate {}.", get_tex_format_name(desc.dagorTextureFormat));
@@ -351,7 +354,7 @@ void TextureCubeNau::updateFaceData(cocos2d::backend::TextureCubeFace side, void
     ::TextureInfo info;
     _textureInfo.texture->getinfo(info);
 
-    eastl::unique_ptr<uint8_t[]> convertedData;
+    std::unique_ptr<uint8_t[]> convertedData;
     if (requiresConversion(_textureFormat))
     {
         convertedData = convertData(_textureFormat, reinterpret_cast<uint8_t*>(data), _width, _height);

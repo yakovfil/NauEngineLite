@@ -3,10 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/unordered_map.h>
+#include <unordered_map>
+#include <utility>
 
 #include "driver.h"
-
 
 namespace drv3d_dx12::debug
 {
@@ -16,7 +16,7 @@ namespace drv3d_dx12::debug
 template <typename T>
 class CommandListStorage
 {
-  eastl::unordered_map<ID3D12GraphicsCommandList *, T> table;
+    std::unordered_map<ID3D12GraphicsCommandList*, T> table;
 
 public:
   T &beginList(ID3D12GraphicsCommandList *cmd)
@@ -35,7 +35,7 @@ public:
     auto ref = table.find(cmd);
     if (end(table) == ref)
     {
-      ref = table.try_emplace(cmd, eastl::forward<Is>(is)...).first;
+        ref = table.try_emplace(cmd, std::forward<Is>(is)...).first;
     }
     return ref->second;
   }

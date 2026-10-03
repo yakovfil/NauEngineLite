@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include "nau/physics/physics_defines.h"
-
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 
-#include <EASTL/vector.h>
-#include <EASTL/set.h>
+#include <set>
+#include <vector>
+
+#include "nau/physics/physics_defines.h"
 
 namespace nau::physics::jolt
 {
@@ -31,8 +31,8 @@ namespace nau::physics::jolt
     class DefaultRayCastChannelFilter : public JPH::ObjectLayerFilter
     {
     public:
-        DefaultRayCastChannelFilter(const eastl::vector<nau::physics::CollisionChannel>& interestLayers)
-            : m_interestLayers(interestLayers.begin(), interestLayers.end())
+        DefaultRayCastChannelFilter(const std::vector<nau::physics::CollisionChannel>& interestLayers) :
+            m_interestLayers(interestLayers.begin(), interestLayers.end())
         {
         }
 
@@ -42,7 +42,7 @@ namespace nau::physics::jolt
         }
 
     private:
-        eastl::set<nau::physics::CollisionChannel> m_interestLayers;
+        std::set<nau::physics::CollisionChannel> m_interestLayers;
     };
 
 }  // namespace nau::physics::jolt

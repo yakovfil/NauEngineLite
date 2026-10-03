@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
 
-#include "nau/test/helpers/assert_catcher_guard.h"
 #include "nau/math/math.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/type_info.h"
 #include "nau/rtti/weak_ptr.h"
+#include "nau/test/helpers/assert_catcher_guard.h"
 #include "nau/utils/functor.h"
 
 using namespace testing;
@@ -156,7 +157,7 @@ namespace nau::test
 
         ~MyRttiClass()
         {
-            if(m_callback)
+            if (m_callback)
             {
                 m_callback();
             }
@@ -204,11 +205,11 @@ namespace nau::test
     template <typename T>
     decltype(auto) operator<<(std::basic_ostream<T>& stream, RcClassAllocationType type)
     {
-        if(type == RcClassAllocationType::CustomAllocator)
+        if (type == RcClassAllocationType::CustomAllocator)
         {
             stream << "Custom allocator";
         }
-        else if(type == RcClassAllocationType::DefaultAllocator)
+        else if (type == RcClassAllocationType::DefaultAllocator)
         {
             stream << "Default allocator";
         }
@@ -282,7 +283,7 @@ namespace nau::test
         }
     };
 
-    template<typename T>
+    template <typename T>
     struct MyInplaceStorage
     {
         alignas(alignof(T)) char space[rtti::InstanceStorageSize<T>];
@@ -296,19 +297,19 @@ namespace nau::test
         {
             const RcClassAllocationType allocationType = GetParam();
 
-            if(allocationType == RcClassAllocationType::DefaultAllocator)
+            if (allocationType == RcClassAllocationType::DefaultAllocator)
             {
                 return rtti::createInstance<T, IRefCounted>();
             }
 
-            if(allocationType == RcClassAllocationType::InplaceMemory)
+            if (allocationType == RcClassAllocationType::InplaceMemory)
             {
                 static MyInplaceStorage<T> inplaceStorage;
                 return rtti::createInstanceInplace<T, IRefCounted>(inplaceStorage);
             }
 
             NAU_ASSERT(allocationType == RcClassAllocationType::CustomAllocator);
-            m_customAllocator = eastl::make_shared<TestAllocator>();
+            m_customAllocator = std::make_shared<TestAllocator>();
 
             return rtti::createInstanceWithAllocator<T, IRefCounted>(m_customAllocator);
         }
@@ -400,8 +401,6 @@ namespace nau::test
         ASSERT_THAT(instance, IsNull());
     }
 
-
-
     TEST_P(TestRttiClass, NonDefaultAlignment)
     {
         const AssertCatcherGuard assertGuard;
@@ -446,7 +445,7 @@ namespace nau::test
 
         [[maybe_unused]] MyRttiClass invalidInstance;
 
-        if constexpr(SharedStateWithClassMarker<SharedState>)
+        if constexpr (SharedStateWithClassMarker<SharedState>)
         {
             const AssertCatcherGuard assertCatcher;
 

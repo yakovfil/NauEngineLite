@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include "nau/ui/ui_control.h"
+#include <vector>
+
 #include "nau/ui/elements/draw_node.h"
 #include "nau/ui/elements/sprite.h"
+#include "nau/ui/ui_control.h"
 
 namespace nau::ui
 {
@@ -161,7 +163,7 @@ namespace nau::ui
 
     private:
         Node* m_contentRoot {nullptr};
-        eastl::vector<Node*> m_content {};
+        std::vector<Node*> m_content{};
         NauScroll::ScrollType m_scrollType {NauScroll::ScrollType::vertical};
         Sprite* m_scrollBarSprite {nullptr};
         bool m_scrollTumbCaptured {false};

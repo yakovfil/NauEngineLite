@@ -3,10 +3,12 @@
 // input_system_impl.h
 
 #pragma once
-#include <EASTL/map.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/vector.h>
 #include <gainput/gainput.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "nau/input_system.h"
 #include "nau/rtti/rtti_impl.h"
@@ -17,20 +19,20 @@ namespace nau
     class InputControllerImpl : public IInputController
     {
     public:
-        InputControllerImpl(const eastl::string& name, IInputDevice* device) :
+        InputControllerImpl(const std::string& name, IInputDevice* device) :
             m_name(name),
             m_device(device)
         {
         }
 
-        eastl::string getName() const override;
+        std::string getName() const override;
 
         IInputDevice* getDevice() override;
 
         void update(float dt) override;
 
     private:
-        eastl::string m_name;
+        std::string m_name;
         IInputDevice* m_device = nullptr;
     };
 }  // namespace nau

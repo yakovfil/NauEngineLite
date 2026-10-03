@@ -27,6 +27,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <functional>
 #include "2d/CCNode.h"
 
 #include <algorithm>
@@ -196,9 +197,9 @@ void Node::cleanup()
         child->cleanup();
 }
 
-eastl::string Node::getDescription() const
+std::string Node::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<Node | Tag = %d", _tag);
+    return cocos2d::StringUtils::format("<Node | Tag = %d", _tag);
 }
 
 // MARK: getters / setters
@@ -655,15 +656,15 @@ void Node::setTag(int tag)
     _tag = tag ;
 }
 
-const eastl::string& Node::getName() const
+const std::string& Node::getName() const
 {
     return _name;
 }
 
-void Node::setName(const eastl::string& name)
+void Node::setName(const std::string& name)
 {
     _name = name;
-    eastl::hash<eastl::string> h;
+    std::hash<std::string> h;
     _hashOfName = h(name);
 }
 
@@ -730,11 +731,11 @@ Node* Node::getChildByTag(int tag) const
     return nullptr;
 }
 
-Node* Node::_getChildByName(const eastl::string& name) const
+Node* Node::_getChildByName(const std::string& name) const
 {
     CCASSERT(!name.empty(), "Invalid name");
     
-    eastl::hash<eastl::string> h;
+    std::hash<std::string> h;
     size_t hash = h(name);
     
     for (const auto& child : _children)
@@ -746,7 +747,7 @@ Node* Node::_getChildByName(const eastl::string& name) const
     return nullptr;
 }
 
-void Node::enumerateChildren(const eastl::string &name, std::function<bool (Node *)> callback) const
+void Node::enumerateChildren(const std::string &name, std::function<bool (Node *)> callback) const
 {
     CCASSERT(!name.empty(), "Invalid name");
     CCASSERT(callback != nullptr, "Invalid callback function");
@@ -777,7 +778,7 @@ void Node::enumerateChildren(const eastl::string &name, std::function<bool (Node
     }
     
     // Remove '//', '/..' if exist
-    eastl::string newName = name.substr(subStrStartPos, subStrlength);
+    std::string newName = name.substr(subStrStartPos, subStrlength);
     
     const Node* target = this;
     
@@ -802,7 +803,7 @@ void Node::enumerateChildren(const eastl::string &name, std::function<bool (Node
     }
 }
 
-bool Node::doEnumerateRecursive(const Node* node, const eastl::string &name, std::function<bool (Node *)> callback) const
+bool Node::doEnumerateRecursive(const Node* node, const std::string &name, std::function<bool (Node *)> callback) const
 {
     bool ret =false;
     
@@ -827,11 +828,11 @@ bool Node::doEnumerateRecursive(const Node* node, const eastl::string &name, std
     return ret;
 }
 
-bool Node::doEnumerate(eastl::string name, std::function<bool (Node *)> callback) const
+bool Node::doEnumerate(std::string name, std::function<bool (Node *)> callback) const
 {
     // name may be xxx/yyy, should find its parent
     size_t pos = name.find('/');
-    eastl::string searchName = name;
+    std::string searchName = name;
     bool needRecursive = false;
     if (pos != name.npos)
     {
@@ -878,7 +879,7 @@ void Node::addChild(Node *child, int localZOrder, int tag)
     addChildHelper(child, localZOrder, tag, "", true);
 }
 
-void Node::addChild(Node* child, int localZOrder, const eastl::string &name)
+void Node::addChild(Node* child, int localZOrder, const std::string &name)
 {
     CCASSERT(child != nullptr, "Argument must be non-nil");
     CCASSERT(child->_parent == nullptr, "child already added. It can't be added again");
@@ -886,7 +887,7 @@ void Node::addChild(Node* child, int localZOrder, const eastl::string &name)
     addChildHelper(child, localZOrder, INVALID_TAG, name, false);
 }
 
-void Node::addChildHelper(Node* child, int localZOrder, int tag, const eastl::string &name, bool setTag)
+void Node::addChildHelper(Node* child, int localZOrder, int tag, const std::string &name, bool setTag)
 {
     auto assertNotSelfChild
         ( [ this, child ]() -> bool
@@ -998,7 +999,7 @@ void Node::removeChildByTag(int tag, bool cleanup/* = true */)
     }
 }
 
-void Node::removeChildByName(const eastl::string &name, bool cleanup)
+void Node::removeChildByName(const std::string &name, bool cleanup)
 {
     CCASSERT(!name.empty(), "Invalid name");
     
@@ -1334,7 +1335,7 @@ bool Node::isScheduled(SEL_SCHEDULE selector) const
     return _scheduler->isScheduled(selector, this);
 }
 
-bool Node::isScheduled(const eastl::string &key) const
+bool Node::isScheduled(const std::string &key) const
 {
     return _scheduler->isScheduled(key, this);
 }
@@ -1378,17 +1379,17 @@ void Node::schedule(SEL_SCHEDULE selector, float interval, unsigned int repeat, 
     _scheduler->schedule(selector, this, interval , repeat, delay, !_running);
 }
 
-void Node::schedule(const std::function<void(float)> &callback, const eastl::string &key)
+void Node::schedule(const std::function<void(float)> &callback, const std::string &key)
 {
     _scheduler->schedule(callback, this, 0, !_running, key);
 }
 
-void Node::schedule(const std::function<void(float)> &callback, float interval, const eastl::string &key)
+void Node::schedule(const std::function<void(float)> &callback, float interval, const std::string &key)
 {
     _scheduler->schedule(callback, this, interval, !_running, key);
 }
 
-void Node::schedule(const std::function<void(float)>& callback, float interval, unsigned int repeat, float delay, const eastl::string &key)
+void Node::schedule(const std::function<void(float)>& callback, float interval, unsigned int repeat, float delay, const std::string &key)
 {
     _scheduler->schedule(callback, this, interval, repeat, delay, !_running, key);
 }
@@ -1398,7 +1399,7 @@ void Node::scheduleOnce(SEL_SCHEDULE selector, float delay)
     this->schedule(selector, 0.0f, 0, delay);
 }
 
-void Node::scheduleOnce(const std::function<void(float)> &callback, float delay, const eastl::string &key)
+void Node::scheduleOnce(const std::function<void(float)> &callback, float delay, const std::string &key)
 {
     _scheduler->schedule(callback, this, 0, 0, delay, !_running, key);
 }
@@ -1412,7 +1413,7 @@ void Node::unschedule(SEL_SCHEDULE selector)
     _scheduler->unschedule(selector, this);
 }
 
-void Node::unschedule(const eastl::string &key)
+void Node::unschedule(const std::string &key)
 {
     _scheduler->unschedule(key, this);
 }
@@ -1730,7 +1731,7 @@ void Node::updateTransform()
 
 // MARK: components
 
-Component* Node::getComponent(const eastl::string& name)
+Component* Node::getComponent(const std::string& name)
 {
     if (_componentContainer)
         return _componentContainer->get(name);
@@ -1750,7 +1751,7 @@ bool Node::addComponent(Component *component)
     return _componentContainer->add(component);
 }
 
-bool Node::removeComponent(const eastl::string& name)
+bool Node::removeComponent(const std::string& name)
 {
     if (_componentContainer)
         return _componentContainer->remove(name);

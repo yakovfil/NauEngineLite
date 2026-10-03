@@ -29,6 +29,7 @@
 
 /// @cond DO_NOT_SHOW
 
+#include <string>
 #include "2d/CCFont.h"
 #include <set>
 #include <unordered_map>
@@ -108,7 +109,7 @@ public:
      * @js NA
      * @lua NA
      */
-    eastl::string description() const;
+    std::string description() const;
 
     /** allocates a BMFontConfiguration with a FNT file */
     static BMFontConfiguration* create(const std::string& FNTfile);
@@ -150,7 +151,7 @@ public:
     Removes from memory the cached configurations and the atlas name dictionary.
     */
     static void purgeCachedData();
-    virtual int* getHorizontalKerningForTextUTF32(const eastl::u32string& text, int &outNumLetters) const override;
+    virtual int* getHorizontalKerningForTextUTF32(const std::u32string& text, int &outNumLetters) const override;
     virtual FontAtlas *createFontAtlas() override;
 
     void setFontSize(float fontSize);

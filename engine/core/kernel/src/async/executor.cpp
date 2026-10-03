@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/async/executor.h"
+
+#include <span>
 
 #include "nau/utils/scope_guard.h"
 
@@ -77,7 +78,7 @@ namespace nau::async
             reset();
         };
 
-        if(!m_callback) [[unlikely]]
+        if (!m_callback) [[unlikely]]
         {
             return;
         }
@@ -95,17 +96,17 @@ namespace nau::async
     Executor::Invocation Executor::Invocation::fromCoroutine(CoroNs::coroutine_handle<> coroutine)
     {
         NAU_ASSERT(coroutine);
-        if(!coroutine)
+        if (!coroutine)
         {
             return {};
         }
 
         return Invocation{[](void* coroAddress, void*) noexcept
-                          {
-                              NAU_ASSERT(coroAddress);
-                              std::coroutine_handle<> coroutine = std::coroutine_handle<>::from_address(coroAddress);
-                              coroutine();
-                          },
+        {
+            NAU_ASSERT(coroAddress);
+            std::coroutine_handle<> coroutine = std::coroutine_handle<>::from_address(coroAddress);
+            coroutine();
+        },
                           coroutine.address(), nullptr};
     }
 
@@ -126,7 +127,7 @@ namespace nau::async
 
     Executor::Ptr Executor::getCurrent()
     {
-        if(auto* const invokedExecutor = getThisThreadInvokedExecutor())
+        if (auto* const invokedExecutor = getThisThreadInvokedExecutor())
         {
             return invokedExecutor;
         }
@@ -154,7 +155,7 @@ namespace nau::async
         using namespace std::chrono;
 
         NAU_ASSERT(executor);
-        if(!executor)
+        if (!executor)
         {
             return;
         }
@@ -163,7 +164,7 @@ namespace nau::async
         {
             constexpr milliseconds ShutdownTimeout{5s};
 
-            if(system_clock::now() - time >= ShutdownTimeout && !notified)
+            if (system_clock::now() - time >= ShutdownTimeout && !notified)
             {
                 notified = true;
                 // core::dumpActiveTasks();
@@ -173,13 +174,13 @@ namespace nau::async
         do
         {
             executor->waitAnyActivity();
-            if(executor->getRefsCount() == 1)  // the only local reference
+            if (executor->getRefsCount() == 1)  // the only local reference
             {
                 break;
             }
 
             checkFinalizeTooLong();
-        } while(true);
+        } while (true);
     }
 
     void Executor::execute(Invocation invocation) noexcept
@@ -207,12 +208,12 @@ namespace nau::async
         invocation();
     }
 
-    void Executor::invoke([[maybe_unused]] Executor& executor, eastl::span<Invocation> invocations) noexcept
+    void Executor::invoke([[maybe_unused]] Executor& executor, std::span<Invocation> invocations) noexcept
     {
         NAU_ASSERT(getThisThreadInvokedExecutor() != nullptr, "Executor must be set prior invoke. Use Executor::InvokeGuard.");
         NAU_ASSERT(getThisThreadInvokedExecutor() == &executor, "Invalid executor.");
 
-        for(auto& invocation : invocations)
+        for (auto& invocation : invocations)
         {
             invocation();
         }

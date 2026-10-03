@@ -3,9 +3,8 @@
 
 #pragma once
 
-#include <EASTL/string_view.h>
-
 #include <concepts>
+#include <string_view>
 #include <tuple>
 
 #include "nau/meta/class_info.h"
@@ -96,7 +95,7 @@ namespace nau::meta
      */
     struct Attribute
     {
-        const eastl::string_view strValue;
+        const std::string_view strValue;
 
         constexpr Attribute(const char value[]) :
             strValue(value)

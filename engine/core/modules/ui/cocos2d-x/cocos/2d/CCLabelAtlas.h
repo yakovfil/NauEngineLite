@@ -28,6 +28,7 @@ THE SOFTWARE.
 #ifndef __CCLABEL_ATLAS_H__
 #define __CCLABEL_ATLAS_H__
 
+#include <string>
 #include "2d/CCAtlasNode.h"
 #if CC_LABELATLAS_DEBUG_DRAW
 #include "renderer/CCCustomCommand.h"
@@ -63,34 +64,34 @@ public:
     static LabelAtlas* create();
     
     /** Creates the LabelAtlas with a string, a char map file(the atlas), the width and height of each element and the starting char of the atlas. */
-    static LabelAtlas* create(const eastl::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap);
+    static LabelAtlas* create(const std::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap);
     
     /**
      * Creates the LabelAtlas with a string and a configuration file.
      * @since v2.0
      */
-    static LabelAtlas* create(const eastl::string& string, const std::string& fntFile);
+    static LabelAtlas* create(const std::string& string, const std::string& fntFile);
 
     /** Initializes the LabelAtlas with a string, a char map file(the atlas), the width and height of each element and the starting char of the atlas. */
-    bool initWithString(const eastl::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap);
+    bool initWithString(const std::string& string, const std::string& charMapFile, int itemWidth, int itemHeight, int startCharMap);
     
     /** 
      * Initializes the LabelAtlas with a string and a configuration file.
      * @since v2.0
      */
-    bool initWithString(const eastl::string& string, const std::string& fntFile);
+    bool initWithString(const std::string& string, const std::string& fntFile);
     
     /** Initializes the LabelAtlas with a string, a texture, the width and height in points of each element and the starting char of the atlas */
-    bool initWithString(const eastl::string& string, Texture2D* texture, int itemWidth, int itemHeight, int startCharMap);
+    bool initWithString(const std::string& string, Texture2D* texture, int itemWidth, int itemHeight, int startCharMap);
     
-    virtual void setString(const eastl::string &label) override;
-    virtual eastl::string getString() const override;
+    virtual void setString(const std::string &label) override;
+    virtual std::string getString() const override;
 
     virtual void updateAtlasValues() override;
 	/**
      * @js NA
      */
-    virtual eastl::string getDescription() const override;
+    virtual std::string getDescription() const override;
 
 #if CC_LABELATLAS_DEBUG_DRAW
     virtual void draw(Renderer *renderer, const Mat4 &transform, uint32_t flags) override;

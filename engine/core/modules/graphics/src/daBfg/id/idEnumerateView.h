@@ -3,20 +3,23 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/iterator.h>
-#include <EASTL/tuple.h>
+#include <iterator>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
+#include "nau/utils/dynamic_bit_vector.h"
 
 template <class Iter, class = void>
 struct ReferenceTypePicker
 {
-  using Type = typename eastl::iterator_traits<Iter>::reference;
+    using Type = typename std::iterator_traits<Iter>::reference;
 };
 
-// Workaround for a "bug" inside eastl::bitvector, whose reference type
+// Workaround for a "bug" inside nau::DynamicBitVector, whose reference type
 // is declared incorrectly
 template <class T>
-struct ReferenceTypePicker<T, eastl::void_t<typename T::reference_type>>
+struct ReferenceTypePicker<T, std::void_t<typename T::reference_type>>
 {
   using Type = typename T::reference_type;
 };
@@ -25,16 +28,19 @@ struct ReferenceTypePicker<T, eastl::void_t<typename T::reference_type>>
 template <class Container>
 struct IdEnumerateView
 {
-  using Base = eastl::remove_cv_t<Container>;
-  using BaseIterator = decltype(eastl::declval<Container>().begin());
+    using Base = std::remove_cv_t<Container>;
+    using BaseIterator = decltype(std::declval<Container>().begin());
 
-  using size_type = typename Base::size_type;
-  using index_type = typename Base::index_type;
-  using value_type = eastl::tuple<const index_type, typename ReferenceTypePicker<BaseIterator>::Type>;
+    using size_type = typename Base::size_type;
+    using index_type = typename Base::index_type;
+    using value_type = std::tuple<const index_type, typename ReferenceTypePicker<BaseIterator>::Type>;
 
-  struct iterator;
+    struct iterator;
 
-  iterator begin() { return {0, container.begin()}; }
+    iterator begin()
+    {
+        return {0, container.begin()};
+    }
   iterator end() { return {container.size(), container.end()}; }
 
   iterator begin() const { return {0, container.begin()}; }
@@ -50,8 +56,8 @@ struct IdEnumerateView<Container>::iterator
   // No need to provide anything stronger than a forward iterator, as
   // we only support a single usecase:
   // `for (auto[i, obj] : idIndexedThing.enumerate())`
-  using iterator_category = eastl::bidirectional_iterator_tag;
-  using difference_type = typename eastl::iterator_traits<BaseIterator>::difference_type;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using difference_type = typename std::iterator_traits<BaseIterator>::difference_type;
   using value_type = typename IdEnumerateView<Container>::value_type;
   using reference = value_type;
   using pointer = void;
@@ -86,6 +92,6 @@ struct IdEnumerateView<Container>::iterator
   friend bool operator==(const iterator &fst, const iterator &snd) { return fst.current == snd.current; }
   friend bool operator!=(const iterator &fst, const iterator &snd) { return !(fst == snd); }
 
-  decltype(eastl::declval<Container>().size()) pos;
+  decltype(std::declval<Container>().size()) pos;
   BaseIterator current;
 };

@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/asset_tools/asset_manager.h"
 
 #include <nau/asset_tools/usd_meta_processor.h>
@@ -13,8 +12,8 @@
 
 #include <format>
 #include <sstream>
+#include <string>
 
-#include "EASTL/string.h"
 #include "nau/asset_tools/asset_api.h"
 #include "nau/asset_tools/asset_compiler.h"
 #include "nau/asset_tools/asset_utils.h"

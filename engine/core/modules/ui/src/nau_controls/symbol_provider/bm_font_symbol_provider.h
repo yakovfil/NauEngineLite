@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "symbol_provider.h"
 
 namespace cocos2d
@@ -18,9 +20,9 @@ public:
 
     bool getSymbol(char32_t utf32Code, nau::ui::FontLetterDefinition& symbolDefinition) override;
     bool hasSymbol(char32_t utf32Code) const override;
-    bool warmUpSymbosCache(const eastl::u32string& text) const override;
+    bool warmUpSymbosCache(const std::u32string& text) const override;
     cocos2d::Texture2D* getSymbolTexture(int textureId) const override;
-    int* getHorizontalKerning(const eastl::u32string& text, int& outNumLetters) const override;
+    int* getHorizontalKerning(const std::u32string& text, int& outNumLetters) const override;
 
 private:
     cocos2d::FontAtlas* m_fontAtlas{ nullptr };

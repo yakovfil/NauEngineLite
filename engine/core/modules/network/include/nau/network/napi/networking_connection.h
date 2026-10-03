@@ -3,9 +3,10 @@
 // inetworking_connection.h
 
 #pragma once
-#include <EASTL/shared_ptr.h>
-#include <EASTL/string.h>
 #include <nau/utils/functor.h>
+
+#include <memory>
+#include <string>
 
 #include "networking_address.h"
 #include "networking_signaling.h"
@@ -45,8 +46,8 @@ namespace nau
          * @param [in] failCallback     Callback that is dispatched, if the connection has failed.
          * @return                      `true`, if connection attempt has started, `false` otherwise.
          */
-        virtual bool connect(const eastl::string& uri,
-                             nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+        virtual bool connect(const std::string& uri,
+                             nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                              nau::Functor<void(void)> failCallback) = 0;
 
         /**
@@ -58,10 +59,10 @@ namespace nau
          * @param [in] signalingCallback    Callback to signaling service.
          * @return                          `true`, if connection attempt has started, `false` otherwise.
          */
-        virtual bool connect(const eastl::string& uri,
-                             nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback,
+        virtual bool connect(const std::string& uri,
+                             nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback,
                              nau::Functor<void(void)> failCallback,
-                             nau::Functor<void(eastl::shared_ptr<INetworkingSignaling>)> signalingCallback) = 0;
+                             nau::Functor<void(std::shared_ptr<INetworkingSignaling>)> signalingCallback) = 0;
 
         /**
          * @brief Stops connection attempts.
@@ -85,7 +86,7 @@ namespace nau
          * @param [in] failCallback     Callback that is dispatched, if the connection has failed.
          * @return                      `true`, if listening has started, `false` otherwise.
          */
-        virtual bool listen(const eastl::string& uri, nau::Functor<void(eastl::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback) = 0;
+        virtual bool listen(const std::string& uri, nau::Functor<void(std::shared_ptr<INetworkingTransport>)> successCallback, nau::Functor<void(void)> failCallback) = 0;
 
         /**
          * @brief Stops listening.

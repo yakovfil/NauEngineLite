@@ -4,17 +4,17 @@
 
 #pragma once
 
+#include <array>
+#include <span>
+#include <string>
+#include <vector>
+
 #include "nau/animation/data/frame.h"
 #include "nau/animation/data/keyframe.h"
 #include "nau/animation/interfaces/animatable.h"
 #include "nau/animation/interfaces/animation_player.h"
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/scene/nau_object.h"
-
-#include <EASTL/array.h>
-#include <EASTL/span.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
 
 namespace nau::scene
 {
@@ -59,7 +59,7 @@ namespace nau::animation
      */
     struct FrameEventInfo
     {
-        eastl::string id;
+        std::string id;
         FrameEventControlFlag flags = { };
     };
 
@@ -174,7 +174,7 @@ namespace nau::animation
 
          * Active events of the animation state are processed by AnimationInstance. 
          */
-        bool addEvent(const eastl::string& id, bool pin);
+        bool addEvent(const std::string& id, bool pin);
 
         /**
          * @brief Removes the event from a frame event slot.
@@ -184,7 +184,7 @@ namespace nau::animation
          * 
          * Use this method to manually deactivate pinned events. Unpinned events perish each update and removed automatically.
          */
-        bool removeEvent(const eastl::string& id);
+        bool removeEvent(const std::string& id);
 
         /**
          * @brief Removes events from all frame event slots.
@@ -288,7 +288,7 @@ namespace nau::animation
          * @param [in] frame    Index of the frame.
          * @return              A collection of the associated events.
          */
-        const eastl::span<const FrameEvent> getEvents(int frame) const;
+        const std::span<const FrameEvent> getEvents(int frame) const;
 
     protected:
 
@@ -349,7 +349,7 @@ namespace nau::animation
         /**
          * @brief Stores event data associated with each keyframe.
          */
-        eastl::vector<Frame> m_perFrameData;
+        std::vector<Frame> m_perFrameData;
     };
 
 }  // namespace nau::animation

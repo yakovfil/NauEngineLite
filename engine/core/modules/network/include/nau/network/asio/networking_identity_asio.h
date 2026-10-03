@@ -3,6 +3,8 @@
 // networking_identity_asio
 
 #pragma once
+#include <string>
+
 #include "nau/network/napi/networkinig_identity.h"
 
 namespace nau
@@ -20,7 +22,7 @@ namespace nau
          * 
          * @param [in] id String networking id.
          */
-        NetworkingIdentityASIO(const eastl::string& id) :
+        NetworkingIdentityASIO(const std::string& id) :
             m_dentity(id)
         {
         }
@@ -42,12 +44,12 @@ namespace nau
          *
          * @return Networking ID text representation
          */
-        eastl::string toString() const
+        std::string toString() const
         {
             return m_dentity;
         }
 
     private:
-        eastl::string m_dentity;
+        std::string m_dentity;
     };
 }  // namespace nau

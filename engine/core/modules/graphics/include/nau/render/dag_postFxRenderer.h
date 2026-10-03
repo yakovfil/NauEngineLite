@@ -3,6 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <string_view>
+
 #include "graphics_assets/material_asset.h"
 #include "graphics_assets/shader_asset.h"
 #include "nau/assets/asset_ref.h"
@@ -23,12 +25,12 @@ namespace nau::render
         MaterialAssetView::Ptr getMaterial();
 
         void render() const;
-        void render(eastl::string_view pipeline) const;
+        void render(std::string_view pipeline) const;
 
     protected:
         MaterialAssetView::Ptr m_material;
 
-        void drawInternal(eastl::string_view pipeline) const;
+        void drawInternal(std::string_view pipeline) const;
     };
 
 }  // namespace nau::render

@@ -3,21 +3,25 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "render/daBfg/virtualPassRequest.h"
-#include "dabfg/frontend/internalRegistry.h"
-#include "render/daBfg/detail/virtualResourceRequestBase.h"
-#include "nau/diag/logging.h"
 
+#include <tuple>
+#include <variant>
+
+#include "dabfg/frontend/internalRegistry.h"
+#include "nau/diag/logging.h"
+#include "render/daBfg/detail/virtualResourceRequestBase.h"
 
 namespace dabfg
 {
 
 VirtualPassRequest::VirtualPassRequest(NodeNameId node, InternalRegistry *reg) : nodeId{node}, registry{reg}
 {
-  if (EASTL_UNLIKELY(registry->nodes[nodeId].renderingRequirements.has_value()))
-    NAU_LOG_ERROR("Encountered two renderpass requests within '{}' framegraph node!"
-           " Ignoring one of them!",
-      registry->knownNames.getName(nodeId));
-  registry->nodes[nodeId].renderingRequirements.emplace();
+    if (NAU_UNLIKELY(registry->nodes[nodeId].renderingRequirements.has_value()))
+        NAU_LOG_ERROR(
+            "Encountered two renderpass requests within '{}' framegraph node!"
+            " Ignoring one of them!",
+            registry->knownNames.getName(nodeId));
+    registry->nodes[nodeId].renderingRequirements.emplace();
 }
 
 template <detail::ResourceRequestPolicy disallowPolicies, detail::ResourceRequestPolicy requirePolicies>
@@ -28,14 +32,14 @@ detail::ResUid VirtualPassRequest::processAttachment(detail::VirtualAttachmentRe
 
   auto &nodeData = registry->nodes[nodeId];
 
-  if (eastl::holds_alternative<detail::ResUid>(attachment.image))
+  if (std::holds_alternative<detail::ResUid>(attachment.image))
   {
-    result = eastl::get<detail::ResUid>(attachment.image);
+      result = std::get<detail::ResUid>(attachment.image);
   }
   else
   {
     const auto nodeNsId = registry->knownNames.getParent(nodeId);
-    const auto id = registry->knownNames.addNameId<ResNameId>(nodeNsId, eastl::get<const char *>(attachment.image));
+    const auto id = registry->knownNames.addNameId<ResNameId>(nodeNsId, std::get<const char*>(attachment.image));
     if (accessOverride == Access::READ_ONLY)
       nodeData.readResources.insert(id);
     else
@@ -59,7 +63,7 @@ detail::ResUid VirtualPassRequest::processAttachment(detail::VirtualAttachmentRe
 VirtualPassRequest VirtualPassRequest::color(std::initializer_list<ColorRwVirtualAttachmentRequest> attachments) &&
 {
   auto &colors = registry->nodes[nodeId].renderingRequirements->colorAttachments;
-  if (EASTL_UNLIKELY(!colors.empty()))
+  if (NAU_UNLIKELY(!colors.empty()))
   {
     NAU_LOG_ERROR("Encountered duplicate color attachment calls on the same pass request"
            " in '%s' frame graph node! Ignoring one of them!",
@@ -79,7 +83,7 @@ VirtualPassRequest VirtualPassRequest::color(std::initializer_list<ColorRwVirtua
 VirtualPassRequest VirtualPassRequest::depthRw(RwVirtualAttachmentRequest attachment) &&
 {
   auto &depth = registry->nodes[nodeId].renderingRequirements->depthAttachment;
-  if (EASTL_UNLIKELY(depth.nameId != ResNameId::Invalid))
+  if (NAU_UNLIKELY(depth.nameId != ResNameId::Invalid))
   {
     NAU_LOG_ERROR("Encountered duplicate depth attachment calls on the same pass request"
            " in '%s' frame graph node! Ignoring one of them!",
@@ -95,7 +99,7 @@ VirtualPassRequest VirtualPassRequest::depthRw(RwVirtualAttachmentRequest attach
 VirtualPassRequest VirtualPassRequest::depthRo(DepthRoVirtualAttachmentRequest attachment) &&
 {
   auto &depth = registry->nodes[nodeId].renderingRequirements->depthAttachment;
-  if (EASTL_UNLIKELY(depth.nameId != ResNameId::Invalid))
+  if (NAU_UNLIKELY(depth.nameId != ResNameId::Invalid))
   {
     NAU_LOG_ERROR("Encountered duplicate depth attachment calls on the same pass request"
            " in '%s' frame graph node! Ignoring one of them!",
@@ -118,7 +122,7 @@ VirtualPassRequest VirtualPassRequest::depthRoAndBindToShaderVars(DepthRoAndSvBi
   // code here and get rid of some copypasta.
 
   auto &depth = registry->nodes[nodeId].renderingRequirements->depthAttachment;
-  if (EASTL_UNLIKELY(depth.nameId != ResNameId::Invalid))
+  if (NAU_UNLIKELY(depth.nameId != ResNameId::Invalid))
   {
     NAU_LOG_ERROR("Encountered duplicate depth attachment calls on the same pass request"
            " in '%s' frame graph node! Ignoring one of them!",

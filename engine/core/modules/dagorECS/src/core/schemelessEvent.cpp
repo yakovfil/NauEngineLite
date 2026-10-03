@@ -1,9 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/core/schemelessEvent.h>
 #include <daECS/core/componentTypes.h>
 #include <daECS/core/entityManager.h>
+#include <daECS/core/schemelessEvent.h>
+
+#include <utility>
 
 namespace ecs
 {
@@ -11,7 +13,7 @@ namespace ecs
 SchemelessEvent::SchemelessEvent(ecs::event_type_t tp, ecs::Object &&data_) :
   SchemelessEvent(tp, EVFLG_DESTROY | EVFLG_SERIALIZE | EVFLG_SCHEMELESS)
 {
-  data = eastl::move(data_);
+    data = std::move(data_);
 }
 
 SchemelessEvent::SchemelessEvent(ecs::event_type_t tp, ecs::event_flags_t flags_) : ecs::Event(tp, sizeof(SchemelessEvent), flags_)

@@ -27,6 +27,7 @@ THE SOFTWARE.
 #ifndef __CC_TEXT_FIELD_H__
 #define __CC_TEXT_FIELD_H__
 
+#include <string>
 #include "2d/CCLabel.h"
 #include "base/CCIMEDelegate.h"
 
@@ -99,18 +100,18 @@ public:
     /** Creates a TextFieldTTF from a fontname, alignment, dimension and font size.
     * @js NA
     */
-    static TextFieldTTF * textFieldWithPlaceHolder(const eastl::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize);
+    static TextFieldTTF * textFieldWithPlaceHolder(const std::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize);
     
     /** Creates a TextFieldTTF from a fontname and font size.
     * @js NA
     */
-    static TextFieldTTF * textFieldWithPlaceHolder(const eastl::string& placeholder, const std::string& fontName, float fontSize);
+    static TextFieldTTF * textFieldWithPlaceHolder(const std::string& placeholder, const std::string& fontName, float fontSize);
     
     /** Initializes the TextFieldTTF with a font name, alignment, dimension and font size. */
-    bool initWithPlaceHolder(const eastl::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize);
+    bool initWithPlaceHolder(const std::string& placeholder, const Size& dimensions, TextHAlignment alignment, const std::string& fontName, float fontSize);
     
     /** Initializes the TextFieldTTF with a font name and font size. */
-    bool initWithPlaceHolder(const eastl::string& placeholder, const std::string& fontName, float fontSize);
+    bool initWithPlaceHolder(const std::string& placeholder, const std::string& fontName, float fontSize);
 
     /**
      *@brief    Open keyboard and receive input text.
@@ -168,7 +169,7 @@ public:
      * Change input text of TextField.
      *@param text The input text of TextField.
      */
-    virtual void setString(const eastl::string& text) override;
+    virtual void setString(const std::string& text) override;
 
     /**
     * Append to input text of TextField.
@@ -180,20 +181,20 @@ public:
      * Query the input text of TextField.
      *@return Get the input text of TextField.
      */
-    virtual eastl::string getString() const override;
+    virtual std::string getString() const override;
 
     /**
      * Change placeholder text.
      * place holder text displayed when there is no text in the text field.
      *@param text  The placeholder string.
      */
-    virtual void setPlaceHolder(const eastl::string& text);
+    virtual void setPlaceHolder(const std::string& text);
 
     /**
      * Query the placeholder string.
      *@return The placeholder string.
      */
-    virtual const eastl::string& getPlaceHolder() const;
+    virtual const std::string& getPlaceHolder() const;
 
     /**
      * Set enable secure text entry representation.
@@ -202,8 +203,8 @@ public:
      * @js NA
      */
     virtual void setSecureTextEntry(bool value);
-    virtual void setPasswordTextStyle(const eastl::string& text);
-    const eastl::string& getPasswordTextStyle() const;
+    virtual void setPasswordTextStyle(const std::string& text);
+    const std::string& getPasswordTextStyle() const;
 
     /**
      * Query whether the currently display mode is secure text entry or not.
@@ -259,12 +260,12 @@ protected:
 
     nau::string _inputText;
 
-    eastl::string _placeHolder;
+    std::string _placeHolder;
     Color4B _colorSpaceHolder;
     Color4B _colorText;
 
     bool _secureTextEntry;
-    eastl::string _passwordStyleText;
+    std::string _passwordStyleText;
 
     // Need use cursor
     bool _cursorEnabled;

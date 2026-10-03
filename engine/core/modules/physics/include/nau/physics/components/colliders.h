@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
-#include <EASTL/vector.h>
+#include <vector>
 
 #include "nau/assets/asset_ref.h"
 #include "nau/math/transform.h"
@@ -76,10 +76,10 @@ namespace nau::physics
      */
     struct CollisionDescription
     {
-        eastl::vector<SphereCollider> spheres;
-        eastl::vector<BoxCollider> boxes;
-        eastl::vector<CapsuleCollider> capsules;
-        eastl::vector<CylinderCollider> cylinders;
+        std::vector<SphereCollider> spheres;
+        std::vector<BoxCollider> boxes;
+        std::vector<CapsuleCollider> capsules;
+        std::vector<CylinderCollider> cylinders;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(spheres),

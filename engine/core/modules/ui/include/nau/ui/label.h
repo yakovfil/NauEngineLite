@@ -4,16 +4,14 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
-#include "EASTL/string.h"
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "nau/ui/ui_control.h"
-#include "nau/ui/symbol_factory.h"
 #include "nau/ui/elements/sprite.h"
-
+#include "nau/ui/symbol_factory.h"
+#include "nau/ui/ui_control.h"
 
 namespace nau::ui
 {
@@ -129,7 +127,7 @@ public:
      * @param [in] fontPath Path to the font file to use for the label.
      * @return              A pointer to the created label.
      */
-    static NauLabel* create(const eastl::string& text, const std::string& fontPath);
+    static NauLabel* create(const std::string& text, const std::string& fontPath);
 
     /**
      * @brief Creates a text label.
@@ -142,12 +140,8 @@ public:
      * @param [in] wrapping             Text line wrapping mechanism to use.
      * @return                          A pointer to the created label.
      */
-    static NauLabel* create(const eastl::string& text, const std::string& fontPath, 
-        HorizontalAlignment horizontalAlignment, 
-        VerticalAlignment verticalAlignment,
-        Overflow overflow,
-        Wrapping wrapping);
-    static NauLabel* create(eastl::unique_ptr<SymbolFactory> symbolFactory);
+    static NauLabel* create(const std::string& text, const std::string& fontPath, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment, Overflow overflow, Wrapping wrapping);
+    static NauLabel* create(std::unique_ptr<SymbolFactory> symbolFactory);
 
     /**
      * @brief Default constructor.
@@ -168,14 +162,14 @@ public:
      * 
      * @param [in] text Text to assign.
      */
-    void setText(const eastl::string& text);
+    void setText(const std::string& text);
 
     /**
      * @brief Retrieves the content of the text label.
      * 
      * @return Text block contained in the label.
      */
-    eastl::string_view getText() const;
+    std::string_view getText() const;
 
     /**
      * @brief Commits changes and updates the label visuals.
@@ -189,7 +183,7 @@ public:
      */
     void enableRichText(bool enable);
 
-    void setSymbolFactory(eastl::unique_ptr<SymbolFactory>&& symbolFactory);
+    void setSymbolFactory(std::unique_ptr<SymbolFactory>&& symbolFactory);
 
     /**
      * @brief Changes the label text vertical alignment type.
@@ -235,25 +229,25 @@ protected:
     bool isWrappingToNextLine(char32_t character, FontLetterDefinition& letterDef, float currentLineWidth, float nextWordLenght);
     Sprite* getLetterSprite(size_t letterIndex);
     void hideLettersSprite();
-    float getNextWordLenght(const eastl::u32string& utf32Text, size_t startIndex, const std::u32string& font);
+    float getNextWordLenght(const std::u32string& utf32Text, size_t startIndex, const std::u32string& font);
     bool isCharacterEndOfWord(char32_t character);
     void setLetterColor(Sprite* letterSprite, const SymbolParams& params);
     void removeSpacesAtEdges(std::vector<SymbolDefinition>& symbolDefinitions);
 
 private:
     void drawText(const std::vector<TextLineDefinition>& lineDefinitions, float totalLinesHeight);
-    TextDefinition calculateTextDefinition(const eastl::u32string& text);
+    TextDefinition calculateTextDefinition(const std::u32string& text);
 
     Overflow m_overflow{ Overflow::none };
     Wrapping m_wrapping{ Wrapping::disable };
     HorizontalAlignment m_horizontalAlignment{ HorizontalAlignment::left };
     VerticalAlignment m_verticalAlignment{ VerticalAlignment::top };
 
-    eastl::unique_ptr<SymbolFactory> m_symbolFactory {};
-    eastl::vector<Sprite*> m_spriteCache{};
+    std::unique_ptr<SymbolFactory> m_symbolFactory{};
+    std::vector<Sprite*> m_spriteCache{};
 
-    eastl::string m_utf8Text{};
-    eastl::u32string m_utf32Text{};
+    std::string m_utf8Text{};
+    std::u32string m_utf32Text{};
     bool m_isRichText{ true };
 
     

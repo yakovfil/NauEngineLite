@@ -1,22 +1,30 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-
 #include "resourceScheduler.h"
 
-#include <EASTL/algorithm.h>
-#include <EASTL/bitvector.h>
-#include <EASTL/sort.h>
-#include <EASTL/vector_set.h>
-#include "nau/3d/dag_drv3d.h"
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <limits>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include "dabfg/common/resourceUsage.h"
-#include "dabfg/runtime/runtime.h"
-#include "dabfg/id/idRange.h"
 #include "dabfg/backend/resourceScheduling/packer.h"
+#include "dabfg/common/resourceUsage.h"
 #include "dabfg/debug/backendDebug.h"
+#include "dabfg/id/idRange.h"
+#include "dabfg/runtime/runtime.h"
+#include "nau/3d/dag_drv3d.h"
 #include "nau/diag/logging.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/enum_utils.h"
+#include "nau/utils/sorted_vector.h"
 
 #if DABFG_STATISTICS_REPORTING
 CONSOLE_BOOL_VAL("dabfg", report_resource_statistics, false);
@@ -66,15 +74,15 @@ auto ResourceScheduler::gatherResourceProperties(const intermediate::Graph &grap
       // This can happen after we change settings in which case we simply reset hinting.
       if (res.asScheduled().isGpuResource() && res.asScheduled().history != History::No)
       {
-        const auto newFlags = getResourceFlags(eastl::get<ResourceDescription>(res.asScheduled().description));
-        for (const auto resNameId : res.frontendResources)
-        {
-          const auto flags = historyResourceFlags.find(resNameId);
-          if (flags != historyResourceFlags.end() && newFlags != flags->second)
-            hintedResources.clear();
+          const auto newFlags = getResourceFlags(std::get<ResourceDescription>(res.asScheduled().description));
+          for (const auto resNameId : res.frontendResources)
+          {
+              const auto flags = historyResourceFlags.find(resNameId);
+              if (flags != historyResourceFlags.end() && newFlags != flags->second)
+                  hintedResources.clear();
 
-          historyResourceFlags[resNameId] = newFlags;
-        }
+              historyResourceFlags[resNameId] = newFlags;
+          }
       }
       resourceProperties[i] = res.asScheduled().isGpuResource()
                                 ? getResourceAllocationProperties(res.asScheduled().getGpuDescription())
@@ -83,8 +91,7 @@ auto ResourceScheduler::gatherResourceProperties(const intermediate::Graph &grap
   return resourceProperties;
 }
 
-auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &resources, const EventsCollectionRef &allEvents,
-  const IntermediateRemapping &cached_res_idx_remapping) -> eastl::pair<AllocationLocations, HeapRequests>
+auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties& resources, const EventsCollectionRef& allEvents, const IntermediateRemapping& cached_res_idx_remapping) -> std::pair<AllocationLocations, HeapRequests>
 {
   //TIME_PROFILE(scheduleHeaps);
 
@@ -92,7 +99,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
 
   // Note that this cannot use framemem as new heap requests appear
   // quite spontaneously while iterating resources.
-  eastl::pair<AllocationLocations, HeapRequests> result;
+  std::pair<AllocationLocations, HeapRequests> result;
 
   auto &allocations = result.first;
   auto &heapRequests = result.second;
@@ -115,9 +122,9 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
     const auto heapGroupProp2 = getResourceHeapGroupProperties(h2);
     if (heapGroupProp1.isOnChip != heapGroupProp2.isOnChip)
       return heapGroupProp1.isOnChip > heapGroupProp2.isOnChip;
-    return eastl::less<ResourceHeapGroup *>()(h1, h2);
+    return std::less<ResourceHeapGroup*>()(h1, h2);
   };
-  eastl::vector_map<ResourceHeapGroup *, uint32_t, decltype(heapGroupComp), nau::EastlFrameAllocator> resourcesPerHeapType(heapGroupComp);
+  nau::SortedVectorMap<ResourceHeapGroup*, uint32_t, decltype(heapGroupComp), nau::FrameStdAllocator<std::pair<ResourceHeapGroup*, uint32_t>>> resourcesPerHeapType(heapGroupComp);
   // TODO: remove when dag::Vector::DoInsertValue starts using resizeInplace
   resourcesPerHeapType.reserve(resources.size());
   for (const auto &resProps : resources)
@@ -127,7 +134,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
 
   // The request into which resources with this heap group should go into.
   // Gets changed to a new heap request if we run out of memory
-  eastl::vector_map<ResourceHeapGroup *, HeapIndex> activeRequestIndexForHeapGroup;
+  nau::SortedVectorMap<ResourceHeapGroup*, HeapIndex> activeRequestIndexForHeapGroup;
   // Hope that we'll need <=2 actual heaps per group
   activeRequestIndexForHeapGroup.reserve(resourcesPerHeapType.size() * 2);
   heapRequests.reserve(resourcesPerHeapType.size() * 2);
@@ -149,7 +156,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
 
   // Bucket resources into requests.
   const uint32_t resMultiply = allEvents.size();
-  IdIndexedMapping<HeapIndex, eastl::vector<FrameResource>> resourcesToBeScheduled(heapRequests.size());
+  IdIndexedMapping<HeapIndex, std::vector<FrameResource>> resourcesToBeScheduled(heapRequests.size());
   for (auto [group, resCount] : resourcesPerHeapType)
     resourcesToBeScheduled[activeRequestIndexForHeapGroup[group]].reserve(resCount * resMultiply);
 
@@ -190,13 +197,13 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
     const uint32_t resMultiply = allEvents.size();
 
     // Collect resources present in this heap and build a mapping
-    eastl::vector<FrameResource, nau::EastlFrameAllocator> inHeapIdxToFrameResource;
-    eastl::vector<PackerInput::Resource, nau::EastlFrameAllocator> packerResources;
+    std::vector<FrameResource, nau::FrameStdAllocator<FrameResource>> inHeapIdxToFrameResource;
+    std::vector<PackerInput::Resource, nau::FrameStdAllocator<PackerInput::Resource>> packerResources;
     inHeapIdxToFrameResource.reserve(resources.size() * resMultiply);
     packerResources.reserve(resources.size() * resMultiply);
 
-    constexpr uint32_t INDEX_NOT_IN_HEAP = eastl::numeric_limits<uint32_t>::max();
-    eastl::vector<uint32_t, nau::EastlFrameAllocator> globalToInHeapIndex(resources.size() * resMultiply, INDEX_NOT_IN_HEAP);
+    constexpr uint32_t INDEX_NOT_IN_HEAP = std::numeric_limits<uint32_t>::max();
+    std::vector<uint32_t, nau::FrameStdAllocator<uint32_t>> globalToInHeapIndex(resources.size() * resMultiply, INDEX_NOT_IN_HEAP);
 
     for (auto resource : resourcesToBeScheduled[heapIdx])
     {
@@ -226,11 +233,11 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
 
           auto &packerRes = packerResources[inHeapIndex];
 
-          if (eastl::holds_alternative<Event::Activation>(event.data) || eastl::holds_alternative<Event::CpuActivation>(event.data))
-            packerRes.start = time;
+          if (std::holds_alternative<Event::Activation>(event.data) || std::holds_alternative<Event::CpuActivation>(event.data))
+              packerRes.start = time;
           else if (
-            eastl::holds_alternative<Event::Deactivation>(event.data) || eastl::holds_alternative<Event::CpuDeactivation>(event.data))
-            packerRes.end = time;
+              std::holds_alternative<Event::Deactivation>(event.data) || std::holds_alternative<Event::CpuDeactivation>(event.data))
+              packerRes.end = time;
         }
       }
     }
@@ -267,7 +274,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
     // on heap sizes that is not reported by the driver and can only be
     // known by asking MS guys on discord, and it's 64MiBs.
     if (heapGroupProp.optimalMaxHeapSize > 0)
-      input.maxHeapSize = eastl::min(input.maxHeapSize, heapGroupProp.optimalMaxHeapSize);
+        input.maxHeapSize = std::min(input.maxHeapSize, heapGroupProp.optimalMaxHeapSize);
 
     // Do not increase the size of an existing heap if resources in it have hints.
     // Otherwise hinted resources will not be preserved, because of the heap recreation.
@@ -310,7 +317,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
       output.heapSize = heapGroupProp.maxHeapSize;
 
     // Collect resources that do not fit into a heap for further rescheduling
-    eastl::vector<FrameResource> rescheduledResources;
+    std::vector<FrameResource> rescheduledResources;
     heapRequests[heapIdx].size = output.heapSize;
     for (uint32_t idx = 0; idx < output.offsets.size(); ++idx)
     {
@@ -325,18 +332,18 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
       const auto &packerRes = input.resources[idx];
       if (cachedIntermediateResources[resIdx].asScheduled().history != History::No)
       {
-        if (packerRes.offsetHint != PackerInput::NO_HINT && EASTL_UNLIKELY(packerRes.offsetHint != output.offsets[idx]))
-        {
-          preservedResources[frame][resIdx] = false;
-          const auto preservedRes = hintedResources[heapIdx][frame].find(cached_res_idx_remapping[resIdx]);
-          // Packer cannot guarantee hint respecting for a resource that has it's lifetime changed.
-          const bool hasSameLifetime = preservedRes->second.start == packerRes.start && preservedRes->second.end == packerRes.end;
-          if (hasSameLifetime)
-            NAU_LOG_ERROR("Resource packer ignored offset hint for history resource!");
-        }
+          if (packerRes.offsetHint != PackerInput::NO_HINT && NAU_UNLIKELY(packerRes.offsetHint != output.offsets[idx]))
+          {
+              preservedResources[frame][resIdx] = false;
+              const auto preservedRes = hintedResources[heapIdx][frame].find(cached_res_idx_remapping[resIdx]);
+              // Packer cannot guarantee hint respecting for a resource that has it's lifetime changed.
+              const bool hasSameLifetime = preservedRes->second.start == packerRes.start && preservedRes->second.end == packerRes.end;
+              if (hasSameLifetime)
+                  NAU_LOG_ERROR("Resource packer ignored offset hint for history resource!");
+          }
         hintedResources[heapIdx][frame][resIdx] = {output.offsets[idx], packerRes.size, packerRes.start, packerRes.end};
       }
-      NAU_FAST_ASSERT(output.offsets[idx] < eastl::numeric_limits<uint32_t>::max());
+      NAU_FAST_ASSERT(output.offsets[idx] < std::numeric_limits<uint32_t>::max());
       allocations[frame][resIdx] = {heapIdx, static_cast<uint32_t>(output.offsets[idx])};
     }
 
@@ -345,7 +352,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
       // Scan next heap requests for a candidate within same group.
       // If the requested group was ESRAM, reschedule into a regular appropriate group.
       auto rescheduleHeapIdx = heapIdx;
-      for (uint32_t j = eastl::to_underlying(heapIdx) + 1; j < heapRequests.size(); ++j)
+      for (uint32_t j = nau::to_underlying(heapIdx) + 1; j < heapRequests.size(); ++j)
       {
         const auto candidateHeapIdx = static_cast<HeapIndex>(j);
         const auto candidateHeapGroupProp = getResourceHeapGroupProperties(heapRequests[candidateHeapIdx].group);
@@ -385,16 +392,17 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
   {
     debug("Frame graph resource allocation statistics report:");
 
-    auto listToStr = [](const auto &list) {
-      eastl::string str = "[";
-      for (auto [k, v] : list)
-      {
-        str += "(" + eastl::to_string(k) + ", " + eastl::to_string(v) + "), ";
-      }
-      if (!list.empty())
-        str.resize(str.size() - 2);
-      str += "]";
-      return str;
+    auto listToStr = [](const auto& list)
+    {
+        std::string str = "[";
+        for (auto [k, v] : list)
+        {
+            str += "(" + std::to_string(k) + ", " + std::to_string(v) + "), ";
+        }
+        if (!list.empty())
+            str.resize(str.size() - 2);
+        str += "]";
+        return str;
     };
 
     static int cumulativeDumpCounter = 0;
@@ -407,7 +415,7 @@ auto ResourceScheduler::scheduleResourcesIntoHeaps(const ResourceProperties &res
     }
 
     for (auto [heapIdx, heap] : heapRequests.enumerate())
-      debug("Heap request %d size: %d bytes", eastl::to_underlying(heapIdx), heap.size);
+        debug("Heap request %d size: %d bytes", nau::to_underlying(heapIdx), heap.size);
   }
 #endif
 
@@ -427,16 +435,16 @@ ResourceScheduler::EventsCollectionRef ResourceScheduler::scheduleEvents(const i
     uint32_t nodeIndex;
   };
 
-  IdIndexedMapping<intermediate::ResourceIndex, uint32_t, nau::EastlFrameAllocator> perResourceUsageCount(graph.resources.size(), 0);
+  IdIndexedMapping<intermediate::ResourceIndex, uint32_t, nau::FrameStdAllocator<uint32_t>> perResourceUsageCount(graph.resources.size(), 0);
   for (const auto &node : graph.nodes)
     for (const auto &req : node.resourceRequests)
       perResourceUsageCount[req.resource]++;
 
   // Timelines of when and how every resource was used
-  eastl::array<
-    IdIndexedMapping<intermediate::ResourceIndex, eastl::vector<ResourceUsageOccurrence, nau::EastlFrameAllocator>, nau::EastlFrameAllocator>,
-    SCHEDULE_FRAME_WINDOW>
-    perFrameResourceUsageTimelines;
+  std::array<
+      IdIndexedMapping<intermediate::ResourceIndex, std::vector<ResourceUsageOccurrence, nau::FrameStdAllocator<ResourceUsageOccurrence>>, nau::FrameStdAllocator<std::vector<ResourceUsageOccurrence, nau::FrameStdAllocator<ResourceUsageOccurrence>>>>,
+      SCHEDULE_FRAME_WINDOW>
+      perFrameResourceUsageTimelines;
 
   // Pre-allocate all timelines so that we can use framemem allocator
   // Note that the order of allocation has to be reversed so that
@@ -513,9 +521,9 @@ ResourceScheduler::EventsCollectionRef ResourceScheduler::scheduleEvents(const i
   // a pre-allocation's size wasn't big enough
   //FRAMEMEM_REGION;
 
-  using NodeEvents = eastl::vector<Event, nau::EastlFrameAllocator>;
-  using FrameEvents = eastl::vector<NodeEvents, nau::EastlFrameAllocator>;
-  using EventsCollection = eastl::array<FrameEvents, SCHEDULE_FRAME_WINDOW>;
+  using NodeEvents = std::vector<Event, nau::FrameStdAllocator<Event>>;
+  using FrameEvents = std::vector<NodeEvents, nau::FrameStdAllocator<NodeEvents>>;
+  using EventsCollection = std::array<FrameEvents, SCHEDULE_FRAME_WINDOW>;
 
   EventsCollection scheduledEvents;
   for (FrameEvents &frameEvents : scheduledEvents)
@@ -537,7 +545,7 @@ ResourceScheduler::EventsCollectionRef ResourceScheduler::scheduleEvents(const i
         for (int i = timeline.size() - 2; i >= 0; --i)
         {
           const auto &curr = timeline[i];
-          const auto &prev = timeline[eastl::exchange(lastState, i)];
+          const auto& prev = timeline[std::exchange(lastState, i)];
 
           ResourceBarrier barrier = barrier_for_transition(prev.usage, curr.usage);
 
@@ -642,8 +650,11 @@ ResourceScheduler::EventsCollectionRef ResourceScheduler::scheduleEvents(const i
   // * activate all
   for (auto &frameEvents : scheduledEvents)
     for (auto &nodeEvents : frameEvents)
-      eastl::sort(nodeEvents.begin(), nodeEvents.end(),
-        [](const Event &a, const Event &b) { return a.data.index() > b.data.index(); });
+        std::sort(nodeEvents.begin(), nodeEvents.end(),
+                  [](const Event& a, const Event& b)
+        {
+            return a.data.index() > b.data.index();
+        });
 
   eventStorage.clear();
 
@@ -662,7 +673,13 @@ ResourceScheduler::EventsCollectionRef ResourceScheduler::scheduleEvents(const i
     eventRefStorage[j].reserve(scheduledEvents[j].size());
     for (auto &eventsForNode : scheduledEvents[j])
     {
-      Event *groupStart = &*eventStorage.end();
+      if (eventsForNode.empty())
+      {
+        eventRefStorage[j].emplace_back();
+        continue;
+      }
+
+      Event *groupStart = eventStorage.data() + eventStorage.size();
       eventStorage.insert(eventStorage.end(), eventsForNode.begin(), eventsForNode.end());
       eventRefStorage[j].emplace_back(groupStart, eventsForNode.size());
     }
@@ -719,8 +736,8 @@ ResourceScheduler::DestroyedHeapSet ResourceScheduler::allocateCpuHeaps(int prev
       for (const auto resIdx : heapToResourceList[heapIdx][prev_frame])
         if (potential_deactivation_set[resIdx].index() == 3)
         {
-          auto [f, x] = eastl::get<3>(potential_deactivation_set[resIdx]);
-          f(x);
+            auto [f, x] = std::get<3>(potential_deactivation_set[resIdx]);
+            f(x);
         }
 
       result.push_back(heapIdx);
@@ -789,7 +806,7 @@ void ResourceScheduler::placeResources(const intermediate::Graph &graph, const R
       if (debug_graph_generation)
       {
         for (auto resId : cachedIntermediateResources[i].frontendResources)
-          debug_rec_resource_placement(resId, frame, eastl::to_underlying(heapIdx), offset, resProps.sizeInBytes);
+            debug_rec_resource_placement(resId, frame, nau::to_underlying(heapIdx), offset, resProps.sizeInBytes);
       }
     }
   }
@@ -804,12 +821,11 @@ void ResourceScheduler::restoreResourceApiNames() const
   struct strInfo
   {
     size_t size;
-    eastl::basic_string<char> str; // , nau::EastlFrameAllocator
+    std::basic_string<char> str;  // , nau::EastlFrameAllocator
   };
 
-  ska::flat_hash_map<const D3dResource *, strInfo, eastl::hash<const D3dResource *>, eastl::equal_to<const D3dResource *>,
-      nau::EastlFrameAllocator>
-    names;
+  ska::flat_hash_map<const D3dResource*, strInfo, std::hash<const D3dResource*>, std::equal_to<const D3dResource*>, nau::FrameStdAllocator<std::pair<const D3dResource*, strInfo>>>
+      names;
   names.reserve(SCHEDULE_FRAME_WINDOW * cachedIntermediateResources.size());
 
   const char *separatorStr = ", ";
@@ -895,9 +911,9 @@ void ResourceScheduler::shutdown(int frame)
 
   for (int i = 0; i < SCHEDULE_FRAME_WINDOW; ++i)
   {
-    eastl::fill(resourceIndexInCollection[i].begin(), resourceIndexInCollection[i].end(), UNSCHEDULED);
-    eastl::fill(heapForCpuResource[i].begin(), heapForCpuResource[i].end(), HeapIndex::Invalid);
-    preservedResources[i].clear();
+      std::fill(resourceIndexInCollection[i].begin(), resourceIndexInCollection[i].end(), UNSCHEDULED);
+      std::fill(heapForCpuResource[i].begin(), heapForCpuResource[i].end(), HeapIndex::Invalid);
+      preservedResources[i].clear();
   }
   hintedResources.clear();
 
@@ -913,12 +929,12 @@ ResourceScheduler::IntermediateRemapping ResourceScheduler::remapResources(const
   //TIME_PROFILE(Remapping resource);
 
   IntermediateRemapping remapping;
-  remapping.resize(eastl::max(new_resources.size(), cachedIntermediateResources.size()), intermediate::RESOURCE_NOT_MAPPED);
+  remapping.resize(std::max(new_resources.size(), cachedIntermediateResources.size()), intermediate::RESOURCE_NOT_MAPPED);
 
   //FRAMEMEM_VALIDATE;
 
-  eastl::vector_map<ResNameId, intermediate::ResourceIndex, eastl::less<ResNameId>, nau::EastlFrameAllocator> resNameToIR;
-  resNameToIR.reserve(eastl::max<size_t>(new_resources.size(), cachedIntermediateResources.size() * 8));
+  nau::SortedVectorMap<ResNameId, intermediate::ResourceIndex, std::less<ResNameId>, nau::FrameStdAllocator<std::pair<ResNameId, intermediate::ResourceIndex>>> resNameToIR;
+  resNameToIR.reserve(std::max<size_t>(new_resources.size(), cachedIntermediateResources.size() * 8));
 
   for (auto [oldResIdx, res] : cachedIntermediateResources.enumerate())
     for (const auto resNameId : res.frontendResources)
@@ -965,7 +981,7 @@ ResourceScheduler::SchedulingResult ResourceScheduler::scheduleResources(int pre
   // Don't deactivate resources that were preserved
   for (auto [idx, res] : cachedIntermediateResources.enumerate())
     if (isResourcePreserved(prev_frame, idx))
-      potentialDeactivations[cachedResIdxRemapping[idx]] = eastl::monostate{};
+        potentialDeactivations[cachedResIdxRemapping[idx]] = std::monostate{};
 
   const auto oldHeapCount = allocatedHeaps.size();
 
@@ -981,7 +997,7 @@ ResourceScheduler::SchedulingResult ResourceScheduler::scheduleResources(int pre
     const auto wipeDeactivations = [this, prev_frame, &potentialDeactivations](const DestroyedHeapSet &set) {
       for (auto heapIdx : set)
         for (auto resIdx : heapToResourceList[heapIdx][prev_frame])
-          potentialDeactivations[resIdx] = eastl::monostate{};
+            potentialDeactivations[resIdx] = std::monostate{};
     };
 
     {
@@ -1008,12 +1024,13 @@ ResourceScheduler::SchedulingResult ResourceScheduler::scheduleResources(int pre
   // the deactivation map into a regular array.
   for (auto [idx, res] : cachedIntermediateResources.enumerate())
     if (const auto oldIdx = cachedResIdxRemapping[idx]; oldIdx != intermediate::RESOURCE_NOT_MAPPED)
-      eastl::visit(
-        [&result](const auto &res) {
-          if constexpr (!eastl::is_same_v<eastl::remove_cvref_t<decltype(res)>, eastl::monostate>)
-            result.deactivations.emplace_back(res);
+        std::visit(
+            [&result](const auto& res)
+        {
+            if constexpr (!std::is_same_v<std::remove_cvref_t<decltype(res)>, std::monostate>)
+                result.deactivations.emplace_back(res);
         },
-        potentialDeactivations[oldIdx]);
+            potentialDeactivations[oldIdx]);
 
   for (auto i = oldHeapCount; i < heapToResourceList.size(); ++i)
     if (const auto &list = heapToResourceList[static_cast<HeapIndex>(i)][0]; list.size() == 1)

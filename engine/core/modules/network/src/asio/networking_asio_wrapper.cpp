@@ -5,19 +5,21 @@
 
 #include <nau/diag/logging.h>
 
+#include <string>
+
 using namespace asio;
 using namespace asio::ip;
 
 namespace nau
 {
-    static void endpointToString(const asio::ip::tcp::endpoint& endpoint, eastl::string& str)
+    static void endpointToString(const asio::ip::tcp::endpoint& endpoint, std::string& str)
     {
         auto address = endpoint.address().to_string();
         auto port = endpoint.port();
         str = "tcp://";
         str += address.c_str();
         str += ":";
-        str += eastl::to_string(port);
+        str += std::to_string(port);
         str += "/";
     }
 
@@ -92,7 +94,7 @@ namespace nau
         }
     }
 
-    const eastl::string& ASIO_Connection::localEndPoint() const
+    const std::string& ASIO_Connection::localEndPoint() const
     {
         if (isConnected())
         {
@@ -100,7 +102,7 @@ namespace nau
         }
         return m_localEndPoint;
     }
-    const eastl::string& ASIO_Connection::remoteEndPoint() const
+    const std::string& ASIO_Connection::remoteEndPoint() const
     {
         if (isConnected())
         {

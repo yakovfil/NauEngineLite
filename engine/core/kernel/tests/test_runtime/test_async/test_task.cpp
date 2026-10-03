@@ -1,12 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
 
-#include "nau/test/helpers/assert_catcher_guard.h"
 #include "helpers/runtime_guard.h"
-#include "nau/test/helpers/stopwatch.h"
 #include "nau/async/task.h"
 #include "nau/math/transform.h"
+#include "nau/test/helpers/assert_catcher_guard.h"
+#include "nau/test/helpers/stopwatch.h"
 #include "nau/threading/barrier.h"
 #include "nau/threading/event.h"
 #include "nau/utils/scope_guard.h"
@@ -579,10 +580,10 @@ namespace nau::test
             ASSERT_FALSE(task.isReady());
         }
 
-        const auto makeErrorMessage = [](size_t index) -> eastl::string
+        const auto makeErrorMessage = [](size_t index) -> std::string
         {
             const std::string message = ::fmt::format("Error: {}", index);
-            return eastl::string{message.data(), message.size()};
+            return std::string{message.data(), message.size()};
         };
 
         // Capturing by reference is possible in this case, because lambda is alive within the same scope as other variables
@@ -737,10 +738,10 @@ namespace nau::test
             ASSERT_FALSE(task.isReady());
         }
 
-        const auto makeExceptionMessage = [](size_t index) -> eastl::string
+        const auto makeExceptionMessage = [](size_t index) -> std::string
         {
             const std::string message = fmt::format("Exception: {}", index);
-            return eastl::string{message.data(), message.size()};
+            return std::string{message.data(), message.size()};
         };
 
         // Capturing by reference is possible in this case, because lambda is alive within the same scope as other variables

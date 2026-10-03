@@ -20,9 +20,7 @@
                 "NAU_CORE_TOOLS": false,
                 "NAU_CORE_TESTS": false,
                 "NAU_MINIMAL_TESTS": true,
-                "NAU_CORE_SAMPLES": true,
-                "EASTL_BUILD_BENCHMARK": false,
-                "EASTL_BUILD_TESTS": false
+                "NAU_CORE_SAMPLES": true
             }
         },
         {
@@ -64,8 +62,6 @@
                 "BUILD_SHARED_LIBS": false,
                 "NAU_CORE_TOOLS": false,
                 "NAU_CORE_TESTS": false,
-                "EASTL_BUILD_BENCHMARK": false,
-                "EASTL_BUILD_TESTS": false,
                 "TRACY_ENABLE": false
             }
         },
@@ -98,8 +94,6 @@
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "NAU_BUILD_SDK": true,
                 "BUILD_SHARED_LIBS": false,
-                "EASTL_BUILD_BENCHMARK": false,
-                "EASTL_BUILD_TESTS": false,
                 "TRACY_ENABLE": false
             }
         },

@@ -3,6 +3,8 @@
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
 
+#include <vector>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/math.h"
 #include "nau/math/transform.h"
@@ -120,7 +122,7 @@ namespace nau::test
 
     TEST(TestMath, TransformMultiplication)
     {
-        eastl::vector<Transform> testTransforms;
+        std::vector<Transform> testTransforms;
 
         auto addUniformTransform =
             [&testTransforms](float tx, float ty, float tz,
@@ -444,10 +446,10 @@ namespace nau::test
         addUniformTransform(50.000000000, 100.000000000, -1000.000000000, 0.00, 0.00, 10.00, 1.000000000, 1.000000000, -1.000000000);
         addUniformTransform(50.000000000, 100.000000000, -1000.000000000, 30.00, 20.00, 10.00, 1.000000000, -1.000000000, 1.000000000);
 
-        for(auto& t1 : testTransforms)
+        for (auto& t1 : testTransforms)
         {
             auto m1 = t1.toMatrixWithScale();
-            for(auto& t2 : testTransforms)
+            for (auto& t2 : testTransforms)
             {
                 auto testTransform = t1 * t2;
                 auto m2 = t2.toMatrixWithScale();
@@ -458,7 +460,7 @@ namespace nau::test
             }
         }
 
-        eastl::vector<Transform> testTransformsWithScale;
+        std::vector<Transform> testTransformsWithScale;
 
         auto addNonUniformTransform =
             [&testTransformsWithScale](float tx, float ty, float tz,
@@ -626,10 +628,10 @@ namespace nau::test
         addNonUniformTransform(0.000000000, 0.000000000, 0.000000000, 30.00, 20.00, 10.00, -10.000000000, -10.000000000, -10.000000000);
         addNonUniformTransform(0.000000000, 0.000000000, 0.000000000, 1.00, -10.00, 1.00, 1.000000000, 1.000000000, -10.000000000);
 
-        for(auto& t1 : testTransforms)
+        for (auto& t1 : testTransforms)
         {
             auto m1 = t1.toMatrixWithScale();
-            for(auto& t2 : testTransformsWithScale)
+            for (auto& t2 : testTransformsWithScale)
             {
                 auto testTransform = t1 * t2;
                 auto m2 = t2.toMatrixWithScale();
@@ -648,7 +650,7 @@ namespace nau::test
 
     TEST(TestMath, transformGetRelativeTransform)
     {
-        eastl::vector<Transform> testTransforms;
+        std::vector<Transform> testTransforms;
 
         auto addTransform =
             [&testTransforms](float tx, float ty, float tz,
@@ -816,9 +818,9 @@ namespace nau::test
         addTransform(0.000000000, 0.000000000, 0.000000000, 30.00, 20.00, 10.00, -10.000000000, -10.000000000, -10.000000000);
         addTransform(0.000000000, 0.000000000, 0.000000000, 1.00, -10.00, 1.00, 1.000000000, 1.000000000, -10.000000000);
 
-        for(auto& t1 : testTransforms)
+        for (auto& t1 : testTransforms)
         {
-            for(auto& t2 : testTransforms)
+            for (auto& t2 : testTransforms)
             {
                 auto testTransform = t1.getRelativeTransformInverse(t2);
                 auto testTransformReverse = t1.getRelativeTransform(t2);
@@ -852,7 +854,7 @@ namespace nau::test
 
     TEST(TestMath, TransformLerp)
     {
-        eastl::vector<Transform> testTransforms;
+        std::vector<Transform> testTransforms;
 
         auto testTransformLerp =
             [&testTransforms](const Transform& A,
@@ -1275,7 +1277,7 @@ namespace nau::test
 
     TEST(TestMath, TransformSlerp)
     {
-        eastl::vector<Transform> testTransforms;
+        std::vector<Transform> testTransforms;
 
         auto testTransformSlerp =
             [&testTransforms](const Transform& A,
@@ -1698,7 +1700,7 @@ namespace nau::test
 
     TEST(TestMath, TransformAddFunctions)
     {
-        eastl::vector<Transform> testTransforms;
+        std::vector<Transform> testTransforms;
 
         auto addNonUniformTransform =
             [&testTransforms](float tx, float ty, float tz,
@@ -1718,7 +1720,7 @@ namespace nau::test
         addNonUniformTransform(-10.000000000, -10.000000000, -10.000000000, 1.00, -10.00, 1.00, 1.000000000, -10.000000000, 1.000000000);
         addNonUniformTransform(-10.000000000, -10.000000000, -10.000000000, -30.00, 20.00, 10.00, 1.000000000, -10.000000000, 1.000000000);
 
-        eastl::vector<Quat> testQuats = {
+        std::vector<Quat> testQuats = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -1763,7 +1765,7 @@ namespace nau::test
             {-10, -20, -30},
         };
 
-        eastl::vector<Vector3> testTranslations = {
+        std::vector<Vector3> testTranslations = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -1798,7 +1800,7 @@ namespace nau::test
             {-10, -10, -10},
         };
 
-        eastl::vector<Vector3> testScales = {
+        std::vector<Vector3> testScales = {
             {  0,   0,   0},
             {  1,   0,   0},
             {  0,   1,   0},
@@ -1833,25 +1835,25 @@ namespace nau::test
             {-10, -10, -10},
         };
 
-        for(auto& testTransform : testTransforms)
+        for (auto& testTransform : testTransforms)
         {
             auto testMatrix = testTransform.toMatrixWithScale();
 
-            for(auto& testScale : testScales)
+            for (auto& testScale : testScales)
             {
                 auto copyTransform = testTransform;
                 copyTransform.addScale(testScale);
                 EXPECT_TRUE(copyTransform.toMatrixWithScale().similar(testMatrix * Matrix4::scale(testScale)));
             }
 
-            for(auto& testTranslation : testTranslations)
+            for (auto& testTranslation : testTranslations)
             {
                 auto copyTransform = testTransform;
                 copyTransform.addTranslation(testTranslation);
                 EXPECT_TRUE(copyTransform.toMatrixWithScale().similar(Matrix4::translation(testTranslation) * testMatrix));
             }
 
-            for(auto& testQuat : testQuats)
+            for (auto& testQuat : testQuats)
             {
                 auto copyTransform = testTransform;
                 copyTransform.addRotation(testQuat);
@@ -1867,7 +1869,7 @@ namespace nau::test
     TEST(TestMath, TransformFormatter)
     {
         Transform testTransform = {
-            {  -1.f,    1.f, 58.f},
+            { -1.f,    1.f, 58.f},
             {100.f, -100.f, 10.f},
             { 10.f,   -1.f, 0.1f}
         };

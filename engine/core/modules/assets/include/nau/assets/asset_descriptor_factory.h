@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <EASTL/string_view.h>
+#include <string_view>
 
 #include "nau/assets/asset_descriptor.h"
 #include "nau/assets/asset_path.h"
@@ -24,7 +24,7 @@ namespace nau
 
         /**
          */
-        virtual IAssetDescriptor::Ptr createAssetDescriptor(IAssetContainer& container, eastl::string_view innerPath) = 0;
+        virtual IAssetDescriptor::Ptr createAssetDescriptor(IAssetContainer& container, std::string_view innerPath) = 0;
 
         virtual void addAssetContainer(const AssetPath& assetPath, nau::Ptr<IAssetContainer> container) = 0;
 

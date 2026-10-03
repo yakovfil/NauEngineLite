@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <vector>
+
 #include "nau/animation/controller/animation_controller.h"
 #include "nau/animation/playback/animation_mixer.h"
 
@@ -58,7 +61,7 @@ namespace nau::animation
          */
         void setWeight(TAnimDescrParam animationId, float weight);
 
-        virtual const eastl::string_view getControllerTypeName() const override;
+        virtual const std::string_view getControllerTypeName() const override;
 
     private:
 
@@ -71,7 +74,7 @@ namespace nau::animation
         /**
          * @brief Stores weights of managed animations.
          */
-        eastl::vector<AnimationPlaybackData> m_playbackTable;
+        std::vector<AnimationPlaybackData> m_playbackTable;
 
         /**
          * @brief Mixer object that is responsible for blending animation instances.

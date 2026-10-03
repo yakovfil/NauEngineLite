@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
+#include <string>
 #include <stdarg.h>
 #include "2d/CCLayer.h"
 #include "base/ccUtils.h"
@@ -173,9 +174,9 @@ void Layer::onTouchesCancelled(const std::vector<Touch*>& touches, Event *event)
     CC_UNUSED_PARAM(event);
 }
 
-eastl::string Layer::getDescription() const
+std::string Layer::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<Layer | Tag = %d>", _tag);
+    return cocos2d::StringUtils::format("<Layer | Tag = %d>", _tag);
 }
 
 /// LayerColor
@@ -565,9 +566,9 @@ void LayerGradient::setCompressedInterpolation(bool compress)
     updateColor();
 }
 
-eastl::string LayerGradient::getDescription() const
+std::string LayerGradient::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<LayerGradient | Tag = %d>", _tag);
+    return cocos2d::StringUtils::format("<LayerGradient | Tag = %d>", _tag);
 }
 
 /**
@@ -980,9 +981,9 @@ void LayerMultiplex::switchToAndReleaseMe(int n)
     this->addChild(_layers.at(n));
 }
 
-eastl::string LayerMultiplex::getDescription() const
+std::string LayerMultiplex::getDescription() const
 {
-    return eastl::string(eastl::string::CtorSprintf{}, "<LayerMultiplex | Tag = %d, Layers = %d", _tag, static_cast<int>(_children.size()));
+    return cocos2d::StringUtils::format("<LayerMultiplex | Tag = %d, Layers = %d", _tag, static_cast<int>(_children.size()));
 }
 
 NS_CC_END

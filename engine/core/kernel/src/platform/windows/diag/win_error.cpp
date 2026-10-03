@@ -3,8 +3,10 @@
 
 #include "nau/platform/windows/diag/win_error.h"
 
-#include "nau/string/string_conv.h"
+#include <string>
+#include <string_view>
 
+#include "nau/string/string_conv.h"
 
 namespace nau::diag
 {
@@ -60,21 +62,21 @@ namespace nau::diag
             return resultMessage;
         }
 
-        inline eastl::string makeWinErrorMessage(unsigned errorCode)
+        inline std::string makeWinErrorMessage(unsigned errorCode)
         {
             std::wstring message = getWinErrorMessageW(errorCode);
-            const auto errorMessage = strings::wstringToUtf8(eastl::wstring_view{message.data(), message.size()});
-            return eastl::string{reinterpret_cast<const char*>(errorMessage.data()), errorMessage.size()};
+            const auto errorMessage = strings::wstringToUtf8(std::wstring_view{message.data(), message.size()});
+            return std::string{reinterpret_cast<const char*>(errorMessage.data()), errorMessage.size()};
         }
 
-        inline eastl::string makeWinErrorMessage(unsigned errorCode, eastl::string_view customMessage)
+        inline std::string makeWinErrorMessage(unsigned errorCode, std::string_view customMessage)
         {
             const std::wstring errorMessageW = getWinErrorMessageW(errorCode);
-            const eastl::u8string errorMessage = strings::wstringToUtf8(eastl::wstring_view{errorMessageW.data(), errorMessageW.size()});
-            const eastl::string_view errorMessageSV = strings::toStringView(errorMessage);
+            const std::u8string errorMessage = strings::wstringToUtf8(std::wstring_view{errorMessageW.data(), errorMessageW.size()});
+            const std::string_view errorMessageSV = strings::toStringView(errorMessage);
             const std::string formattedMessage = ::fmt::format("{}. code:({}):{}", customMessage, errorCode, errorMessageSV);
-            return eastl::string{formattedMessage.data(), formattedMessage.size()};
-        }        
+            return std::string{formattedMessage.data(), formattedMessage.size()};
+        }
     }  // namespace
 
     WinCodeError::WinCodeError(const diag::SourceInfo& sourceInfo, unsigned errorCode) :
@@ -83,10 +85,11 @@ namespace nau::diag
     {
     }
 
-    WinCodeError::WinCodeError(const diag::SourceInfo& sourceInfo, eastl::string message, unsigned errorCode):
+    WinCodeError::WinCodeError(const diag::SourceInfo& sourceInfo, std::string message, unsigned errorCode) :
         DefaultError<>(sourceInfo, makeWinErrorMessage(errorCode, message)),
         m_errorCode(errorCode)
-    {}
+    {
+    }
 
     unsigned WinCodeError::getErrorCode() const
     {

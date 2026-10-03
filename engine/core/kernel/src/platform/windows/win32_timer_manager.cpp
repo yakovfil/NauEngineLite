@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
 
 #include "nau/async/async_timer.h"
 #include "nau/async/task.h"
@@ -12,6 +13,7 @@
 #include "nau/runtime/internal/runtime_object_registry.h"
 #include "nau/threading/lock_guard.h"
 #include "nau/threading/spin_lock.h"
+#include "nau/utils/intrusive_list.h"
 #include "nau/utils/scope_guard.h"
 
 namespace nau::async
@@ -46,7 +48,7 @@ namespace nau::async
         Task<> executeAfterAsync(std::chrono::milliseconds timeout, async::Executor::Ptr executor, ExecuteAfterCallback callback, void* callbackData)
         {
             NAU_ASSERT(callback);
-            if(!callback)
+            if (!callback)
             {
                 co_return;
             }
@@ -57,16 +59,16 @@ namespace nau::async
             auto opResult = co_await state.getTask();
             Error::Ptr error;
 
-            if(opResult == TimerOperationResult::Cancelled)
+            if (opResult == TimerOperationResult::Cancelled)
             {
                 error = NauMakeErrorT(nau::OperationCancelledError)();
             }
-            else if(opResult == TimerOperationResult::ShutingDown)
+            else if (opResult == TimerOperationResult::ShutingDown)
             {
                 error = NauMakeErrorT(nau::OperationCancelledError)("Timers subsystem is disposed");
             }
 
-            if(executor)
+            if (executor)
             {
                 ASYNC_SWITCH_EXECUTOR(executor)
             }
@@ -88,11 +90,11 @@ namespace nau::async
                 // - TimerOperationResult::Cancelled = explicitly cancelled ny client, callback must NOT be called
                 // - TimerOperationResult::ShuttingDown = manager is in disposed state, callback must be called
                 // - ...
-                if(const auto opResult = co_await state.getTask(); opResult != TimerOperationResult::Cancelled)
+                if (const auto opResult = co_await state.getTask(); opResult != TimerOperationResult::Cancelled)
                 {
                     lock_(state.mutex);
 
-                    if(!state.cancelled)
+                    if (!state.cancelled)
                     {
                         callback(data);
                     }
@@ -106,7 +108,7 @@ namespace nau::async
 
         void cancelInvokeAfter(InvokeAfterHandle handle) override
         {
-            if(handle == 0)
+            if (handle == 0)
             {
                 return;
             }
@@ -118,7 +120,7 @@ namespace nau::async
                 return state.id == handle;
             });
 
-            if(state != m_timerStateList.end())
+            if (state != m_timerStateList.end())
             {
                 state->cancel(TimerOperationResult::Cancelled);
             }
@@ -126,13 +128,13 @@ namespace nau::async
 
         void dispose() override
         {
-            if(m_isDisposed.exchange(true))
+            if (m_isDisposed.exchange(true))
             {  // already disposed
                 return;
             }
 
             lock_(m_mutex);
-            for(auto& timerState : m_timerStateList)
+            for (auto& timerState : m_timerStateList)
             {
                 timerState.cancel(TimerOperationResult::ShutingDown);
             }
@@ -152,7 +154,7 @@ namespace nau::async
             ShutingDown
         };
 
-        struct TimerState : eastl::intrusive_list_node
+        struct TimerState : nau::IntrusiveListNode
         {
             Win32TimerManager& manager;
             const InvokeAfterHandle id;
@@ -174,7 +176,7 @@ namespace nau::async
                     manager.m_timerStateList.push_back(*this);
                 };
 
-                if(manager.m_isDisposed)
+                if (manager.m_isDisposed)
                 {
                     cancelled = true;
                     promise.resolve(TimerOperationResult::Cancelled);
@@ -208,7 +210,7 @@ namespace nau::async
                     manager.m_timerStateList.erase(iter);
                 }
 
-                if(hTimer)
+                if (hTimer)
                 {
                     [[maybe_unused]] BOOL deletedOk = ::DeleteTimerQueueTimer(manager.m_hTimerQueue, hTimer, INVALID_HANDLE_VALUE);
                     NAU_ASSERT(deletedOk == TRUE);
@@ -228,7 +230,7 @@ namespace nau::async
                 }
 
                 promise.resolve(result);
-                if(auto timerHandle = std::exchange(hTimer, nullptr))
+                if (auto timerHandle = std::exchange(hTimer, nullptr))
                 {
                     [[maybe_unused]] BOOL deletedOk = ::DeleteTimerQueueTimer(manager.m_hTimerQueue, timerHandle, INVALID_HANDLE_VALUE);
                     NAU_ASSERT(deletedOk == TRUE);
@@ -246,7 +248,7 @@ namespace nau::async
 
         HANDLE m_hTimerQueue = nullptr;
         std::mutex m_mutex;
-        eastl::intrusive_list<TimerState> m_timerStateList;
+        nau::IntrusiveList<TimerState> m_timerStateList;
         std::atomic<InvokeAfterHandle> m_nextTimerStateId = 1;
         std::atomic_bool m_isDisposed = false;
         const RuntimeObjectRegistration m_runtimeObjectRegistration;
@@ -256,7 +258,7 @@ namespace nau::async
      */
     ITimerManager::Ptr ITimerManager::createDefault()
     {
-        return eastl::make_unique<Win32TimerManager>();
+        return std::make_unique<Win32TimerManager>();
     }
 
 }  // namespace nau::async

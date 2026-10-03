@@ -2,6 +2,10 @@
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
 #include "file_helper.h"
+
+#include <string>
+#include <string_view>
+
 #include "nau/io/special_paths.h"
 #include "nau/string/string_conv.h"
 
@@ -10,7 +14,7 @@ namespace spdlog
     namespace details
     {
 
-        file_helper::file_helper(eastl::string_view fname, const file_event_handlers& event_handlers) :
+        file_helper::file_helper(std::string_view fname, const file_event_handlers& event_handlers) :
             filename_(fname),
             event_handlers_(event_handlers)
         {
@@ -59,7 +63,7 @@ namespace spdlog
             {
                 logFilePath = fs::absolute(logFilePath);
             }
-            
+
             if (const auto logDirPath = logFilePath.parent_path(); !fs::exists(logDirPath))
             {
                 std::error_code ec;
@@ -159,12 +163,12 @@ namespace spdlog
             return sd_->getPosition();
         }
 
-        eastl::string_view file_helper::filename() const
+        std::string_view file_helper::filename() const
         {
             return filename_;
         }
 
-        constexpr static const eastl::string::value_type folder_seps_filename[] = "\\/";
+        constexpr static const std::string::value_type folder_seps_filename[] = "\\/";
 
         //
         // return file path and its extension:
@@ -179,27 +183,27 @@ namespace spdlog
         // ".mylog" => (".mylog". "")
         // "my_folder/.mylog" => ("my_folder/.mylog", "")
         // "my_folder/.mylog.txt" => ("my_folder/.mylog", ".txt")
-        std::tuple<eastl::string, eastl::string> file_helper::split_by_extension(
-            eastl::string_view fname)
+        std::tuple<std::string, std::string> file_helper::split_by_extension(
+            std::string_view fname)
         {
             auto ext_index = fname.rfind('.');
 
             // no valid extension found - return whole path and empty string as
             // extension
-            if (ext_index == eastl::string::npos || ext_index == 0 || ext_index == fname.size() - 1)
+            if (ext_index == std::string::npos || ext_index == 0 || ext_index == fname.size() - 1)
             {
-                return std::make_tuple(eastl::string(fname), eastl::string());
+                return std::make_tuple(std::string(fname), std::string());
             }
 
             // treat cases like "/etc/rc.d/somelogfile or "/abc/.hiddenfile"
             auto folder_index = fname.find_last_of(folder_seps_filename);
-            if (folder_index != eastl::string::npos && folder_index >= ext_index - 1)
+            if (folder_index != std::string::npos && folder_index >= ext_index - 1)
             {
-                return std::make_tuple(eastl::string(fname), eastl::string());
+                return std::make_tuple(std::string(fname), std::string());
             }
 
             // finally - return a valid base and extension tuple
-            return std::make_tuple(eastl::string(fname.substr(0, ext_index)), eastl::string(fname.substr(ext_index)));
+            return std::make_tuple(std::string(fname.substr(0, ext_index)), std::string(fname.substr(ext_index)));
         }
 
     }  // namespace details

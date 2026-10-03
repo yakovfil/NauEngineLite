@@ -3,28 +3,37 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <nau/app/application.h>
-#include <daECS/core/entityId.h>
-#include <daECS/core/ecsQuery.h>
-#include <EASTL/deque.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector_map.h>
-#include <daECS/core/event.h>
-#include "daECS/core/internal/templates.h"
-#include "daECS/core/internal/trackComponentAccess.h"
-#include "daECS/core/internal/stackAllocator.h"
-#include "daECS/core/internal/eventsDb.h"
-#include "daECS/core/internal/circularBuffer.h"
-#include "daECS/core/internal/inplaceKeySet.h"
-#include <daECS/core/template.h>
-#include <daECS/core/entityComponent.h>
 #include <daECS/core/ecsGameRes.h>
+#include <daECS/core/ecsQuery.h>
+#include <daECS/core/entityComponent.h>
+#include <daECS/core/entityId.h>
+#include <daECS/core/event.h>
+#include <daECS/core/template.h>
+#include <nau/app/application.h>
+#include <nau/threading/critical_section.h>
+#include <nau/threading/dag_atomic.h>
+#include <nau/threading/spin_lock.h>
 #include <nau/utils/dag_hashedKeyMap.h>
 #include <nau/utils/dag_oaHashNameMap.h>
-#include <nau/threading/spin_lock.h>
-#include <nau/threading/critical_section.h>
-#include <nau/app/application.h>
-#include <nau/threading/dag_atomic.h>
+
+#include <deque>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "daECS/core/internal/circularBuffer.h"
+#include "daECS/core/internal/eventsDb.h"
+#include "daECS/core/internal/inplaceKeySet.h"
+#include "daECS/core/internal/stackAllocator.h"
+#include "daECS/core/internal/templates.h"
+#include "daECS/core/internal/trackComponentAccess.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "nau/utils/sorted_vector.h"
 
 namespace ecs
 {
@@ -44,7 +53,7 @@ struct EntitySystemDesc;
 struct ComponentsIterator;
 struct NestedQueryRestorer;
 
-typedef eastl::function<void(EntityId /*created_entity*/)> create_entity_async_cb_t;
+typedef std::function<void(EntityId /*created_entity*/)> create_entity_async_cb_t;
 typedef void (*replication_cb_t)(EntityId eid, component_index_t cidx);
 
 class NAU_DAGORECS_EXPORT EntityManager
@@ -163,8 +172,7 @@ public:
     Removed,
     Unknown
   };
-  bool updateTemplates(TemplateRefs &trefs, bool update_templ_values, uint32_t tag,
-    eastl::function<void(const char *, EntityManager::UpdateTemplateResult)> cb);
+  bool updateTemplates(TemplateRefs& trefs, bool update_templ_values, uint32_t tag, std::function<void(const char*, EntityManager::UpdateTemplateResult)> cb);
 
   const TemplateDB &getTemplateDB() const;
   TemplateDB &getTemplateDB();
@@ -199,7 +207,7 @@ public:
   // ECS2.0 Compatibility
   EntityId createEntityAsync(const char *templ_name, ComponentsInitializer &&initializer, create_entity_async_cb_t &&cb)
   {
-    return createEntityAsync(templ_name, eastl::move(initializer), ComponentsMap(), eastl::move(cb));
+      return createEntityAsync(templ_name, std::move(initializer), ComponentsMap(), std::move(cb));
   }
 
   // Schedule compare & remove difference in components/components of already existing entity & new template.
@@ -247,7 +255,7 @@ public:
   // Warning: DO NOT recreateEntity from within this iterator - it might get invalidated!
   ComponentsIterator getComponentsIterator(EntityId eid, bool including_templates = true) const;
 
-  typedef eastl::pair<const char *, const EntityComponentRef> ComponentInfo;
+  typedef std::pair<const char*, const EntityComponentRef> ComponentInfo;
   // cid is 0.. till getArchetypeNumComponents
   ecs::component_index_t getArchetypeComponentIndex(archetype_t archetype, uint32_t cid) const;
   EntityComponentRef getEntityComponentRef(EntityId eid, uint32_t cid) const;   // cid is 0.. till getNumComponents
@@ -314,13 +322,13 @@ public:
   template <class T>
   void setFast(EntityId eid, const FastGetInfo name, const T &__restrict v, const LTComponentList *__restrict list);
 
-  // template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T&&>::value, void>>
+  // template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
 
   template <typename T>
-  typename eastl::enable_if<eastl::is_rvalue_reference<T &&>::value>::type set(EntityId eid, const HashedConstString name, T &&v);
+  typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type set(EntityId eid, const HashedConstString name, T&& v);
   template <typename T>
-  typename eastl::enable_if<eastl::is_rvalue_reference<T &&>::value>::type setOptional(EntityId eid, const HashedConstString name,
-    T &&v); // won't assert if missing
+  typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type setOptional(EntityId eid, const HashedConstString name,
+                                                                                  T&& v);  // won't assert if missing
   template <class T>
   bool is(const HashedConstString name) const;
   bool has(EntityId eid, const HashedConstString name) const;
@@ -500,14 +508,14 @@ public:
   typedef dag::HashedKeySet<uint64_t, uint64_t(0), oa_hashmap_util::MumStepHash<uint64_t>> TrackedChangeEid;
   typedef dag::HashedKeySet<uint32_t, uint32_t(0), oa_hashmap_util::MumStepHash<uint32_t>> TrackedChangeArchetype;
 
-  eastl::bitvector<> queryScheduled;
-  eastl::vector<uint32_t> trackQueryIndices;
+  nau::DynamicBitVector<> queryScheduled;
+  std::vector<uint32_t> trackQueryIndices;
   void convertArchetypeScheduledChanges();  // converts queryScheduled + trackQueryIndices -> archetypeTrackingQueue
 
   TrackedChangeEid eidTrackingQueue;
   nau::threading::SpinLock archetypeTrackingMutex, eidTrackingMutex;
 
-  eastl::bitvector<> canBeReplicated;
+  nau::DynamicBitVector<> canBeReplicated;
   TrackedChangeArchetype archetypeTrackingQueue;
   replication_cb_t replicationCb = NULL;
 
@@ -571,7 +579,7 @@ public:
           template_id = INVALID_TEMPLATE_INDEX;
           archetype = INVALID_ARCHETYPE;
 #if NAU_DEBUG
-          idInChunk = eastl::numeric_limits<id_in_chunk_type_t>::max();
+          idInChunk = std::numeric_limits<id_in_chunk_type_t>::max();
 #endif
       }
   };
@@ -579,9 +587,9 @@ public:
 
   struct EntitiesDescriptors
   {
-      eastl::vector<EntityDesc> entDescs;  // we rarely add entities, and often compare with size
+      std::vector<EntityDesc> entDescs;  // we rarely add entities, and often compare with size
       // Not zero counter in eid.index() slot means that entity was scheduled for [re]creation or destruction. SoA to entDescs
-      eastl::vector<uint8_t> currentlyCreatingEntitiesCnt;
+      std::vector<uint8_t> currentlyCreatingEntitiesCnt;
       uint32_t totalSize = 0;
       uint32_t delayedAdded = 0;
       decltype(EntityDesc::generation) globalGen = 0;
@@ -629,7 +637,7 @@ public:
       {
           addDelayed();
           const uint32_t idx = totalSize;
-          entDescs.push_back();
+          entDescs.emplace_back();
           currentlyCreatingEntitiesCnt.push_back(0);
           totalSize++;
           DAECS_EXT_FAST_ASSERT(entDescs.size() == currentlyCreatingEntitiesCnt.size());
@@ -742,21 +750,21 @@ public:
   bool exhaustedReservedIndices = false;
   uint32_t nextResevedEidIndex = 0;
   float lastTrackedCount = 0;
-  eastl::deque<ecs::entity_id_t> freeIndices, freeIndicesReserved;
+  std::deque<ecs::entity_id_t> freeIndices, freeIndicesReserved;
   Archetypes archetypes;
   ComponentTypes componentTypes;
   DataComponents dataComponents;
   Templates templates;
-  eastl::unique_ptr<uint8_t[]> zeroMem;  // size of biggest type registered, so we can always return something in case of getNullableRW
+  std::unique_ptr<uint8_t[]> zeroMem;  // size of biggest type registered, so we can always return something in case of getNullableRW
   template <typename T>
-  static inline T& get_scratch_value_impl(void* mem, eastl::true_type)
+  static inline T& get_scratch_value_impl(void* mem, std::true_type)
   {
       // Note: this will leak memory for types that hold memory (strings, vectors, objects...) if someone will write to it (since this
       // instance is never freed) but that's should be relatively ok since this is already emergency code-path
       return *new (mem /*, _NEW_INPLACE*/) T();
   }
   template <typename T>
-  static inline T& get_scratch_value_impl(void* mem, eastl::false_type)
+  static inline T& get_scratch_value_impl(void* mem, std::false_type)
   {
       memset(mem, 0, sizeof(T));
       return *(T*)mem;
@@ -765,8 +773,8 @@ public:
   template <typename T>
   NAU_NOINLINE T& getScratchValue() const
   {
-      typedef typename eastl::type_select<eastl::is_default_constructible<T>::value && !eastl::is_scalar<T>::value, eastl::true_type,
-                                          eastl::false_type>::type TP;
+      typedef typename std::conditional<std::is_default_constructible<T>::value && !std::is_scalar<T>::value, std::true_type,
+                                        std::false_type>::type TP;
       return get_scratch_value_impl<T>(zeroMem.get(), TP());
   }
 
@@ -783,8 +791,8 @@ public:
   CreatingEntity creatingEntityTop;
 #endif
 
-  eastl::vector_map<ecs::EntityId, uint16_t> loadingEntities;  // it is vector_map eid->loadCount, as there can be more than one
-                                                               // recreation scheduled
+  nau::SortedVectorMap<ecs::EntityId, uint16_t> loadingEntities;  // it is vector_map eid->loadCount, as there can be more than one
+                                                                  // recreation scheduled
 
   RequestResources requestResources(EntityId eid, archetype_t old, template_t templId, const ComponentsInitializer& initializer, RequestResourcesType type);
   bool validateResources(EntityId eid, archetype_t old, template_t templId, const ComponentsInitializer& initializer);
@@ -799,13 +807,13 @@ public:
   void recreateOnSameArchetype(EntityId eid, template_t templId, ComponentsInitializer&& initializer, const create_entity_async_cb_t& cb);
 
   uint32_t lastEsGen = 0;
-  ska::flat_hash_set<eastl::string> esTags;
-  eastl::vector_map<eastl::string, uint32_t> esOrder;
-  eastl::vector_set<eastl::string> disableEntitySystems, esSkip;
-  eastl::vector<const EntitySystemDesc* /*, MidmemAlloc TODO Allocators.*/> esList;  // sorted
-  eastl::bitvector<> esForAllEntities;
+  ska::flat_hash_set<std::string> esTags;
+  nau::SortedVectorMap<std::string, uint32_t> esOrder;
+  nau::SortedVectorSet<std::string> disableEntitySystems, esSkip;
+  std::vector<const EntitySystemDesc* /*, MidmemAlloc TODO Allocators.*/> esList;  // sorted
+  nau::DynamicBitVector<> esForAllEntities;
 
-  eastl::vector<ecs::EntityId> resourceEntities;
+  std::vector<ecs::EntityId> resourceEntities;
   gameres_list_t requestedResources;
 
   friend void singleton_creation_event(const Event& evt, const QueryView& components);
@@ -854,15 +862,15 @@ public:
           checkUnlocked("destructor", 0);
       }
       EsIndexFixedSet(EsIndexFixedSet&& a) :
-          list(eastl::move(a.list)),
+          list(std::move(a.list)),
           lockedEid(a.lockedEid)
       {
           a.unlock();
       }
       EsIndexFixedSet& operator=(EsIndexFixedSet&& a)
       {
-          list = eastl::move(a.list);
-          eastl::swap(lockedEid, a.lockedEid);
+          list = std::move(a.list);
+          std::swap(lockedEid, a.lockedEid);
           return *this;
       }
       void lock(EntityId eid) const
@@ -901,9 +909,9 @@ public:
       set_type_t list;
   };
   typedef EsIndexFixedSet es_index_set;
-  eastl::vector<es_index_set> esUpdates;  // sorted by update priority ES functions (for each update stage)
+  std::vector<es_index_set> esUpdates;  // sorted by update priority ES functions (for each update stage)
 
-  // probably use ska::flat_hash_map<event_type_t, event_index_t> esEventsMap; eastl::vector<eastl::vector_set<es_index_type>>
+  // probably use ska::flat_hash_map<event_type_t, event_index_t> esEventsMap; std::vector<nau::SortedVectorSet<es_index_type>>
   // esEventsList; check performance
   ska::flat_hash_map<event_type_t, es_index_set, ska::power_of_two_std_hash<event_type_t>> esEvents;
   ska::flat_hash_map<component_t, es_index_set, ska::power_of_two_std_hash<event_type_t>> esOnChangeEvents;
@@ -935,17 +943,17 @@ public:
   };
   InternalEvent recreateEvents[RECREATE_ES_LIST_COUNT] = {
       ECS_HASH("EventComponentsDisappear").hash, ECS_HASH("EventComponentsAppear").hash};
-  typedef eastl::vector<es_index_set> archetype_es_list;
+  typedef std::vector<es_index_set> archetype_es_list;
   archetype_es_list archetypesES[ARCHETYPES_ES_LIST_COUNT];
 
   struct RecreateEsSet
   {
       es_index_set disappear, appear;
   };
-  typedef eastl::vector_map<archetype_t, RecreateEsSet> archetype_es_map;  // this is pointer, and not value, so we can add archetypes
-                                                                           // within recreate ES call
+  typedef nau::SortedVectorMap<archetype_t, RecreateEsSet> archetype_es_map;  // this is pointer, and not value, so we can add archetypes
+                                                                              // within recreate ES call
 
-  eastl::vector<archetype_es_map> archetypesRecreateES;  // same size as archetypesES. Make tuple vector?
+  std::vector<archetype_es_map> archetypesRecreateES;  // same size as archetypesES. Make tuple vector?
   const RecreateEsSet* updateRecreatePair(archetype_t old_archetype, archetype_t new_archetype);
 
   void updateArchetypeESLists(archetype_t arch);
@@ -982,7 +990,7 @@ public:
       auto recreateListIt = archRecreateList.find(new_archetype);
       // update cache on the fly. If we hadn't ever recreated from old_archetype to new_archetype
       // ofc, we can make that N*(N-1) matrices, and remove updating cache on the fly, but there way less actual recreates.
-      if(EASTL_UNLIKELY(recreateListIt == archetypesRecreateES[old_archetype].end()))
+      if (NAU_UNLIKELY(recreateListIt == archetypesRecreateES[old_archetype].end()))
           return updateRecreatePair(old_archetype, new_archetype);
       else
           return &recreateListIt->second;
@@ -1026,7 +1034,7 @@ public:
       }
   }
 
-  // eastl::hash_map<, ecs_query_handle> resolvedQueriesIndices;//combined NameQuery. list of all component_t + flags. has to be updated
+  // std::unordered_map<, ecs_query_handle> resolvedQueriesIndices;//combined NameQuery. list of all component_t + flags. has to be updated
   // if ecs_query_handle is completely destroyed
   bool isResolved(uint32_t idx) const;  // completely or partially
   bool isCompletelyResolved(uint32_t idx) const;
@@ -1043,9 +1051,9 @@ public:
   struct CopyQueryDesc
   {
 #if NAU_DEBUG
-      eastl::string name;
+      std::string name;
 #endif
-      eastl::vector<ComponentDesc> components;  // replace with FixedVector?
+      std::vector<ComponentDesc> components;  // replace with FixedVector?
       uint8_t requiredSetCount = 0, rwCnt = 0, roCnt = 0, rqCnt = 0, noCnt = 0;
       // 3 bytes of padding. add is_eid_query?
       uint16_t rwEnd() const
@@ -1101,24 +1109,24 @@ public:
           return wyhash64(uint32_t(h), 1);
       }
   };
-  ska::flat_hash_map<QueryId, eastl::vector<es_index_type>, QueryHasher> queryToEsMap;
+  ska::flat_hash_map<QueryId, std::vector<es_index_type>, QueryHasher> queryToEsMap;
   QueryId createUnresolvedQuery(const NamedQueryDesc& desc);
   dag::OAHashNameMap<false> queriesComponentsNames;
 #if NAU_DEBUG
 #endif
-  eastl::vector<ArchetypesQuery> archetypeQueries;        // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add new
-                                                          // archetype
-  eastl::vector<ArchetypesEidQuery> archetypeEidQueries;  // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add
-                                                          // new archetype
-  eastl::vector<archetype_t, EASTLAllocatorType> archSubQueriesContainer;
+  std::vector<ArchetypesQuery> archetypeQueries;        // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add new
+                                                        // archetype
+  std::vector<ArchetypesEidQuery> archetypeEidQueries;  // SoA, we need to update ArchetypesQuery from ResolvedQueryDesc again, if we add
+                                                        // new archetype
+  std::vector<archetype_t, std::allocator<archetype_t>> archSubQueriesContainer;
   uint32_t archSubQueriesWasted = 0;
   uint32_t archSubLastTickSize = 0;
   void defragmentArchetypeSubQueries();
-  eastl::vector<uint16_t, EASTLAllocatorType> archComponentsSizeContainers;
+  std::vector<uint16_t, std::allocator<uint16_t>> archComponentsSizeContainers;
   dag::Vector<ResolvedQueryDesc> resolvedQueries;  // SoA, we never need resolvedQuery again, if it was successfully resolved, but we need
                                                      // it to resolve ArchetypesQuery
   typedef uint32_t status_word_type_t;
-  eastl::vector<status_word_type_t> resolvedQueryStatus;  // SoA, two-bit vector
+  std::vector<status_word_type_t> resolvedQueryStatus;  // SoA, two-bit vector
   static constexpr status_word_type_t status_words_shift = nau::math::get_const_log2(sizeof(status_word_type_t) * 4);
   static constexpr status_word_type_t status_words_mask = (1 << status_words_shift) - 1;
   static bool isFullyResolved(ResolvedStatus s)
@@ -1150,9 +1158,9 @@ public:
       if(sz != resolvedQueryStatus.size())
           resolvedQueryStatus.push_back(status_word_type_t(0));
   }
-  eastl::vector<CopyQueryDesc> queryDescs;    // SoA, not empty ONLY if resolvedQueries is not resolved fully
-  eastl::vector<uint16_t> queriesReferences;  // SoA, reference count of ecs_query_handles
-  eastl::vector<uint8_t> queriesGenerations;  // SoA, generation in ecs_query_handles. Sanity check.
+  std::vector<CopyQueryDesc> queryDescs;    // SoA, not empty ONLY if resolvedQueries is not resolved fully
+  std::vector<uint16_t> queriesReferences;  // SoA, reference count of ecs_query_handles
+  std::vector<uint8_t> queriesGenerations;  // SoA, generation in ecs_query_handles. Sanity check.
   uint32_t freeQueriesCount = 0;
 
   typedef uint64_t query_components_hash;
@@ -1175,7 +1183,7 @@ public:
   }
   void queriesShrink();
   //--SoA for QueryId
-  eastl::vector<QueryId> esListQueries;  // parallel to esList, index in ecs_query_handle
+  std::vector<QueryId> esListQueries;  // parallel to esList, index in ecs_query_handle
 
 #if NAU_DEBUG
   EntityId destroyingEntity;
@@ -1188,7 +1196,9 @@ public:
       {
           changeQueryingArchetypes(-1);
       }
-      EA_NON_COPYABLE(ScopedQueryingArchetypesCheck)
+      ScopedQueryingArchetypesCheck(const ScopedQueryingArchetypesCheck&) = delete;
+      ScopedQueryingArchetypesCheck& operator=(const ScopedQueryingArchetypesCheck&) = delete;
+
   private:
       EntityManager& mgr;
       uint32_t index, validateCount;
@@ -1256,7 +1266,8 @@ public:
           if(!wasConstrained)
               mgr.setConstrainedMTMode(false);
       }
-      EA_NON_COPYABLE(ScopeSetMtConstrained)
+      ScopeSetMtConstrained(const ScopeSetMtConstrained&) = delete;
+      ScopeSetMtConstrained& operator=(const ScopeSetMtConstrained&) = delete;
   };
 
   void performDeferredEvents(bool flush_all);  // manually call perform deferred events
@@ -1272,6 +1283,11 @@ public:
       }
       struct Compare
       {
+          using is_transparent = void;
+          bool operator()(const LoadingEntityEvents& lhs, const LoadingEntityEvents& rhs) const
+          {
+              return lhs < rhs;
+          }
           bool operator()(EntityId eid, const LoadingEntityEvents& rhs) const
           {
               return entity_id_t(eid) < entity_id_t(rhs.eid);
@@ -1282,11 +1298,11 @@ public:
           }
       };
   };
-  eastl::vector_set<LoadingEntityEvents> eventsForLoadingEntities;
+  nau::SortedVectorSet<LoadingEntityEvents, LoadingEntityEvents::Compare> eventsForLoadingEntities;
 
-  eastl::vector_set<LoadingEntityEvents>::iterator findLoadingEntityEvents(EntityId eid)
+  nau::SortedVectorSet<LoadingEntityEvents, LoadingEntityEvents::Compare>::iterator findLoadingEntityEvents(EntityId eid)
   {
-      return eventsForLoadingEntities.find_as(eid, LoadingEntityEvents::Compare());
+      return eventsForLoadingEntities.find(eid);
   }
 
   void addEventForLoadingEntity(EntityId eid, Event& evt);
@@ -1318,7 +1334,9 @@ public:
       {
           return mutex != nullptr;
       }
-      EA_NON_COPYABLE(ScopedMTMutexT);
+      ScopedMTMutexT(const ScopedMTMutexT&) = delete;
+      ScopedMTMutexT& operator=(const ScopedMTMutexT&) = delete;
+      ;
 
   protected:
       T* mutex;
@@ -1332,7 +1350,7 @@ public:
       // We almost never have ComponentsMap, and it's size is 24 byte (pointer is just 8 bytes). But we have one(!) such component in each
       // network replicated object.
       create_entity_async_cb_t cb;
-      eastl::string templateName;
+      std::string templateName;
       EntityId eid;
       template_t templ = INVALID_TEMPLATE_INDEX;
       enum class Op : uint8_t
@@ -1351,9 +1369,9 @@ public:
           eid(eid_),
           op(op_),
           templateName(templ_name),
-          compInit(eastl::move(ai)),
-          compMap(eastl::move(am)),
-          cb(eastl::move(cb_))
+          compInit(std::move(ai)),
+          compMap(std::move(am)),
+          cb(std::move(cb_))
       {
           NAU_FAST_ASSERT(!isToDestroy());
       }
@@ -1361,9 +1379,9 @@ public:
           eid(eid_),
           op(op_),
           templ(t),
-          compInit(eastl::move(ai)),
-          compMap(eastl::move(am)),
-          cb(eastl::move(cb_))
+          compInit(std::move(ai)),
+          compMap(std::move(am)),
+          cb(std::move(cb_))
       {
           NAU_FAST_ASSERT(!isToDestroy());
       }
@@ -1416,7 +1434,7 @@ public:
           DelayedEntityCreation* end_ = end();
           // NAU_ASSERT(pos >= begin() && pos < end_, "{} {} {} {}", queue, pos, readFrom, writeTo);
           if((pos + 1) < end_)
-              eastl::move(pos + 1, end_, pos);
+              std::move(pos + 1, end_, pos);
           --writeTo;
           (end_ - 1)->~DelayedEntityCreation();
           return pos;
@@ -1441,7 +1459,7 @@ public:
       bool emplace_back(EntityId eid, Args&&... args)
       {
           DAECS_EXT_ASSERT(!full());
-          new (queue + (writeTo++) /*, _NEW_INPLACE*/) DelayedEntityCreation(eid, eastl::forward<Args>(args)...);
+          new(queue + (writeTo++) /*, _NEW_INPLACE*/) DelayedEntityCreation(eid, std::forward<Args>(args)...);
           return full();
       }
       void reset()
@@ -1467,7 +1485,7 @@ public:
   };
   // we will always insert in top chunk, which is just always delayedCreationQueue.back();
   // which is never empty (i.e. topChunk != nullptr)
-  eastl::vector<DelayedEntityCreationChunk> delayedCreationQueue;
+  std::vector<DelayedEntityCreationChunk> delayedCreationQueue;
   enum
   {
       INVALID_CREATION_QUEUE_GEN = 0,
@@ -1497,14 +1515,14 @@ public:
 #else
       createOrDestroyGen++;
 #endif
-      if(delayedCreationQueue.back().emplace_back(eid, eastl::forward<Args>(args)...))
+      if (delayedCreationQueue.back().emplace_back(eid, std::forward<Args>(args)...))
           delayedCreationQueue.emplace_back(delayedCreationQueue.back().next_capacity());
   }
 
   template <typename... Args>
   void emplaceCreate(EntityId eid, Args&&... args)
   {
-      emplaceCreateInt(eid, eastl::forward<Args>(args)...);
+      emplaceCreateInt(eid, std::forward<Args>(args)...);
       entDescs.increaseCreating(eid.index());
   }
   void emplaceDestroy(ecs::EntityId eid)
@@ -1540,9 +1558,9 @@ public:
   template <class T, bool optional>
   void setComponentInternal(EntityId eid, const HashedConstString name, const T& v);
   template <typename T, bool optional>
-  typename eastl::enable_if<eastl::is_rvalue_reference<T&&>::value>::type setComponentInternal(EntityId eid,
-                                                                                               const HashedConstString name,
-                                                                                               T&& v);
+  typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type setComponentInternal(EntityId eid,
+                                                                                           const HashedConstString name,
+                                                                                           T&& v);
   template <bool optional>
   void setComponentInternal(EntityId eid, const HashedConstString name, ChildComponent&&);  // not checked for non-pod types. Won't
                                                                                             // assert if missing. named for ecs20
@@ -1557,14 +1575,14 @@ public:
   void updateAllQueriesInternal();
   bool updateAllQueriesAnyMT()
   {
-      if(EASTL_LIKELY(allQueriesUpdatedToArch == archetypes.size()))
+      if (NAU_LIKELY(allQueriesUpdatedToArch == archetypes.size()))
           return false;
       updateAllQueriesInternal();
       return true;
   }
   void updateAllQueries()
   {
-      if(EASTL_UNLIKELY(!isConstrainedMTMode()))
+      if (NAU_UNLIKELY(!isConstrainedMTMode()))
           updateAllQueriesAnyMT();
   }
 
@@ -1635,9 +1653,9 @@ NAU_DAGORECS_EXPORT extern InitOnDemand<ecs::EntityManager, false> g_entity_mgr;
 #define ECS_DECLARE_GET_FAST(type_, aname) ECS_DECLARE_GET_FAST_BASE(type_, aname, #aname)
 
 #define ECS_GET_COMPONENT(type_, eid, aname) \
-  g_entity_mgr->getNullableRW<typename eastl::remove_const<type_>::type>(eid, ECS_HASH(#aname))
+    g_entity_mgr->getNullableRW<typename std::remove_const<type_>::type>(eid, ECS_HASH(#aname))
 #define ECS_GET_COMPONENT_RO(type_, eid, aname) \
-  g_entity_mgr->getNullable<typename eastl::remove_const<type_>::type>(eid, ECS_HASH(#aname))
+    g_entity_mgr->getNullable<typename std::remove_const<type_>::type>(eid, ECS_HASH(#aname))
 
 #if _ECS_CODEGEN
 
@@ -1739,12 +1757,12 @@ namespace ecs
     inline TemplateDB::AddResult EntityManager::addTemplate(Template&& templ, nau::ConstSpan<const char*>* pnames)
     {
         ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
-        return templateDB.addTemplate(eastl::move(templ), pnames);
+        return templateDB.addTemplate(std::move(templ), pnames);
     }
     inline TemplateDB::AddResult EntityManager::addTemplate(Template&& templ, nau::ConstSpan<template_t> parentIds)
     {
         ScopedMTMutex lock(isConstrainedMTMode(), creationMutex);
-        return templateDB.addTemplate(eastl::move(templ), parentIds);
+        return templateDB.addTemplate(std::move(templ), parentIds);
     }
     inline void EntityManager::addTemplates(TemplateRefs& trefs, uint32_t tag)
     {
@@ -1856,8 +1874,8 @@ namespace ecs
     {
         EntityComponentRef ref = getEntityComponentRef(eid, cid);
         if(ref.isNull())
-            return ComponentInfo("<invalid>", eastl::move(ref));
-        return ComponentInfo(dataComponents.getComponentNameById(ref.getComponentId()), eastl::move(ref));
+            return ComponentInfo("<invalid>", std::move(ref));
+        return ComponentInfo(dataComponents.getComponentNameById(ref.getComponentId()), std::move(ref));
     }
 
     inline const EntityComponentRef EntityManager::getComponentRef(EntityId eid, const HashedConstString name) const
@@ -1920,7 +1938,7 @@ namespace ecs
             return nullptr;
         archetype = entDesc.archetype;
         DAECS_VALIDATE_ARCHETYPE(archetype);
-        if(EASTL_UNLIKELY(archetype == INVALID_ARCHETYPE))
+        if (NAU_UNLIKELY(archetype == INVALID_ARCHETYPE))
             return nullptr;
         archetype_component_id componentInArchetypeIndex = archetypes.getArchetypeComponentIdUnsafe(archetype, index);
         if(componentInArchetypeIndex == INVALID_ARCHETYPE_COMPONENT_ID)
@@ -1931,9 +1949,9 @@ namespace ecs
                                                           for_write ? "getRW/set" : "get", eid);
 #endif
 #if NAU_DEBUG
-        if(EASTL_UNLIKELY(
-               for_write && creatingEntityTop.eid == eid && creatingEntityTop.createdCindex < index &&
-               (componentTypes.getTypeInfo(dataComponents.getComponentById(index).componentType).flags & COMPONENT_TYPE_NON_TRIVIAL_CREATE)))
+        if (NAU_UNLIKELY(
+                for_write && creatingEntityTop.eid == eid && creatingEntityTop.createdCindex < index &&
+                (componentTypes.getTypeInfo(dataComponents.getComponentById(index).componentType).flags & COMPONENT_TYPE_NON_TRIVIAL_CREATE)))
         {
             logerr(
                 "attempt to write to component <{}> of type <{}> during creation of <{}>.\n"
@@ -1974,7 +1992,7 @@ namespace ecs
         uint32_t archetype;
         void* __restrict val =
             get(eid, name, ComponentTypeInfo<T>::type, ComponentTypeInfo<T>::size, cidx, archetype DAECS_EXTENSIVE_CHECK_FOR_WRITE);
-        if(EASTL_LIKELY(val != nullptr))
+        if (NAU_LIKELY(val != nullptr))
         {
             if(ComponentTypeInfo<T>::can_be_tracked)
                 scheduleTrackChangedCheck(eid, archetype, cidx);
@@ -1991,7 +2009,7 @@ namespace ecs
         uint32_t archetype;
         const void* __restrict val =
             get(eid, name, ComponentTypeInfo<T>::type, ComponentTypeInfo<T>::size, cidx, archetype DAECS_EXTENSIVE_CHECK_FOR_READ);
-        if(EASTL_LIKELY(val != nullptr))
+        if (NAU_LIKELY(val != nullptr))
             return PtrComponentType<T>::cref(val);
         accessError(eid, name);
         return getScratchValue<T>();
@@ -2010,7 +2028,7 @@ namespace ecs
     template <class T>
     DAECS_RELEASE_INLINE T EntityManager::getOr(EntityId eid, const HashedConstString name, const T& __restrict def) const
     {
-        static_assert(!eastl::is_same<T, ecs::string>::value,
+        static_assert(!std::is_same<T, ecs::string>::value,
                       "Generic \"getOr\" is not for strings, use \"const char* getOr(...)\" method instead");
         component_index_t cidx;
         uint32_t archetype;
@@ -2025,7 +2043,7 @@ namespace ecs
     {
         uint32_t archetype;
         const void* __restrict val = get(eid, cidx, ComponentTypeInfo<T>::size, archetype DAECS_EXTENSIVE_CHECK_FOR_READ);
-        if(EASTL_LIKELY(val != nullptr))
+        if (NAU_LIKELY(val != nullptr))
             return PtrComponentType<T>::cref(val);
         accessError(eid, cidx, list);
         return getScratchValue<T>();
@@ -2041,7 +2059,7 @@ namespace ecs
     template <class T, typename U>
     NAU_FORCE_INLINE U EntityManager::getOrFast(EntityId eid, const component_index_t cidx, const T& __restrict def) const
     {
-        static_assert(!eastl::is_same<T, ecs::string>::value, "Generic \"getOrFast\" is not strings, use non-generic method for that");
+        static_assert(!std::is_same<T, ecs::string>::value, "Generic \"getOrFast\" is not strings, use non-generic method for that");
         uint32_t archetype;
         const void* val = get(eid, cidx, ComponentTypeInfo<T>::size, archetype DAECS_EXTENSIVE_CHECK_FOR_READ);
         return val ? PtrComponentType<T>::cref(val) : def;
@@ -2052,7 +2070,7 @@ namespace ecs
     {
         uint32_t archetype;
         void* __restrict val = get(eid, name.cidx, ComponentTypeInfo<T>::size, archetype DAECS_EXTENSIVE_CHECK_FOR_WRITE);
-        if(EASTL_LIKELY(val != nullptr))
+        if (NAU_LIKELY(val != nullptr))
         {
             if(ComponentTypeInfo<T>::can_be_tracked && name.canBeTracked())
                 scheduleTrackChangedCheck(eid, archetype, name.cidx);
@@ -2139,14 +2157,14 @@ namespace ecs
     }
 
     template <typename T, bool optional>
-    typename eastl::enable_if<eastl::is_rvalue_reference<T&&>::value>::type DAECS_RELEASE_INLINE EntityManager::setComponentInternal(
+    typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type DAECS_RELEASE_INLINE EntityManager::setComponentInternal(
         EntityId eid,
         const HashedConstString name,
         T&& v)
     {
         T* __restrict attr = getNullableRW<T>(eid, name);
         if(attr)
-            *attr = eastl::move(v);
+            *attr = std::move(v);
         else if(!optional)
             accessError(eid, name);
     }
@@ -2178,10 +2196,10 @@ namespace ecs
         DAECS_EXT_ASSERTF(bool(eid) == bool(evt.getFlags() & EVCAST_UNICAST), "event {} has {} flags but sent as {}", evt.getName(),
                           (evt.getFlags() & EVCAST_UNICAST) ? "unicast" : "broadcast", bool(eid) ? "unicast" : "broadcast");
         ScopedMTMutexT<decltype(deferredEventsMutex)> evtMutex(isMtMode, deferredEventsMutex);
-        validateEventRegistration(evt, eastl::remove_reference<EventType>::type::staticName());
+        validateEventRegistration(evt, std::remove_reference<EventType>::type::staticName());
 
         deferredEventsCount++;
-        eventsStorage.emplaceEvent(eid, eastl::move(evt));
+        eventsStorage.emplaceEvent(eid, std::move(evt));
     }
 
     template <class Storage>
@@ -2189,12 +2207,12 @@ namespace ecs
     {
         const uint32_t len = evt.getLength();
         void* __restrict at = storage.allocateUntypedEvent(eid, len);
-        if(EASTL_LIKELY(!(evt.getFlags() & EVFLG_DESTROY)))
+        if (NAU_LIKELY(!(evt.getFlags() & EVFLG_DESTROY)))
         {
             memcpy(at, (void*)&evt, len);  // we can memcpy such event
         }
         else
-            eventDb.moveOut(at, eastl::move(evt));  // hash lookup
+            eventDb.moveOut(at, std::move(evt));  // hash lookup
     }
 
     NAU_FORCE_INLINE void EntityManager::dispatchEvent(EntityId eid, Event& evt)  // INVALID_ENTITY_ID means broadcast
@@ -2219,14 +2237,14 @@ namespace ecs
     template <class EventType>
     inline void EntityManager::sendEvent(EntityId eid, EventType&& evt)
     {
-        static_assert(eastl::remove_reference<EventType>::type::staticFlags() & EVCAST_UNICAST);
-        if(EASTL_LIKELY(eid))  // attempt to send event to invalid entity is no-op
-            dispatchEvent(eid, eastl::move(evt));
+        static_assert(std::remove_reference<EventType>::type::staticFlags() & EVCAST_UNICAST);
+        if (NAU_LIKELY(eid))  // attempt to send event to invalid entity is no-op
+            dispatchEvent(eid, std::move(evt));
     }
 
     inline void EntityManager::sendEvent(EntityId eid, Event& evt)
     {
-        if(EASTL_LIKELY(eid))  // attempt to send event to invalid entity is no-op
+        if (NAU_LIKELY(eid))  // attempt to send event to invalid entity is no-op
             dispatchEvent(eid, evt);
     }
 
@@ -2238,8 +2256,8 @@ namespace ecs
     template <class EventType>
     inline void EntityManager::broadcastEvent(EventType&& evt)
     {
-        static_assert(eastl::remove_reference<EventType>::type::staticFlags() & EVCAST_BROADCAST);
-        dispatchEvent(INVALID_ENTITY_ID, eastl::move(evt));
+        static_assert(std::remove_reference<EventType>::type::staticFlags() & EVCAST_BROADCAST);
+        dispatchEvent(INVALID_ENTITY_ID, std::move(evt));
     }
 
     inline void EntityManager::broadcastEvent(Event& evt)
@@ -2322,15 +2340,15 @@ namespace ecs
 
     inline void EntityManager::set(EntityId eid, const HashedConstString name, ChildComponent&& a)
     {
-        setComponentInternal<false>(eid, name, eastl::move(a));
+        setComponentInternal<false>(eid, name, std::move(a));
     }
 
     template <typename T>
-    typename eastl::enable_if<eastl::is_rvalue_reference<T&&>::value>::type inline EntityManager::set(EntityId eid,
-                                                                                                      const HashedConstString name,
-                                                                                                      T&& v)
+    typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type inline EntityManager::set(EntityId eid,
+                                                                                                  const HashedConstString name,
+                                                                                                  T&& v)
     {
-        setComponentInternal<T, false>(eid, name, eastl::move(v));
+        setComponentInternal<T, false>(eid, name, std::move(v));
     }
     template <class T>
     inline void EntityManager::set(EntityId eid, const HashedConstString name, const T& v)
@@ -2340,14 +2358,14 @@ namespace ecs
 
     inline void EntityManager::setOptional(EntityId eid, const HashedConstString name, ChildComponent&& a)
     {
-        setComponentInternal<true>(eid, name, eastl::move(a));
+        setComponentInternal<true>(eid, name, std::move(a));
     }
     template <typename T>
-    typename eastl::enable_if<eastl::is_rvalue_reference<T&&>::value>::type inline EntityManager::setOptional(EntityId eid,
-                                                                                                              const HashedConstString name,
-                                                                                                              T&& v)
+    typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type inline EntityManager::setOptional(EntityId eid,
+                                                                                                          const HashedConstString name,
+                                                                                                          T&& v)
     {
-        setComponentInternal<T, true>(eid, name, eastl::move(v));
+        setComponentInternal<T, true>(eid, name, std::move(v));
     }
     template <class T>
     inline void EntityManager::setOptional(EntityId eid, const HashedConstString name, const T& v)
@@ -2472,7 +2490,7 @@ namespace ecs
                 return init.second.getNullable<T>();
 
         // check current entity data (from archetype eventsStorage)
-        if(EASTL_UNLIKELY(creating.oldArchetype != INVALID_ARCHETYPE))
+        if (NAU_UNLIKELY(creating.oldArchetype != INVALID_ARCHETYPE))
         {
             const T* old = getNullable<T>(creating.eid, name);
             if(old)
@@ -2509,7 +2527,7 @@ namespace ecs
     inline const T& EntityManager::getRequesting(const HashedConstString name) const
     {
         const T* comp = getRequestingBase<T>(name);
-        if(EASTL_LIKELY(comp != nullptr))
+        if (NAU_LIKELY(comp != nullptr))
             return *comp;
         accessError(requestingTop->eid, name);
         return getScratchValue<T>();
@@ -2545,7 +2563,9 @@ namespace ecs
             NAU_ASSERT_RETURN(n && *n, );
             requestedResources.emplace(n, type_id);
         }
-        EA_NON_COPYABLE(ResourceRequestCb)
+        ResourceRequestCb(const ResourceRequestCb&) = delete;
+        ResourceRequestCb& operator=(const ResourceRequestCb&) = delete;
+
     protected:
         ResourceRequestCb(const EntityManager& m, EntityId eid) :
             mgr(m), eid(eid)

@@ -8,6 +8,8 @@ target_sources(NauMinimalLifecycleTests PRIVATE
   "../../../kernel/tests/test_kernel/test_service_dependencies.cpp"
   "../../../kernel/tests/test_kernel/test_service_init_proxy.cpp")
 target_precompile_headers(NauMinimalLifecycleTests PRIVATE <gtest/gtest.h>)
+target_include_directories(NauMinimalLifecycleTests PRIVATE "../../src")
+target_compile_definitions(NauMinimalLifecycleTests PRIVATE NAU_MINIMAL_RUNTIME)
 target_link_libraries(NauMinimalLifecycleTests PRIVATE NauFrameworkMinimal PlatformAppApi gtest_main)
 nau_target_link_modules(NauMinimalLifecycleTests ${NAU_MINIMAL_MODULES})
 nau_add_compile_options(NauMinimalLifecycleTests)

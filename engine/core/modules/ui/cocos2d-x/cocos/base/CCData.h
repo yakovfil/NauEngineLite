@@ -29,7 +29,7 @@
 
 #include "platform/CCPlatformMacros.h"
 #include <stdint.h> // for ssize_t on android
-#include <EASTL/string.h>
+#include <string>
 #include "platform/CCStdC.h" // for ssize_t on window
 
 /**

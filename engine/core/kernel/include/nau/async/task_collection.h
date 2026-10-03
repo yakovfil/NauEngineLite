@@ -1,13 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
-#include <EASTL/list.h>
+#include <list>
 
 #include "nau/async/task_base.h"
 #include "nau/kernel/kernel_config.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/runtime/async_disposable.h"
 #include "nau/threading/spin_lock.h"
 
@@ -62,10 +61,9 @@ namespace nau::async
 
         Task<> awaitCompletionInternal(bool dispose);
 
-
         mutable threading::SpinLock m_mutex;
 
-        eastl::list<TaskEntry> m_tasks;
+        std::list<TaskEntry> m_tasks;
         TaskSource<> m_closeAwaiter = nullptr;
         bool m_isDisposing = false;
         bool m_isDisposed = false;

@@ -3,14 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
+#include <functional>
+#include <type_traits>
 
-#include "render/daBfg/usage.h"
-#include "render/daBfg/stage.h"
-#include "render/daBfg/virtualResourceHandle.h"
-#include "render/daBfg/detail/virtualResourceRequestBase.h"
+#include "nau/utils/enum_utils.h"
 #include "render/daBfg/detail/resourceRequestPolicy.h"
-
+#include "render/daBfg/detail/virtualResourceRequestBase.h"
+#include "render/daBfg/stage.h"
+#include "render/daBfg/usage.h"
+#include "render/daBfg/virtualResourceHandle.h"
 
 namespace dabfg
 {
@@ -23,8 +24,8 @@ class VirtualAttachmentRequest;
 
 #ifndef DOXYGEN
 // TODO: Replace this hackyness with constraints as soon as C++20 drops
-#define REQUIRE_IMPL(...) class Dummy1 = void, class = typename eastl::enable_if<(__VA_ARGS__), Dummy1>::type
-#define REQUIRE(...)      template <REQUIRE_IMPL(__VA_ARGS__)>
+    #define REQUIRE_IMPL(...) class Dummy1 = void, class = typename std::enable_if<(__VA_ARGS__), Dummy1>::type
+    #define REQUIRE(...) template <REQUIRE_IMPL(__VA_ARGS__)>
 #else
 #define REQUIRE_IMPL(...) class = void
 #define REQUIRE(...)
@@ -55,22 +56,25 @@ class VirtualResourceRequest
   : private detail::VirtualResourceRequestBase
 /// \endcond
 {
-  static constexpr bool is_gpu = eastl::is_base_of_v<D3dResource, Res>;
+    static constexpr bool is_gpu = std::is_base_of_v<D3dResource, Res>;
 
-  using Base = detail::VirtualResourceRequestBase;
+    using Base = detail::VirtualResourceRequestBase;
 
-  template <detail::ResourceRequestPolicy, detail::ResourceRequestPolicy>
-  friend class detail::VirtualAttachmentRequest;
+    template <detail::ResourceRequestPolicy, detail::ResourceRequestPolicy>
+    friend class detail::VirtualAttachmentRequest;
 
-  template <class, detail::ResourceRequestPolicy>
-  friend class VirtualResourceRequest;
+    template <class, detail::ResourceRequestPolicy>
+    friend class VirtualResourceRequest;
 
-  friend class VirtualResourceCreationSemiRequest;
+    friend class VirtualResourceCreationSemiRequest;
 
-  template <detail::ResourceRequestPolicy>
-  friend class VirtualResourceSemiRequest;
-  friend class Registry;
-  VirtualResourceRequest(detail::ResUid resId, NodeNameId node, InternalRegistry *reg) : Base{resId, node, reg} {}
+    template <detail::ResourceRequestPolicy>
+    friend class VirtualResourceSemiRequest;
+    friend class Registry;
+    VirtualResourceRequest(detail::ResUid resId, NodeNameId node, InternalRegistry* reg) :
+        Base{resId, node, reg}
+    {
+    }
 
   using RRP = detail::ResourceRequestPolicy;
 
@@ -78,12 +82,15 @@ class VirtualResourceRequest
 
   static constexpr bool hasPolicy(RRP p, const char *) { return hasPolicy(p); }
 
-  static constexpr RRP flipPolicy(RRP p) { return static_cast<RRP>(eastl::to_underlying(policy) ^ eastl::to_underlying(p)); }
+  static constexpr RRP flipPolicy(RRP p)
+  {
+      return static_cast<RRP>(nau::to_underlying(policy) ^ nau::to_underlying(p));
+  }
 
   using HandleType =
-    VirtualResourceHandle<eastl::conditional_t<hasPolicy(RRP::Readonly), const Res, Res>, is_gpu, hasPolicy(RRP::Optional)>;
+      VirtualResourceHandle<std::conditional_t<hasPolicy(RRP::Readonly), const Res, Res>, is_gpu, hasPolicy(RRP::Optional)>;
 
-public:
+  public:
   /**
    * \brief Makes this request optional. The node will not get disabled
    * if the resource is missing, the handle will return an empty value.
@@ -122,14 +129,14 @@ public:
    * \param shader_var_name The name of the shader variable to bind.
    *   If not specified, the name of the resource will be used.
    */
-  template <auto projector, REQUIRE_IMPL(!is_gpu && eastl::is_invocable_v<decltype(projector), Res>)>
-  VirtualResourceRequest<Res, policy> bindToShaderVar(const char *shader_var_name = nullptr) &&
+  template <auto projector, REQUIRE_IMPL(!is_gpu && std::is_invocable_v<decltype(projector), Res>)>
+  VirtualResourceRequest<Res, policy> bindToShaderVar(const char* shader_var_name = nullptr) &&
   {
-    using InvokeResult = eastl::invoke_result_t<decltype(projector), const Res &>;
-    static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
-    using ProjectedType = eastl::remove_cvref_t<InvokeResult>;
-    Base::bindToShaderVar(shader_var_name, tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
-    return {resUid, nodeId, registry};
+      using InvokeResult = std::invoke_result_t<decltype(projector), const Res&>;
+      static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
+      using ProjectedType = std::remove_cvref_t<InvokeResult>;
+      Base::bindToShaderVar(shader_var_name, tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
+      return {resUid, nodeId, registry};
   }
 
   /**
@@ -150,14 +157,14 @@ public:
    * \tparam projector A function to extract the value to bind from
    *   the blob. Can be a pointer-to-member, i.e. `&BlobType::field`.
    */
-  template <auto projector, REQUIRE_IMPL(!is_gpu && eastl::is_invocable_v<decltype(projector), Res>)>
+  template <auto projector, REQUIRE_IMPL(!is_gpu && std::is_invocable_v<decltype(projector), Res>)>
   VirtualResourceRequest<Res, policy> bindAsView() &&
   {
-    using InvokeResult = eastl::invoke_result_t<decltype(projector), const Res &>;
-    static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
-    using ProjectedType = eastl::remove_cvref_t<InvokeResult>;
-    Base::bindAsView(tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
-    return {resUid, nodeId, registry};
+      using InvokeResult = std::invoke_result_t<decltype(projector), const Res&>;
+      static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
+      using ProjectedType = std::remove_cvref_t<InvokeResult>;
+      Base::bindAsView(tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
+      return {resUid, nodeId, registry};
   }
 
   /**
@@ -178,14 +185,14 @@ public:
    * \tparam projector A function to extract the value to bind from
    *   the blob. Can be a pointer-to-member, i.e. `&BlobType::field`.
    */
-  template <auto projector, REQUIRE_IMPL(!is_gpu && eastl::is_invocable_v<decltype(projector), const Res &>)>
+  template <auto projector, REQUIRE_IMPL(!is_gpu && std::is_invocable_v<decltype(projector), const Res&>)>
   VirtualResourceRequest<Res, policy> bindAsProj() &&
   {
-    using InvokeResult = eastl::invoke_result_t<decltype(projector), const Res &>;
-    static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
-    using ProjectedType = eastl::remove_cvref_t<InvokeResult>;
-    Base::bindAsProj(tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
-    return {resUid, nodeId, registry};
+      using InvokeResult = std::invoke_result_t<decltype(projector), const Res&>;
+      static_assert(detail::is_const_lvalue_reference<InvokeResult>, "Invoking a projector must return a const lvalue reference!");
+      using ProjectedType = std::remove_cvref_t<InvokeResult>;
+      Base::bindAsProj(tag_for<ProjectedType>(), detail::erase_projector_type<projector, Res>());
+      return {resUid, nodeId, registry};
   }
 
   /**

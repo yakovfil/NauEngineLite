@@ -26,6 +26,7 @@
 #ifndef __cocos2d_libs__CCAccelerometerListener__
 #define __cocos2d_libs__CCAccelerometerListener__
 
+#include <string>
 #include "base/CCEventListener.h"
 #include "base/ccTypes.h"
 
@@ -43,7 +44,7 @@ NS_CC_BEGIN
 class CC_DLL EventListenerAcceleration : public EventListener
 {
 public:
-    static const eastl::string LISTENER_ID;
+    static const std::string LISTENER_ID;
     
     /** Create a acceleration EventListener.
      *

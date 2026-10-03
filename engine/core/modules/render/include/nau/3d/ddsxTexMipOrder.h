@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <vector>
+
 #include "nau/3d/ddsxTex.h"
-#include <eastl/vector.h>
 //#include <generic/dag_tab.h>
 #include "nau/utils/dag_globDef.h"
 
@@ -23,7 +24,7 @@ static inline void ddsx_reverse_mips_inplace(ddsx::Header &hdr, char *tex_data, 
   if (tex_data_size != hdr.memSz || hdr.packedSz)
     return;
 
-  eastl::vector<char> rev_data; // defaultmem
+  std::vector<char> rev_data;  // defaultmem
   rev_data.resize(hdr.memSz);
 
   if (hdr.flags & hdr.FLG_CUBTEX)
@@ -81,7 +82,7 @@ static inline void ddsx_forward_mips_inplace(ddsx::Header &hdr, char *tex_data, 
   if (tex_data_size != hdr.memSz)
     return;
 
-  eastl::vector<char> fwd_data; // defaultmem
+  std::vector<char> fwd_data;  // defaultmem
   fwd_data.resize(hdr.memSz);
 
   if (hdr.flags & hdr.FLG_CUBTEX)

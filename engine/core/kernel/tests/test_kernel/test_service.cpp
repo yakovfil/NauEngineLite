@@ -1,6 +1,9 @@
+#include <algorithm>
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <memory>
+#include <vector>
 
 #include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/internal/runtime_state.h"
@@ -16,9 +19,9 @@ namespace nau::test
     {
     protected:
         template <typename T>
-        static bool containsClass(const eastl::vector<IClassDescriptor::Ptr>& classes)
+        static bool containsClass(const std::vector<IClassDescriptor::Ptr>& classes)
         {
-            return eastl::any_of(classes.begin(), classes.end(), [](const IClassDescriptor::Ptr& classDescriptor)
+            return std::any_of(classes.begin(), classes.end(), [](const IClassDescriptor::Ptr& classDescriptor)
             {
                 return classDescriptor->getClassTypeInfo() == rtti::getTypeInfo<T>();
             });
@@ -33,7 +36,7 @@ namespace nau::test
         bool lazyCreation = false;
         size_t serviceCount = 100;
 
-        static eastl::vector<InitServiceTestData> getDefaults()
+        static std::vector<InitServiceTestData> getDefaults()
         {
             return {
                 InitServiceTestData{.asyncMode = false, .lazyCreation = false},
@@ -199,12 +202,12 @@ namespace nau::test
             {
                 m_serviceProvider->addServiceLazy([useAsync]
                 {
-                    return eastl::make_unique<TestServiceWithInit>(useAsync);
+                    return std::make_unique<TestServiceWithInit>(useAsync);
                 });
             }
             else
             {
-                m_serviceProvider->addService(eastl::make_unique<TestServiceWithInit>(useAsync));
+                m_serviceProvider->addService(std::make_unique<TestServiceWithInit>(useAsync));
             }
         }
     }
@@ -230,7 +233,7 @@ namespace nau::test
 
     TEST_F(TestService, addService_EastlUniquePtr)
     {
-        m_serviceProvider->addService(eastl::make_unique<TestService1>());
+        m_serviceProvider->addService(std::make_unique<TestService1>());
         ASSERT_TRUE(m_serviceProvider->has<ITestInterface1>());
     }
 
@@ -254,7 +257,7 @@ namespace nau::test
     {
         m_serviceProvider->addServiceLazy([]
         {
-            return eastl::make_unique<TestService12>();
+            return std::make_unique<TestService12>();
         });
         ASSERT_TRUE(m_serviceProvider->has<ITestInterface1>());
         ASSERT_TRUE(m_serviceProvider->has<ITestInterface2>());
@@ -402,12 +405,12 @@ namespace nau::test
         const auto allServices = m_serviceProvider->getAll<ITestServiceInit>();
         ASSERT_THAT(allServices.size(), Eq(GetParam().serviceCount));
 
-        const bool allArePreInitialized = eastl::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool allArePreInitialized = std::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isPreInitialized();
         });
 
-        const bool anyIsInitialized = eastl::any_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool anyIsInitialized = std::any_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isInitialized();
         });
@@ -426,12 +429,12 @@ namespace nau::test
         const auto allServices = m_serviceProvider->getAll<ITestServiceInit>();
         ASSERT_THAT(allServices.size(), Eq(GetParam().serviceCount));
 
-        const bool anyIsPreInitialized = eastl::any_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool anyIsPreInitialized = std::any_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isPreInitialized();
         });
 
-        const bool allAreInitialized = eastl::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool allAreInitialized = std::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isInitialized();
         });
@@ -450,12 +453,12 @@ namespace nau::test
         const auto allServices = m_serviceProvider->getAll<ITestServiceInit>();
         ASSERT_THAT(allServices.size(), Eq(GetParam().serviceCount));
 
-        const bool allArePreInitialized = eastl::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool allArePreInitialized = std::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isPreInitialized();
         });
 
-        const bool allAreInitialized = eastl::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
+        const bool allAreInitialized = std::all_of(allServices.begin(), allServices.end(), [](const ITestServiceInit* init)
         {
             return init->isInitialized();
         });

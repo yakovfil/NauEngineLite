@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <vector>
+
 #include "nau/assets/asset_container.h"
 #include "nau/assets/shader_asset_accessor.h"
 
@@ -19,7 +22,7 @@ namespace nau
         ShaderAssetContainerLoader() = default;
 
     private:
-        eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        std::vector<std::string_view> getSupportedAssetKind() const override;
 
         async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr stream, AssetContentInfo info) override;
 

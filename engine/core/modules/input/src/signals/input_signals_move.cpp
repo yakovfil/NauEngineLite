@@ -3,6 +3,8 @@
 
 #include "input_signals_move.h"
 
+#include <string>
+
 namespace nau
 {
     namespace
@@ -13,7 +15,7 @@ namespace nau
         constexpr auto DataAxisW = "axis_w";
     }  // namespace
 
-    InputSignalAxis::InputSignalAxis(const eastl::string& type) :
+    InputSignalAxis::InputSignalAxis(const std::string& type) :
         InputSignalImpl(type)
     {
         addProperty<int>(DataAxisX, -1);

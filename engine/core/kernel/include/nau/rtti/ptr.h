@@ -2,18 +2,14 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/rtti/ptr.h
 
-
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <vector>
 
 #include "nau/diag/assertion.h"
 #include "nau/rtti/rtti_utils.h"
-
-#if __has_include(<EASTL/unique_ptr.h>)
-    #define HAS_EASTL
-    #include <EASTL/unique_ptr.h>
-#endif
 
 namespace nau::rtti_detail
 {
@@ -25,11 +21,11 @@ namespace nau::rtti_detail
 
         [[maybe_unused]] IRefCounted* rc = nullptr;
 
-        if constexpr(std::is_convertible_v<T*, IRefCounted*>)
+        if constexpr (std::is_convertible_v<T*, IRefCounted*>)
         {
             return static_cast<IRefCounted&>(instance);
         }
-        else if constexpr(std::is_convertible_v<T*, IRttiObject*>)
+        else if constexpr (std::is_convertible_v<T*, IRttiObject*>)
         {
             rc = static_cast<IRttiObject&>(instance).as<IRefCounted*>();
         }
@@ -49,14 +45,14 @@ namespace nau::rtti_detail
         template <typename U, typename T>
         static UniquePtrT<U> cast(UniquePtrT<T>&& ptr)
         {
-            if constexpr(std::is_assignable_v<U&, T&>)
+            if constexpr (std::is_assignable_v<U&, T&>)
             {
                 return UniquePtrT<U>{ptr.release()};
             }
             else
             {
                 NAU_ASSERT(ptr);
-                if(!ptr)
+                if (!ptr)
                 {
                     return {};
                 }
@@ -67,7 +63,7 @@ namespace nau::rtti_detail
                 IRttiObject* const rttiObj = rtti::staticCast<IRttiObject*>(ptr.get());
                 NAU_FATAL(rttiObj);
 
-                if(auto* const targetPtr = rttiObj->as<U*>(); targetPtr)
+                if (auto* const targetPtr = rttiObj->as<U*>(); targetPtr)
                 {
                     [[maybe_unused]] auto oldPtr = ptr.release();
 
@@ -122,7 +118,7 @@ namespace nau
         Ptr(const Ptr<T>& other) :
             m_instance(other.m_instance)
         {
-            if(m_instance != nullptr)
+            if (m_instance != nullptr)
             {
                 rtti_detail::asRefCounted(*m_instance).addRef();
             }
@@ -136,7 +132,7 @@ namespace nau
         Ptr(T* ptr) :
             m_instance(ptr)
         {
-            if(m_instance)
+            if (m_instance)
             {
                 rtti_detail::asRefCounted(*m_instance).addRef();
             }
@@ -166,7 +162,7 @@ namespace nau
 
         ~Ptr()
         {
-            if(m_instance)
+            if (m_instance)
             {
                 rtti_detail::asRefCounted(*m_instance).releaseRef();
             }
@@ -250,7 +246,7 @@ namespace nau
         requires(!std::is_same_v<T, U>)
         bool operator==(const Ptr<U>& other) const noexcept
         {
-            if(reinterpret_cast<const void*>(m_instance) == reinterpret_cast<void*>(other.get()))
+            if (reinterpret_cast<const void*>(m_instance) == reinterpret_cast<void*>(other.get()))
             {
                 return true;
             }
@@ -262,12 +258,12 @@ namespace nau
     private:
         void acquire(T* newInstance)
         {
-            if(T* const prevInstance = std::exchange(m_instance, newInstance); prevInstance)
+            if (T* const prevInstance = std::exchange(m_instance, newInstance); prevInstance)
             {
                 rtti_detail::asRefCounted(*prevInstance).releaseRef();
             }
 
-            if(m_instance)
+            if (m_instance)
             {
                 rtti_detail::asRefCounted(*m_instance).addRef();
             }
@@ -275,7 +271,7 @@ namespace nau
 
         void moveAcquire(T* newInstance)
         {
-            if(T* const instance = std::exchange(m_instance, newInstance); instance)
+            if (T* const instance = std::exchange(m_instance, newInstance); instance)
             {
                 rtti_detail::asRefCounted(*instance).releaseRef();
             }
@@ -285,12 +281,12 @@ namespace nau
         requires(!std::is_same_v<U, T>)
         void acquire(U* newInstance)
         {
-            if(T* const instance = std::exchange(m_instance, nullptr))
+            if (T* const instance = std::exchange(m_instance, nullptr))
             {
                 rtti_detail::asRefCounted(*instance).releaseRef();
             }
 
-            if(newInstance == nullptr)
+            if (newInstance == nullptr)
             {
                 // TODO: check is convertible
                 return;
@@ -300,7 +296,7 @@ namespace nau
             m_instance = refCounted.template as<T*>();
             NAU_ASSERT(m_instance, "Expected API not exposed: ({}).", rtti::getTypeInfo<U>().getTypeName());
 
-            if(m_instance != nullptr)
+            if (m_instance != nullptr)
             {
                 refCounted.addRef();
             }
@@ -310,18 +306,18 @@ namespace nau
         requires(!std::is_same_v<U, T>)
         void moveAcquire(U* newInstance)
         {
-            if(T* const instance = std::exchange(m_instance, nullptr))
+            if (T* const instance = std::exchange(m_instance, nullptr))
             {
                 rtti_detail::asRefCounted(*instance).releaseRef();
             }
 
-            if(newInstance == nullptr)
+            if (newInstance == nullptr)
             {
                 return;
             }
 
             m_instance = rtti_detail::asRefCounted(*newInstance).template as<T*>();
-            if(!m_instance)
+            if (!m_instance)
             {
                 rtti_detail::asRefCounted(*newInstance).releaseRef();
                 NAU_ASSERT(m_instance, "Expected API not exposed: ({}).", rtti::getTypeInfo<U>().getTypeName());
@@ -353,17 +349,4 @@ namespace nau::rtti
         return rtti_detail::UniquePtrCastHelper<std::unique_ptr>::cast<U>(std::move(ptr));
     }
 
-#ifdef HAS_EASTL
-    template <typename U, typename T>
-    eastl::unique_ptr<U> pointer_cast(eastl::unique_ptr<T>&& ptr)
-    {
-        return rtti_detail::UniquePtrCastHelper<eastl::unique_ptr>::cast<U>(std::move(ptr));
-    }
-
-#endif
-
 }  // namespace nau::rtti
-
-#ifdef HAS_EASTL
-    #undef HAS_EASTL
-#endif

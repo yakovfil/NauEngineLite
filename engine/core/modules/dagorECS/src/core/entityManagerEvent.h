@@ -9,11 +9,11 @@ namespace ecs
 
 #if TIME_PROFILER_ENABLED && DAGOR_DBGLEVEL > 0
 extern bool events_perf_markers;
-#define PROFILE_ES(es, evt) (EASTL_UNLIKELY(events_perf_markers || evt.getFlags() & EVFLG_PROFILE))
-#define TIME_SCOPE_ES(es)        \
-  if (events_perf_markers)       \
-    es.cacheProfileTokensOnce(); \
-  DA_PROFILE_EVENT_DESC(es.dapToken);
+    #define PROFILE_ES(es, evt) (NAU_UNLIKELY(events_perf_markers || evt.getFlags() & EVFLG_PROFILE))
+    #define TIME_SCOPE_ES(es)               \
+        if (events_perf_markers)            \
+            es.cacheProfileTokensOnce();    \
+        DA_PROFILE_EVENT_DESC(es.dapToken);
 #else
 #define TIME_SCOPE_ES(es)
 #define PROFILE_ES(es, evt) false
@@ -51,21 +51,21 @@ __forceinline void EntityManager::dispatchEventImmediate(EntityId eid, Event &ev
 template <class T, typename ProcessEvent>
 __forceinline uint32_t EntityManager::processEventInternal(T &buffer, ProcessEvent &&process)
 {
-  if (EASTL_LIKELY(!buffer.canRead(sizeof(Event) + sizeof(EntityId)))) // empty
-    return 0;
+    if (NAU_LIKELY(!buffer.canRead(sizeof(Event) + sizeof(EntityId))))  // empty
+        return 0;
 
-  const char *__restrict reading = (const char *__restrict)buffer.reading();
-  EntityId eid = *(const EntityId *__restrict)reading;
-  Event *__restrict event = (Event *__restrict)(reading + sizeof(EntityId));
-  const uint32_t eventSize = uint32_t(event->getLength()) + uint32_t(sizeof(EntityId));
-  auto finalizeRead = buffer.justRead(eventSize);
-  // we can't use reference to buffer after process
-  process(eid, *event);
-  if (EASTL_UNLIKELY(event->getFlags() & EVFLG_DESTROY))
-    eventDb.destroy(*event);
+    const char* __restrict reading = (const char* __restrict)buffer.reading();
+    EntityId eid = *(const EntityId* __restrict)reading;
+    Event* __restrict event = (Event* __restrict)(reading + sizeof(EntityId));
+    const uint32_t eventSize = uint32_t(event->getLength()) + uint32_t(sizeof(EntityId));
+    auto finalizeRead = buffer.justRead(eventSize);
+    // we can't use reference to buffer after process
+    process(eid, *event);
+    if (NAU_UNLIKELY(event->getFlags() & EVFLG_DESTROY))
+        eventDb.destroy(*event);
 
-  T::freeRead(finalizeRead, eventSize);
-  return eventSize;
+    T::freeRead(finalizeRead, eventSize);
+    return eventSize;
 }
 
 template <class T>
@@ -92,9 +92,9 @@ inline uint32_t EntityManager::processEventsActive(uint32_t count, T &storage)
 template <class T>
 inline uint32_t EntityManager::processEventsAnyway(uint32_t count, T &storage)
 {
-  if (EASTL_LIKELY(storage.canProcess())) // otherwise too many events scheduled, circular buffer exhausted, we were only writing!
-    return processEventsActive(count, storage);
-  return processEventsExhausted(count, storage);
+    if (NAU_LIKELY(storage.canProcess()))  // otherwise too many events scheduled, circular buffer exhausted, we were only writing!
+        return processEventsActive(count, storage);
+    return processEventsExhausted(count, storage);
 }
 
 inline void ecs::EntityManager::sendQueuedEvents(uint32_t top_send_count)

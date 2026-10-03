@@ -3,8 +3,9 @@
 
 
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "nau/utils/enum/enum_reflection.h"
 #include "nau/utils/result.h"
@@ -22,14 +23,14 @@ namespace nau::scene
      */
     struct NAU_CORESCENE_EXPORT SceneQuery
     {
-        eastl::optional<QueryObjectCategory> category;
+        std::optional<QueryObjectCategory> category;
         Uid uid = NullUid;
         size_t typeHashCode = 0;
 
         SceneQuery() = default;
         SceneQuery(QueryObjectCategory inCategory, Uid inUid = NullUid);
         SceneQuery(const SceneQuery&) = default;
-        SceneQuery(eastl::string_view queryString);
+        SceneQuery(std::string_view queryString);
         SceneQuery& operator=(const SceneQuery&) = default;
 
         template <rtti::WithTypeInfo T>

@@ -3,10 +3,17 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "poolResourceScheduler.h"
-#include <EASTL/type_traits.h>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "dabfg/debug/backendDebug.h"
 #include "dabfg/id/idRange.h"
-
 
 #define SUPPORTED_TEXTURE_RESTYPE_LIST \
   USE(PoolResourceType::Texture)       \
@@ -30,10 +37,10 @@ template <PoolResourceType RES_TYPE>
 struct ResourceCreator
 {
   ResourceDescription desc;
-  eastl::string getResName()
+  std::string getResName()
   {
     resource_names_counter++;
-    return eastl::string(eastl::string::CtorSprintf(), "fg_resource_pooled_%d", resource_names_counter);
+    return nau::utils::format("fg_resource_pooled_{}", resource_names_counter);
   }
   ResourceCreator(const ResourceDescription &desc) : desc(desc) {}
   ResourceCreator() = default;
@@ -43,68 +50,71 @@ struct ResourceCreator
 template <>
 auto ResourceCreator<PoolResourceType::Texture>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueTex(
-    dag::create_tex(nullptr, desc.asTexRes.width, desc.asTexRes.height, desc.asTexRes.cFlags, desc.asTexRes.mipLevels, name.data()));
+    std::string name = getResName();
+    return UniqueTex(
+        dag::create_tex(nullptr, desc.asTexRes.width, desc.asTexRes.height, desc.asTexRes.cFlags, desc.asTexRes.mipLevels, name.data()));
 }
 
 template <>
 auto ResourceCreator<PoolResourceType::CubeTexture>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueTex(dag::create_cubetex(desc.asCubeTexRes.extent, desc.asCubeTexRes.cFlags, desc.asCubeTexRes.mipLevels, name.data()));
+    std::string name = getResName();
+    return UniqueTex(dag::create_cubetex(desc.asCubeTexRes.extent, desc.asCubeTexRes.cFlags, desc.asCubeTexRes.mipLevels, name.data()));
 }
 
 template <>
 auto ResourceCreator<PoolResourceType::VolTexture>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueTex(dag::create_voltex(desc.asVolTexRes.width, desc.asVolTexRes.height, desc.asVolTexRes.depth, desc.asVolTexRes.cFlags,
-    desc.asVolTexRes.mipLevels, name.data()));
+    std::string name = getResName();
+    return UniqueTex(dag::create_voltex(desc.asVolTexRes.width, desc.asVolTexRes.height, desc.asVolTexRes.depth, desc.asVolTexRes.cFlags,
+                                        desc.asVolTexRes.mipLevels, name.data()));
 }
 
 template <>
 auto ResourceCreator<PoolResourceType::ArrayTexture>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueTex(dag::create_array_tex(desc.asArrayTexRes.width, desc.asArrayTexRes.height, desc.asArrayTexRes.arrayLayers,
-    desc.asArrayTexRes.cFlags, desc.asArrayTexRes.mipLevels, name.data()));
+    std::string name = getResName();
+    return UniqueTex(dag::create_array_tex(desc.asArrayTexRes.width, desc.asArrayTexRes.height, desc.asArrayTexRes.arrayLayers,
+                                           desc.asArrayTexRes.cFlags, desc.asArrayTexRes.mipLevels, name.data()));
 }
 
 template <>
 auto ResourceCreator<PoolResourceType::CubeArrayTexture>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueTex(dag::create_cube_array_tex(desc.asArrayCubeTexRes.cubes, desc.asArrayCubeTexRes.extent,
-    desc.asArrayCubeTexRes.cFlags, desc.asArrayCubeTexRes.mipLevels, name.data()));
+    std::string name = getResName();
+    return UniqueTex(dag::create_cube_array_tex(desc.asArrayCubeTexRes.cubes, desc.asArrayCubeTexRes.extent,
+                                                desc.asArrayCubeTexRes.cFlags, desc.asArrayCubeTexRes.mipLevels, name.data()));
 }
 
 template <>
 auto ResourceCreator<PoolResourceType::SBuffer>::operator()()
 {
-  eastl::string name = getResName();
-  return UniqueBuf(dag::create_sbuffer(desc.asBufferRes.elementSizeInBytes, desc.asBufferRes.elementCount, desc.asBufferRes.cFlags,
-    desc.asBufferRes.viewFormat, name.data()));
+    std::string name = getResName();
+    return UniqueBuf(dag::create_sbuffer(desc.asBufferRes.elementSizeInBytes, desc.asBufferRes.elementCount, desc.asBufferRes.cFlags,
+                                         desc.asBufferRes.viewFormat, name.data()));
 }
 
 template <PoolResourceType RES_TYPE>
 class ResourceCollection
 {
-  using ResStorageType = eastl::result_of_t<ResourceCreator<RES_TYPE>()>;
-  eastl::vector<ResStorageType> resources;
-  eastl::vector<ResStorageType> flipped;
+    using ResStorageType = std::invoke_result_t<ResourceCreator<RES_TYPE>>;
+    std::vector<ResStorageType> resources;
+    std::vector<ResStorageType> flipped;
 
-  static auto &get()
-  {
-    static ResourceCollection collection;
-    return collection;
-  }
+    static auto& get()
+    {
+        static ResourceCollection collection;
+        return collection;
+    }
 
 public:
   static auto &current() { return get().resources; }
   static auto &previous() { return get().flipped; }
 
-  static void flip() { get().flipped = eastl::move(get().resources); }
+  static void flip()
+  {
+      get().flipped = std::move(get().resources);
+  }
 };
 
 // Try and give a compile error in case new d3d resources are added
@@ -137,10 +147,10 @@ public:
   static SimulatedHeapId heapIndexForDesc(const ResourceDescription &desc)
   {
     auto &heapIdxToResDesc = get();
-    auto it = eastl::find(heapIdxToResDesc.begin(), heapIdxToResDesc.end(), desc);
+    auto it = std::find(heapIdxToResDesc.begin(), heapIdxToResDesc.end(), desc);
     if (it == heapIdxToResDesc.end())
       it = heapIdxToResDesc.emplace(it, desc);
-    return static_cast<SimulatedHeapId>(eastl::distance(heapIdxToResDesc.begin(), it));
+    return static_cast<SimulatedHeapId>(std::distance(heapIdxToResDesc.begin(), it));
   }
 
   static PoolResourceType resourceTypeOfHeap(SimulatedHeapId heap_idx)
@@ -148,7 +158,7 @@ public:
     const auto &heapIdxToResDesc = get();
     NAU_ASSERT(heapIdxToResDesc.isMapped(heap_idx));
     int resType = heapIdxToResDesc[heap_idx].resType;
-    NAU_ASSERT(resType <= eastl::size(D3D_RESTYPE_TO_POOL_RESTYPE));
+    NAU_ASSERT(resType <= std::size(D3D_RESTYPE_TO_POOL_RESTYPE));
     return D3D_RESTYPE_TO_POOL_RESTYPE[resType];
   }
 
@@ -266,8 +276,8 @@ ResourceHeapGroupProperties PoolResourceScheduler::getResourceHeapGroupPropertie
 {
   ResourceHeapGroupProperties heapGroupProp{};
   heapGroupProp.flags = 0;
-  heapGroupProp.maxHeapSize = eastl::numeric_limits<uint64_t>::max();
-  heapGroupProp.maxResourceSize = eastl::numeric_limits<uint64_t>::max();
+  heapGroupProp.maxHeapSize = std::numeric_limits<uint64_t>::max();
+  heapGroupProp.maxResourceSize = std::numeric_limits<uint64_t>::max();
   return heapGroupProp;
 }
 
@@ -286,8 +296,8 @@ static uint32_t allocateHeap(SimulatedHeapId simulated_heap_id, uint32_t heap_si
   {
     // Move already leased resources
     currStorage.resize(currStorage.size() + reusableResCount);
-    eastl::move(prevStorage.begin() + previous_heap_start_offset, prevStorage.begin() + previous_heap_start_offset + reusableResCount,
-      currStorage.end() - reusableResCount);
+    std::move(prevStorage.begin() + previous_heap_start_offset, prevStorage.begin() + previous_heap_start_offset + reusableResCount,
+              currStorage.end() - reusableResCount);
   }
 
   // Lease new resources

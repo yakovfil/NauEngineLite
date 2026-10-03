@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
 #include <chrono>
@@ -10,8 +9,8 @@
 #include "nau/async/cpp_coroutine.h"
 #include "nau/async/executor.h"
 #include "nau/diag/error.h"
-#include "nau/rtti/rtti_object.h"
 #include "nau/kernel/kernel_config.h"
+#include "nau/rtti/rtti_object.h"
 
 namespace nau::async
 {
@@ -29,12 +28,11 @@ namespace nau::async
     {
         NAU_INTERFACE(nau::async::ITimerManager, IRttiObject);
 
-        using Ptr = eastl::unique_ptr<ITimerManager>;
+        using Ptr = std::unique_ptr<ITimerManager>;
 
         using InvokeAfterHandle = uint64_t;
         using InvokeAfterCallback = void (*)(void*) noexcept;
         using ExecuteAfterCallback = void (*)(Error::Ptr, void*) noexcept;
-
 
         NAU_KERNEL_EXPORT
         static void setInstance(ITimerManager::Ptr);
@@ -47,7 +45,6 @@ namespace nau::async
 
         NAU_KERNEL_EXPORT
         static ITimerManager::Ptr createDefault();
-
 
         static inline void setDefaultInstance()
         {

@@ -1,31 +1,35 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
-
 #include "input_system_impl.h"
+
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "input_action_impl.h"
 #include "input_controller_impl.h"
 #include "input_devices_impl.h"
 #include "nau/dag_ioSys/dag_chainedMemIo.h"
+#include "nau/input.h"
 #include "nau/io/virtual_file_system.h"
 #include "nau/memory/bytes_buffer.h"
 #include "nau/service/service_provider.h"
 #include "signals/input_signals_impl.h"
-#include "nau/input.h"
 
 namespace nau
 {
     InputSystemImpl::InputSystemImpl()
     {
-        m_devices.push_back(eastl::make_shared<GAKeyboardDevice>(m_inputManager));
-        m_devices.push_back(eastl::make_shared<GAMouseDevice>(m_inputManager));
+        m_devices.push_back(std::make_shared<GAKeyboardDevice>(m_inputManager));
+        m_devices.push_back(std::make_shared<GAMouseDevice>(m_inputManager));
         // Pseudo controller for signal logic processing
-        m_controllers.emplace("gate", eastl::make_shared<InputControllerImpl>("gate", nullptr));
+        m_controllers.emplace("gate", std::make_shared<InputControllerImpl>("gate", nullptr));
     }
 
-    IInputSignal* InputSystemImpl::createSignal(const eastl::string& signalType)
+    IInputSignal* InputSystemImpl::createSignal(const std::string& signalType)
     {
         InputSignalImpl* signal = InputSignalFactory::create(signalType);
         if (signal != nullptr)
@@ -35,7 +39,7 @@ namespace nau
         return signal;
     }
 
-    IInputSignal* InputSystemImpl::createSignal(const eastl::string& signalType, const eastl::string& controllerName, nau::Functor<void(IInputSignal*)> signalCallback)
+    IInputSignal* InputSystemImpl::createSignal(const std::string& signalType, const std::string& controllerName, nau::Functor<void(IInputSignal*)> signalCallback)
     {
         IInputSignal* signal = createSignal(signalType);
         if (signal)
@@ -53,9 +57,9 @@ namespace nau
         return signal;
     }
 
-    eastl::shared_ptr<IInputAction> InputSystemImpl::addAction(const eastl::string& name, IInputAction::Type type, IInputSignal* signal, nau::Functor<void(IInputSignal*)> actionCallback)
+    std::shared_ptr<IInputAction> InputSystemImpl::addAction(const std::string& name, IInputAction::Type type, IInputSignal* signal, nau::Functor<void(IInputSignal*)> actionCallback)
     {
-        auto actionPtr = eastl::make_shared<InputActionImpl>(eastl::move(actionCallback));
+        auto actionPtr = std::make_shared<InputActionImpl>(std::move(actionCallback));
         actionPtr->setName(name);
         actionPtr->setType(type);
         actionPtr->setSignal(signal);
@@ -63,7 +67,7 @@ namespace nau
         return actionPtr;
     }
 
-    eastl::shared_ptr<IInputAction> InputSystemImpl::addAction(const eastl::string& serialized, nau::Functor<void(IInputSignal*)> actionCallback)
+    std::shared_ptr<IInputAction> InputSystemImpl::addAction(const std::string& serialized, nau::Functor<void(IInputSignal*)> actionCallback)
     {
         DataBlock block;
         if (!block.loadText(serialized.c_str(), serialized.size()))
@@ -71,7 +75,7 @@ namespace nau
             NAU_LOG_WARNING("addAction: DataBlock loadText failed");
             return nullptr;
         }
-        auto actionPtr = eastl::make_shared<InputActionImpl>(eastl::move(actionCallback));
+        auto actionPtr = std::make_shared<InputActionImpl>(std::move(actionCallback));
         if (actionPtr->deserialize(&block))
         {
             m_actions.emplace(actionPtr->getName(), actionPtr);
@@ -81,7 +85,7 @@ namespace nau
         return nullptr;
     }
 
-    bool InputSystemImpl::removeAction(eastl::shared_ptr<IInputAction>&& action)
+    bool InputSystemImpl::removeAction(std::shared_ptr<IInputAction>&& action)
     {
         for (auto it = m_actions.cbegin(); it != m_actions.cend(); ++it)
         {
@@ -94,7 +98,7 @@ namespace nau
         return false;
     }
 
-    eastl::shared_ptr<IInputAction> InputSystemImpl::loadAction(const io::FsPath& filePath, nau::Functor<void(IInputSignal*)> actionCallback)
+    std::shared_ptr<IInputAction> InputSystemImpl::loadAction(const io::FsPath& filePath, nau::Functor<void(IInputSignal*)> actionCallback)
     {
         using namespace nau::io;
         auto& fileSystem = nau::getServiceProvider().get<IFileSystem>();
@@ -118,14 +122,14 @@ namespace nau
                 char* str = (char*)buffer.data();
                 str[size] = '\0';
                 auto& insys = nau::getServiceProvider().get<nau::IInputSystem>();
-                return insys.addAction(str, eastl::move(actionCallback));
+                return insys.addAction(str, std::move(actionCallback));
             }
         }
         NAU_LOG_WARNING("loadAction: can't load from file ({})", filePath.getCStr());
         return nullptr;
     }
 
-    bool InputSystemImpl::saveAction(const eastl::shared_ptr<IInputAction> action, const eastl::string& filePath)
+    bool InputSystemImpl::saveAction(const std::shared_ptr<IInputAction> action, const std::string& filePath)
     {
         using namespace io;
         IStreamWriter::Ptr stream = io::createNativeFileStream(filePath.c_str(), io::AccessMode::Write, io::OpenFileMode::CreateAlways);
@@ -146,7 +150,7 @@ namespace nau
         return false;
     }
 
-    void InputSystemImpl::getActions(eastl::vector<eastl::shared_ptr<IInputAction>>& actions)
+    void InputSystemImpl::getActions(std::vector<std::shared_ptr<IInputAction>>& actions)
     {
         actions.clear();
         for (auto& action : m_actions)
@@ -155,23 +159,23 @@ namespace nau
         }
     }
 
-    void InputSystemImpl::setContext(const eastl::string& context)
+    void InputSystemImpl::setContext(const std::string& context)
     {
         m_contexts.clear();
         m_contexts.emplace(context);
     }
 
-    void InputSystemImpl::addContext(const eastl::string& context)
+    void InputSystemImpl::addContext(const std::string& context)
     {
         m_contexts.emplace(context);
     }
 
-    void InputSystemImpl::removeContext(const eastl::string& context)
+    void InputSystemImpl::removeContext(const std::string& context)
     {
         m_contexts.erase(context);
     }
 
-    IInputController* InputSystemImpl::getController(const eastl::string& controllerDesc)
+    IInputController* InputSystemImpl::getController(const std::string& controllerDesc)
     {
         for (auto& controller : m_controllers)
         {
@@ -184,7 +188,7 @@ namespace nau
         {
             if (device->getName() == controllerDesc)
             {
-                auto controller = eastl::make_shared<InputControllerImpl>(controllerDesc, device.get());
+                auto controller = std::make_shared<InputControllerImpl>(controllerDesc, device.get());
                 m_controllers.emplace(controllerDesc, controller);
                 return controller.get();
             }
@@ -192,9 +196,9 @@ namespace nau
         return nullptr;
     }
 
-    eastl::vector<IInputDevice*> InputSystemImpl::getDevices()
+    std::vector<IInputDevice*> InputSystemImpl::getDevices()
     {
-        eastl::vector<IInputDevice*> devices;
+        std::vector<IInputDevice*> devices;
         for (auto& device : m_devices)
         {
             devices.push_back(device.get());
@@ -221,9 +225,9 @@ namespace nau
         if (!m_contexts.empty())
         {
             // Contexts can be changed in actions
-            eastl::set<eastl::string> contexts = m_contexts;
+            std::set<std::string> contexts = m_contexts;
             // Action with context tag processed once, even it have multiple tags
-            eastl::set<IInputAction*> processed;
+            std::set<IInputAction*> processed;
             for (auto& context : contexts)
             {
                 for (auto& action : m_actions)
@@ -243,7 +247,7 @@ namespace nau
         }
     }
 
-    void InputSystemImpl::setInputSource(const eastl::string& source)
+    void InputSystemImpl::setInputSource(const std::string& source)
     {
         if (m_currentSource != source)
         {

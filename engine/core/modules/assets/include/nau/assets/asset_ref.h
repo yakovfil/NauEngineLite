@@ -3,10 +3,10 @@
 
 
 #pragma once
-#include <EASTL/string.h>
-
 #include <atomic>
 #include <concepts>
+#include <string>
+#include <string_view>
 
 #include "nau/assets/asset_descriptor.h"
 #include "nau/assets/asset_path.h"
@@ -150,14 +150,14 @@ namespace nau
          */
         AssetRefBase(AssetPath assetPath, bool loadOnDemand = false) noexcept;
 
-        AssetRefBase(eastl::string_view assetPathStr, bool loadOnDemand = false) noexcept;
+        AssetRefBase(std::string_view assetPathStr, bool loadOnDemand = false) noexcept;
 
-        //template <size_t N>
-        //inline AssetRefBase(const char (&assetPathStr)[N], bool loadOnDemand = false) noexcept
-        //    :
-        //    AssetRefBase{AssetPath{eastl::string_view{assetPathStr, N}}, loadOnDemand}
+        // template <size_t N>
+        // inline AssetRefBase(const char (&assetPathStr)[N], bool loadOnDemand = false) noexcept
+        //     :
+        //     AssetRefBase{AssetPath{std::string_view{assetPathStr, N}}, loadOnDemand}
         //{
-        //}
+        // }
 
         /**
          * @brief Initialization constructor.

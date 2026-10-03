@@ -3,7 +3,10 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "nau/assets/asset_container.h"
 #include "nau/rtti/rtti_impl.h"
@@ -27,9 +30,9 @@ namespace nau
         const ObjectsMap& getSceneObjects() const;
 
     private:
-        nau::Ptr<> getAsset(eastl::string_view path) override;
+        nau::Ptr<> getAsset(std::string_view path) override;
 
-        eastl::vector<eastl::string> getContent() const override;
+        std::vector<std::string> getContent() const override;
 
         const SceneHeader m_sceneHeader;
         const ObjectsMap m_sceneObjects;
@@ -43,7 +46,7 @@ namespace nau
         NAU_RTTI_CLASS(nau::SceneAssetLoader, IAssetContainerLoader, IRttiObject)
 
     private:
-        eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        std::vector<std::string_view> getSupportedAssetKind() const override;
 
         async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr, AssetContentInfo info) override;
 

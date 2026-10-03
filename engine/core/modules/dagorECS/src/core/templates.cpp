@@ -1,8 +1,10 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <EASTL/fixed_vector.h>
 #include <daECS/core/internal/templates.h>
+
+#include <utility>
+#include <vector>
 
 namespace ecs
 {
@@ -78,19 +80,19 @@ void Templates::remap(const template_t *map, uint32_t used_count, bool defrag_na
   NAU_UNUSED(used_count);
   NAU_ASSERT(used_count == templates.size());
 #else
-  eastl::vector<InstantiatedTemplate> templatesNew(used_count);
-  eastl::vector<uint32_t> newTemplateDbId(used_count);
-  eastl::vector<uint32_t> newTemplateReplData;
+  std::vector<InstantiatedTemplate> templatesNew(used_count);
+  std::vector<uint32_t> newTemplateDbId(used_count);
+  std::vector<uint32_t> newTemplateReplData;
   newTemplateReplData.reserve(used_count + 1);
   newTemplateReplData.push_back(0);
-  eastl::vector<component_index_t> newReplicatedComponents;
+  std::vector<component_index_t> newReplicatedComponents;
   newReplicatedComponents.reserve(replicatedComponents.size());
   for (uint32_t i = 0, e = size(); i != e; ++i)
   {
     const template_t newId = map[i];
     if (newId == INVALID_TEMPLATE_INDEX)
       continue;
-    templatesNew[newId] = eastl::move(templates[i]);
+    templatesNew[newId] = std::move(templates[i]);
     newTemplateDbId[newId] = templateDbId[i];
     uint32_t riCnt = 0;
     const component_index_t *ri = replicatedComponentsList(i, riCnt);
@@ -98,10 +100,10 @@ void Templates::remap(const template_t *map, uint32_t used_count, bool defrag_na
     newTemplateReplData.push_back((uint32_t)newReplicatedComponents.size());
   }
   newReplicatedComponents.shrink_to_fit();
-  eastl::swap(templates, templatesNew);
-  eastl::swap(newTemplateDbId, templateDbId);
-  eastl::swap(templateReplData, newTemplateReplData);
-  eastl::swap(replicatedComponents, newReplicatedComponents);
+  std::swap(templates, templatesNew);
+  std::swap(newTemplateDbId, templateDbId);
+  std::swap(templateReplData, newTemplateReplData);
+  std::swap(replicatedComponents, newReplicatedComponents);
   for (auto &t : templatesNew)
     t.clear(archetypes, dataComponents, componentTypes); // destructor
 #endif

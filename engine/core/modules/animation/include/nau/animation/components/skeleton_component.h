@@ -10,6 +10,10 @@
 #include <ozz/base/maths/soa_transform.h>
 #include <ozz/base/maths/vec_float.h>
 
+#include <map>
+#include <string>
+#include <vector>
+
 #include "nau/animation/assets/skeleton_asset.h"
 #include "nau/animation/playback/animation.h"
 #include "nau/assets/asset_ref.h"
@@ -17,7 +21,6 @@
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/internal/component_internal_attributes.h"
 #include "nau/scene/components/scene_component.h"
-
 
 namespace nau
 {
@@ -36,7 +39,7 @@ namespace nau
 
     struct SkeletalAnimRuntimeData final
     {
-        eastl::map<nau::string, SkeletalTrackData> tracks;
+        std::map<nau::string, SkeletalTrackData> tracks;
 
         // Buffer of local transforms after blending is performed
         ozz::vector<ozz::math::SoaTransform> locals;
@@ -60,7 +63,7 @@ namespace nau
     public:
         SkeletonComponent();
 
-        const eastl::string& getName() const;
+        const std::string& getName() const;
 
         SkeletonAssetRef& getSkeletonAsset() const;
         nau::Ptr<SkeletonAssetView> getSkeletonAssetView() const noexcept;
@@ -71,8 +74,8 @@ namespace nau
         void setSkeletonToDefaultPose();
 
         const ozz::animation::Skeleton& getSkeleton() const;
-        const eastl::vector<SkeletonJoint>& getJoints() const;
-        const eastl::vector<nau::math::Matrix4>& getInverseBindTransforms() const;
+        const std::vector<SkeletonJoint>& getJoints() const;
+        const std::vector<nau::math::Matrix4>& getInverseBindTransforms() const;
 
         unsigned getBonesCount() const;
 
@@ -94,6 +97,6 @@ namespace nau
         // Buffer of model space matrices.
         ozz::vector<ozz::math::Float4x4> models;
 
-        eastl::string m_name;
+        std::string m_name;
     };
 }  // namespace nau

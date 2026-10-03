@@ -3,7 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
+#include <algorithm>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 //#include <util/dag_string.h>
 //#include <util/dag_strUtil.h>
@@ -569,14 +574,17 @@ public:
   {
       lock_(mutex);
 
-    auto ref = eastl::find_if(begin(publicStateTable), end(publicStateTable),
-      [&def](auto &&e) { return renderStateCompare(eastl::get<0>(e), def); });
-    if (ref == end(publicStateTable))
-    {
-      auto staticStateId = registerStaticState(ctx, def);
-      auto dynamicState = getDynamicStateFromState(def);
-      ref = publicStateTable.insert(end(publicStateTable), eastl::pair(def, PublicStateInfo{dynamicState, staticStateId}));
-    }
+      auto ref = std::find_if(begin(publicStateTable), end(publicStateTable),
+                              [&def](auto&& e)
+      {
+          return renderStateCompare(std::get<0>(e), def);
+      });
+      if (ref == end(publicStateTable))
+      {
+          auto staticStateId = registerStaticState(ctx, def);
+          auto dynamicState = getDynamicStateFromState(def);
+          ref = publicStateTable.insert(end(publicStateTable), std::pair(def, PublicStateInfo{dynamicState, staticStateId}));
+      }
     return static_cast<uint32_t>(ref - begin(publicStateTable));
   }
 
@@ -685,7 +693,7 @@ private:
 
   nau::threading::SpinLock mutex;
 
-  eastl::vector<StaticState> staticStateTable;
-  eastl::vector<eastl::pair<shaders::RenderState, PublicStateInfo>> publicStateTable;
+  std::vector<StaticState> staticStateTable;
+  std::vector<std::pair<shaders::RenderState, PublicStateInfo>> publicStateTable;
 };
 } // namespace drv3d_dx12

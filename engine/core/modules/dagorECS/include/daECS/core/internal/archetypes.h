@@ -3,14 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #pragma once
-#include <nau/math/dag_adjpow2.h>
-#include <EASTL/vector_multimap.h>
-#include <EASTL/unique_ptr.h>
-#include "daECS/core/internal/dataComponentManager.h"
 #include <daECS/core/dataComponent.h>
 #include <daECS/core/entityId.h>
 #include <daECS/utility/ecs_asserts.h>
 #include <nau/diag/assertion.h>
+#include <nau/math/dag_adjpow2.h>
+
+#include <memory>
+#include <type_traits>
+#include <vector>
+
+#include "daECS/core/internal/dataComponentManager.h"
+#include "nau/utils/sorted_vector.h"
+#include "nau/utils/tuple_vector.h"
 
 namespace ecs
 {
@@ -125,7 +130,7 @@ protected:
   struct ArchetypeInfo
   {
     component_index_t firstNonEidIndex, count;
-    eastl::unique_ptr<archetype_component_id[]> componentIndexToArchetypeOffset; // todo: make it soa as well
+    std::unique_ptr<archetype_component_id[]> componentIndexToArchetypeOffset;  // todo: make it soa as well
     inline archetype_component_id getComponentId(component_index_t cidx) const;
   };
 #pragma pack(push, 1)
@@ -151,16 +156,31 @@ protected:
   };
 #pragma pack(pop)
 
-  const eastl::vector<TrackedPod> &getTrackedPodPairs(uint32_t arch) const { return archetypes.get<TRACKED_PODS>()[arch]; }
+  const std::vector<TrackedPod>& getTrackedPodPairs(uint32_t arch) const
+  {
+      return archetypes.get<TRACKED_PODS>()[arch];
+  }
 
   // not including creatable tracked pairs
-  const eastl::vector<CreatableComponent> &getCreatables(uint32_t arch) const { return archetypes.get<CREATABLES>()[arch]; }
-  const eastl::vector<CreatableComponent> &getCreatableTrackeds(uint32_t arch) const { return archetypes.get<TRACKED_CREATABLES>()[arch]; }
-  const eastl::vector<ResourceComponent> &getComponentsWithResources(uint32_t arch) const { return archetypes.get<WITH_RESOURCES>()[arch]; }
+  const std::vector<CreatableComponent>& getCreatables(uint32_t arch) const
+  {
+      return archetypes.get<CREATABLES>()[arch];
+  }
+  const std::vector<CreatableComponent>& getCreatableTrackeds(uint32_t arch) const
+  {
+      return archetypes.get<TRACKED_CREATABLES>()[arch];
+  }
+  const std::vector<ResourceComponent>& getComponentsWithResources(uint32_t arch) const
+  {
+      return archetypes.get<WITH_RESOURCES>()[arch];
+  }
   static constexpr int HAS_TRACKED_COMPONENT = (COMPONENT_TYPE_LAST_PLUS_1 - 1) * 2;
   // SoA
   uint32_t findArchetype(const component_index_t *__restrict components, uint32_t components_cnt, uint32_t &hash) const;
-  const ArchetypeInfo &getArchetypeInfoUnsafe(uint32_t archetype) const { return eastl::get<INFO>(archetypes[archetype]); }
+  const ArchetypeInfo& getArchetypeInfoUnsafe(uint32_t archetype) const
+  {
+      return std::get<INFO>(archetypes[archetype]);
+  }
 
   enum
   {
@@ -174,13 +194,13 @@ protected:
     TRACKED_CREATABLES,
     WITH_RESOURCES
   };
-  eastl::tuple_vector<Archetype, uint32_t, ArchetypeInfo, eastl::underlying_type_t<ComponentTypeFlags>, eastl::vector<TrackedPod>, uint32_t,
-                      eastl::vector<CreatableComponent>,  // not including creatable tracked pairs
-    eastl::vector<CreatableComponent>,
-                      eastl::vector<ResourceComponent>>
-    archetypes; // all archetypes all components data
-  eastl::vector<component_index_t> allTrackedPodsCidx;
-  eastl::vector<eastl::unique_ptr<uint16_t[]>> initialOffsets; // can't be made part of tuple_vector :(
+  nau::TupleVector<Archetype, uint32_t, ArchetypeInfo, std::underlying_type_t<ComponentTypeFlags>, std::vector<TrackedPod>, uint32_t,
+                   std::vector<CreatableComponent>,  // not including creatable tracked pairs
+                   std::vector<CreatableComponent>,
+                   std::vector<ResourceComponent>>
+      archetypes;  // all archetypes all components data
+  std::vector<component_index_t> allTrackedPodsCidx;
+  std::vector<std::unique_ptr<uint16_t[]>> initialOffsets;  // can't be made part of tuple_vector :(
 
   enum
   {
@@ -192,14 +212,14 @@ protected:
     //  is more important even if we add/del entity (since it causes invalidation anyway).
     DATA_SIZE = 2,
   };
-  eastl::tuple_vector<component_index_t, uint16_t, uint16_t> archetypeComponents; // INDEX, DATA_OFFSET, DATA_SIZE. indexed by
-                                                                                  // COMPONENT_OFS+component
+  nau::TupleVector<component_index_t, uint16_t, uint16_t> archetypeComponents;  // INDEX, DATA_OFFSET, DATA_SIZE. indexed by
+                                                                                // COMPONENT_OFS+component
   //-SoA
 
   // const ArchetypeInfo &getArchetypeInfo(uint32_t archetype) const {return archetypes.get<INFO>()[archetype];}
-  eastl::vector_multimap<uint32_t, archetype_t> archetypesByComponents; // hash(of component_indices) -> list of archetypes
+  nau::SortedVectorMultiMap<uint32_t, archetype_t> archetypesByComponents;  // hash(of component_indices) -> list of archetypes
 #if NAU_DEBUG
-  eastl::vector<int> queryingArchetypeCount;
+  std::vector<int> queryingArchetypeCount;
 #endif
 };
 
@@ -362,17 +382,17 @@ inline archetype_component_id Archetypes::getArchetypeComponentId(uint32_t arche
 
 inline uint8_t *__restrict Archetypes::getChunkData(uint32_t archetype, chunk_type_t chunkId, uint32_t &stride) const
 {
-  return eastl::get<ARCHETYPE>(archetypes[archetype]).manager.getChunkData(chunkId, stride);
+    return std::get<ARCHETYPE>(archetypes[archetype]).manager.getChunkData(chunkId, stride);
 }
 inline uint32_t Archetypes::getArchetypeSize(uint32_t archetypeId) const
 {
   DAECS_EXT_ASSERT(archetypeId < archetypes.size());
-  return eastl::get<ARCHETYPE>(archetypes[archetypeId]).entitySize;
+  return std::get<ARCHETYPE>(archetypes[archetypeId]).entitySize;
 }
 inline uint16_t Archetypes::getComponentsCount(uint32_t archetypeId) const
 {
   DAECS_EXT_ASSERT(archetypeId < archetypes.size());
-  return eastl::get<ARCHETYPE>(archetypes[archetypeId]).componentsCnt;
+  return std::get<ARCHETYPE>(archetypes[archetypeId]).componentsCnt;
 }
 
 inline bool Archetypes::shouldDefragment(uint32_t) const

@@ -27,7 +27,7 @@ THE SOFTWARE.
 #define __SUPPORT_CCUSERDEFAULT_H__
 
 #include "platform/CCPlatformMacros.h"
-#include <EASTL/string.h>
+#include <string>
 #include "base/CCData.h"
 
 /**

@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
+
+#include <memory>
 
 #include "nau/dispatch/class_descriptor_builder.h"
 #include "nau/dispatch/dynamic_object.h"
@@ -62,14 +63,14 @@ namespace nau
         }
 
     protected:
-        virtual eastl::unique_ptr<ser_detail::RuntimeObjectState> createRuntimeObjectState() const = 0;
+        virtual std::unique_ptr<ser_detail::RuntimeObjectState> createRuntimeObjectState() const = 0;
 
         virtual void* getThis() const = 0;
 
     private:
         ser_detail::RuntimeObjectState& getRuntimeObjectState() const
         {
-            if(!m_runtimeObjectState)
+            if (!m_runtimeObjectState)
             {
                 m_runtimeObjectState = createRuntimeObjectState();
                 NAU_FATAL(m_runtimeObjectState);
@@ -78,30 +79,30 @@ namespace nau
             return *m_runtimeObjectState;
         }
 
-        mutable eastl::unique_ptr<ser_detail::RuntimeObjectState> m_runtimeObjectState;
+        mutable std::unique_ptr<ser_detail::RuntimeObjectState> m_runtimeObjectState;
     };
 
 }  // namespace nau
 
-#define NAU_DECLARE_DYNAMIC_OBJECT                                                                      \
-    ::nau::IClassDescriptor::Ptr getClassDescriptor() const override;                                   \
-    eastl::unique_ptr<::nau::ser_detail::RuntimeObjectState> createRuntimeObjectState() const override; \
+#define NAU_DECLARE_DYNAMIC_OBJECT                                                                    \
+    ::nau::IClassDescriptor::Ptr getClassDescriptor() const override;                                 \
+    std::unique_ptr<::nau::ser_detail::RuntimeObjectState> createRuntimeObjectState() const override; \
     void* getThis() const override;
 
-#define NAU_IMPLEMENT_DYNAMIC_OBJECT(Class)                                                          \
-    ::nau::IClassDescriptor::Ptr Class::getClassDescriptor() const                                   \
-    {                                                                                                \
-        return ::nau::getClassDescriptor<Class>();                                                   \
-    }                                                                                                \
-                                                                                                     \
-    eastl::unique_ptr<::nau::ser_detail::RuntimeObjectState> Class::createRuntimeObjectState() const \
-    {                                                                                                \
-        return eastl::make_unique<::nau::ser_detail::RuntimeObjectStateImpl<Class>>();               \
-    }                                                                                                \
-                                                                                                     \
-    void* Class::getThis() const                                                                     \
-    {                                                                                                \
-        using ThisType = std::remove_const_t<std::remove_reference_t<decltype(*this)>>;              \
-        auto mutableThis = const_cast<ThisType*>(this);                                              \
-        return reinterpret_cast<void*>(mutableThis);                                                 \
+#define NAU_IMPLEMENT_DYNAMIC_OBJECT(Class)                                                        \
+    ::nau::IClassDescriptor::Ptr Class::getClassDescriptor() const                                 \
+    {                                                                                              \
+        return ::nau::getClassDescriptor<Class>();                                                 \
+    }                                                                                              \
+                                                                                                   \
+    std::unique_ptr<::nau::ser_detail::RuntimeObjectState> Class::createRuntimeObjectState() const \
+    {                                                                                              \
+        return std::make_unique<::nau::ser_detail::RuntimeObjectStateImpl<Class>>();               \
+    }                                                                                              \
+                                                                                                   \
+    void* Class::getThis() const                                                                   \
+    {                                                                                              \
+        using ThisType = std::remove_const_t<std::remove_reference_t<decltype(*this)>>;            \
+        auto mutableThis = const_cast<ThisType*>(this);                                            \
+        return reinterpret_cast<void*>(mutableThis);                                               \
     }

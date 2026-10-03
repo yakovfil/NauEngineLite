@@ -2,21 +2,20 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "texMgrData.h"
+#include <span>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_tex3d.h"
 #include "nau/3d/dag_texPackMgr2.h"
+#include "nau/3d/tql.h"
 #include "nau/dataBlock/dag_dataBlock.h"
-#include "nau/threading/dag_atomic.h"
 #include "nau/osApiWrappers/dag_cpuJobs.h"
 #include "nau/osApiWrappers/dag_miscApi.h"
-#include "nau/startup/dag_globalSettings.h"
-#include "nau/startup/dag_globalSettings.h"
-
 #include "nau/osApiWrappers/dag_threads.h"
-#include "nau/osApiWrappers/dag_miscApi.h"
-#include "nau/3d/tql.h"
-#include <EASTL/vector_set.h>
+#include "nau/startup/dag_globalSettings.h"
+#include "nau/threading/dag_atomic.h"
+#include "nau/utils/sorted_vector.h"
+#include "texMgrData.h"
 
 #if _TARGET_PC_WIN
 #include <windows.h>
@@ -44,7 +43,7 @@ static int mgr_log_level = 0;
 using texmgr_internal::reload_jobmgr_id;
 using texmgr_internal::RMGR;
 
-static void load_tex_on_usage(eastl::span<const TEXTUREID> tid);
+static void load_tex_on_usage(std::span<const TEXTUREID> tid);
 static void free_up_sys_mem(int mem_to_free_tb, bool force_report = false);
 static void free_up_gpu_mem(int mem_to_free_kb, int actual_quota_kb);
 
@@ -309,7 +308,7 @@ static void on_frame_finished()
   //}
 }
 
-static void load_tex_on_usage(eastl::span<const TEXTUREID> tid)
+static void load_tex_on_usage(std::span<const TEXTUREID> tid)
 {
   using namespace texmgr_internal;
 
@@ -700,7 +699,7 @@ bool texmgr_internal::D3dResMgrDataFinal::downgradeTexQuality(int idx, BaseTextu
 }
 
 // texture prefetch
-bool prefetch_managed_textures(eastl::span<const TEXTUREID> tid)
+bool prefetch_managed_textures(std::span<const TEXTUREID> tid)
 {
   using namespace texmgr_internal;
 
@@ -721,7 +720,10 @@ bool prefetch_managed_textures(eastl::span<const TEXTUREID> tid)
   }
   return ready == tid.size();
 }
-bool prefetch_managed_texture(TEXTUREID tid) { return prefetch_managed_textures(eastl::span<const TEXTUREID>(&tid, 1)); }
+bool prefetch_managed_texture(TEXTUREID tid)
+{
+    return prefetch_managed_textures(std::span<const TEXTUREID>(&tid, 1));
+}
 bool prefetch_managed_textures_by_textag(int textag)
 {
   using namespace texmgr_internal;
@@ -748,7 +750,7 @@ bool prefetch_managed_textures_by_textag(int textag)
   return not_ready == 0;
 }
 
-bool prefetch_and_check_managed_textures_loaded(eastl::span<const TEXTUREID> tex_list, bool fq_loaded)
+bool prefetch_and_check_managed_textures_loaded(std::span<const TEXTUREID> tex_list, bool fq_loaded)
 {
   if (check_all_managed_textures_loaded(tex_list, fq_loaded))
     return true;
@@ -758,8 +760,7 @@ bool prefetch_and_check_managed_textures_loaded(eastl::span<const TEXTUREID> tex
   return (loaded && fq_loaded) ? check_all_managed_textures_loaded(tex_list, fq_loaded) : loaded;
 }
 
-
-void prefetch_and_wait_managed_textures_loaded(eastl::span<const TEXTUREID> tex_list, bool fq_loaded)
+void prefetch_and_wait_managed_textures_loaded(std::span<const TEXTUREID> tex_list, bool fq_loaded)
 {
   int64_t reft = ref_time_ticks();
   unsigned f = dagor_frame_no();

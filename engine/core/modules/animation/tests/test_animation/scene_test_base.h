@@ -3,6 +3,10 @@
 
 
 #pragma once
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_factory.h"
 #include "nau/scene/scene_manager.h"
@@ -33,8 +37,8 @@ namespace nau::test
             return getSceneFactory().createEmptyScene();
         }
 
-        template<std::derived_from<scene::SceneComponent> ComponentType = scene::SceneComponent>
-        static scene::SceneObject::Ptr createObject(eastl::string name = "")
+        template <std::derived_from<scene::SceneComponent> ComponentType = scene::SceneComponent>
+        static scene::SceneObject::Ptr createObject(std::string name = "")
         {
             scene::SceneObject::Ptr newObject = getSceneFactory().createSceneObject<ComponentType>();
             NAU_FATAL(newObject);
@@ -76,9 +80,9 @@ namespace nau::test
             async::TaskSource<> signal;
         };
 
-        eastl::unique_ptr<Application> m_app;
+        std::unique_ptr<Application> m_app;
         unsigned m_stepCounter = 0;
-        eastl::vector<SkipFrameAwaiter> m_frameSkipAwaiters;
+        std::vector<SkipFrameAwaiter> m_frameSkipAwaiters;
     };
 }  // namespace nau::test
 

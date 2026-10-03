@@ -23,13 +23,14 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerAcceleration.h"
 #include "base/CCEventAcceleration.h"
 #include "base/CCConsole.h"
 
 NS_CC_BEGIN
 
-const eastl::string EventListenerAcceleration::LISTENER_ID = "__cc_acceleration";
+const std::string EventListenerAcceleration::LISTENER_ID = "__cc_acceleration";
 
 EventListenerAcceleration::EventListenerAcceleration()
 {

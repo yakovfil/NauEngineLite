@@ -25,6 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCController.h"
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX || CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
@@ -92,7 +93,7 @@ class CC_DLL ControllerImpl
 
 
 			// Create the necessary variables:
-			eastl::string deviceName = "2Axes 11Keys Game  Pad";
+			std::string deviceName = "2Axes 11Keys Game  Pad";
 			std::unordered_map<int,int> buttonInputMap;
 			std::unordered_map<int,int> axisInputMap;
 
@@ -4724,7 +4725,7 @@ class CC_DLL ControllerImpl
 			return iter;
 		}
 
-		static void onConnected(const eastl::string& deviceName, int deviceId)
+		static void onConnected(const std::string& deviceName, int deviceId)
 		{
 			// Check whether the controller is already registered
 			auto iter = findController(deviceId);
@@ -4901,10 +4902,10 @@ class CC_DLL ControllerImpl
 		//provide a mapping from the GLFW gamepad key codes to the
 		//Controller::Key keycodes. So far an std::unordered_map<int,int>
 		//should suffice.
-		static std::map<eastl::string, std::pair< std::unordered_map<int, int>, std::unordered_map<int, int> > > s_controllerProfiles;
+		static std::map<std::string, std::pair< std::unordered_map<int, int>, std::unordered_map<int, int> > > s_controllerProfiles;
 };
 
-std::map<eastl::string, std::pair< std::unordered_map<int, int>, std::unordered_map<int, int> > > ControllerImpl::s_controllerProfiles;
+std::map<std::string, std::pair< std::unordered_map<int, int>, std::unordered_map<int, int> > > ControllerImpl::s_controllerProfiles;
 
 void Controller::startDiscoveryController()
 {

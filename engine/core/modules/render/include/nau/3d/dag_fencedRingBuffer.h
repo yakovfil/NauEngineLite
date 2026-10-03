@@ -3,8 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/deque.h>
 #include <stdint.h>
+
+#include <deque>
+#include <utility>
 
 class D3dEventQuery;
 
@@ -16,7 +18,12 @@ public:
   static constexpr offset_type_t invalid_offset = offset_type_t(~offset_type_t(0));
   struct FrameHeadAttribs
   {
-    FrameHeadAttribs(FenceType &&f, offset_type_t off, offset_type_t sz) : fence(eastl::move(f)), offset(off), size(sz) {}
+      FrameHeadAttribs(FenceType&& f, offset_type_t off, offset_type_t sz) :
+          fence(std::move(f)),
+          offset(off),
+          size(sz)
+      {
+      }
 
     FenceType fence;
     offset_type_t offset;
@@ -25,28 +32,28 @@ public:
 
   FencedRingBuffer(offset_type_t sz) : maxSize(sz) {}
 
-  FencedRingBuffer(FencedRingBuffer &&a) :
-    completedFrameHeads(eastl::move(a.completedFrameHeads)),
-    tail(a.tail),
-    head(a.head),
-    maxSize(a.maxSize),
-    usedSize(a.usedSize),
-    currentFrameSize(a.currentFrameSize)
+  FencedRingBuffer(FencedRingBuffer&& a) :
+      completedFrameHeads(std::move(a.completedFrameHeads)),
+      tail(a.tail),
+      head(a.head),
+      maxSize(a.maxSize),
+      usedSize(a.usedSize),
+      currentFrameSize(a.currentFrameSize)
   {
     a.tail = a.head = a.maxSize = a.usedSize = a.currentFrameSize = 0;
   }
 
   FencedRingBuffer &operator=(FencedRingBuffer &&a) noexcept
   {
-    completedFrameHeads = eastl::move(a.completedFrameHeads);
-    tail = a.tail;
-    head = a.head;
-    maxSize = a.maxSize;
-    usedSize = a.usedSize;
-    currentFrameSize = a.currentFrameSize;
-    a.tail = a.head = a.maxSize = a.usedSize = a.currentFrameSize = 0;
+      completedFrameHeads = std::move(a.completedFrameHeads);
+      tail = a.tail;
+      head = a.head;
+      maxSize = a.maxSize;
+      usedSize = a.usedSize;
+      currentFrameSize = a.currentFrameSize;
+      a.tail = a.head = a.maxSize = a.usedSize = a.currentFrameSize = 0;
 
-    return *this;
+      return *this;
   }
 
   FencedRingBuffer(const FencedRingBuffer &) = delete;
@@ -112,8 +119,8 @@ public:
     // Ignore zero-size frames
     if (currentFrameSize != 0)
     {
-      completedFrameHeads.emplace_back(eastl::move(fv), head, currentFrameSize);
-      currentFrameSize = 0;
+        completedFrameHeads.emplace_back(std::move(fv), head, currentFrameSize);
+        currentFrameSize = 0;
     }
   }
 
@@ -158,11 +165,11 @@ public:
   offset_type_t getCurrentFrameSize() const { return currentFrameSize; }
 
 private:
-  eastl::deque<FrameHeadAttribs> completedFrameHeads;
+    std::deque<FrameHeadAttribs> completedFrameHeads;
 
-  offset_type_t tail = 0;
-  offset_type_t head = 0;
-  offset_type_t maxSize = 0;
-  offset_type_t usedSize = 0;
-  offset_type_t currentFrameSize = 0;
+    offset_type_t tail = 0;
+    offset_type_t head = 0;
+    offset_type_t maxSize = 0;
+    offset_type_t usedSize = 0;
+    offset_type_t currentFrameSize = 0;
 };

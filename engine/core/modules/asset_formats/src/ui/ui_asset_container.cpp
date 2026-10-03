@@ -1,19 +1,22 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "ui_asset_container.h"
 
-#include "EASTL/unique_ptr.h"
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
 #include "nau/assets/ui_asset_accessor.h"
-#include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/dag_ioSys/dag_memIo.h"
-#include "nau/math/math.h"
+#include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/diag/assertion.h"
 #include "nau/math/dag_color.h"
 #include "nau/math/dag_e3dColor.h"
-
-#include <mutex>
+#include "nau/math/math.h"
 
 namespace nau
 {
@@ -29,7 +32,7 @@ namespace nau
             explicit UiStreamAssetAccessor(UiStreamAssetContainer& container);
 
         private:
-            virtual async::Task<> copyUiElements(eastl::vector<UiElementAssetData>& elements) override;
+            virtual async::Task<> copyUiElements(std::vector<UiElementAssetData>& elements) override;
 
             nau::WeakPtr<UiStreamAssetContainer> m_containerRef;
         };
@@ -41,12 +44,12 @@ namespace nau
         public:
             UiStreamAssetContainer(io::IStreamReader::Ptr stream);
 
-            virtual async::Task<> copyUiElements(eastl::vector<UiElementAssetData>& elements);
+            virtual async::Task<> copyUiElements(std::vector<UiElementAssetData>& elements);
 
         private:
-            nau::Ptr<> getAsset(eastl::string_view path) override;
+            nau::Ptr<> getAsset(std::string_view path) override;
 
-            eastl::vector<eastl::string> getContent() const override;
+            std::vector<std::string> getContent() const override;
 
         private:
             std::mutex m_mutex;
@@ -63,7 +66,7 @@ namespace nau
             m_size = stream->getPosition();
             stream->setPosition(io::OffsetOrigin::Begin, prevPosition);
 
-            eastl::u8string blkStr;
+            std::u8string blkStr;
             blkStr.resize(m_size);
 
             lock_(m_mutex);
@@ -75,19 +78,19 @@ namespace nau
             }
         }
 
-        static eastl::unordered_map<eastl::string, UiElementType> g_string_to_ui_element_type = {
-            {"label",     UiElementType::Label},
-            {"button",    UiElementType::Button}, 
-            {"draw_node", UiElementType::DrawNode}, 
-            {"layer",     UiElementType::Layer}, 
-            {"node",      UiElementType::Node}, 
-            {"scroll",    UiElementType::Scroll}, 
-            {"sprite",    UiElementType::Sprite}, 
+        static std::unordered_map<std::string, UiElementType> g_string_to_ui_element_type = {
+            {    "label",    UiElementType::Label},
+            {   "button",   UiElementType::Button},
+            {"draw_node", UiElementType::DrawNode},
+            {    "layer",    UiElementType::Layer},
+            {     "node",     UiElementType::Node},
+            {   "scroll",   UiElementType::Scroll},
+            {   "sprite",   UiElementType::Sprite},
         };
 
         UiElementType parseElementType(const char* value)
         {
-            const eastl::string stringType(value);
+            const std::string stringType(value);
             auto it = g_string_to_ui_element_type.find(value);
             if (it != g_string_to_ui_element_type.end())
             {
@@ -114,7 +117,7 @@ namespace nau
             }
         }
 
-        void readElements(DataBlock& blk, eastl::vector<UiElementAssetData>& elements)
+        void readElements(DataBlock& blk, std::vector<UiElementAssetData>& elements)
         {
             const int elemNameId = blk.getNameId("element");
             for (int i = 0, c = blk.blockCount(); i < c; ++i)
@@ -159,7 +162,7 @@ namespace nau
                 { 
                     case UiElementType::Label:
                     {
-                        auto customData = eastl::make_unique<NauLabelAssetData>();
+                        auto customData = std::make_unique<NauLabelAssetData>();
 
                         if (auto* customDataBlock = elementBlock->getBlockByName("label_data"))
                         {
@@ -172,7 +175,7 @@ namespace nau
                     }
                     case UiElementType::Button:
                     {
-                        auto customData = eastl::make_unique<NauButtonAssetData>();
+                        auto customData = std::make_unique<NauButtonAssetData>();
 
                         if (auto* customDataBlock = elementBlock->getBlockByName("button_data"))
                         {
@@ -187,7 +190,7 @@ namespace nau
                     }
                     case UiElementType::Sprite:
                     {
-                        auto customData = eastl::make_unique<SpriteAssetData>();
+                        auto customData = std::make_unique<SpriteAssetData>();
 
                         if (auto* customDataBlock = elementBlock->getBlockByName("sprite_data"))
                         {
@@ -198,7 +201,7 @@ namespace nau
                     }
                     case UiElementType::DrawNode:
                     {
-                        auto customData = eastl::make_unique<DrawNodeAssetData>();
+                        auto customData = std::make_unique<DrawNodeAssetData>();
                         if (DataBlock* customBlk = elementBlock->getBlockByName("draw_polygon"))
                         {
                             customData->drawPolygon.points[0] = customBlk->getPoint2("point0");
@@ -229,7 +232,7 @@ namespace nau
                     }
                     case UiElementType::Scroll:
                     {
-                        auto customData = eastl::make_unique<ScrollAssetData>();
+                        auto customData = std::make_unique<ScrollAssetData>();
                         customData->scrollType = "vertical";
                         if (DataBlock* customBlk = elementBlock->getBlockByName("scroll_data"))
                         {
@@ -250,7 +253,7 @@ namespace nau
             }
         }
 
-        async::Task<> UiStreamAssetContainer::copyUiElements(eastl::vector<UiElementAssetData>& elements)
+        async::Task<> UiStreamAssetContainer::copyUiElements(std::vector<UiElementAssetData>& elements)
         {
             lock_(m_mutex);
             readElements(m_sceneBlk, elements);
@@ -258,12 +261,12 @@ namespace nau
             return async::Task<>::makeResolved();
         }
 
-        nau::Ptr<> UiStreamAssetContainer::getAsset(eastl::string_view path)
+        nau::Ptr<> UiStreamAssetContainer::getAsset(std::string_view path)
         {
             return rtti::createInstance<UiStreamAssetAccessor>(*this);
         }
 
-        eastl::vector<eastl::string> UiStreamAssetContainer::getContent() const
+        std::vector<std::string> UiStreamAssetContainer::getContent() const
         {
             return {};
         }
@@ -273,7 +276,7 @@ namespace nau
         {
         }
 
-        async::Task<> UiStreamAssetAccessor::copyUiElements(eastl::vector<UiElementAssetData>& elements)
+        async::Task<> UiStreamAssetAccessor::copyUiElements(std::vector<UiElementAssetData>& elements)
         {
             nau::Ptr<UiStreamAssetContainer> container = m_containerRef.lock();
             NAU_ASSERT(container, "Invalid logic, asset accessor can not live longer that host container");
@@ -287,7 +290,7 @@ namespace nau
         }
     } // anonymous namespace
 
-    eastl::vector<eastl::string_view> UiAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> UiAssetContainerLoader::getSupportedAssetKind() const
     {
         return { "UI/*", "nui", "" };
     }

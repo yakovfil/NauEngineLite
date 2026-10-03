@@ -5,8 +5,7 @@
 
 #include "nau/dataBlock/dag_dataBlock.h"
 //#include <util/dag_string.h>
-#include <EASTL/string_view.h>
-
+#include <string_view>
 
 namespace drv3d_dx12
 {

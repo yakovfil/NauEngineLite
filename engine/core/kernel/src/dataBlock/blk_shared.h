@@ -5,13 +5,15 @@
 
 #include <nau/dataBlock/dag_dataBlock.h>
 #include <nau/utils/dag_oaHashNameMap.h>
+
+#include <string>
+#include <vector>
 // #include <memory/dag_fixedBlockAllocator.h>
 #include <nau/threading/dag_atomic.h>
 #include <nau/utils/dag_oaHashNameMap.h>
 
 #include <atomic>
 
-#include "EASTL/internal/char_traits.h"
 #include "nau/memory/mem_allocator.h"
 
 namespace nau
@@ -68,7 +70,7 @@ namespace nau
 
     struct DataBlockOwned  // not thread safe
     {
-        eastl::vector<char> data;
+        std::vector<char> data;
 
     public:
         uint32_t allocate(uint32_t sz)
@@ -100,12 +102,14 @@ namespace nau
         char* insertAt(uint32_t at, uint32_t n)
         {
             NAU_ASSERT(data.size() >= at, "sz {} at {} n {}", data.size(), at, n);
-            return data.insert(data.begin() + at, n);
+            data.insert(data.begin() + at, n, char());
+            return data.data() + at;
         }
         char* insertAt(uint32_t at, uint32_t n, const char* v)
         {
             NAU_ASSERT(data.size() >= at, "sz {} at {} n {}", data.size(), at, n);
-            auto ret = data.insert(data.begin() + at, n, char());
+            data.insert(data.begin() + at, n, char());
+            auto ret = data.data() + at;
             memcpy(ret, v, n);
             return ret;
         }
@@ -133,17 +137,17 @@ namespace nau
         {
             auto hash = DBNameMap::string_hash(reinterpret_cast<const char*>(name), name_len);
             const int roc = !ro ? 0 : ro->nameCount();
-            if(rw.nameCount())
+            if (rw.nameCount())
             {
                 int id = rw.getNameId(reinterpret_cast<const char*>(name), name_len, hash);
-                if(id >= 0)
+                if (id >= 0)
                     return id + roc;
             }
             return roc ? ro->getNameId(reinterpret_cast<const char*>(name), name_len, hash) : -1;  //-V1004
         }
         int getNameId(const char* name) const
         {
-            return getNameId(name, eastl::CharStrlen(name));
+            return getNameId(name, std::char_traits<char>::length(name));
         }
 
         int addNameId(const char* name, size_t name_len)
@@ -151,13 +155,13 @@ namespace nau
             auto hash = DBNameMap::string_hash(reinterpret_cast<const char*>(name), name_len);
             const int roc = !ro ? 0 : ro->nameCount();
             int id = roc ? ro->getNameId(reinterpret_cast<const char*>(name), name_len, hash) : -1;  //-V1004
-            if(id >= 0)
+            if (id >= 0)
                 return id;
             return rw.addNameId(reinterpret_cast<const char*>(name), name_len, hash) + roc;
         }
         int addNameId(const char* name)
         {
-            return addNameId(name, eastl::CharStrlen(name));
+            return addNameId(name, std::char_traits<char>::length(name));
         }
 
         DataBlock* getBlock(uint32_t i)
@@ -348,7 +352,7 @@ namespace nau
         Param p;
         p.nameId = name_id;
         p.type = type;
-        if(type_sz <= INPLACE_PARAM_SIZE)
+        if (type_sz <= INPLACE_PARAM_SIZE)
         {
             NAU_STATIC_ASSERT(INPLACE_PARAM_SIZE == sizeof(Param::v));
             p.v = 0;

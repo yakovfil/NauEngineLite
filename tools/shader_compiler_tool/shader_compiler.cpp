@@ -1,18 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "shader_compiler.h"
+
+#include <comdef.h>
+#include <d3d12shader.h>
+#include <dxcapi.h>
+#include <wrl.h>
 
 #include <format>
 #include <fstream>
+#include <string>
+#include <string_view>
 #include <unordered_set>
-
-#include <d3d12shader.h>
-#include <dxcapi.h>
-
-#include <comdef.h>
-#include <wrl.h>
 
 #ifndef _UNICODE
     #define NAU_TCHAR_ERROR(handle)                                                         \
@@ -185,7 +185,7 @@ namespace nau
 
             for (auto i = 0; i < typeDesc.Members; ++i)
             {
-                const eastl::string memberName = type->GetMemberTypeName(i);
+                const std::string memberName = type->GetMemberTypeName(i);
                 ID3D12ShaderReflectionType* memberType = type->GetMemberTypeByIndex(i);
 
                 auto memberTypeDesc = getVariableTypeDescription(memberType);
@@ -525,7 +525,7 @@ namespace nau
                     NAU_TCHAR_ERROR(result);
                 }
 
-                if (eastl::string_view(d3d12Desc.SemanticName).starts_with("SV_"))
+                if (std::string_view(d3d12Desc.SemanticName).starts_with("SV_"))
                 {
                     continue;
                 }

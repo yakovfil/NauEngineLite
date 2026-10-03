@@ -4,13 +4,16 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "gltf/gltf_file.h"
 #include "nau/assets/asset_container.h"
+#include "nau/assets/scene_asset.h"
 #include "nau/io/stream.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/scene.h"
-
-#include "nau/assets/scene_asset.h"
 
 namespace nau::scene
 {
@@ -30,12 +33,12 @@ namespace nau
         GltfAssetContainer(GltfFile gltfFile, const io::FsPath& filePath);
 
     private:
-        nau::Ptr<> getAsset(eastl::string_view path) override;
+        nau::Ptr<> getAsset(std::string_view path) override;
 
-        eastl::vector<eastl::string> getContent() const override;
+        std::vector<std::string> getContent() const override;
 
         GltfFile m_gltfFile;
-        eastl::vector<io::IFile::Ptr> m_bufferFiles;
+        std::vector<io::IFile::Ptr> m_bufferFiles;
         const io::FsPath m_gltfFilePath;
     };
 
@@ -49,8 +52,7 @@ namespace nau
         GltfAssetContainerLoader() = default;
 
     private:
-
-        eastl::vector<eastl::string_view> getSupportedAssetKind() const override;
+        std::vector<std::string_view> getSupportedAssetKind() const override;
 
         async::Task<IAssetContainer::Ptr> loadFromStream(io::IStreamReader::Ptr stream, AssetContentInfo info) override;
 

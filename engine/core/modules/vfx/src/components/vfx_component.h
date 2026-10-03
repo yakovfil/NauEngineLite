@@ -3,13 +3,15 @@
 
 #pragma once
 
+#include <filesystem>
+#include <string>
+
+#include "../vfx_mod_fx_instance.h"
+#include "nau/assets/reloadable_asset_view.h"
 #include "nau/meta/class_info.h"
 #include "nau/rtti/ptr.h"
 #include "nau/scene/components/component_life_cycle.h"
 #include "nau/scene/components/scene_component.h"
-#include "../vfx_mod_fx_instance.h"
-#include "nau/assets/reloadable_asset_view.h"
-#include <filesystem>
 
 namespace nau::vfx
 {
@@ -39,15 +41,15 @@ namespace nau::vfx
         virtual void updateComponent(float dt) override;
 
     public:
-        void setAssetPath(const eastl::string& assetPath);
-        
+        void setAssetPath(const std::string& assetPath);
+
         void forceUpdateTexture(ReloadableAssetView::Ptr texture);
         void forceBLKUpdate();
         void forcePositionUpdate();
 
     private:
         std::filesystem::path dbPath();
-        eastl::string resolvePath(const eastl::string& assetPath);
+        std::string resolvePath(const std::string& assetPath);
 
     private:
         std::shared_ptr<nau::vfx::modfx::VFXModFXInstance> m_vfxInstance;
@@ -57,7 +59,7 @@ namespace nau::vfx
 
         nau::MaterialAssetRef defaultMaterialRef{"file:/res/materials/vfx.nmat_json"};
 
-        eastl::string m_assetPath;
-        eastl::string m_cachedAssetPath;
+        std::string m_assetPath;
+        std::string m_cachedAssetPath;
     };
 }  // namespace nau::vfx

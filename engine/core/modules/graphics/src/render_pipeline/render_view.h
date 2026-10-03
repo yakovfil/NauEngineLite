@@ -4,21 +4,23 @@
 
 #pragma once
 
-#include <EASTL/vector.h>
+#include <functional>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "graphics_assets/material_asset.h"
+#include "instance_group.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/math/dag_frustum.h"
-#include "graphics_assets/material_asset.h"
 #include "render_list.h"
-#include "instance_group.h"
-
 
 namespace nau
 {
     class RenderView
     {
     public:
-        RenderView(eastl::string_view viewName);
+        RenderView(std::string_view viewName);
         virtual ~RenderView();
 
         void addRenderList(RenderList::Ptr list);
@@ -45,22 +47,21 @@ namespace nau
         void setUserData(void* userData);
         void* getUserData();
 
+        std::function<bool(const InstanceInfo&)>& getInstanceFilter();
+        void setInstanceFilter(std::function<bool(const InstanceInfo&)>& filter);
 
-        eastl::function<bool(const InstanceInfo&)>& getInstanceFilter();
-        void setInstanceFilter(eastl::function<bool(const InstanceInfo&)>& filter);
-
-        eastl::function<bool(const MaterialAssetView::Ptr)>& getMaterialFilter();
-        void setMaterialFilter(eastl::function<bool(const MaterialAssetView::Ptr)>& filter);
+        std::function<bool(const MaterialAssetView::Ptr)>& getMaterialFilter();
+        void setMaterialFilter(std::function<bool(const MaterialAssetView::Ptr)>& filter);
 
     protected:
-        eastl::string m_viewName;
+        std::string m_viewName;
         nau::math::NauFrustum m_frustum;
         Sbuffer* m_instanceData = nullptr;
         uint32_t m_maxInstancesCount = 0;
-        eastl::vector<RenderList::Ptr> m_lists = {};
+        std::vector<RenderList::Ptr> m_lists = {};
 
-        eastl::function<bool(const InstanceInfo&)> m_instanceFilter;
-        eastl::function<bool(const MaterialAssetView::Ptr)> m_materialFilter;
+        std::function<bool(const InstanceInfo&)> m_instanceFilter;
+        std::function<bool(const MaterialAssetView::Ptr)> m_materialFilter;
 
         RenderTags m_tags;
 

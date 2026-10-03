@@ -4,7 +4,11 @@
 #pragma once
 
 #include <memory.h>
-#include <EASTL/functional.h>
+
+#include <functional>
+#include <type_traits>
+#include <utility>
+
 #include "componentType.h"
 
 namespace ecs
@@ -64,16 +68,16 @@ public:
   EntityComponentRef &operator=(const T &v)
   {
     NAU_ASSERT_RETURN(is<T>(), *this);
-    PtrComponentType<typename eastl::remove_const<typename eastl::remove_reference<T>::type>::type>::ref(getRawData()) = v;
+    PtrComponentType<typename std::remove_const<typename std::remove_reference<T>::type>::type>::ref(getRawData()) = v;
     return *this;
   }
 
-  template <typename T, typename = eastl::enable_if_t<eastl::is_rvalue_reference<T &&>::value, void>>
-  EntityComponentRef &operator=(T &&v)
+  template <typename T, typename = std::enable_if_t<std::is_rvalue_reference<T&&>::value, void>>
+  EntityComponentRef& operator=(T&& v)
   {
     NAU_ASSERT_RETURN(is<T>(), *this);
-    PtrComponentType<typename eastl::remove_const<typename eastl::remove_reference<T>::type>::type>::ref(getRawData()) =
-      eastl::move(v);
+    PtrComponentType<typename std::remove_const<typename std::remove_reference<T>::type>::type>::ref(getRawData()) =
+        std::move(v);
     return *this;
   }
   bool isNull() const { return componentType == 0; }
@@ -115,7 +119,7 @@ struct ComponentTypeInfo<EntityComponentRef>
 {
   static constexpr bool is_boxed = false;
   static constexpr size_t ref_alignment =
-    ecs_data_alignment(sizeof(eastl::type_select<is_defined<EntityComponentRef>, EntityComponentRef, char>::type));
+      ecs_data_alignment(sizeof(std::conditional<is_defined<EntityComponentRef>, EntityComponentRef, char>::type));
   ;
 };
 

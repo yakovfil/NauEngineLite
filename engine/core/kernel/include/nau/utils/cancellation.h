@@ -1,12 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #pragma once
 
-#include <optional>
 #include <chrono>
-#include "EASTL/shared_ptr.h"
+#include <memory>
+#include <optional>
 
 #include "nau/kernel/kernel_config.h"
 
@@ -33,20 +32,20 @@ namespace nau
 
         CancellationSubscription(const CancellationSubscription&) = delete;
 
-        CancellationSubscription& operator= (CancellationSubscription&&);
+        CancellationSubscription& operator=(CancellationSubscription&&);
 
-        CancellationSubscription& operator= (const CancellationSubscription&) = delete;
+        CancellationSubscription& operator=(const CancellationSubscription&) = delete;
 
-        CancellationSubscription& operator= (std::nullptr_t);
+        CancellationSubscription& operator=(std::nullptr_t);
 
-        explicit operator bool () const;
+        explicit operator bool() const;
 
         void reset();
 
     private:
-        CancellationSubscription(eastl::shared_ptr<rt_detail::CancellationState>, uintptr_t);
+        CancellationSubscription(std::shared_ptr<rt_detail::CancellationState>, uintptr_t);
 
-        eastl::shared_ptr<rt_detail::CancellationState> m_cancellation;
+        std::shared_ptr<rt_detail::CancellationState> m_cancellation;
         uintptr_t m_subscriptionHandle = 0;
 
         friend class Cancellation;
@@ -65,18 +64,18 @@ namespace nau
 
         ExpirationSubscription(const ExpirationSubscription&) = delete;
 
-        ExpirationSubscription& operator= (ExpirationSubscription&&);
+        ExpirationSubscription& operator=(ExpirationSubscription&&);
 
-        ExpirationSubscription& operator= (const ExpirationSubscription&) = delete;
+        ExpirationSubscription& operator=(const ExpirationSubscription&) = delete;
 
-        explicit operator bool () const;
+        explicit operator bool() const;
 
         void reset();
 
     private:
-        ExpirationSubscription(eastl::shared_ptr<rt_detail::ExpirationState>, uintptr_t);
+        ExpirationSubscription(std::shared_ptr<rt_detail::ExpirationState>, uintptr_t);
 
-        eastl::shared_ptr<rt_detail::ExpirationState> m_expiration;
+        std::shared_ptr<rt_detail::ExpirationState> m_expiration;
         uintptr_t m_subscriptionHandle = 0;
 
         friend class Expiration;
@@ -101,9 +100,9 @@ namespace nau
 
         Cancellation(const Cancellation&);
 
-        Cancellation& operator= (Cancellation&&);
+        Cancellation& operator=(Cancellation&&);
 
-        Cancellation& operator= (const Cancellation&);
+        Cancellation& operator=(const Cancellation&);
 
         bool isCancelled() const;
 
@@ -112,9 +111,9 @@ namespace nau
         CancellationSubscription subscribe(void (*callback)(void*), void* callbackData);
 
     private:
-        Cancellation(eastl::shared_ptr<rt_detail::CancellationState> token);
+        Cancellation(std::shared_ptr<rt_detail::CancellationState> token);
 
-        eastl::shared_ptr<rt_detail::CancellationState> m_cancellation;
+        std::shared_ptr<rt_detail::CancellationState> m_cancellation;
 
         friend class CancellationSource;
         friend class Expiration;
@@ -135,11 +134,11 @@ namespace nau
 
         CancellationSource(const CancellationSource&) = delete;
 
-        CancellationSource& operator= (CancellationSource&&);
+        CancellationSource& operator=(CancellationSource&&);
 
-        CancellationSource& operator= (const CancellationSource&) = delete;
+        CancellationSource& operator=(const CancellationSource&) = delete;
 
-        explicit operator bool () const;
+        explicit operator bool() const;
 
         Cancellation getCancellation();
 
@@ -152,13 +151,13 @@ namespace nau
         {
             using namespace std::chrono;
 
-            setTimeoutInternal(duration_cast<milliseconds>(timeout));
+            SetTimeoutInternal(duration_cast<milliseconds>(timeout));
         }
 
     private:
         void SetTimeoutInternal(std::chrono::milliseconds);
 
-        eastl::shared_ptr<rt_detail::CancellationState> m_cancellation;
+        std::shared_ptr<rt_detail::CancellationState> m_cancellation;
     };
 
     /**
@@ -185,7 +184,7 @@ namespace nau
     private:
         Expiration();
 
-        eastl::shared_ptr<rt_detail::ExpirationState> m_expiration;
+        std::shared_ptr<rt_detail::ExpirationState> m_expiration;
     };
 
 }  // namespace nau

@@ -12,6 +12,7 @@
 
 #include "nau/3d/dag_render.h"
 #include "nau/image/dag_texPixel.h"
+#include "nau/memory/heap_byte_allocator.h"
 
 constexpr int NUM_VERTEX_CHANNELS = 3;
 
@@ -41,7 +42,7 @@ void DagImGuiRenderer::createAndSetFontTexture(ImGuiIO& io)
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-    eastl::allocator tmpAlloc;
+    nau::HeapByteAllocator tmpAlloc;
     TexImage32* img = TexImage32::create(width, height, &tmpAlloc);
     memcpy(img->getPixels(), pixels, width * height * 4);
     fontTex = d3d::create_tex(img, width, height, TEXFMT_R8G8B8A8, 1, u8"imgui_font");

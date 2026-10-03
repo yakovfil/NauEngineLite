@@ -3,9 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "drv3d_commonCode/value_range.h"
-#include "drv3d_commonCode/free_list_utils.h"
+#include <algorithm>
+#include <span>
+#include <utility>
+#include <vector>
 
+#include "drv3d_commonCode/free_list_utils.h"
+#include "drv3d_commonCode/value_range.h"
 #include "nau/osApiWrappers/dag_miscApi.h"
 
 #if _TARGET_XBOX
@@ -45,7 +49,7 @@ class TextureImageFactory : public RaytraceAccelerationStructureObjectProvider
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<Image *> deletedImages;
+      std::vector<Image*> deletedImages;
   };
 
   void completeFrameExecution(const CompletedFrameExecutionInfo &info, PendingForCompletedFrameData &data)
@@ -67,7 +71,7 @@ public:
   }
 
 protected:
-  void destroyTextures(eastl::span<Image *> textures);
+    void destroyTextures(std::span<Image*> textures);
 };
 
 class AliasHeapProvider : public TextureImageFactory
@@ -82,8 +86,8 @@ class AliasHeapProvider : public TextureImageFactory
       COUNT
     };
     ResourceMemory memory;
-    eastl::vector<Image *> images;
-    eastl::vector<BufferGlobalId> buffers;
+    std::vector<Image*> images;
+    std::vector<BufferGlobalId> buffers;
     TypedBitSet<Flag> flags;
 #if _TARGET_XBOX
     HANDLE heapRegHandle = nullptr;
@@ -110,10 +114,10 @@ class AliasHeapProvider : public TextureImageFactory
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<::ResourceHeap *> deletedResourceHeaps;
+      std::vector<::ResourceHeap*> deletedResourceHeaps;
   };
 
-  ContainerMutexWrapper<eastl::vector<AliasHeap>, nau::threading::SpinLock> aliasHeaps;
+  ContainerMutexWrapper<std::vector<AliasHeap>, nau::threading::SpinLock> aliasHeaps;
 
   uint32_t adoptMemoryAsAliasHeap(ResourceMemory memory);
 
@@ -151,8 +155,8 @@ public:
   ResourceMemory getUserHeapMemory(::ResourceHeap *heap);
 
 protected:
-  bool detachTextures(eastl::span<Image *> textures);
-  void processAutoFree();
+    bool detachTextures(std::span<Image*> textures);
+    void processAutoFree();
 
 public:
   BufferState placeBufferInHeap(ID3D12Device *device, ::ResourceHeap *heap, const ResourceDescription &desc, size_t offset,
@@ -174,7 +178,7 @@ class ScratchBufferProvider : public AliasHeapProvider
 protected:
   struct PendingForCompletedFrameData : BaseType::PendingForCompletedFrameData
   {
-    eastl::vector<BasicBuffer> deletedScratchBuffers;
+      std::vector<BasicBuffer> deletedScratchBuffers;
   };
 
   struct TempScratchBufferState
@@ -194,10 +198,13 @@ protected:
       // out of space
       if (buffer)
       {
-        heap->accessRecodingPendingFrameCompletion<ScratchBufferProvider::PendingForCompletedFrameData>(
-          [&](auto &data) { data.deletedScratchBuffers.push_back(eastl::move(buffer)); });
+          heap->accessRecodingPendingFrameCompletion<ScratchBufferProvider::PendingForCompletedFrameData>(
+              [&](auto& data)
+          {
+              data.deletedScratchBuffers.push_back(std::move(buffer));
+          });
 
-        buffer = {};
+          buffer = {};
       }
 
       while (nextSize < size)
@@ -353,23 +360,26 @@ class SamplerDescriptorProvider : public ScratchBufferProvider
 
   struct State
   {
-    eastl::vector<SamplerInfo> samplers;
-    DescriptorHeap<SamplerStagingPolicy> descriptors;
+      std::vector<SamplerInfo> samplers;
+      DescriptorHeap<SamplerStagingPolicy> descriptors;
 
-    eastl::vector<SamplerInfo>::const_iterator get(ID3D12Device *device, SamplerState state)
-    {
-      auto ref = eastl::find_if(begin(samplers), end(samplers), [state](auto &info) { return state == info.state; });
-      if (ref == end(samplers))
+      std::vector<SamplerInfo>::const_iterator get(ID3D12Device* device, SamplerState state)
       {
-        SamplerInfo sampler{descriptors.allocate(device), state};
+          auto ref = std::find_if(begin(samplers), end(samplers), [state](auto& info)
+          {
+              return state == info.state;
+          });
+          if (ref == end(samplers))
+          {
+              SamplerInfo sampler{descriptors.allocate(device), state};
 
-        D3D12_SAMPLER_DESC desc = state.asDesc();
-        device->CreateSampler(&desc, sampler.sampler);
+              D3D12_SAMPLER_DESC desc = state.asDesc();
+              device->CreateSampler(&desc, sampler.sampler);
 
-        ref = samplers.insert(ref, sampler);
+              ref = samplers.insert(ref, sampler);
+          }
+          return ref;
       }
-      return ref;
-    }
   };
   ContainerMutexWrapper<State, nau::threading::SpinLock> samplers;
 

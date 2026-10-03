@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <tuple>
+
 #include "nau/io/memory_stream.h"
 #include "nau/serialization/runtime_value.h"
 
@@ -23,7 +26,7 @@ namespace nau::io
      * @param containerData A shared pointer to `RuntimeValue` containing the container data.
      */
     NAU_KERNEL_EXPORT
-    void writeContainerHeader(IStreamWriter::Ptr outputStream, eastl::string_view kind, const RuntimeValue::Ptr& containerData);
+    void writeContainerHeader(IStreamWriter::Ptr outputStream, std::string_view kind, const RuntimeValue::Ptr& containerData);
 
     /**
      * @brief Reads the header for a container from the input stream.
@@ -37,5 +40,5 @@ namespace nau::io
      *         - `size_t`: The offset of the header data.
      */
     NAU_KERNEL_EXPORT
-    Result<eastl::tuple<RuntimeValue::Ptr, size_t>> readContainerHeader(IStreamReader::Ptr stream);
+    Result<std::tuple<RuntimeValue::Ptr, size_t>> readContainerHeader(IStreamReader::Ptr stream);
 }  // namespace nau::io

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #pragma once
+#include <optional>
+
 #include "nau/async/task_base.h"
 #include "nau/async/work_queue.h"
 #include "nau/dispatch/class_descriptor.h"
@@ -34,7 +36,7 @@ namespace nau
         async::Task<> m_executionTask;
         std::atomic<bool> m_isAlive = false;
         std::atomic<bool> m_isShutdownCompleted = false;
-        eastl::optional<threading::Event> m_initSignal;
+        std::optional<threading::Event> m_initSignal;
         IRttiObject* m_gameSystemInstance = nullptr;
     };
 

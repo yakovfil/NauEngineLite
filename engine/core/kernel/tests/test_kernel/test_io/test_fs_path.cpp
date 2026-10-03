@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include <filesystem>
 #include <string_view>
 
@@ -235,7 +234,7 @@ namespace nau::test
     {
         static_assert(StringParsable<FsPath>);
 
-        eastl::u8string_view json =
+        std::u8string_view json =
             u8R"--(
             {
                 "path1": "/path1/path2/",

@@ -1,21 +1,22 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "animation_helper.h"
 
+#include <string>
+
+#include "nau/animation/controller/animation_controller_blend.h"
+#include "nau/animation/controller/animation_controller_direct.h"
 #include "nau/animation/data/events.h"
 #include "nau/animation/playback/animation_instance.h"
 #include "nau/animation/playback/animation_skeleton.h"
-#include "nau/animation/controller/animation_controller_direct.h"
-#include "nau/animation/controller/animation_controller_blend.h"
 #include "nau/messaging/messaging.h"
 #include "nau/scene/scene_object.h"
 
 namespace nau::animation
 {
 
-    void AnimationHelper::broadcastFrameEvent(scene::SceneObject* owner, AnimationInstance* trackPlayer, const eastl::string& message)
+    void AnimationHelper::broadcastFrameEvent(scene::SceneObject* owner, AnimationInstance* trackPlayer, const std::string& message)
     {
         if (owner && trackPlayer)
         { 
@@ -31,7 +32,7 @@ namespace nau::animation
         }
     }
 
-    nau::Ptr<AnimationController> AnimationHelper::createAnimationController(const eastl::string& className)
+    nau::Ptr<AnimationController> AnimationHelper::createAnimationController(const std::string& className)
     {
         if (className == "direct")
         {

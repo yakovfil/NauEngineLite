@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/3d/dag_fencedRingBuffer.h"
+#include <utility>
+
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3dReset.h"
+#include "nau/3d/dag_fencedRingBuffer.h"
 
 class GPUEventRingBuffer
 {
@@ -21,8 +23,8 @@ public:
     EventQuery(EventQuery &&a) : q(a.q) { a.q = nullptr; }
     EventQuery &operator=(EventQuery &&a)
     {
-      eastl::swap(q, a.q);
-      return *this;
+        std::swap(q, a.q);
+        return *this;
     }
     EventQuery(const EventQuery &a) = delete;
     EventQuery &operator=(const EventQuery &a) = delete;

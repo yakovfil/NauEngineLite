@@ -3,12 +3,10 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/type_traits.h>
-
-#include "render/daBfg/detail/virtualResourceHandleBase.h"
+#include <type_traits>
 
 #include "nau/3d/dag_resPtr.h"
-
+#include "render/daBfg/detail/virtualResourceHandleBase.h"
 
 namespace dabfg
 {
@@ -20,7 +18,7 @@ enum class ResourceRequestPolicy : uint32_t;
 
 #ifndef DOXYGEN
 // TODO: Replace this hackyness with constraints as soon as C++20 drops
-#define REQUIRE(...) template <class Dummy1 = void, class = typename eastl::enable_if<(__VA_ARGS__), Dummy1>::type>
+    #define REQUIRE(...) template <class Dummy1 = void, class = typename std::enable_if<(__VA_ARGS__), Dummy1>::type>
 #else
 #define REQUIRE(...)
 #endif
@@ -48,8 +46,8 @@ class VirtualResourceHandle
 
   using Base = detail::VirtualResourceHandleBase;
 
-  using ResNoConst = eastl::remove_cvref_t<Res>;
-  using View = eastl::conditional_t<gpu, ManagedResView<ManagedRes<ResNoConst>>, BlobView>;
+  using ResNoConst = std::remove_cvref_t<Res>;
+  using View = std::conditional_t<gpu, ManagedResView<ManagedRes<ResNoConst>>, BlobView>;
 
   VirtualResourceHandle(detail::ResUid resId, const ResourceProvider *prov) : Base{resId, prov} {}
 
@@ -78,17 +76,17 @@ public:
    */
   Res *get() const &
   {
-    if constexpr (eastl::is_base_of_v<BaseTexture, ResNoConst>)
-      return Base::getResourceView<View>().getBaseTex();
-    else if constexpr (eastl::is_base_of_v<Sbuffer, ResNoConst>)
-      return Base::getResourceView<View>().getBuf();
-    else
-    {
-      auto view = Base::getResourceView<View>();
-      NAU_ASSERT((view.data != nullptr && view.typeTag == tag_for<ResNoConst>()) ||
-               (view.data == nullptr && view.typeTag == ResourceSubtypeTag::Invalid)); // sanity check
-      return reinterpret_cast<ResNoConst *>(view.data);
-    }
+      if constexpr (std::is_base_of_v<BaseTexture, ResNoConst>)
+          return Base::getResourceView<View>().getBaseTex();
+      else if constexpr (std::is_base_of_v<Sbuffer, ResNoConst>)
+          return Base::getResourceView<View>().getBuf();
+      else
+      {
+          auto view = Base::getResourceView<View>();
+          NAU_ASSERT((view.data != nullptr && view.typeTag == tag_for<ResNoConst>()) ||
+                     (view.data == nullptr && view.typeTag == ResourceSubtypeTag::Invalid));  // sanity check
+          return reinterpret_cast<ResNoConst*>(view.data);
+      }
   }
 
   /**
@@ -113,10 +111,10 @@ public:
   {
     // Pet peeve: why tf do different managed res holders have different
     // getter calls but no common one for templated cases?
-    if constexpr (eastl::is_base_of_v<BaseTexture, ResNoConst>)
-      return Base::getResourceView<View>().getTexId();
-    else if constexpr (eastl::is_base_of_v<Sbuffer, ResNoConst>)
-      return Base::getResourceView<View>().getBufId();
+    if constexpr (std::is_base_of_v<BaseTexture, ResNoConst>)
+        return Base::getResourceView<View>().getTexId();
+    else if constexpr (std::is_base_of_v<Sbuffer, ResNoConst>)
+        return Base::getResourceView<View>().getBufId();
     else
       return BAD_D3DRESID;
   }

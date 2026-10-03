@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "render/daBfg/detail/bfg.h"
+#include <utility>
 
+#include "render/daBfg/detail/bfg.h"
 
 namespace dabfg
 {
@@ -30,7 +31,10 @@ public:
   NodeHandle &operator=(const NodeHandle &) = delete;
 
   /// Move constructor.
-  NodeHandle(NodeHandle &&other) : uid{eastl::exchange(other.uid, detail::NodeUid{})} {}
+  NodeHandle(NodeHandle&& other) :
+      uid{std::exchange(other.uid, detail::NodeUid{})}
+  {
+  }
 
   /// Move assignment operator.
   NodeHandle &operator=(NodeHandle &&other)
@@ -41,7 +45,7 @@ public:
     if (uid.valid)
       detail::unregister_node(uid);
 
-    uid = eastl::exchange(other.uid, detail::NodeUid{});
+    uid = std::exchange(other.uid, detail::NodeUid{});
 
     return *this;
   }

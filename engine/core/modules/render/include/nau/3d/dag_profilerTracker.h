@@ -3,7 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
 
 #if DAGOR_DBGLEVEL > 0
 #define PROFILER_TRACKER_ENABLED 1
@@ -17,7 +17,7 @@ void start_frame();
 // recommended: use milliseconds for consistency between different values
 // record_value behavior:
 //  history[currnent_frame - frameOffset] += value
-void record_value(const eastl::string &group, const eastl::string &label, float value, uint32_t frame_offset);
+void record_value(const std::string& group, const std::string& label, float value, uint32_t frame_offset);
 void record_value(const char *group, const char *label, float value, uint32_t frame_offset);
 
 void clear();

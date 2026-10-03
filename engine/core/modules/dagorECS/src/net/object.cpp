@@ -1,21 +1,29 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
-#include <daECS/net/object.h>
-#include <daECS/net/connection.h>
-#include <daECS/core/entityManager.h>
 #include <daECS/core/baseIo.h>
-#include <daECS/core/template.h>
 #include <daECS/core/componentTypes.h>
-#include "objectReplica.h"
+#include <daECS/core/entityManager.h>
+#include <daECS/core/template.h>
+#include <daECS/net/connection.h>
+#include <daECS/net/object.h>
+#include <daECS/net/serialize.h>
 #include <daNet/bitStream.h>
 #include <debug/dag_assert.h>
 #include <debug/dag_debug.h>
 #include <generic/dag_tab.h>
 #include <memory/dag_framemem.h>
 #include <string.h>
-#include <util/dag_string.h>
 #include <util/dag_simpleString.h>
-#include <daECS/net/serialize.h>
+#include <util/dag_string.h>
+
+#include <algorithm>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "component_replication_filters.h"
+#include "nau/utils/sorted_vector.h"
+#include "objectReplica.h"
 
 #define REPL_BSREAD(x) \
   if (!bs.Read(x))     \
@@ -28,93 +36,89 @@ namespace net
 
 #if PROFILE_COMPONENTS_SERIALIZATION_STATS
 
-static ska::flat_hash_map<uint32_t, eastl::pair<uint32_t, uint32_t>>
-  replication_components_stats; // uint32_t == ecs::template_t|(ecs::component_index_t<<16)
+    static ska::flat_hash_map<uint32_t, std::pair<uint32_t, uint32_t>>
+        replication_components_stats;  // uint32_t == ecs::template_t|(ecs::component_index_t<<16)
 
-void dump_and_clear_components_profiler_stats()
-{
-  if (!replication_components_stats.size())
-    return;
-  static_assert(sizeof(ecs::template_t) + sizeof(ecs::component_index_t) == sizeof(uint32_t)); // if ever happen, can be replaced
-                                                                                                 // with uint64_t
-  eastl::vector_map<ecs::component_index_t, uint32_t> sortedList;
-  sortedList.reserve(replication_components_stats.size());
-  typedef eastl::vector_map<ecs::component_index_t, uint32_t>::base_type list_type;
-  constexpr float topThreshold = 0.95;
-  auto dump_stats = [&](list_type &list) {
-    eastl::sort(list.begin(), list.end(), [](auto a, auto b) { return a.second > b.second; });
-    size_t total = 0;
-    eastl::for_each(list.cbegin(), list.cend(), [&total](auto &a) { total += a.second; });
-    size_t curSum = 0, totalThreshold = total * topThreshold;
-    double toPercentMult = total ? (100. / total) : 0.;
-    int i = 0;
-    for (auto &it : list)
+    void dump_and_clear_components_profiler_stats()
     {
-      NAU_CORE_DEBUG_LF("  #%2d component %s, was replicated %.2f%%(%d)", ++i, g_entity_mgr->getDataComponents().getComponentNameById(it.first),
-        it.second * toPercentMult, it.second);
-      curSum += it.second;
-      if (curSum >= totalThreshold)
-        break;
+        if (!replication_components_stats.size())
+            return;
+        static_assert(sizeof(ecs::template_t) + sizeof(ecs::component_index_t) == sizeof(uint32_t));  // if ever happen, can be replaced
+                                                                                                      // with uint64_t
+        nau::SortedVectorMap<ecs::component_index_t, uint32_t> sortedList;
+        sortedList.reserve(replication_components_stats.size());
+        typedef nau::SortedVectorMap<ecs::component_index_t, uint32_t>::base_type list_type;
+        constexpr float topThreshold = 0.95;
+        auto dump_stats = [&](list_type& list)
+        {
+            std::sort(list.begin(), list.end(), [](auto a, auto b)
+            {
+                return a.second > b.second;
+            });
+            size_t total = 0;
+            std::for_each(list.cbegin(), list.cend(), [&total](auto& a)
+            {
+                total += a.second;
+            });
+            size_t curSum = 0, totalThreshold = total * topThreshold;
+            double toPercentMult = total ? (100. / total) : 0.;
+            int i = 0;
+            for (auto& it : list)
+            {
+                NAU_CORE_DEBUG_LF("  #%2d component %s, was replicated %.2f%%(%d)", ++i, g_entity_mgr->getDataComponents().getComponentNameById(it.first),
+                                  it.second * toPercentMult, it.second);
+                curSum += it.second;
+                if (curSum >= totalThreshold)
+                    break;
+            }
+        };
+        for (auto& it : replication_components_stats)
+            sortedList[it.first >> 16] += it.second.first;
+        NAU_CORE_DEBUG_LF("dumping top %g%% components replication stats by frequency...", topThreshold * 100.);
+        dump_stats(sortedList);
+        sortedList.clear();
+        for (auto& it : replication_components_stats)
+            sortedList[it.first >> 16] += it.second.second;
+        NAU_CORE_DEBUG_LF("dumping top %g%% components replication stats by replication bits...", topThreshold * 100.);
+        dump_stats(sortedList);
+        std::string templates;
+        for (int i = 0, sz = std::min(sortedList.size(), size_t(20)); i < sz; ++i)
+        {
+            templates = "";
+            ecs::component_index_t componentId = ((list_type&)sortedList)[i].first;
+            for (auto& s : replication_components_stats)
+            {
+                if ((s.first >> 16) == componentId)
+                    templates += nau::utils::format("{}={},", g_entity_mgr->getTemplateName(s.first & 0xFFFF), s.second.first);
+            }
+            NAU_CORE_DEBUG_LF(" component %s:templates <%s>", g_entity_mgr->getDataComponents().getComponentNameById(componentId), templates.c_str());
+        }
+        replication_components_stats.clear();
+        replication_components_stats.shrink_to_fit();
     }
-  };
-  for (auto &it : replication_components_stats)
-    sortedList[it.first >> 16] += it.second.first;
-  NAU_CORE_DEBUG_LF("dumping top %g%% components replication stats by frequency...", topThreshold * 100.);
-  dump_stats(sortedList);
-  sortedList.clear();
-  for (auto &it : replication_components_stats)
-    sortedList[it.first >> 16] += it.second.second;
-  NAU_CORE_DEBUG_LF("dumping top %g%% components replication stats by replication bits...", topThreshold * 100.);
-  dump_stats(sortedList);
-  eastl::string templates;
-  for (int i = 0, sz = eastl::min(sortedList.size(), size_t(20)); i < sz; ++i)
-  {
-    templates = "";
-    ecs::component_index_t componentId = ((list_type &)sortedList)[i].first;
-    for (auto &s : replication_components_stats)
-    {
-      if ((s.first >> 16) == componentId)
-        templates.append_sprintf("%s=%d,", g_entity_mgr->getTemplateName(s.first & 0xFFFF), s.second.first);
-    }
-    NAU_CORE_DEBUG_LF(" component %s:templates <%s>", g_entity_mgr->getDataComponents().getComponentNameById(componentId), templates.c_str());
-  }
-  replication_components_stats.clear();
-  replication_components_stats.shrink_to_fit();
-}
 #else
 void dump_and_clear_components_profiler_stats() {}
 #endif
 
 /* static */
 bool Object::do_not_verify_destruction = false;
-eastl::vector_set<ecs::EntityId> Object::pending_destroys;
+nau::SortedVectorSet<ecs::EntityId> Object::pending_destroys;
 Object::dirty_entities_list_t Object::dirtyList;
 static uint32_t objectsCreationOrderSequence = 0;
-static const ecs::component_index_t NO_COMPONENTS_STUB = 0;
-typedef eastl::vector<const ecs::component_index_t *> components_list_type_t;
-static components_list_type_t replicated_components, ignored_components; // cached list per template, begins with num components in 0th
-                                                                         // element)
-
+// Owning buffers keep their data addresses across outer-vector growth.
+static std::vector<std::vector<ecs::component_index_t>> ignored_components;
 void clear_cached_replicated_components()
 {
-  auto clear = [&](components_list_type_t &components) {
-    for (const ecs::component_index_t *cptr : components)
-      if (cptr != &NO_COMPONENTS_STUB)
-        EASTLFree(EASTLAllocatorType(), cptr, 0);
-    components_list_type_t().swap(components); // clear
-  };
-  clear(replicated_components);
-  clear(ignored_components);
+    ignored_components.clear();
+    ignored_components.shrink_to_fit();
 }
 
-// list of replicated components is unique for each template.
-// instead of getting slow iteration over hash_sets or even regexps - just initialize once (cache)
 static const ecs::component_index_t *get_template_replicated_components(ecs::EntityId eid, uint32_t &cnt)
 {
   return g_entity_mgr->replicatedComponentsList(g_entity_mgr->getEntityTemplateId(eid), cnt);
 }
 
-static inline void gather_ignored(const ecs::Template *templ, eastl::vector_set<ecs::component_index_t> &ignored)
+static inline void gather_ignored(const ecs::Template* templ, nau::SortedVectorSet<ecs::component_index_t>& ignored)
 {
   for (auto comp : templ->getIgnoredInitialReplicationSet())
   {
@@ -128,29 +132,24 @@ static inline void gather_ignored(const ecs::Template *templ, eastl::vector_set<
 
 const ecs::component_index_t *get_template_ignored_initial_components(ecs::template_t tid)
 {
-  if (const ecs::component_index_t *ret = (tid < ignored_components.size()) ? ignored_components[tid] : nullptr)
-    return (ret == &NO_COMPONENTS_STUB) ? nullptr : ret;
-  const char *templateName = g_entity_mgr->getTemplateName(tid);
-  const ecs::Template *templ = nullptr;
-  if (!templateName)
-    return nullptr;
-  templ = g_entity_mgr->getTemplateDB().getTemplateByName(templateName);
-  if (!templ)
-    return nullptr;
-  eastl::vector_set<ecs::component_index_t> ignoredComponents;
-  gather_ignored(templ, ignoredComponents);
-  if (tid >= ignored_components.size())
-    ignored_components.resize(tid + 1);
-  if (ignoredComponents.size() == 0)
-  {
-    ignored_components[tid] = &NO_COMPONENTS_STUB;
-    return nullptr;
-  }
-  ignoredComponents.insert(ignoredComponents.begin(), ignoredComponents.size());
-  ignoredComponents.shrink_to_fit();
-  ignored_components[tid] = ignoredComponents.data();
-  ignoredComponents.reset_lose_memory();
-  return ignored_components[tid];
+    if (tid < ignored_components.size() && !ignored_components[tid].empty())
+        return ignored_components[tid][0] ? ignored_components[tid].data() : nullptr;
+    const char* templateName = g_entity_mgr->getTemplateName(tid);
+    const ecs::Template* templ = nullptr;
+    if (!templateName)
+        return nullptr;
+    templ = g_entity_mgr->getTemplateDB().getTemplateByName(templateName);
+    if (!templ)
+        return nullptr;
+    nau::SortedVectorSet<ecs::component_index_t> ignoredComponents;
+    gather_ignored(templ, ignoredComponents);
+    if (tid >= ignored_components.size())
+        ignored_components.resize(tid + 1);
+    auto& stored = ignored_components[tid];
+    stored.reserve(ignoredComponents.size() + 1);
+    stored.push_back(static_cast<ecs::component_index_t>(ignoredComponents.size()));
+    stored.insert(stored.end(), ignoredComponents.begin(), ignoredComponents.end());
+    return stored[0] ? stored.data() : nullptr;
 }
 
 Object::Object(const ecs::EntityManager &, ecs::EntityId eid_, const ecs::ComponentsMap &map) :
@@ -199,19 +198,19 @@ void Object::initCompVers()
   }
   for (auto it = compVers.begin(); it != compVers.end();) // erase not existing
   {
-    auto cit = eastl::lower_bound(components, cend, it->first);
-    if (cit != cend && *cit == it->first)
-      ++it;
-    else
-    {
-      for (ObjectReplica *repl = replicasLinkList; repl; repl = repl->nextRepl)
+      auto cit = std::lower_bound(components, cend, it->first);
+      if (cit != cend && *cit == it->first)
+          ++it;
+      else
       {
-        auto rit = repl->remoteCompVers.find(it->first);
-        if (rit != repl->remoteCompVers.end())
-          repl->remoteCompVers.erase(rit);
+          for (ObjectReplica* repl = replicasLinkList; repl; repl = repl->nextRepl)
+          {
+              auto rit = repl->remoteCompVers.find(it->first);
+              if (rit != repl->remoteCompVers.end())
+                  repl->remoteCompVers.erase(rit);
+          }
+          it = compVers.erase(it);
       }
-      it = compVers.erase(it);
-    }
   }
   for (ObjectReplica *repl = replicasLinkList; repl; repl = repl->nextRepl)
     repl->debugVerifyRemoteCompVers(compVers);
@@ -221,9 +220,9 @@ void Object::forceReplicaVersion(CompVersMap::const_iterator cit, ecs::component
 {
   if (cit != compVers.end() && cit->first == cidx) // just force correct remoteCompVer
   {
-    size_t at = eastl::distance(compVers.begin(), cit);
-    NAU_FAST_ASSERT(replica->remoteCompVers.data()[at].first == cit->first);
-    replica->remoteCompVers.data()[at].second = cit->second; // now it is already replicated
+      size_t at = std::distance(compVers.begin(), cit);
+      NAU_FAST_ASSERT(replica->remoteCompVers.data()[at].first == cit->first);
+      replica->remoteCompVers.data()[at].second = cit->second;  // now it is already replicated
   }
 }
 
@@ -256,25 +255,25 @@ bool Object::skipInitialReplication(ecs::component_index_t cidx, Connection *con
   }
   else // if we have skipped replication, we have to ensure remote version is different
   {
-    size_t at = eastl::distance(compVers.begin(), cit);
-    NAU_FAST_ASSERT(replica->remoteCompVers.data()[at].first == cit->first);
-    if (replica->remoteCompVers.data()[at].second == cit->second)
-      replica->remoteCompVers.data()[at].second--; // it is not replicated
+      size_t at = std::distance(compVers.begin(), cit);
+      NAU_FAST_ASSERT(replica->remoteCompVers.data()[at].first == cit->first);
+      if (replica->remoteCompVers.data()[at].second == cit->second)
+          replica->remoteCompVers.data()[at].second--;  // it is not replicated
   }
   return true;
 }
 
 CompVersMap::iterator Object::insertNewCompVer(ecs::component_index_t cidx, CompVersMap::iterator cit)
 {
-  size_t i = eastl::distance(compVers.begin(), cit);
-  for (ObjectReplica *repl = replicasLinkList; repl; repl = repl->nextRepl)
-  {
-    repl->debugVerifyRemoteCompVers(compVers);
-    repl->remoteCompVers.insert(repl->remoteCompVers.begin() + i, eastl::make_pair(cidx, DEFAULT_COMP_VER));
-  }
-  compVers.insert(cit, eastl::make_pair(cidx, compver_t(DEFAULT_COMP_VER + 1)));
-  addToDirty();
-  return compVers.begin() + i;
+    size_t i = std::distance(compVers.begin(), cit);
+    for (ObjectReplica* repl = replicasLinkList; repl; repl = repl->nextRepl)
+    {
+        repl->debugVerifyRemoteCompVers(compVers);
+        repl->remoteCompVers.insert(repl->remoteCompVers.begin() + i, std::make_pair(cidx, DEFAULT_COMP_VER));
+    }
+    compVers.insert(cit, std::make_pair(cidx, compver_t(DEFAULT_COMP_VER + 1)));
+    addToDirty();
+    return compVers.begin() + i;
 }
 
 void Object::onCompChanged(ecs::component_index_t cidx)
@@ -289,8 +288,7 @@ void Object::onCompChanged(ecs::component_index_t cidx)
   insertNewCompVer(cidx, it);
 }
 
-void Object::serializeComps(const Connection *conn, danet::BitStream &bs, const ObjectReplica &repl,
-  eastl::vector<CompRevision> &comps_serialized) const
+void Object::serializeComps(const Connection* conn, danet::BitStream& bs, const ObjectReplica& repl, std::vector<CompRevision>& comps_serialized) const
 {
   NAU_ASSERT(!isReplica(), "%d", (ecs::entity_id_t)eid);
 #if _DEBUG

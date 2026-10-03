@@ -68,8 +68,8 @@ inline void EntityManager::destroyComponents(const uint32_t archetype, const chu
     destructComponent(archetypes.getComponentUnsafe(archetype, ci->archComponentId), ci);
   auto &creatables = archetypes.getCreatables(archetype);
   DAECS_EXT_ASSERT(!creatables.empty()); // can not be empty as we have combined flag of having creatables
-  for (auto ci = creatables.end() - 1, ce = creatables.begin(); ci >= ce; --ci)
-    destructComponent(ci->originalCidx, ci);
+  for (auto ci = creatables.rbegin(), ce = creatables.rend(); ci != ce; ++ci)
+      destructComponent(ci->originalCidx, ci);
 }
 
 template <typename FilterUsed>

@@ -2,13 +2,13 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "nau/3d/dag_drv3dReset.h"
+#include <array>
+
+#include "lib3d/texMgrData.h"
 #include "nau/3d/dag_drv3d.h"
 #include "nau/3d/dag_drv3dCmd.h"
+#include "nau/3d/dag_drv3dReset.h"
 #include "nau/3d/dag_gpuConfig.h"
-#include "lib3d/texMgrData.h"
-
-#include <EASTL/array.h>
 
 bool dagor_d3d_force_driver_reset = false;
 bool dagor_d3d_force_driver_mode_reset = false;
@@ -181,8 +181,8 @@ void D3dResetQueue::perform_reset_queue(const D3dResetQueue *q, bool full_reset)
 static float convert_game_time_to_reset_stat_buckets(int game_ms)
 {
   const float minutes = static_cast<float>(game_ms) / 1000.f / 60.f;
-  const eastl::array<float, 5> KEY_POINTS = {0.f, 1.f, 5.f, 10.f, 30.f};
-  const eastl::array<float, 7> BUCKET_LIMITS = {0.f, 10.f, 25.f, 50.f, 75.f, 90.f, 100.f};
+  const std::array<float, 5> KEY_POINTS = {0.f, 1.f, 5.f, 10.f, 30.f};
+  const std::array<float, 7> BUCKET_LIMITS = {0.f, 10.f, 25.f, 50.f, 75.f, 90.f, 100.f};
   G_STATIC_ASSERT(KEY_POINTS.size() < BUCKET_LIMITS.size());
   for (uint32_t i = 1; i < KEY_POINTS.size(); ++i)
   {

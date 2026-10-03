@@ -3,9 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/string.h>
-
+#include <functional>
 #include <ska_hash_map/flat_hash_map2.hpp>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/utils/dag_oaHashNameMap.h"
 //#include <dag/dag_vector.h>
 
@@ -28,12 +31,15 @@ class Tracker
     NameIdx name;
     friend bool operator==(const EventPathEntry &l, const EventPathEntry &r) { return l.parent == r.parent && l.name == r.name; }
   };
-  eastl::vector<EventPathEntry> pathTable;
-  eastl::vector<eastl::string> fullpathTable;
+  std::vector<EventPathEntry> pathTable;
+  std::vector<std::string> fullpathTable;
 
   struct EventPathEntryHasher
   {
-    size_t operator()(const EventPathEntry &e) const { return eastl::hash<uintptr_t>{}((e.parent << 16) | e.name); }
+      size_t operator()(const EventPathEntry& e) const
+      {
+          return std::hash<uintptr_t>{}((e.parent << 16) | e.name);
+      }
   };
 
   ska::flat_hash_map<EventPathEntry, FullPathIdx, EventPathEntryHasher> pathLookup;
@@ -41,37 +47,37 @@ class Tracker
   NameIdx lastMarker = INVALID_IDX;
 
 public:
-  eastl::string_view beginEvent(eastl::string_view name)
-  {
-    NameIdx nameId = nameTable.addNameId(name.data(), name.length());
-
-    const EventPathEntry previousEntry = {currentPath, nameId};
-
-    if (pathLookup.find(previousEntry) == pathLookup.end())
+    std::string_view beginEvent(std::string_view name)
     {
-      currentPath = pathTable.size();
-      pathTable.push_back(previousEntry);
-      pathLookup[previousEntry] = currentPath;
-      if (previousEntry.parent != INVALID_IDX)
-      {
-        fullpathTable.resize(pathTable.size());
-        fullpathTable.back().reserve(fullpathTable[previousEntry.parent].length() + 1 + name.length());
-        fullpathTable.back().assign(fullpathTable[previousEntry.parent].data(), fullpathTable[previousEntry.parent].length());
-        fullpathTable.back().push_back(separator);
-      }
-      else
-      {
-        fullpathTable.resize(pathTable.size());
-        fullpathTable.back().assign(name.data(), name.length());
-      }
-    }
-    else
-    {
-      currentPath = pathLookup[previousEntry];
-    }
+        NameIdx nameId = nameTable.addNameId(name.data(), name.length());
 
-    return {nameTable.getName(nameId), name.length()};
-  }
+        const EventPathEntry previousEntry = {currentPath, nameId};
+
+        if (pathLookup.find(previousEntry) == pathLookup.end())
+        {
+            currentPath = pathTable.size();
+            pathTable.push_back(previousEntry);
+            pathLookup[previousEntry] = currentPath;
+            if (previousEntry.parent != INVALID_IDX)
+            {
+                fullpathTable.resize(pathTable.size());
+                fullpathTable.back().reserve(fullpathTable[previousEntry.parent].length() + 1 + name.length());
+                fullpathTable.back().assign(fullpathTable[previousEntry.parent].data(), fullpathTable[previousEntry.parent].length());
+                fullpathTable.back().push_back(separator);
+            }
+            else
+            {
+                fullpathTable.resize(pathTable.size());
+                fullpathTable.back().assign(name.data(), name.length());
+            }
+        }
+        else
+        {
+            currentPath = pathLookup[previousEntry];
+        }
+
+        return {nameTable.getName(nameId), name.length()};
+    }
 
   void endEvent()
   {
@@ -81,13 +87,13 @@ public:
     }
   }
 
-  eastl::string_view marker(eastl::string_view name)
+  std::string_view marker(std::string_view name)
   {
     lastMarker = nameTable.addNameId(name.data(), name.length());
     return {nameTable.getName(lastMarker), name.length()};
   }
 
-  eastl::string_view currentEventPath() const
+  std::string_view currentEventPath() const
   {
     if (currentPath != INVALID_IDX)
     {
@@ -99,7 +105,7 @@ public:
     }
   }
 
-  eastl::string_view currentEvent() const
+  std::string_view currentEvent() const
   {
     if (currentPath != INVALID_IDX)
     {
@@ -115,7 +121,7 @@ public:
     }
   }
 
-  eastl::string_view currentMarker() const
+  std::string_view currentMarker() const
   {
     if (lastMarker != INVALID_IDX)
     {
@@ -139,12 +145,27 @@ namespace null
 class Tracker
 {
 public:
-  eastl::string_view beginEvent(eastl::string_view name) { return name; }
+    std::string_view beginEvent(std::string_view name)
+    {
+        return name;
+    }
   void endEvent() {}
-  eastl::string_view marker(eastl::string_view name) { return name; }
-  constexpr eastl::string_view currentEventPath() const { return {}; }
-  constexpr eastl::string_view currentEvent() const { return {}; }
-  constexpr eastl::string_view currentMarker() const { return {}; }
+  std::string_view marker(std::string_view name)
+  {
+      return name;
+  }
+  constexpr std::string_view currentEventPath() const
+  {
+      return {};
+  }
+  constexpr std::string_view currentEvent() const
+  {
+      return {};
+  }
+  constexpr std::string_view currentMarker() const
+  {
+      return {};
+  }
   constexpr bool isPersistent() const { return false; }
 };
 } // namespace null

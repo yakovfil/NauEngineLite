@@ -4,20 +4,25 @@
 
 #include "runtime.h"
 
-#include <EASTL/sort.h>
+#include <algorithm>
 #include <mutex>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include "nau/3d/dag_drv3d.h"
-#include "render/daBfg/bfg.h"
-#include "dabfg/debug/backendDebug.h"
-#include "dabfg/frontend/multiplexingInternal.h"
 #include "dabfg/backend/nodeStateDeltas.h"
 #include "dabfg/backend/resourceScheduling/nativeResourceScheduler.h"
 #include "dabfg/backend/resourceScheduling/poolResourceScheduler.h"
 #include "dabfg/common/resourceUsage.h"
+#include "dabfg/debug/backendDebug.h"
+#include "dabfg/frontend/multiplexingInternal.h"
 #include "dabfg/id/idRange.h"
+#include "nau/3d/dag_drv3d.h"
 #include "nau/diag/logging.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dynamic_bit_vector.h"
+#include "render/daBfg/bfg.h"
 
 #if _TARGET_D3D_MULTI || _TARGET_C1 || _TARGET_C2
 #define PLATFORM_HAS_HEAPS d3d::get_driver_desc().caps.hasResourceHeaps
@@ -108,7 +113,7 @@ void Runtime::scheduleNodes()
   if (debug_graph_generation)
   {
     // Debug graph visualization works with not multiplexed nodes
-    eastl::vector<NodeNameId, nau::EastlFrameAllocator> demultiplexedNodeExecutionOrder;
+    std::vector<NodeNameId, nau::FrameStdAllocator<NodeNameId>> demultiplexedNodeExecutionOrder;
     demultiplexedNodeExecutionOrder.reserve(registry.nodes.size());
     for (const intermediate::Node &irNode : intermediateGraph.nodes)
       if (irNode.multiplexingIndex == 0)
@@ -151,18 +156,18 @@ void Runtime::scheduleResources()
 
     const auto id = nameResolver.resolve(unresolvedId);
 
-    auto &texDesc = eastl::get<ResourceDescription>(res.description).asTexRes;
+    auto& texDesc = std::get<ResourceDescription>(res.description).asTexRes;
     texDesc.width = static_cast<uint32_t>(registry.autoResTypes[id].staticResolution.getX() * mult);
     texDesc.height = static_cast<uint32_t>(registry.autoResTypes[id].staticResolution.getY() * mult);
   }
 
   if (debug_graph_generation)
   {
-    eastl::vector<NodeNameId, nau::EastlFrameAllocator> frontendNodeExecutionOrder;
-    for (const intermediate::Node &irNode : intermediateGraph.nodes)
-      frontendNodeExecutionOrder.emplace_back(irNode.frontendNode);
+      std::vector<NodeNameId, nau::FrameStdAllocator<NodeNameId>> frontendNodeExecutionOrder;
+      for (const intermediate::Node& irNode : intermediateGraph.nodes)
+          frontendNodeExecutionOrder.emplace_back(irNode.frontendNode);
 
-    update_resource_visualization(registry, frontendNodeExecutionOrder);
+      update_resource_visualization(registry, frontendNodeExecutionOrder);
   }
 
   {
@@ -172,15 +177,19 @@ void Runtime::scheduleResources()
     for (auto deactivation : deactivations)
       switch (deactivation.index())
       {
-        case 0: d3d::deactivate_texture(eastl::get<0>(deactivation)); break;
-        case 1: d3d::deactivate_buffer(eastl::get<1>(deactivation)); break;
-        case 2:
-          auto [f, x] = eastl::get<2>(deactivation);
-          f(x);
-          break;
+          case 0:
+              d3d::deactivate_texture(std::get<0>(deactivation));
+              break;
+          case 1:
+              d3d::deactivate_buffer(std::get<1>(deactivation));
+              break;
+          case 2:
+              auto [f, x] = std::get<2>(deactivation);
+              f(x);
+              break;
       }
 
-    allResourceEvents = eastl::move(events);
+    allResourceEvents = std::move(events);
   }
 
   // After rescheduling resources are in default resolution, so update number of frames to
@@ -221,7 +230,7 @@ void Runtime::initializeHistoryOfNewResources()
   // potentially expensive clear, used for cumulative textures
   // (those where prev and current frame versions get blended together).
 
-  IdIndexedFlags<intermediate::ResourceIndex, nau::EastlFrameAllocator> resourceActivated(intermediateGraph.resources.size(), false);
+  IdIndexedFlags<intermediate::ResourceIndex, nau::FrameStdAllocator<nau::BitVectorWord>> resourceActivated(intermediateGraph.resources.size(), false);
 
   // frameIndex will be incremented after this function completes,
   // so the current index is actually the previous frame index.
@@ -358,9 +367,9 @@ void Runtime::runNodes()
   else
   {
     for (auto [id, dynResType] : registry.autoResTypes.enumerate())
-      if (eastl::exchange(dynResType.dynamicResolutionCountdown, 0) > 0)
-        NAU_LOG_ERROR("daBfg: Attempted to use dynamic resolution '{}' on a platform that does not support resource heaps!",
-          registry.knownNames.getName(id));
+        if (std::exchange(dynResType.dynamicResolutionCountdown, 0) > 0)
+            NAU_LOG_ERROR("daBfg: Attempted to use dynamic resolution '{}' on a platform that does not support resource heaps!",
+                          registry.knownNames.getName(id));
   }
 
   const auto &frameEvents = allResourceEvents[currFrame];

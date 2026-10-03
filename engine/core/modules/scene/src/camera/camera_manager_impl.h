@@ -3,6 +3,11 @@
 
 #pragma once
 
+#include <list>
+#include <span>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "nau/app/main_loop/game_system.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/camera/camera_manager.h"
@@ -19,7 +24,7 @@ namespace nau::scene
         NAU_RTTI_CLASS(nau::scene::CameraManagerImpl, ICameraManager, IComponentsActivator, IServiceInitialization, IGamePreUpdate)
 
     private:
-        void cleanupActiveCameras(const eastl::unordered_set<Uid>&);
+        void cleanupActiveCameras(const std::unordered_set<Uid>&);
 
         async::Task<> preInitService() override;
         async::Task<> initService() override;
@@ -29,17 +34,17 @@ namespace nau::scene
         nau::Ptr<ICameraControl> createDetachedCamera(Uid worldUid) override;
         Uid setMainCamera(Uid cameraUid) override;
         void resetWorldMainCamera(Uid worldUid) override;
-        Result<> activateComponents(Uid worldUid, eastl::span<Component*> components) override;
-        void deactivateComponents(Uid worldUid, eastl::span<Component*> components) override;
+        Result<> activateComponents(Uid worldUid, std::span<Component*> components) override;
+        void deactivateComponents(Uid worldUid, std::span<Component*> components) override;
         void gamePreUpdate(std::chrono::milliseconds dt) override;
 
         void checkCameras();
 
         mutable std::mutex m_mutex;
         std::thread::id m_syncThreadId;
-        eastl::list<ObjectWeakRef<ICameraControl>> m_sceneCameras;
-        eastl::list<nau::WeakPtr<ICameraControl>> m_detachedCameras;
-        eastl::unordered_map<Uid, Uid> m_worldMainCameras;
+        std::list<ObjectWeakRef<ICameraControl>> m_sceneCameras;
+        std::list<nau::WeakPtr<ICameraControl>> m_detachedCameras;
+        std::unordered_map<Uid, Uid> m_worldMainCameras;
 
         std::chrono::system_clock::time_point m_checkCamerasLastTime;
     };

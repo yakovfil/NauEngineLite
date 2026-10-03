@@ -5,7 +5,7 @@
 */
 #pragma once
 
-#include <EASTL/vector.h>
+#include <vector>
 #include <cassert>
 //#include <debug/dag_assert.h>
 
@@ -66,7 +66,7 @@ bool NAU_BINPACK_EXPORT IsContainedIn(const Rect &a, const Rect &b);
 class NAU_BINPACK_EXPORT DisjointRectCollection
 {
 public:
-	eastl::vector<Rect> rects;
+	std::vector<Rect> rects;
 
 	bool Add(const Rect &r)
 	{

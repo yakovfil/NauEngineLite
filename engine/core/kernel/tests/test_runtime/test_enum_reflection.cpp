@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_nau_ptr.cpp
 
-
 #include <concepts>
 #include <string_view>
 
@@ -251,7 +250,7 @@ namespace nau::test
     TEST(TestEnumReflection, SerializeOptionalValue)
     {
         using namespace nau::serialization;
-        eastl::u8string_view json =
+        std::u8string_view json =
             u8R"--(
             {
                 "value": ""
@@ -263,7 +262,7 @@ namespace nau::test
     }
 
     /**
-        
+
     */
     TEST(TestEnumReflection, BaseOld)
     {

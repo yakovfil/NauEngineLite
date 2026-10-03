@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include <EASTL/optional.h>
+#include <optional>
+#include <string_view>
+#include <vector>
 
 #include "nau/assets/material.h"
 
@@ -13,8 +15,8 @@ namespace nau
     class MaterialCreator final
     {
     public:
-        Result<> createMaterial(eastl::string_view name);
-        Result<> addPipeline(eastl::string_view name, eastl::string_view shaderCacheFilename, const eastl::vector<Shader>& shaders);
+        Result<> createMaterial(std::string_view name);
+        Result<> addPipeline(std::string_view name, std::string_view shaderCacheFilename, const std::vector<Shader>& shaders);
 
         Result<Material> getResult() const;
 
@@ -25,6 +27,6 @@ namespace nau
         void processTexture(MaterialPipeline& pipeline, const ShaderInputBindDescription& bind);
         void processSampler(MaterialPipeline& pipeline, const ShaderInputBindDescription& bind);
 
-        eastl::optional<Material> m_material = eastl::nullopt;
+        std::optional<Material> m_material = std::nullopt;
     };
 } // namespace nau

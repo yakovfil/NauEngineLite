@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "shader_asset_container.h"
+
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/io/nau_container.h"
 #include "nau/rtti/weak_ptr.h"
@@ -19,18 +23,18 @@ namespace nau
             NAU_CLASS_(nau::ShaderAssetAccessor, IShaderAssetAccessor)
 
         public:
-            ShaderAssetAccessor(ShaderAssetContainer& shaderContainer, eastl::string_view shaderName);
+            ShaderAssetAccessor(ShaderAssetContainer& shaderContainer, std::string_view shaderName);
 
         private:
             Result<> fillShader(Shader& shader) const override;
 
             mutable nau::WeakPtr<ShaderAssetContainer> m_shaderContainerRef;
-            eastl::string_view m_shaderName;
+            std::string_view m_shaderName;
         };
 
         struct ShaderBytecodeEntry
         {
-            eastl::string shaderName;
+            std::string shaderName;
             size_t blobOffset;
             size_t blobSize;
 
@@ -42,8 +46,8 @@ namespace nau
 
         struct ShaderPackContainerData
         {
-            eastl::vector<Shader> shaders;
-            eastl::vector<ShaderBytecodeEntry> byteCode;
+            std::vector<Shader> shaders;
+            std::vector<ShaderBytecodeEntry> byteCode;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(shaders),
@@ -75,7 +79,7 @@ namespace nau
                 }
             }
 
-            Result<> fillShader(eastl::string_view shaderName, Shader& outShader)
+            Result<> fillShader(std::string_view shaderName, Shader& outShader)
             {
                 const Shader* const shader = findShader(shaderName);
                 if(!shader)
@@ -91,7 +95,7 @@ namespace nau
             }
 
         private:
-            ReadOnlyBuffer readShaderBytecode(eastl::string_view shaderName)
+            ReadOnlyBuffer readShaderBytecode(std::string_view shaderName)
             {
                 auto blobEntry = std::find_if(m_shadersPackData.byteCode.begin(), m_shadersPackData.byteCode.end(), [shaderName](const ShaderBytecodeEntry& entry)
                 {
@@ -112,7 +116,7 @@ namespace nau
                 return ReadOnlyBuffer{std::move(bytecode)};
             }
 
-            nau::Ptr<> getAsset(eastl::string_view path) override
+            nau::Ptr<> getAsset(std::string_view path) override
             {
                 auto* const shader = findShader(path);
                 if(!shader)
@@ -124,9 +128,9 @@ namespace nau
                 return rtti::createInstance<ShaderAssetAccessor>(*this, shader->name);
             }
 
-            eastl::vector<eastl::string> getContent() const override
+            std::vector<std::string> getContent() const override
             {
-                eastl::vector<eastl::string> shaderNames;
+                std::vector<std::string> shaderNames;
                 shaderNames.reserve(m_shadersPackData.shaders.size());
 
                 for(const auto& shader : m_shadersPackData.shaders)
@@ -137,7 +141,7 @@ namespace nau
                 return shaderNames;
             }
 
-            Shader* findShader(eastl::string_view shaderName)
+            Shader* findShader(std::string_view shaderName)
             {
                 auto& shaders = m_shadersPackData.shaders;
 
@@ -152,7 +156,7 @@ namespace nau
                     return !shaders.empty() ? &shaders.front() : nullptr;
                 }
 
-                auto iter = eastl::find_if(shaders.begin(), shaders.end(), [shaderName](const Shader& shader)
+                auto iter = std::find_if(shaders.begin(), shaders.end(), [shaderName](const Shader& shader)
                 {
                     return shader.name == shaderName;
                 });
@@ -165,7 +169,7 @@ namespace nau
             std::mutex m_mutex;
         };
 
-        ShaderAssetAccessor::ShaderAssetAccessor(ShaderAssetContainer& shaderContainer, eastl::string_view shaderName) :
+        ShaderAssetAccessor::ShaderAssetAccessor(ShaderAssetContainer& shaderContainer, std::string_view shaderName) :
             m_shaderContainerRef{&shaderContainer},
             m_shaderName(shaderName)
         {
@@ -184,7 +188,7 @@ namespace nau
         }
     }  // anonymous namespace
 
-    eastl::vector<eastl::string_view> ShaderAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> ShaderAssetContainerLoader::getSupportedAssetKind() const
     {
         return {"Shader/*", "nsbc"};
     }

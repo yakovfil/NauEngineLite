@@ -3,9 +3,14 @@
 
 #include "camera/camera_manager_impl.h"
 
+#include <algorithm>
+#include <iterator>
+#include <span>
+#include <unordered_set>
+
 #include "camera/detached_camera.h"
 #include "camera/readonly_camera.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/scene/components/camera_component.h"
 #include "nau/scene/scene_manager.h"
 #include "nau/scene/world.h"
@@ -24,9 +29,9 @@ namespace nau::scene
         return async::Task<>::makeResolved();
     }
 
-    void CameraManagerImpl::cleanupActiveCameras(const eastl::unordered_set<Uid>& allCameraUids)
+    void CameraManagerImpl::cleanupActiveCameras(const std::unordered_set<Uid>& allCameraUids)
     {
-        eastl::erase_if(m_worldMainCameras, [&allCameraUids](const auto& keyValue)
+        std::erase_if(m_worldMainCameras, [&allCameraUids](const auto& keyValue)
         {
             return !allCameraUids.contains(keyValue.second);
         });
@@ -37,7 +42,7 @@ namespace nau::scene
         NAU_FATAL(m_syncThreadId == std::this_thread::get_id(), "Camera synchronization can be performed only from main thread");
         lock_(m_mutex);
 
-        eastl::unordered_set<Uid> allCameraUids;
+        std::unordered_set<Uid> allCameraUids;
 
         CamerasSnapshot snapshot;
 
@@ -81,7 +86,7 @@ namespace nau::scene
         // sync existing camera properties and remove non existent
         for (auto& [worldUid, cameras] : snapshot.m_worldCameras)
         {
-            eastl::erase_if(cameras, [&onCameraRemoved](nau::Ptr<ICameraProperties>& camera) -> bool
+            std::erase_if(cameras, [&onCameraRemoved](nau::Ptr<ICameraProperties>& camera) -> bool
             {
                 NAU_FATAL(camera);
                 const bool syncOk = camera->as<ReadonlyCamera&>().syncCameraProperties();
@@ -98,13 +103,13 @@ namespace nau::scene
         {
             auto& cameras = snapshot.m_worldCameras[cam.getWorldUid()];
 
-            return eastl::any_of(cameras.begin(), cameras.end(), [cameraUid = cam.getCameraUid()](const auto& camera)
+            return std::any_of(cameras.begin(), cameras.end(), [cameraUid = cam.getCameraUid()](const auto& camera)
             {
                 return camera->getCameraUid() == cameraUid;
             });
         };
 
-        eastl::unordered_set<Uid> allCameraUids;
+        std::unordered_set<Uid> allCameraUids;
 
         // iterate over detached cameras and add that not exists in cameras collection:
         m_detachedCameras.remove_if([&](nau::WeakPtr<ICameraControl>& cameraWeakPtr) -> bool
@@ -265,7 +270,7 @@ namespace nau::scene
         m_worldMainCameras.erase(worldUid);
     }
 
-    Result<> CameraManagerImpl::activateComponents([[maybe_unused]] Uid worldUid, eastl::span<Component*> components)
+    Result<> CameraManagerImpl::activateComponents([[maybe_unused]] Uid worldUid, std::span<Component*> components)
     {
         NAU_ASSERT(m_syncThreadId == std::this_thread::get_id());
 
@@ -284,7 +289,7 @@ namespace nau::scene
         return ResultSuccess;
     }
 
-    void CameraManagerImpl::deactivateComponents([[maybe_unused]] Uid worldUid, eastl::span<Component*> components)
+    void CameraManagerImpl::deactivateComponents([[maybe_unused]] Uid worldUid, std::span<Component*> components)
     {
         NAU_ASSERT(m_syncThreadId == std::this_thread::get_id());
     }
@@ -311,7 +316,7 @@ namespace nau::scene
             m_checkCamerasLastTime = currentTime;
         }
 
-        eastl::unordered_set<Uid> worldsWithCameras;
+        std::unordered_set<Uid> worldsWithCameras;
 
         m_detachedCameras.remove_if([&worldsWithCameras](nau::WeakPtr<ICameraControl>& cameraWeakPtr) -> bool
         {
@@ -357,7 +362,7 @@ namespace nau::scene
     {
         for (const auto& [worldUid, cameras] : m_worldCameras)
         {
-            auto camIter = eastl::find_if(cameras.begin(), cameras.end(), [cameraUid](const Ptr<ICameraProperties>& cam)
+            auto camIter = std::find_if(cameras.begin(), cameras.end(), [cameraUid](const Ptr<ICameraProperties>& cam)
             {
                 return cam->getCameraUid() == cameraUid;
             });
@@ -372,7 +377,7 @@ namespace nau::scene
         return nullptr;
     }
 
-    eastl::span<Ptr<ICameraProperties>> ICameraManager::CamerasSnapshot::getWorldAllCameras(Uid worldUid)
+    std::span<Ptr<ICameraProperties>> ICameraManager::CamerasSnapshot::getWorldAllCameras(Uid worldUid)
     {
         if (worldUid == NullUid && hasServiceProvider())
         {
@@ -417,7 +422,7 @@ namespace nau::scene
         if (mainCamIter != m_worldMainCameras.end() && mainCamIter->second != NullUid)
         {
             const Uid& mainCameraUid = mainCamIter->second;
-            auto iter = eastl::find_if(worldCameras->begin(), worldCameras->end(), [&mainCameraUid](const Ptr<ICameraProperties>& cam)
+            auto iter = std::find_if(worldCameras->begin(), worldCameras->end(), [&mainCameraUid](const Ptr<ICameraProperties>& cam)
             {
                 return cam->getCameraUid() == mainCameraUid;
             });
@@ -429,7 +434,7 @@ namespace nau::scene
             }
             else
             {
-                cameraIndex = static_cast<size_t>(eastl::distance(worldCameras->begin(), iter));
+                cameraIndex = static_cast<size_t>(std::distance(worldCameras->begin(), iter));
             }
         }
 
@@ -468,7 +473,7 @@ namespace nau::scene
         }
 
         const Uid& mainCameraUid = mainCamIter->second;
-        auto iter = eastl::find_if(worldCameras->begin(), worldCameras->end(), [&mainCameraUid](const Ptr<ICameraProperties>& cam)
+        auto iter = std::find_if(worldCameras->begin(), worldCameras->end(), [&mainCameraUid](const Ptr<ICameraProperties>& cam)
         {
             return cam->getCameraUid() == mainCameraUid;
         });
@@ -480,7 +485,7 @@ namespace nau::scene
             return nullptr;
         }
 
-        const size_t cameraIndex = static_cast<size_t>(eastl::distance(worldCameras->begin(), iter));
+        const size_t cameraIndex = static_cast<size_t>(std::distance(worldCameras->begin(), iter));
         NAU_FATAL(cameraIndex < worldCameras->size());
         return worldCameras->at(cameraIndex);
     }
@@ -492,7 +497,7 @@ namespace nau::scene
             return true;
         }
 
-        return eastl::all_of(m_worldCameras.begin(), m_worldCameras.end(), [](const auto& entry)
+        return std::all_of(m_worldCameras.begin(), m_worldCameras.end(), [](const auto& entry)
         {
             return entry.second.empty();
         });

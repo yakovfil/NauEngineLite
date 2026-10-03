@@ -3,8 +3,8 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-//#include <debug/daNAU_ASSERT.h>
-#include <EASTL/string.h>
+// #include <debug/daNAU_ASSERT.h>
+#include <string>
 #if (_TARGET_PC_WIN /*|| _TARGET_XBOX*/) && DAGOR_DBGLEVEL > 0
 #include <intrin.h>
 #define COMMANDS_STORE_RETURN_ADDRESS 1

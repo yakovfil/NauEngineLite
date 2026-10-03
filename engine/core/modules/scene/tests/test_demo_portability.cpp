@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <map>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "asset_manager_impl.h"
 #include "demo_scene.h"
@@ -29,11 +32,11 @@ namespace nau::test
         {
             m_destroyed = true;
         }
-        nau::Ptr<> getAsset(eastl::string_view) override
+        nau::Ptr<> getAsset(std::string_view) override
         {
             return nullptr;
         }
-        eastl::vector<eastl::string> getContent() const override
+        std::vector<std::string> getContent() const override
         {
             return {};
         }
@@ -148,7 +151,7 @@ namespace nau::test
             {  "NORMAL", 1},
             {"POSITION", 0}
         };
-        eastl::map<eastl::string, unsigned> east{
+        std::map<std::string, unsigned> east{
             {  "NORMAL", 1},
             {"POSITION", 0}
         };

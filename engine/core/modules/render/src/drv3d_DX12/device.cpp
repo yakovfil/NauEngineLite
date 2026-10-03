@@ -5,10 +5,15 @@
 #include "device.h"
 
 #include <drv3d_commonCode/nvLowLatency.h>
-#include "nau/dataBlock/dag_dataBlock.h"
-#include "nau/math/dag_random.h"
+
+#include <algorithm>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 #include "../drv3d_commonCode/dxgi_utils.h"
+#include "nau/dataBlock/dag_dataBlock.h"
+#include "nau/math/dag_random.h"
 #include "nau/utils/span.h"
 
 #if _TARGET_XBOXONE
@@ -74,8 +79,8 @@ D3D12_RAYTRACING_GEOMETRY_FLAGS toGeometryFlags(RaytraceGeometryDescription::Fla
   return result;
 }
 
-eastl::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
-raytraceGeometryDescriptionToGeometryDescAABBs(const RaytraceGeometryDescription::AABBsInfo &info)
+std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
+raytraceGeometryDescriptionToGeometryDescAABBs(const RaytraceGeometryDescription::AABBsInfo& info)
 {
   auto buf = (GenericBufferInterface *)info.buffer;
   buf->updateDeviceBuffer([](auto &b) { b.resourceId.isUsedAsNonPixelShaderResourceBuffer(); });
@@ -94,8 +99,8 @@ raytraceGeometryDescriptionToGeometryDescAABBs(const RaytraceGeometryDescription
   return {desc, refs};
 }
 
-eastl::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
-raytraceGeometryDescriptionToGeometryDescTriangles(const RaytraceGeometryDescription::TrianglesInfo &info)
+std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
+raytraceGeometryDescriptionToGeometryDescTriangles(const RaytraceGeometryDescription::TrianglesInfo& info)
 {
   auto vbuf = (GenericBufferInterface *)info.vertexBuffer;
   auto ibuf = (GenericBufferInterface *)info.indexBuffer;
@@ -176,8 +181,8 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS toAccelerationStructureBuild
   return result;
 }
 
-eastl::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
-raytraceGeometryDescriptionToGeometryDesc(const RaytraceGeometryDescription &desc)
+std::pair<D3D12_RAYTRACING_GEOMETRY_DESC, RaytraceGeometryDescriptionBufferResourceReferenceSet>
+raytraceGeometryDescriptionToGeometryDesc(const RaytraceGeometryDescription& desc)
 {
   switch (desc.type)
   {
@@ -261,52 +266,55 @@ bool Device::isSamplesCountSupported(DXGI_FORMAT format, int32_t samples_count)
 
 D3D12_CPU_DESCRIPTOR_HANDLE Device::getNonRecentImageViews(Image *img, ImageViewState state)
 {
-  auto iter = eastl::find_if(begin(img->getOldViews()), end(img->getOldViews()),
-    [state](const Image::ViewInfo &view) { return view.state == state; });
-  if (iter == img->getOldViews().end())
-  {
-    if (isInErrorState())
+    auto iter = std::find_if(begin(img->getOldViews()), end(img->getOldViews()),
+                             [state](const Image::ViewInfo& view)
     {
-      if (state.isDSV())
-        return {};
-      if (state.isRTV())
-        return nullResourceTable.table[NullResourceTable::RENDER_TARGET_VIEW];
-      if (state.isUAV())
-        return nullResourceTable.get(D3D_SIT_UAV_RWTYPED, img->getSRVDimension());
-      if (state.isSRV())
-        return nullResourceTable.get(D3D_SIT_TEXTURE, img->getSRVDimension());
-    }
-    Image::ViewInfo viewInfo;
-    viewInfo.state = state;
-    if (state.isSRV())
+        return view.state == state;
+    });
+    if (iter == img->getOldViews().end())
     {
-      D3D12_SHADER_RESOURCE_VIEW_DESC desc = state.asSRVDesc(img->getType(), img->isMultisampled());
-      viewInfo.handle = resources.allocateTextureSRVDescriptor(device.get());
-      device->CreateShaderResourceView(img->getHandle(), &desc, viewInfo.handle);
-    }
-    else if (state.isUAV())
-    {
-      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = state.asUAVDesc(img->getType());
-      viewInfo.handle = resources.allocateTextureSRVDescriptor(device.get());
-      device->CreateUnorderedAccessView(img->getHandle(), nullptr, &desc, viewInfo.handle);
-    }
-    else if (state.isRTV())
-    {
-      D3D12_RENDER_TARGET_VIEW_DESC desc = state.asRTVDesc(img->getType(), img->isMultisampled());
-      viewInfo.handle = resources.allocateTextureRTVDescriptor(device.get());
-      device->CreateRenderTargetView(img->getHandle(), &desc, viewInfo.handle);
-    }
-    else if (state.isDSV())
-    {
-      D3D12_DEPTH_STENCIL_VIEW_DESC desc = state.asDSVDesc(img->getType(), img->isMultisampled());
-      viewInfo.handle = resources.allocateTextureDSVDescriptor(device.get());
-      device->CreateDepthStencilView(img->getHandle(), &desc, viewInfo.handle);
-    }
-    img->addView(viewInfo);
-    if (is_swapchain_color_image(img))
-    {
-      context.addSwapchainView(img, img->getRecentView());
-    }
+        if (isInErrorState())
+        {
+            if (state.isDSV())
+                return {};
+            if (state.isRTV())
+                return nullResourceTable.table[NullResourceTable::RENDER_TARGET_VIEW];
+            if (state.isUAV())
+                return nullResourceTable.get(D3D_SIT_UAV_RWTYPED, img->getSRVDimension());
+            if (state.isSRV())
+                return nullResourceTable.get(D3D_SIT_TEXTURE, img->getSRVDimension());
+        }
+        Image::ViewInfo viewInfo;
+        viewInfo.state = state;
+        if (state.isSRV())
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC desc = state.asSRVDesc(img->getType(), img->isMultisampled());
+            viewInfo.handle = resources.allocateTextureSRVDescriptor(device.get());
+            device->CreateShaderResourceView(img->getHandle(), &desc, viewInfo.handle);
+        }
+        else if (state.isUAV())
+        {
+            D3D12_UNORDERED_ACCESS_VIEW_DESC desc = state.asUAVDesc(img->getType());
+            viewInfo.handle = resources.allocateTextureSRVDescriptor(device.get());
+            device->CreateUnorderedAccessView(img->getHandle(), nullptr, &desc, viewInfo.handle);
+        }
+        else if (state.isRTV())
+        {
+            D3D12_RENDER_TARGET_VIEW_DESC desc = state.asRTVDesc(img->getType(), img->isMultisampled());
+            viewInfo.handle = resources.allocateTextureRTVDescriptor(device.get());
+            device->CreateRenderTargetView(img->getHandle(), &desc, viewInfo.handle);
+        }
+        else if (state.isDSV())
+        {
+            D3D12_DEPTH_STENCIL_VIEW_DESC desc = state.asDSVDesc(img->getType(), img->isMultisampled());
+            viewInfo.handle = resources.allocateTextureDSVDescriptor(device.get());
+            device->CreateDepthStencilView(img->getHandle(), &desc, viewInfo.handle);
+        }
+        img->addView(viewInfo);
+        if (is_swapchain_color_image(img))
+        {
+            context.addSwapchainView(img, img->getRecentView());
+        }
   }
   else
   {
@@ -562,7 +570,7 @@ bool Device::init(DXGIFactory *factory, AdapterInfo &&adapterInfo, D3D_FEATURE_L
 
   NAU_LOG_DEBUG("DX12: Creating swapchain...");
   if (!context.back.swapchain.setup(*this, context.front.swapchain, factory, queues[DeviceQueueType::GRAPHICS].getHandle(),
-        eastl::move(swapchain_create_info)))
+                                    std::move(swapchain_create_info)))
   {
     NAU_LOG_DEBUG("DX12: Failed...");
     shutdown({});
@@ -681,7 +689,7 @@ void Device::shutdown(const DeviceCapsAndShaderModel &features)
   if (!isInitialized())
     return;
 
-  context.destroyBuffer(eastl::move(nullBuffer), u8"nullBuffer");
+  context.destroyBuffer(std::move(nullBuffer), u8"nullBuffer");
 
   nvlowlatency::close();
 
@@ -1079,12 +1087,12 @@ D3DDevice *drv3d_dx12::Device::getDevice() { return device.get(); }
 RaytraceAccelerationStructure *Device::createRaytraceAccelerationStructure(RaytraceGeometryDescription *desc, uint32_t count,
   RaytraceBuildFlags flags)
 {
-  eastl::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDesc;
-  geometryDesc.reserve(count);
-  for (uint32_t i = 0; i < count; ++i)
-  {
-    geometryDesc.push_back(raytraceGeometryDescriptionToGeometryDesc(desc[i]).first);
-  }
+    std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDesc;
+    geometryDesc.reserve(count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        geometryDesc.push_back(raytraceGeometryDescriptionToGeometryDesc(desc[i]).first);
+    }
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = {};
   bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
@@ -1142,7 +1150,7 @@ Device::AdapterInfo Device::getAdapterInfo()
   return info;
 }
 
-void Device::enumerateDisplayModes(eastl::vector<nau::string> &list)
+void Device::enumerateDisplayModes(std::vector<nau::string>& list)
 {
   clear_and_shrink(list);
   ScopedCommitLock ctxLock{context};
@@ -1151,7 +1159,7 @@ void Device::enumerateDisplayModes(eastl::vector<nau::string> &list)
     enumerateDisplayModesFromOutput(output, list);
   }
 }
-void Device::enumerateDisplayModesFromOutput(IDXGIOutput *dxgi_output, eastl::vector<nau::string> &list)
+void Device::enumerateDisplayModesFromOutput(IDXGIOutput* dxgi_output, std::vector<nau::string>& list)
 {
   static constexpr UINT MIN_MODE_WIDTH = 800;
   static constexpr UINT MIN_MODE_HEIGHT = 600;
@@ -1161,61 +1169,67 @@ void Device::enumerateDisplayModesFromOutput(IDXGIOutput *dxgi_output, eastl::ve
 
   if (SUCCEEDED(dxgi_output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &numModes, nullptr)))
   {
-    eastl::vector<DXGI_MODE_DESC> displayModes(numModes);
-    if (SUCCEEDED(dxgi_output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &numModes, displayModes.data())))
-    {
-      displayModes.resize(numModes);
-      // first drop modes that are to small
-      displayModes.erase(eastl::remove_if(begin(displayModes), end(displayModes),
-                           [](const DXGI_MODE_DESC &mode) //
-                           { return mode.Width < MIN_MODE_WIDTH || mode.Height < MIN_MODE_HEIGHT; }),
-        end(displayModes));
-      // sort them to prep remove of duplicated modes
-      eastl::sort(begin(displayModes), end(displayModes),
-        [](const DXGI_MODE_DESC &l, const DXGI_MODE_DESC &r) //
-        {
-          if (l.Width < r.Width)
-            return true;
-          if (l.Width > r.Width)
-            return false;
-          return l.Height < r.Height;
-        });
-      // remove modes with same width and height
-      displayModes.erase(eastl::unique(begin(displayModes), end(displayModes),
-                           [](const DXGI_MODE_DESC &l, const DXGI_MODE_DESC &r) //
-                           { return l.Width == r.Width && l.Height == r.Height; }),
-        end(displayModes));
-
-      if (recommended_resolution)
+      std::vector<DXGI_MODE_DESC> displayModes(numModes);
+      if (SUCCEEDED(dxgi_output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &numModes, displayModes.data())))
       {
-        // remove modes larger than recommended mode
-        displayModes.erase(eastl::remove_if(eastl::begin(displayModes), eastl::end(displayModes),
-                             [&recommended_resolution](const DXGI_MODE_DESC &mode) {
-                               return mode.Width > recommended_resolution->first || mode.Height > recommended_resolution->second;
-                             }),
-          eastl::end(displayModes));
+          displayModes.resize(numModes);
+          // first drop modes that are to small
+          displayModes.erase(std::remove_if(begin(displayModes), end(displayModes),
+                                            [](const DXGI_MODE_DESC& mode)  //
+          {
+              return mode.Width < MIN_MODE_WIDTH || mode.Height < MIN_MODE_HEIGHT;
+          }),
+                             end(displayModes));
+          // sort them to prep remove of duplicated modes
+          std::sort(begin(displayModes), end(displayModes),
+                    [](const DXGI_MODE_DESC& l, const DXGI_MODE_DESC& r)  //
+          {
+              if (l.Width < r.Width)
+                  return true;
+              if (l.Width > r.Width)
+                  return false;
+              return l.Height < r.Height;
+          });
+          // remove modes with same width and height
+          displayModes.erase(std::unique(begin(displayModes), end(displayModes),
+                                         [](const DXGI_MODE_DESC& l, const DXGI_MODE_DESC& r)  //
+          {
+              return l.Width == r.Width && l.Height == r.Height;
+          }),
+                             end(displayModes));
 
-        // remove modes with differect aspect ratio than recommended
-        displayModes.erase(eastl::remove_if(eastl::begin(displayModes), eastl::end(displayModes),
-                             [&recommended_resolution](const DXGI_MODE_DESC &mode) {
-                               return !resolutions_have_same_ratio(*recommended_resolution, {mode.Width, mode.Height});
-                             }),
-          eastl::end(displayModes));
+          if (recommended_resolution)
+          {
+              // remove modes larger than recommended mode
+              displayModes.erase(std::remove_if(std::begin(displayModes), std::end(displayModes),
+                                                [&recommended_resolution](const DXGI_MODE_DESC& mode)
+              {
+                  return mode.Width > recommended_resolution->first || mode.Height > recommended_resolution->second;
+              }),
+                                 std::end(displayModes));
+
+              // remove modes with differect aspect ratio than recommended
+              displayModes.erase(std::remove_if(std::begin(displayModes), std::end(displayModes),
+                                                [&recommended_resolution](const DXGI_MODE_DESC& mode)
+              {
+                  return !resolutions_have_same_ratio(*recommended_resolution, {mode.Width, mode.Height});
+              }),
+                                 std::end(displayModes));
+          }
+
+          list.resize(displayModes.size());
+          // turn into W x H string
+          std::transform(begin(displayModes), end(displayModes), list.data(),
+                         [](const DXGI_MODE_DESC& mode)  //
+          {
+              nau::string retStr = nau::string::format(64, "{} x {}", mode.Width, mode.Height);
+              return retStr;
+          });
       }
-
-      list.resize(displayModes.size());
-      // turn into W x H string
-      eastl::transform(begin(displayModes), end(displayModes), list.data(),
-        [](const DXGI_MODE_DESC &mode) //
-        {
-          nau::string retStr = nau::string::format(64, "{} x {}", mode.Width, mode.Height);
-          return retStr;
-        });
-    }
   }
 }
 
-void Device::enumerateActiveMonitors(eastl::vector<nau::string> &result)
+void Device::enumerateActiveMonitors(std::vector<nau::string>& result)
 {
   clear_and_shrink(result);
   ComPtr<IDXGIOutput> activeOutput;
@@ -1290,7 +1304,7 @@ LUID Device::preRecovery()
   pipeMan.preRecovery();
   pipelineCache.preRecovery();
   queues.shutdown();
-  stopDeviceErrorObserver(eastl::move(errorObserverShutdownToken));
+  stopDeviceErrorObserver(std::move(errorObserverShutdownToken));
   device.reset();
   DXGI_ADAPTER_DESC desc = {};
   adapter->GetDesc(&desc);
@@ -1357,7 +1371,7 @@ bool Device::recover(DXGIFactory *factory, ComPtr<IDXGIAdapter1> input_adapter, 
   sci.presentMode = context.front.swapchain.getPresentationMode();
   sci.windowed = !context.back.swapchain.isInExclusiveFullscreenMode();
   if (!context.back.swapchain.setup(*this, context.front.swapchain, factory, queues[DeviceQueueType::GRAPHICS].getHandle(),
-        eastl::move(sci)))
+                                    std::move(sci)))
   {
     NAU_LOG_DEBUG("DX12: Failed...");
     enterErrorState();
@@ -1416,7 +1430,7 @@ bool Device::recover(DXGIFactory *factory, ComPtr<IDXGIAdapter1> input_adapter, 
 
   pipeMan.recover(device.get(), pipelineCache);
 
-  eastl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> unboundedTable;
+  std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> unboundedTable;
   bindlessManager.visitSamplers([this, &unboundedTable](auto desc) { unboundedTable.push_back(getSampler(desc)); });
   context.recover(unboundedTable);
   frontendQueryManager.postRecovery(*this, device.get());
@@ -1445,9 +1459,9 @@ bool Device::finalizeRecovery()
 void Device::registerDeviceResetEventHandler(DeviceResetEventHandler *handler)
 {
   ScopedCommitLock ctxLock{context};
-  auto it = eastl::find(eastl::begin(deviceResetEventHandlers), eastl::end(deviceResetEventHandlers), handler);
-  if (it == eastl::end(deviceResetEventHandlers))
-    deviceResetEventHandlers.emplace_back(handler);
+  auto it = std::find(std::begin(deviceResetEventHandlers), std::end(deviceResetEventHandlers), handler);
+  if (it == std::end(deviceResetEventHandlers))
+      deviceResetEventHandlers.emplace_back(handler);
   else
     NAU_ASSERT(false, "Device reset event handler is already registered.");
 }
@@ -1455,9 +1469,9 @@ void Device::registerDeviceResetEventHandler(DeviceResetEventHandler *handler)
 void Device::unregisterDeviceResetEventHandler(DeviceResetEventHandler *handler)
 {
   ScopedCommitLock ctxLock{context};
-  auto it = eastl::find(eastl::begin(deviceResetEventHandlers), eastl::end(deviceResetEventHandlers), handler);
-  if (it != eastl::end(deviceResetEventHandlers))
-    deviceResetEventHandlers.erase(it);
+  auto it = std::find(std::begin(deviceResetEventHandlers), std::end(deviceResetEventHandlers), handler);
+  if (it != std::end(deviceResetEventHandlers))
+      deviceResetEventHandlers.erase(it);
   else
     NAU_ASSERT(false, "Could not find device reset event handler to unregister.");
 }
@@ -1587,7 +1601,7 @@ void FrameInfo::preRecovery(DeviceQueueGroup &queue_group, PipelineManager &pipe
   deletedGraphicPrograms.clear();
 
   // handle?
-  // eastl::vector<ProgramID> deletedPrograms;
+  // std::vector<ProgramID> deletedPrograms;
   deletedShaderModules.clear();
   resourceViewHeaps = ShaderResourceViewDescriptorHeapManager{};
   samplerHeaps = SamplerDescriptorHeapManager{};
@@ -1887,8 +1901,8 @@ SWAPID Device::createAdditionalSwachain(void* hwnd, DXGIFactory* factory)
     info.resolutionY = 611;
     info.window = static_cast<HWND>(hwnd);
     info.windowed = true;
-    
-    if(!bswapch.setup(*this, factory, queues[DeviceQueueType::GRAPHICS].getHandle(), eastl::move(info)))
+
+    if (!bswapch.setup(*this, factory, queues[DeviceQueueType::GRAPHICS].getHandle(), std::move(info)))
     {
         NAU_FAILURE("Can't create swapchain");
         return false;

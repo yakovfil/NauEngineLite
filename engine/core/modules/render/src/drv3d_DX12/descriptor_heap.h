@@ -2,16 +2,18 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
+#include "nau/generic/dag_bitset.h"
 
-#include "nau/supp/dag_comPtr.h"
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
 
-#include "driver.h"
+#include <algorithm>
+#include <memory>
+#include <vector>
+
 #include "d3d12_error_handling.h"
 #include "d3d12_utils.h"
+#include "driver.h"
 #include "drv3d_commonCode/value_range.h"
-
+#include "nau/supp/dag_comPtr.h"
 
 namespace drv3d_dx12
 {
@@ -81,7 +83,7 @@ class DescriptorHeap
     }
   };
 
-  eastl::vector<SubHeap> heaps;
+  std::vector<SubHeap> heaps;
   typename Policy::HeapData data;
 
 public:
@@ -266,19 +268,19 @@ struct BasicFreeListHeap
 
   struct SubHeapData
   {
-    eastl::vector<ValueRange<uint32_t>> freeSlots;
-    uint32_t totalSlots;
-    uint32_t allocate()
-    {
-      if (freeSlots.empty())
-        return totalSlots;
-      auto &block = freeSlots.back();
-      auto slot = block.front();
-      block.pop_front();
-      if (block.empty())
-        freeSlots.pop_back();
-      return slot;
-    }
+      std::vector<ValueRange<uint32_t>> freeSlots;
+      uint32_t totalSlots;
+      uint32_t allocate()
+      {
+          if (freeSlots.empty())
+              return totalSlots;
+          auto& block = freeSlots.back();
+          auto slot = block.front();
+          block.pop_front();
+          if (block.empty())
+              freeSlots.pop_back();
+          return slot;
+      }
     constexpr bool isValidSlot(uint32_t slot) const { return slot < totalSlots; }
     void free(uint32_t slot)
     {
@@ -413,7 +415,7 @@ public:
 template <uint32_t HeapSize>
 class ManagedDescriptorHeapAllocationTableStore<HeapSize, false>
 {
-  eastl::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE> cpuDescriptorTable{new D3D12_CPU_DESCRIPTOR_HANDLE[HeapSize]};
+    std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE> cpuDescriptorTable{new D3D12_CPU_DESCRIPTOR_HANDLE[HeapSize]};
 
 public:
   const D3D12_CPU_DESCRIPTOR_HANDLE *getCpuDescriptorTable() const { return cpuDescriptorTable.get(); }
@@ -542,7 +544,7 @@ class ShaderResourceViewDescriptorHeapManager
 
     bool reserveSpace(uint32_t size) const { return (SRV_HEAP_SIZE - allocationCount) >= size; }
   };
-  eastl::vector<Heap> heaps;
+  std::vector<Heap> heaps;
   uint32_t activeHeapIndex = 0;
   uint32_t entrySize = 0;
   uint32_t bindlessIndex = 0;
@@ -711,7 +713,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       auto from = getCpuDescriptorTable() + bindlessAndSRVSegmentSpace.back() + 1;
       auto to = getCpuDescriptorTable() + srv_begin_uav_end_index;
-      auto at = eastl::search(from, to, descriptors, descriptors + count);
+      auto at = std::search(from, to, descriptors, descriptors + count);
       return DescriptorHeapIndex::make(at != to, at - getCpuDescriptorTable());
     }
 
@@ -719,7 +721,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       auto from = getCpuDescriptorTable() + bindlessAndSRVSegmentSpace.back() + 1;
       auto to = getCpuDescriptorTable() + srv_begin_uav_end_index;
-      auto at = eastl::find(from, to, descriptor);
+      auto at = std::find(from, to, descriptor);
       return DescriptorHeapIndex::make(at != to, at - getCpuDescriptorTable());
     }
 
@@ -727,7 +729,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       bindlessAndSRVSegmentSpace.pop_back(count);
       auto index = bindlessAndSRVSegmentSpace.back() + 1;
-      eastl::copy(descriptors, descriptors + count, getCpuDescriptorTable() + index);
+      std::copy(descriptors, descriptors + count, getCpuDescriptorTable() + index);
       auto dstStart = getCpuAddress(index);
       device->CopyDescriptors(1, &dstStart, &count, count, descriptors, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
       return DescriptorHeapIndex::make(index);
@@ -748,7 +750,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       auto from = getCpuDescriptorTable() + uavAndConstSegmentSpace.back() + 1;
       auto to = getCpuDescriptorTable() + SRV_HEAP_SIZE;
-      auto at = eastl::search(from, to, descriptors, descriptors + count);
+      auto at = std::search(from, to, descriptors, descriptors + count);
       return DescriptorHeapIndex::make(at != to, at - getCpuDescriptorTable());
     }
 
@@ -756,7 +758,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       auto from = getCpuDescriptorTable() + uavAndConstSegmentSpace.back() + 1;
       auto to = getCpuDescriptorTable() + SRV_HEAP_SIZE;
-      auto at = eastl::find(from, to, descriptor);
+      auto at = std::find(from, to, descriptor);
       return DescriptorHeapIndex::make(at != to, at - getCpuDescriptorTable());
     }
 
@@ -764,7 +766,7 @@ class ShaderResourceViewDescriptorHeapManager
     {
       uavAndConstSegmentSpace.pop_back(count);
       auto index = uavAndConstSegmentSpace.back() + 1;
-      eastl::copy(descriptors, descriptors + count, getCpuDescriptorTable() + index);
+      std::copy(descriptors, descriptors + count, getCpuDescriptorTable() + index);
       auto dstStart = getCpuAddress(index);
       device->CopyDescriptors(1, &dstStart, &count, count, descriptors, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
       return DescriptorHeapIndex::make(index);
@@ -829,7 +831,7 @@ class ShaderResourceViewDescriptorHeapManager
       return DescriptorHeapIndex::make(index);
     }
   };
-  eastl::vector<Heap> heaps;
+  std::vector<Heap> heaps;
   uint32_t activeHeapIndex = 0;
   uint32_t entrySize = 0;
 
@@ -984,7 +986,7 @@ class SamplerDescriptorHeapManager
     {
       auto from = cpuDescriptorTable + freeSection.back() + 1;
       auto to = cpuDescriptorTable + SAMPLER_HEAP_SIZE;
-      auto at = eastl::search(from, to, descriptors, descriptors + count);
+      auto at = std::search(from, to, descriptors, descriptors + count);
       return DescriptorHeapIndex::make(at != to, at - cpuDescriptorTable);
     }
 
@@ -993,7 +995,7 @@ class SamplerDescriptorHeapManager
       freeSection.pop_back(count);
       auto loc = freeSection.back() + 1;
 
-      eastl::copy(descriptors, descriptors + count, cpuDescriptorTable + loc);
+      std::copy(descriptors, descriptors + count, cpuDescriptorTable + loc);
       auto dstStart = getCpuAddress(loc);
       // nullptr on src ranges means its a set of ranges with a length of 1
       device->CopyDescriptors(1, &dstStart, &count, count, descriptors, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -1028,7 +1030,7 @@ class SamplerDescriptorHeapManager
       bindlessSamplersCommitted = size;
     }
   };
-  eastl::vector<Heap> heaps;
+  std::vector<Heap> heaps;
   uint32_t activeHeapIndex = 0;
   uint32_t entrySize = 0;
 

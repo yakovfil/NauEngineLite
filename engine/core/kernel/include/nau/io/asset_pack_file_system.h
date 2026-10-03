@@ -4,6 +4,7 @@
 #pragma once
 
 #include <chrono>
+#include <string_view>
 
 #include "nau/io/file_system.h"
 #include "nau/kernel/kernel_config.h"
@@ -34,5 +35,5 @@ namespace nau::io
      * @details This function initializes a file system for managing asset packs with the specified settings.
      */
     NAU_KERNEL_EXPORT
-    IFileSystem::Ptr createAssetPackFileSystem(eastl::u8string_view assetPackPath, AssetPackFileSystemSettings settings = {});
+    IFileSystem::Ptr createAssetPackFileSystem(std::u8string_view assetPackPath, AssetPackFileSystemSettings settings = {});
 }  // namespace nau::io

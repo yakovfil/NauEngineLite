@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "nau/math/dag_bounds3.h"
 #include "nau/math/dag_color.h"
 #include "nau/math/math.h"
@@ -15,7 +18,7 @@ namespace nau
     {
         NAU_INTERFACE(nau::DebugRenderSystem, IRttiObject)
 
-        using Ptr = eastl::unique_ptr<DebugRenderSystem>;
+        using Ptr = std::unique_ptr<DebugRenderSystem>;
 
     public:
         virtual ~DebugRenderSystem() = default;
@@ -40,8 +43,8 @@ namespace nau
 
         struct StaticMesh
         {
-            const eastl::vector<math::Point3>& vertices;
-            const eastl::vector<uint32_t>& indices;
+            const std::vector<math::Point3>& vertices;
+            const std::vector<uint32_t>& indices;
         };
 
         virtual void drawStaticMesh(const StaticMesh& mesh, const math::Matrix4& transform, const math::Color4& color, float time) = 0;

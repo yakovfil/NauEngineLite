@@ -3,34 +3,33 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/variant.h>
-#include <EASTL/vector_map.h>
+#include <variant>
+
+#include "dabfg/id/idIndexedMapping.h"
 #include "nau/3d/dag_resPtr.h"
 #include "nau/math/math.h"
-
-#include "render/daBfg/detail/resNameId.h"
+#include "nau/utils/sorted_vector.h"
 #include "render/daBfg/detail/autoResTypeNameId.h"
 #include "render/daBfg/detail/blob.h"
-#include "dabfg/id/idIndexedMapping.h"
-
+#include "render/daBfg/detail/resNameId.h"
 
 namespace dabfg
 {
 
-using ProvidedResource = eastl::variant<ManagedTexView, ManagedBufView, dabfg::BlobView>;
+    using ProvidedResource = std::variant<ManagedTexView, ManagedBufView, dabfg::BlobView>;
 
-struct ResourceProvider
-{
-  eastl::vector_map<ResNameId, ProvidedResource> providedResources;
-  eastl::vector_map<ResNameId, ProvidedResource> providedHistoryResources;
+    struct ResourceProvider
+    {
+        nau::SortedVectorMap<ResNameId, ProvidedResource> providedResources;
+        nau::SortedVectorMap<ResNameId, ProvidedResource> providedHistoryResources;
 
-  IdIndexedMapping<AutoResTypeNameId, nau::math::IVector2> resolutions;
+        IdIndexedMapping<AutoResTypeNameId, nau::math::IVector2> resolutions;
 
-  void clear()
-  {
-    providedResources.clear();
-    providedHistoryResources.clear();
-  }
+        void clear()
+        {
+            providedResources.clear();
+            providedHistoryResources.clear();
+        }
 };
 
 } // namespace dabfg

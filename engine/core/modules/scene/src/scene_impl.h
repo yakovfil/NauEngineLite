@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "nau/scene/scene.h"
 #include "nau/scene/scene_object.h"
 
@@ -16,9 +19,9 @@ namespace nau::scene
     public:
         SceneImpl();
 
-        eastl::string_view getName() const override;
+        std::string_view getName() const override;
 
-        void setName(eastl::string_view name) override;
+        void setName(std::string_view name) override;
 
         IWorld* getWorld() const override;
 
@@ -27,7 +30,7 @@ namespace nau::scene
     private:
         void setWorld(class WorldImpl&);
 
-        eastl::string m_name;
+        std::string m_name;
         const SceneObject::Ptr m_sceneRoot;
         mutable ObjectWeakRef<WorldImpl> m_world;
 

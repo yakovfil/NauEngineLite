@@ -4,14 +4,19 @@
 
 #pragma once
 
+#include <list>
+#include <optional>
+#include <string>
+#include <string_view>
+
 #include "nau/assets/asset_accessor.h"
 #include "nau/assets/asset_container.h"
 #include "nau/assets/asset_descriptor.h"
 #include "nau/assets/asset_view.h"
-#include "nau/assets/reloadable_asset_view.h"
 #include "nau/assets/internal/asset_descriptor_inernal.h"
+#include "nau/assets/reloadable_asset_view.h"
 #include "nau/async/multi_task_source.h"
-#include "nau/memory/eastl_aliases.h"
+#include "nau/memory/standard_aliases.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/rtti/type_info.h"
 #include "nau/rtti/weak_ptr.h"
@@ -36,7 +41,7 @@ namespace nau
         AssetDescriptorImpl(const AssetDescriptorImpl&) = delete;
         AssetDescriptorImpl& operator=(const AssetDescriptorImpl&) = delete;
 
-        IAssetDescriptor::Ptr getInnerAsset(eastl::string_view);
+        IAssetDescriptor::Ptr getInnerAsset(std::string_view);
 
         IAssetContainer* getLoadedContainer();
 
@@ -61,13 +66,13 @@ namespace nau
         {
         public:
             AssetViewEntry() = delete;
-            AssetViewEntry(eastl::string assetInnerPath, const rtti::TypeInfo* viewType);
+            AssetViewEntry(std::string assetInnerPath, const rtti::TypeInfo* viewType);
             AssetViewEntry(const AssetViewEntry&) = delete;
             ~AssetViewEntry();
 
             AssetViewEntry& operator=(const AssetViewEntry&) = delete;
 
-            bool isThatView(eastl::string_view innerPath, const rtti::TypeInfo* viewType) const;
+            bool isThatView(std::string_view innerPath, const rtti::TypeInfo* viewType) const;
 
             bool hasNoAssetViewReferences();
 
@@ -82,7 +87,7 @@ namespace nau
 
             async::Task<IAssetView::Ptr> fabricateAssetView(IAssetContainer& container);
 
-            const eastl::string m_assetInnerPath;
+            const std::string m_assetInnerPath;
             const rtti::TypeInfo* const m_viewType = nullptr;
 
             nau::WeakPtr<IAssetView> m_assetViewRef;
@@ -93,22 +98,21 @@ namespace nau
 
         async::Task<IAssetContainer::Ptr> getContainer();
 
-        async::Task<IAssetView::Ptr> getInnerAssetView(eastl::string_view innerPath, const rtti::TypeInfo* viewType);
-        async::Task<ReloadableAssetView::Ptr> getInnerReloadableAssetView(eastl::string_view innerPath, const rtti::TypeInfo* viewType);
+        async::Task<IAssetView::Ptr> getInnerAssetView(std::string_view innerPath, const rtti::TypeInfo* viewType);
+        async::Task<ReloadableAssetView::Ptr> getInnerReloadableAssetView(std::string_view innerPath, const rtti::TypeInfo* viewType);
 
-        async::Task<nau::Ptr<>> getInnerRawAsset(eastl::string_view innerPath);
+        async::Task<nau::Ptr<>> getInnerRawAsset(std::string_view innerPath);
 
-        eastl::optional<assets::AssetInternalState> getInnerCachedAssetViewState(eastl::string_view innerPath, const rtti::TypeInfo* viewType, assets::InternalStateOptsFlag);
+        std::optional<assets::AssetInternalState> getInnerCachedAssetViewState(std::string_view innerPath, const rtti::TypeInfo* viewType, assets::InternalStateOptsFlag);
 
-        eastl::optional<assets::AssetInternalState> getCachedAssetViewInternalState(const rtti::TypeInfo* viewType, assets::InternalStateOptsFlag) override;
-
+        std::optional<assets::AssetInternalState> getCachedAssetViewInternalState(const rtti::TypeInfo* viewType, assets::InternalStateOptsFlag) override;
 
         const AssetId m_assetId = 0;
         const AssetPath m_assetPath;
         ContainerLoaderFunc m_containerLoader;
         IAssetContainer::Ptr m_container;
         async::MultiTaskSource<IAssetContainer::Ptr> m_containerLoadingState = nullptr;
-        eastl::list<AssetViewEntry, EastlBlockAllocator<alignedSize(sizeof(AssetViewEntry), 64)>> m_assetViews;
+        nau::List<AssetViewEntry> m_assetViews;
         mutable std::mutex m_mutex;
 
         friend class InnerAssetDescriptor;

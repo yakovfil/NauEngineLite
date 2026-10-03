@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <vector>
+
 #include "nau/3d/dag_texMgr.h"
-#include <EASTL/vector.h>
 //#include <generic/dag_tabFwd.h>
 
 namespace ddsx
@@ -68,7 +69,7 @@ struct DDSxDataPublicHdr // built on basis of ddsx::Header (engine/sharedInclude
 };
 
 //! reads and unpacks DDSx data into buffer
-bool read_ddsx_contents(const char *tex_name, eastl::vector<char> &out_data, DDSxDataPublicHdr &out_desc);
+bool read_ddsx_contents(const char* tex_name, std::vector<char>& out_data, DDSxDataPublicHdr& out_desc);
 
 //! fills DDSx header for texture and returns memory size for it (or -1 when tex_name is not registered
 int read_ddsx_header(const char *tex_name, DDSxDataPublicHdr &out_desc, bool full_quality = true);

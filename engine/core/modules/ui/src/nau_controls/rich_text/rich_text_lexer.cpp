@@ -3,8 +3,9 @@
 
 #include "rich_text_lexer.h"
 
+#include <string>
 
-RichTextParseResult RichTextLexer::Parse(const eastl::u32string& text, size_t startIndex)
+RichTextParseResult RichTextLexer::Parse(const std::u32string& text, size_t startIndex)
 {
     RichTextParseResult result;
 

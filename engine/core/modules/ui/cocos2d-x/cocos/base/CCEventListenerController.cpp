@@ -24,6 +24,7 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerController.h"
 #include "base/CCEventController.h"
 #include "base/ccMacros.h"
@@ -31,7 +32,7 @@
 
 NS_CC_BEGIN
 
-const eastl::string EventListenerController::LISTENER_ID = "__cc_controller";
+const std::string EventListenerController::LISTENER_ID = "__cc_controller";
 
 EventListenerController* EventListenerController::create()
 {

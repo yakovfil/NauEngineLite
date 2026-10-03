@@ -3,9 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "resourceScheduler.h"
 #include <ska_hash_map/flat_hash_map2.hpp>
+#include <variant>
+#include <vector>
+
 #include "nau/3d/dag_resizableTex.h"
+#include "resourceScheduler.h"
 
 namespace dabfg
 {
@@ -70,7 +73,7 @@ private:
   struct ResourceEntry
   {
     uint32_t collectionIdx;
-    eastl::variant<UniqueBuf, UniqueTex> resource;
+    std::variant<UniqueBuf, UniqueTex> resource;
   };
   using ResourceHashMap = ska::flat_hash_map<ResourceKey, ResourceEntry, ResKeyHash>;
   IdIndexedMapping<HeapIndex, ResourceHashMap> placedHeapResources;
@@ -79,7 +82,7 @@ private:
   void placeResource(int frame, intermediate::ResourceIndex res_idx, HeapIndex heap_idx, uint32_t offset, const ResourceKey &key,
     const ResourceCreator &resourceCreator);
 
-  eastl::vector<PlaceProperty> placedProperties;
+  std::vector<PlaceProperty> placedProperties;
   ska::flat_hash_map<ResourceDescription, ResourceAllocationProperties> allocationPropertiesCache;
 };
 

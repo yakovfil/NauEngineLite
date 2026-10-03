@@ -3,10 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <algorithm>
+#include <iterator>
+
+#include "call_stack_full_stack.h"
 #include "call_stack_null.h"
 #include "call_stack_return_address.h"
-#include "call_stack_full_stack.h"
-
 #include "nau/dataBlock/dag_dataBlock.h"
 
 namespace drv3d_dx12
@@ -111,8 +113,11 @@ public:
         }
       }
     }
-    auto ref = eastl::find_if(eastl::begin(modes), eastl::end(modes), [modeName](auto &e) { return 0 == strcmp(modeName, e.name); });
-    if (eastl::end(modes) != ref)
+    auto ref = std::find_if(std::begin(modes), std::end(modes), [modeName](auto& e)
+    {
+        return 0 == strcmp(modeName, e.name);
+    });
+    if (std::end(modes) != ref)
     {
       generatorMode = ref->mode;
       NAU_LOG_DEBUG("DX12: debug::call_stack::selectable using mode '{}'", ref->name);

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
 #include <cstdio>
+#include <memory>
+#include <string>
+#include <string_view>
 
 #include "nau/debug/debugger.h"
 #include "nau/diag/device_error.h"
@@ -39,7 +42,7 @@ namespace nau::diag
 
     IDeviceError::Ptr createDefaultDeviceError()
     {
-        return eastl::make_unique<CoreDeviceError>();
+        return std::make_unique<CoreDeviceError>();
     }
 
     ILogSubscriber::Ptr createDebugOutputLogSubscriber()
@@ -50,19 +53,19 @@ namespace nau::diag
 
 namespace nau::strings
 {
-    eastl::wstring utf8ToWString(eastl::u8string_view text)
+    std::wstring utf8ToWString(std::u8string_view text)
     {
         static_assert(sizeof(wchar_t) == 4);
-        eastl::wstring result;
+        std::wstring result;
         nau_utf8::utf8to32(text.begin(), text.end(), std::back_inserter(result));
         return result;
     }
 
-    eastl::u8string wstringToUtf8(eastl::wstring_view text)
+    std::u8string wstringToUtf8(std::wstring_view text)
     {
         std::u32string decoded;
         nau_utf8::utf16to32(text.begin(), text.end(), std::back_inserter(decoded));
-        eastl::u8string result;
+        std::u8string result;
         for (char32_t cp : decoded)
         {
             utf8::internal::append(static_cast<utf8::utfchar32_t>(cp), std::back_inserter(result));
@@ -89,7 +92,7 @@ namespace nau::io
         return {};
     }
 
-    eastl::u8string getNativeTempFilePath(eastl::u8string_view)
+    std::u8string getNativeTempFilePath(std::u8string_view)
     {
         std::fputs("Nau: native host temporary files are unavailable on wasm32\n", stderr);
         return {};

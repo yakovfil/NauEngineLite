@@ -3,6 +3,14 @@
 
 #include "./gltf_scene_asset.h"
 
+#include <algorithm>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "nau/animation/components/animation_component.h"
 #include "nau/animation/components/skeleton_component.h"
 #include "nau/assets/asset_descriptor_factory.h"
@@ -17,9 +25,9 @@ namespace nau
 {
     namespace details
     {
-        static eastl::map<int, eastl::vector<GltfAnimationParseInfo>> parseKeyframeAnimationsGltf(const GltfFile& gltfFile, const eastl::set<unsigned>& skeletonJointNodes)
+        static std::map<int, std::vector<GltfAnimationParseInfo>> parseKeyframeAnimationsGltf(const GltfFile& gltfFile, const std::set<unsigned>& skeletonJointNodes)
         {
-            eastl::map<int, eastl::vector<details::GltfAnimationParseInfo>> animParseInfos;
+            std::map<int, std::vector<details::GltfAnimationParseInfo>> animParseInfos;
 
             for (size_t animIdx = 0; animIdx < gltfFile.animations.size(); ++animIdx)
             {
@@ -80,7 +88,7 @@ namespace nau
             if (extrasNode.containsKey("ozz_skeleton_path"))
             {
                 const auto& skValue = extrasNode.getValue("ozz_skeleton_path");
-                result.skeletonPath = *runtimeValueCast<eastl::string>(skValue);
+                result.skeletonPath = *runtimeValueCast<std::string>(skValue);
             }
 
             const bool containsAnimationsBlock = extrasNode.containsKey("ozz_animations");
@@ -102,9 +110,9 @@ namespace nau
                 if (containsPath && containsBlendMethod && containsWeight)
                 {
                     auto& newAnim = result.animations.emplace_back();
-                    newAnim.ozzPath = *runtimeValueCast<eastl::string>(animNode["path"]);
+                    newAnim.ozzPath = *runtimeValueCast<std::string>(animNode["path"]);
                     newAnim.weight = *runtimeValueCast<float>(animNode["weight"]);
-                    newAnim.blendMethod = *runtimeValueCast<eastl::string>(animNode["blend_method"]);
+                    newAnim.blendMethod = *runtimeValueCast<std::string>(animNode["blend_method"]);
                 }
                 else
                 {
@@ -133,7 +141,7 @@ namespace nau
 
     ComponentAsset& GltfSceneAsset::GltfSceneObjectAsset::getExistingComponentOrAdd(const rtti::TypeInfo& type)
     {
-        auto existingComponent = eastl::find_if(additionalComponents.begin(), additionalComponents.end(), [&type](const ComponentAsset& comp)
+        auto existingComponent = std::find_if(additionalComponents.begin(), additionalComponents.end(), [&type](const ComponentAsset& comp)
         {
             return comp.getComponentType() == type;
         });
@@ -153,7 +161,7 @@ namespace nau
             return this;
         }
 
-        auto childIter = eastl::find_if(children.begin(), children.end(), [index](const GltfSceneObjectAsset& child)
+        auto childIter = std::find_if(children.begin(), children.end(), [index](const GltfSceneObjectAsset& child)
         {
             return child.nodeIndex == index;
         });
@@ -184,7 +192,7 @@ namespace nau
         m_root.childCount = gltfScene.nodes.size();
         m_root.children.reserve(gltfScene.nodes.size());
 
-        eastl::set<unsigned> skeletonJointNodes = {};
+        std::set<unsigned> skeletonJointNodes = {};
         for (const auto& skin : gltfFile.skins)
         {
             for (const auto jointNodeIndex : skin.joints)
@@ -205,14 +213,14 @@ namespace nau
         makeAnimationComponentAssets(container, animParseInfos);
     }
 
-    void GltfSceneAsset::makeAnimationComponentAssets(IAssetContainer& container, const eastl::map<int, eastl::vector<details::GltfAnimationParseInfo>>& animationParseInfos)
+    void GltfSceneAsset::makeAnimationComponentAssets(IAssetContainer& container, const std::map<int, std::vector<details::GltfAnimationParseInfo>>& animationParseInfos)
     {
         IAssetDescriptorFactory& assetFactory = getServiceProvider().get<IAssetDescriptorFactory>();
 
         for (const auto& pair : animationParseInfos)
         {
             const int targetNodeIndex = pair.first;
-            const eastl::vector<details::GltfAnimationParseInfo>& animsTracks = pair.second;
+            const std::vector<details::GltfAnimationParseInfo>& animsTracks = pair.second;
 
             GltfSceneObjectAsset* const targetObject = m_root.findNodeByIndex(targetNodeIndex);
             if (!targetObject)
@@ -223,7 +231,7 @@ namespace nau
 
             ComponentAsset& animationComponentAsset = targetObject->addComponent(rtti::getTypeInfo<animation::AnimationComponent>());
 
-            eastl::vector<RuntimeValue::Ptr> animTracks;
+            std::vector<RuntimeValue::Ptr> animTracks;
 
             for (const details::GltfAnimationParseInfo& trackInfo : animsTracks)
             {
@@ -242,10 +250,10 @@ namespace nau
                 animTracks.emplace_back(makeValueCopy(ti));
             }
 
-            RuntimeStringValue::Ptr controllerTypeStr = makeValueCopy(eastl::string_view("direct"));
+            RuntimeStringValue::Ptr controllerTypeStr = makeValueCopy(std::string_view("direct"));
             RuntimeCollection::Ptr tracksCollection = makeValueCopy(std::move(animTracks));
 
-            eastl::map<eastl::string, RuntimeValue::Ptr> animationComponentProps = {
+            std::map<std::string, RuntimeValue::Ptr> animationComponentProps = {
                 {"animControllerType", controllerTypeStr},
                 {"tracksCreationInfo",  tracksCollection}
             };
@@ -260,7 +268,7 @@ namespace nau
 
         ComponentAsset& animationComponentAsset = object.addComponent(rtti::getTypeInfo<animation::AnimationComponent>());
 
-        eastl::vector<RuntimeValue::Ptr> animTracks;
+        std::vector<RuntimeValue::Ptr> animTracks;
         for (const auto& anim : skinnedMeshParseInfo.animations)
         {
             auto formattedOzzAnimName = fmt::format("skeletal_animation_ozz/{}", anim.ozzPath);
@@ -278,10 +286,10 @@ namespace nau
             animTracks.emplace_back(makeValueCopy(ti));
         }
 
-        RuntimeStringValue::Ptr controllerTypeStr = makeValueCopy(eastl::string_view("blend_skeletal"));
+        RuntimeStringValue::Ptr controllerTypeStr = makeValueCopy(std::string_view("blend_skeletal"));
         RuntimeCollection::Ptr tracksCollection = makeValueCopy(std::move(animTracks));
 
-        eastl::map<eastl::string, RuntimeValue::Ptr> animationComponentProps = {
+        std::map<std::string, RuntimeValue::Ptr> animationComponentProps = {
             {"animControllerType", controllerTypeStr},
             {"tracksCreationInfo",  tracksCollection}
         };
@@ -289,7 +297,7 @@ namespace nau
         animationComponentAsset.properties = makeValueCopy(std::move(animationComponentProps));
     }
 
-    GltfSceneAsset::GltfSceneObjectAsset GltfSceneAsset::makeSceneObjectAsset(IAssetContainer& container, const GltfFile& gltfFile, const eastl::set<unsigned>& skeletonJointNodes, unsigned index)
+    GltfSceneAsset::GltfSceneObjectAsset GltfSceneAsset::makeSceneObjectAsset(IAssetContainer& container, const GltfFile& gltfFile, const std::set<unsigned>& skeletonJointNodes, unsigned index)
     {
         NAU_FATAL(index < gltfFile.nodes.size());
         RuntimeReadonlyDictionary& gltfNode = gltfFile.nodes[index]->as<RuntimeReadonlyDictionary&>();
@@ -324,7 +332,7 @@ namespace nau
             .componentTypeId = 0,
             .uid = Uid::generate()};
 
-        eastl::map<eastl::string, RuntimeValue::Ptr> properties;
+        std::map<std::string, RuntimeValue::Ptr> properties;
 
         if (gltfNode.containsKey("mesh"))
         {
@@ -346,8 +354,8 @@ namespace nau
                 if (!skinningParseInfo.skeletonPath.empty())
                 {
                     ComponentAsset& skeletonComponent = object.addComponent(rtti::getTypeInfo<SkeletonComponent>());
-                    eastl::map<eastl::string, RuntimeValue::Ptr> skeletonProps = {
-  // load skeleton from gltf + ozz
+                    std::map<std::string, RuntimeValue::Ptr> skeletonProps = {
+                        // load skeleton from gltf + ozz
                         {"skeletonAsset", makeAssetPath(container, assetFactory, fmt::format("skin/{}/{}", skinIdx, skinningParseInfo.skeletonPath))}
                     };
 
@@ -404,9 +412,9 @@ namespace nau
             .name = "GLTF Scene"};
     }
 
-    eastl::optional<Vector<ReferenceField>> GltfSceneAsset::getReferencesInfo() const
+    std::optional<Vector<ReferenceField>> GltfSceneAsset::getReferencesInfo() const
     {
-        return eastl::nullopt;
+        return std::nullopt;
     }
 
     void GltfSceneAsset::visitScene(ISceneAssetVisitor& visitor) const

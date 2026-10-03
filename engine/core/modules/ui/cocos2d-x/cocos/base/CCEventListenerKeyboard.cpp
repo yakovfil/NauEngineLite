@@ -24,12 +24,13 @@
  
  ****************************************************************************/
 
+#include <string>
 #include "base/CCEventListenerKeyboard.h"
 #include "base/ccMacros.h"
 
 NS_CC_BEGIN
 
-const eastl::string EventListenerKeyboard::LISTENER_ID = "__cc_keyboard";
+const std::string EventListenerKeyboard::LISTENER_ID = "__cc_keyboard";
 
 bool EventListenerKeyboard::checkAvailable()
 {

@@ -3,13 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/type_traits.h>
-#include <EASTL/algorithm.h>
-#include <EASTL/numeric.h>
-#include "nau/diag/assertion.h"
+#include <algorithm>
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "dag_bitset.h"
+#include "nau/diag/assertion.h"
 
 // Pool should scan from oldest to newest block for a free slot
 struct ObjectPoolBlockSearchOrderFrontToBack
@@ -43,7 +46,10 @@ struct ObjectPoolPolicyRandomAllocationAndFree
       return (~freeMask).any();
     }
     bool isAllocated(size_t index) const { return !freeMask.test(index); }
-    size_t allocatedSlots() const { return BlockSize - freeMask.size(); }
+    size_t allocatedSlots() const
+    {
+        return BlockSize - freeMask.count();
+    }
   };
 };
 
@@ -61,9 +67,9 @@ struct ObjectPoolPolicyLinearAllocationAndNoFree
     size_t findFreeSlot() const { return allocated; }
     void markAsAllocated(size_t index)
     {
-      EA_UNUSED(index);
-      NAU_ASSERT(index == allocated);
-      ++allocated;
+        (void)index;
+        NAU_ASSERT(index == allocated);
+        ++allocated;
     }
     // If this complains, you are using the wrong policy, no individual frees with this policy
     void markAsFree(size_t index);
@@ -77,7 +83,7 @@ struct ObjectPoolPolicyLinearAllocationAndNoFree
 // Object pool of T that allocates memory to store BlockSize objects in one contiguous block each.
 // Behavior and support for some features is dictated by the used policy.
 // (sort of) TODO:
-// - Version with user supplied memory allocator, right now used eastl::vector default allocator and new for object pools.
+// - Version with user supplied memory allocator, right now used std::vector default allocator and new for object pools.
 // - May remove need for unique_ptr as it has some (minor overhead)
 template <typename T, size_t BlockSize = OBJECT_POOL_DEFAULT_BLOCK_SIZE, typename Policy = ObjectPoolPolicyRandomAllocationAndFree>
 class ObjectPool
@@ -85,7 +91,10 @@ class ObjectPool
   // Shortcut for block search order
   using BlockSearchOrder = typename Policy::BlockSearchOrder;
   // Shortcut for memory provider
-  using StorageUnit = typename eastl::aligned_storage<sizeof(T)>::type;
+  struct alignas(T) StorageUnit
+  {
+      std::byte bytes[sizeof(T)];
+  };
 
   // Implements constructor handler for trivially constructible types
   template <bool isTrivial = true, bool = false>
@@ -98,7 +107,7 @@ class ObjectPool
     static T *construct(void *ptr, B &&b, Args &&...args)
     {
       // "::" forces use of default inplace allocator
-      return ::new (ptr) T(eastl::forward<B>(b), eastl::forward<Args>(args)...);
+      return ::new(ptr) T(std::forward<B>(b), std::forward<Args>(args)...);
     }
   };
   // Implements constructor handler for non trivially constructible types
@@ -109,7 +118,7 @@ class ObjectPool
     static T *construct(void *ptr, Args &&...args)
     {
       // "::" forces use of default inplace allocator
-      return ::new (ptr) T(eastl::forward<Args>(args)...);
+      return ::new(ptr) T(std::forward<Args>(args)...);
     }
   };
   // Implements destructor handler for trivially destructible types
@@ -125,8 +134,8 @@ class ObjectPool
     static void destruct(T *ptr) { ptr->~T(); }
   };
   // Composites constructor handler and destructor handler for T
-  struct TypeHandler : ConstructorHandler<eastl::is_trivially_default_constructible<T>::value, false>,
-                       DestructorHandler<eastl::is_trivially_destructible<T>::value, false>
+  struct TypeHandler : ConstructorHandler<std::is_trivially_default_constructible<T>::value, false>,
+                       DestructorHandler<std::is_trivially_destructible<T>::value, false>
   {};
 
   struct Block : Policy::template BlockData<T, BlockSize>
@@ -146,7 +155,7 @@ class ObjectPool
     template <typename... Args>
     T *allocSlot(size_t i, Args &&...args)
     {
-      return TypeHandler::construct(acquireSlot(i), eastl::forward<Args>(args)...);
+        return TypeHandler::construct(acquireSlot(i), std::forward<Args>(args)...);
     }
     // Calculates offset from &objects[0] to ptr. This value can be anything, negative values and values outside of this block.
     ptrdiff_t calculate_relative_offset(const T *ptr) const { return reinterpret_cast<const StorageUnit *>(ptr) - &objects[0]; }
@@ -173,7 +182,7 @@ class ObjectPool
     }
   };
 
-  eastl::vector<eastl::unique_ptr<Block>> blocks;
+  std::vector<std::unique_ptr<Block>> blocks;
   // This keeps track of a block that is guaranteed to have at least one free slot.
   // Search for free slot can be massively shortened when this index points to a valid block.
   size_t blockWithSpaceIndex = 0;
@@ -182,35 +191,47 @@ class ObjectPool
   // Parameter overloaded version that searches from front to back.
   Block *findBlockWithSpace(ObjectPoolBlockSearchOrderFrontToBack)
   {
-    auto ref = eastl::find_if(begin(blocks), end(blocks), [](auto &block) { return block->hasSpace(); });
-    if (ref != end(blocks))
-      return ref->get();
-    return nullptr;
+      auto ref = std::find_if(begin(blocks), end(blocks), [](auto& block)
+      {
+          return block->hasSpace();
+      });
+      if (ref != end(blocks))
+          return ref->get();
+      return nullptr;
   }
   // Finds a block that has a free slot that can be allocated.
   // Parameter overloaded version that searches from back to front.
   Block *findBlockWithSpace(ObjectPoolBlockSearchOrderBackToFront)
   {
-    auto ref = eastl::find_if(rbegin(blocks), rend(blocks), [](auto &block) { return block->hasSpace(); });
-    if (ref != rend(blocks))
-      return ref->get();
-    return nullptr;
+      auto ref = std::find_if(rbegin(blocks), rend(blocks), [](auto& block)
+      {
+          return block->hasSpace();
+      });
+      if (ref != rend(blocks))
+          return ref->get();
+      return nullptr;
   }
   // Returns an index to a block that has a free slot that can be allocated.
   // Returns blocks.size() when no block could be found.
   // Parameter overloaded version that searches from front to back.
   size_t findBlockIndexWithSpace(ObjectPoolBlockSearchOrderFrontToBack)
   {
-    auto ref = eastl::find_if(begin(blocks), end(blocks), [](auto &block) { return block->hasSpace(); });
-    return eastl::distance(begin(blocks), ref);
+      auto ref = std::find_if(begin(blocks), end(blocks), [](auto& block)
+      {
+          return block->hasSpace();
+      });
+      return std::distance(begin(blocks), ref);
   }
   // Returns an index to a block that has a free slot that can be allocated.
   // Returns blocks.size() when no block could be found.
   // Parameter overloaded version that searches from back to front.
   size_t findBlockIndexWithSpace(ObjectPoolBlockSearchOrderBackToFront)
   {
-    auto ref = eastl::find_if(rbegin(blocks), rend(blocks), [](auto &block) { return block->hasSpace(); });
-    return eastl::distance(begin(blocks), ref.base());
+      auto ref = std::find_if(rbegin(blocks), rend(blocks), [](auto& block)
+      {
+          return block->hasSpace();
+      });
+      return std::distance(begin(blocks), ref.base());
   }
 
 public:
@@ -227,9 +248,13 @@ public:
   // NOTE: invalidates ids, so if ...andId are used, this can not be used to free memory.
   void trim()
   {
-    blocks.erase(eastl::remove_if(begin(blocks), end(blocks), [](auto &block) { return !block->hasAnyAllocated(); }), end(blocks));
-    // remove_if might reordered stuff in a way we no longer point to the correct block, need to reset
-    blockWithSpaceIndex = blocks.size();
+      blocks.erase(std::remove_if(begin(blocks), end(blocks), [](auto& block)
+      {
+          return !block->hasAnyAllocated();
+      }),
+                   end(blocks));
+      // remove_if might reordered stuff in a way we no longer point to the correct block, need to reset
+      blockWithSpaceIndex = blocks.size();
   }
   // Tries to free memory in a way that preserves object ids.
   void trimBack()
@@ -261,19 +286,19 @@ public:
     auto block = blockWithSpaceIndex < blocks.size() ? blocks[blockWithSpaceIndex].get() : findBlockWithSpace(BlockSearchOrder{});
     if (block)
     {
-      result = block->allocSlot(block->findFreeSlot(), eastl::forward<Args>(args)...);
-      // it might be the last slot we used up of this block, then set the index out of bounds to indicate
-      // that we don't have a block and a search is needed.
-      if (!block->hasSpace())
-        blockWithSpaceIndex = blocks.size();
+        result = block->allocSlot(block->findFreeSlot(), std::forward<Args>(args)...);
+        // it might be the last slot we used up of this block, then set the index out of bounds to indicate
+        // that we don't have a block and a search is needed.
+        if (!block->hasSpace())
+            blockWithSpaceIndex = blocks.size();
     }
     else
     {
       // new block has at least one free block after we allocated one (static assert ensures that block size is > 1)
       blockWithSpaceIndex = blocks.size();
-      blocks.push_back(eastl::make_unique<Block>());
+      blocks.push_back(std::make_unique<Block>());
       block = blocks.back().get();
-      result = block->allocSlot(block->findFreeSlot(), eastl::forward<Args>(args)...);
+      result = block->allocSlot(block->findFreeSlot(), std::forward<Args>(args)...);
     }
     return result;
   }
@@ -294,7 +319,7 @@ public:
     {
       // new block has at least one free block after we allocated one (static assert ensures that block size is > 1)
       blockWithSpaceIndex = blocks.size();
-      blocks.push_back(eastl::make_unique<Block>());
+      blocks.push_back(std::make_unique<Block>());
       block = blocks.back().get();
       result = block->acquireSlot(block->findFreeSlot());
     }
@@ -312,7 +337,7 @@ public:
       auto block = blocks[blockIndex].get();
       auto slot = block->findFreeSlot();
       auto id = slot + BlockSize * blockIndex;
-      result = block->allocSlot(slot, id, eastl::forward<Args>(args)...);
+      result = block->allocSlot(slot, id, std::forward<Args>(args)...);
       // it might be the last slot we used up of this block, then set the index out of bounds to indicate
       // that we don't have a block and a search is needed.
       if (!block->hasSpace())
@@ -323,9 +348,9 @@ public:
       // new block has at least one free block after we allocated one (static assert ensures that block size is > 1)
       blockWithSpaceIndex = blocks.size();
       auto id = blocks.size() * BlockSize;
-      blocks.push_back(eastl::make_unique<Block>());
+      blocks.push_back(std::make_unique<Block>());
       auto block = blocks.back().get();
-      result = block->allocSlot(0, id, eastl::forward<Args>(args)...);
+      result = block->allocSlot(0, id, std::forward<Args>(args)...);
     }
     return result;
   }
@@ -351,7 +376,7 @@ public:
       // new block has at least one free block after we allocated one (static assert ensures that block size is > 1)
       blockWithSpaceIndex = blocks.size();
       id = blocks.size() * BlockSize;
-      blocks.push_back(eastl::make_unique<Block>());
+      blocks.push_back(std::make_unique<Block>());
       auto block = blocks.back().get();
       result = block->acquireSlot(0);
     }
@@ -473,9 +498,11 @@ public:
   // Returns number of allocates object slots
   size_t size() const
   {
-    return eastl::accumulate(begin(blocks), end(blocks), size_t(0),
-      [](auto value, auto &block) //
-      { return value + block->allocatedSlots(); });
+      return std::accumulate(begin(blocks), end(blocks), size_t(0),
+                             [](auto value, auto& block)  //
+      {
+          return value + block->allocatedSlots();
+      });
   }
 
   // Ensures that at least the number of requested objects can be held by the pool without any additional
@@ -485,7 +512,7 @@ public:
     auto cnt = (size + BlockSize - 1) / BlockSize;
     while (cnt > blocks.size())
     {
-      blocks.push_back(eastl::make_unique<Block>());
+        blocks.push_back(std::make_unique<Block>());
     }
   }
 

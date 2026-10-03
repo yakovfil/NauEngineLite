@@ -5,7 +5,9 @@
 
 	This work is released to Public Domain, do whatever you want with it.
 */
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <limits>
+#include <utility>
 
 #include <binPack2d/SkylineBinPack.h>
 
@@ -49,15 +51,15 @@ void SkylineBinPack::Init(int width, int height, bool useWasteMap_)
 	}
 }
 
-void SkylineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &dst, LevelChoiceHeuristic method, bool allowFlip)
+void SkylineBinPack::Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &dst, LevelChoiceHeuristic method, bool allowFlip)
 {
 	dst.clear();
 
 	while(rects.size() > 0)
 	{
 		Rect bestNode;
-		int bestScore1 = eastl::numeric_limits<int>::max();
-		int bestScore2 = eastl::numeric_limits<int>::max();
+		int bestScore1 = std::numeric_limits<int>::max();
+		int bestScore2 = std::numeric_limits<int>::max();
 		int bestSkylineIndex = -1;
 		int bestRectIndex = -1;
 		for(unsigned i = 0; i < rects.size(); ++i)
@@ -145,7 +147,7 @@ bool SkylineBinPack::RectangleFits(int skylineNodeIndex, int width, int height, 
 	y = skyLine[skylineNodeIndex].y;
 	while(widthLeft > 0)
 	{
-		y = eastl::max(y, skyLine[i].y);
+		y = std::max(y, skyLine[i].y);
 		if (y + height > binHeight)
 			return false;
 		widthLeft -= skyLine[i].width;
@@ -166,7 +168,7 @@ int SkylineBinPack::ComputeWastedArea(int skylineNodeIndex, int width, int heigh
 			break;
 
 		int leftSide = skyLine[skylineNodeIndex].x;
-		int rightSide = eastl::min(rectRight, leftSide + skyLine[skylineNodeIndex].width);
+		int rightSide = std::min(rectRight, leftSide + skyLine[skylineNodeIndex].width);
 		debug_assert(y >= skyLine[skylineNodeIndex].y);
 		wastedArea += (rightSide - leftSide) * (y - skyLine[skylineNodeIndex].y);
 	}
@@ -193,7 +195,7 @@ void SkylineBinPack::AddWasteMapArea(int skylineNodeIndex, int width, int height
 			break;
 
 		int leftSide = skyLine[skylineNodeIndex].x;
-		int rightSide = eastl::min(rectRight, leftSide + skyLine[skylineNodeIndex].width);
+		int rightSide = std::min(rectRight, leftSide + skyLine[skylineNodeIndex].width);
 		debug_assert(y >= skyLine[skylineNodeIndex].y);
 
 		Rect waste;
@@ -285,10 +287,10 @@ Rect SkylineBinPack::InsertBottomLeft(int width, int height, bool allowFlip)
 
 Rect SkylineBinPack::FindPositionForNewNodeBottomLeft(int width, int height, int &bestHeight, int &bestWidth, int &bestIndex, bool allowFlip) const
 {
-	bestHeight = eastl::numeric_limits<int>::max();
+	bestHeight = std::numeric_limits<int>::max();
 	bestIndex = -1;
 	// Used to break ties if there are nodes at the same level. Then pick the narrowest one.
-	bestWidth = eastl::numeric_limits<int>::max();
+	bestWidth = std::numeric_limits<int>::max();
 	Rect newNode;
 	memset(&newNode, 0, sizeof(newNode));
 	for(unsigned i = 0; i < skyLine.size(); ++i)
@@ -356,8 +358,8 @@ Rect SkylineBinPack::InsertMinWaste(int width, int height, bool allowFlip)
 
 Rect SkylineBinPack::FindPositionForNewNodeMinWaste(int width, int height, int &bestHeight, int &bestWastedArea, int &bestIndex, bool allowFlip) const
 {
-	bestHeight = eastl::numeric_limits<int>::max();
-	bestWastedArea = eastl::numeric_limits<int>::max();
+	bestHeight = std::numeric_limits<int>::max();
+	bestWastedArea = std::numeric_limits<int>::max();
 	bestIndex = -1;
 	Rect newNode;
 	memset(&newNode, 0, sizeof(newNode));

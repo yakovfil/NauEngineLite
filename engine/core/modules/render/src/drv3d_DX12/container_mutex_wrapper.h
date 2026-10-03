@@ -3,8 +3,7 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/utility.h>
-
+#include <utility>
 
 // Very simple wrapper to make a non thread safe container thread safe with the help of a paired mutex.
 // Access is grated with a AccessToken type, which grants access to the containers interface.
@@ -52,8 +51,8 @@ public:
     AccessToken(AccessToken &&other) : parent{other.parent} { other.parent = nullptr; }
     AccessToken &operator=(AccessToken &&other)
     {
-      eastl::swap(parent, other.parent);
-      return *this;
+        std::swap(parent, other.parent);
+        return *this;
     }
 
     T &operator*() { return parent->data(); }

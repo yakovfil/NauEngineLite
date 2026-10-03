@@ -3,10 +3,12 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "resourceUsage.h"
-#include <EASTL/utility.h>
-#include <EASTL/span.h>
-#include "nau/diag/logging.h"
 
+#include <optional>
+#include <span>
+#include <utility>
+
+#include "nau/diag/logging.h"
 
 namespace dabfg
 {
@@ -78,7 +80,7 @@ void validate_usage(ResourceUsage usage)
   }
 }
 
-using StageMapEntry = eastl::pair<Stage, ResourceBarrier>;
+using StageMapEntry = std::pair<Stage, ResourceBarrier>;
 
 static constexpr StageMapEntry USAGE_STAGE_TO_BARRIER_DEST_STAGE[]{
   {Stage::UNKNOWN, RB_NONE},
@@ -98,7 +100,7 @@ static constexpr StageMapEntry USAGE_STAGE_TO_BARRIER_SOURCE_STAGE[]{
   {Stage::RAYTRACE, RB_SOURCE_STAGE_RAYTRACE},
 };
 
-static ResourceBarrier map_stage_flags(eastl::span<StageMapEntry const> map, Stage stage)
+static ResourceBarrier map_stage_flags(std::span<StageMapEntry const> map, Stage stage)
 {
   int result = RB_NONE;
   for (auto &[stageFlag, d3dStage] : map)
@@ -182,98 +184,109 @@ ResourceBarrier barrier_for_transition(intermediate::ResourceUsage usage_before,
   return RB_NONE;
 }
 
-eastl::optional<ResourceActivationAction> get_activation_from_usage(History history, intermediate::ResourceUsage usage,
-  ResourceType res_type)
+std::optional<ResourceActivationAction> get_activation_from_usage(History history, intermediate::ResourceUsage usage, ResourceType res_type)
 {
   switch (history)
   {
-    case History::No: return eastl::nullopt;
-    case History::DiscardOnFirstFrame:
-      switch (usage.type)
-      {
-        case Usage::COPY: return ResourceActivationAction::REWRITE_AS_COPY_DESTINATION;
+      case History::No:
+          return std::nullopt;
+      case History::DiscardOnFirstFrame:
+          switch (usage.type)
+          {
+              case Usage::COPY:
+                  return ResourceActivationAction::REWRITE_AS_COPY_DESTINATION;
 
-        case Usage::BLIT:
-        case Usage::COLOR_ATTACHMENT:
-        case Usage::DEPTH_ATTACHMENT:
-        case Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE:
-        case Usage::RESOLVE_ATTACHMENT: return ResourceActivationAction::DISCARD_AS_RTV_DSV;
+              case Usage::BLIT:
+              case Usage::COLOR_ATTACHMENT:
+              case Usage::DEPTH_ATTACHMENT:
+              case Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE:
+              case Usage::RESOLVE_ATTACHMENT:
+                  return ResourceActivationAction::DISCARD_AS_RTV_DSV;
 
-        case Usage::INPUT_ATTACHMENT:
-          NAU_LOG_ERROR("Attempted to deduce activation of a discarded texture used as an input "
-                 "attachment! This is likely an application error!");
-          return eastl::nullopt;
+              case Usage::INPUT_ATTACHMENT:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a discarded texture used as an input "
+                      "attachment! This is likely an application error!");
+                  return std::nullopt;
 
-        case Usage::SHADER_RESOURCE:
-          if (usage.access == Access::READ_WRITE)
-            return ResourceActivationAction::DISCARD_AS_UAV;
-          else if (res_type == ResourceType::Texture)
-            return ResourceActivationAction::DISCARD_AS_RTV_DSV;
-          else if (res_type == ResourceType::Buffer)
-            return ResourceActivationAction::DISCARD_AS_UAV;
-          NAU_ASSERT(false, "Unhandled resource type! This should never happen!");
-          return eastl::nullopt;
+              case Usage::SHADER_RESOURCE:
+                  if (usage.access == Access::READ_WRITE)
+                      return ResourceActivationAction::DISCARD_AS_UAV;
+                  else if (res_type == ResourceType::Texture)
+                      return ResourceActivationAction::DISCARD_AS_RTV_DSV;
+                  else if (res_type == ResourceType::Buffer)
+                      return ResourceActivationAction::DISCARD_AS_UAV;
+                  NAU_ASSERT(false, "Unhandled resource type! This should never happen!");
+                  return std::nullopt;
 
-        case Usage::VERTEX_BUFFER:
-        case Usage::INDEX_BUFFER:
-        case Usage::INDIRECTION_BUFFER:
-          NAU_LOG_ERROR("Attempted to deduce activation of a discarded buffer used as a "
-                 "geometry buffer (vertex/index/indirection)! This is likely an application error!");
-          return eastl::nullopt;
+              case Usage::VERTEX_BUFFER:
+              case Usage::INDEX_BUFFER:
+              case Usage::INDIRECTION_BUFFER:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a discarded buffer used as a "
+                      "geometry buffer (vertex/index/indirection)! This is likely an application error!");
+                  return std::nullopt;
 
-        case Usage::VRS_RATE_TEXTURE:
-          NAU_LOG_ERROR("Attempted to deduce activation of a discarded texture used as a "
-                 "VRS rate texture! This is likely an application error!");
-          return eastl::nullopt;
+              case Usage::VRS_RATE_TEXTURE:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a discarded texture used as a "
+                      "VRS rate texture! This is likely an application error!");
+                  return std::nullopt;
 
-        case Usage::CONSTANT_BUFFER:
-          NAU_LOG_ERROR("Attempted to deduce activation of a discarded resource used as a constant buffer! "
-                 "This is likely an application error!");
-          return ResourceActivationAction::DISCARD_AS_UAV;
+              case Usage::CONSTANT_BUFFER:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a discarded resource used as a constant buffer! "
+                      "This is likely an application error!");
+                  return ResourceActivationAction::DISCARD_AS_UAV;
 
-        case Usage::UNKNOWN:
-          NAU_LOG_ERROR("Attempted to deduce activation of a discarded resource used as an UNKNOWN!"
-                 " This may cause driver validation errors! Please, provide a usage.");
-          return eastl::nullopt;
-      }
-      [[fallthrough]];
+              case Usage::UNKNOWN:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a discarded resource used as an UNKNOWN!"
+                      " This may cause driver validation errors! Please, provide a usage.");
+                  return std::nullopt;
+          }
+          [[fallthrough]];
 
-    case History::ClearZeroOnFirstFrame:
-      switch (usage.type)
-      {
-        case Usage::COPY:
-        case Usage::CONSTANT_BUFFER: return ResourceActivationAction::CLEAR_I_AS_UAV;
+      case History::ClearZeroOnFirstFrame:
+          switch (usage.type)
+          {
+              case Usage::COPY:
+              case Usage::CONSTANT_BUFFER:
+                  return ResourceActivationAction::CLEAR_I_AS_UAV;
 
-        case Usage::BLIT:
-        case Usage::COLOR_ATTACHMENT:
-        case Usage::DEPTH_ATTACHMENT:
-        case Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE:
-        case Usage::RESOLVE_ATTACHMENT:
-        case Usage::INPUT_ATTACHMENT:
-        case Usage::VRS_RATE_TEXTURE: return ResourceActivationAction::CLEAR_AS_RTV_DSV;
+              case Usage::BLIT:
+              case Usage::COLOR_ATTACHMENT:
+              case Usage::DEPTH_ATTACHMENT:
+              case Usage::DEPTH_ATTACHMENT_AND_SHADER_RESOURCE:
+              case Usage::RESOLVE_ATTACHMENT:
+              case Usage::INPUT_ATTACHMENT:
+              case Usage::VRS_RATE_TEXTURE:
+                  return ResourceActivationAction::CLEAR_AS_RTV_DSV;
 
-        case Usage::SHADER_RESOURCE:
-          if (usage.access == Access::READ_WRITE)
-            return ResourceActivationAction::CLEAR_I_AS_UAV;
-          else if (res_type == ResourceType::Texture)
-            return ResourceActivationAction::CLEAR_AS_RTV_DSV;
-          else if (res_type == ResourceType::Buffer)
-            return ResourceActivationAction::CLEAR_I_AS_UAV;
-          NAU_ASSERT(false, "Unhandled resource type! This should never happen!");
-          return eastl::nullopt;
+              case Usage::SHADER_RESOURCE:
+                  if (usage.access == Access::READ_WRITE)
+                      return ResourceActivationAction::CLEAR_I_AS_UAV;
+                  else if (res_type == ResourceType::Texture)
+                      return ResourceActivationAction::CLEAR_AS_RTV_DSV;
+                  else if (res_type == ResourceType::Buffer)
+                      return ResourceActivationAction::CLEAR_I_AS_UAV;
+                  NAU_ASSERT(false, "Unhandled resource type! This should never happen!");
+                  return std::nullopt;
 
-        case Usage::VERTEX_BUFFER:
-        case Usage::INDEX_BUFFER:
-        case Usage::INDIRECTION_BUFFER:
-          NAU_LOG_ERROR("Attempted to deduce activation of a cleared buffer used as a "
-                 "geometry buffer (vertex/index/indirection)! This is likely an application error!");
-          return ResourceActivationAction::CLEAR_I_AS_UAV;
+              case Usage::VERTEX_BUFFER:
+              case Usage::INDEX_BUFFER:
+              case Usage::INDIRECTION_BUFFER:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a cleared buffer used as a "
+                      "geometry buffer (vertex/index/indirection)! This is likely an application error!");
+                  return ResourceActivationAction::CLEAR_I_AS_UAV;
 
-        case Usage::UNKNOWN:
-          NAU_LOG_ERROR("Attempted to deduce activation of a cleared history resource used as an UNKNOWN!"
-                 " This may cause driver validation errors! Please, provide a usage.");
-          return eastl::nullopt;
-      }
+              case Usage::UNKNOWN:
+                  NAU_LOG_ERROR(
+                      "Attempted to deduce activation of a cleared history resource used as an UNKNOWN!"
+                      " This may cause driver validation errors! Please, provide a usage.");
+                  return std::nullopt;
+          }
   }
 
   return {};

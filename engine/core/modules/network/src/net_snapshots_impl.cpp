@@ -3,6 +3,11 @@
 
 #include "net_snapshots_impl.h"
 
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 #include "nau/diag/logging.h"
 #include "nau/network/napi/networking_factory.h"
 #include "nau/network/netsync/net_connector.h"
@@ -54,9 +59,9 @@ namespace nau
         m_sceneToPeer.emplace(sceneName, pdata);
     }
 
-    void NetSnapshotsImpl::setOnSceneMissing(nau::Functor<void(eastl::string_view peerId, eastl::string_view sceneName)> callback)
+    void NetSnapshotsImpl::setOnSceneMissing(nau::Functor<void(std::string_view peerId, std::string_view sceneName)> callback)
     {
-        m_onSceneMissing = eastl::move(callback);
+        m_onSceneMissing = std::move(callback);
     }
 
     void NetSnapshotsImpl::onComponentActivated(IComponentNetSync* component)
@@ -71,7 +76,7 @@ namespace nau
 
     void NetSnapshotsImpl::onComponentWrite(IComponentNetSync* component)
     {
-        eastl::string_view sceneName = component->getSceneName();
+        std::string_view sceneName = component->getSceneName();
         auto peerPtr = getPeer(sceneName.data());
         if (peerPtr != nullptr)
         {
@@ -85,7 +90,7 @@ namespace nau
 
         for (auto& peer : m_peers)
         {
-            eastl::string buffer;
+            std::string buffer;
             peer.second.serializeFrame(m_frame, buffer);
             if (!buffer.empty())
             {
@@ -106,11 +111,11 @@ namespace nau
         auto& connector = getServiceProvider().get<INetConnector>();
         for (auto& peer : m_peers)
         {
-            eastl::vector<eastl::string> peers;
+            std::vector<std::string> peers;
             connector.getConnections(peer.first, peers);
             for (auto& connected : peers)
             {
-                eastl::string frameBuffer;
+                std::string frameBuffer;
                 if (connector.readFrame(peer.first, connected, frameBuffer))
                 {
                     FrameSnapshot frameSnapshot;
@@ -135,7 +140,7 @@ namespace nau
         }
     }
 
-    void NetSnapshotsImpl::applyFrameUpdate(const eastl::string& peerId, uint32_t frameNum)
+    void NetSnapshotsImpl::applyFrameUpdate(const std::string& peerId, uint32_t frameNum)
     {
         if (m_peers.count(peerId) == 0)
         {
@@ -235,7 +240,7 @@ namespace nau
         }
     }
 
-    void NetSnapshotsImpl::PeerData::serializeFrame(uint32_t frame, eastl::string& str)
+    void NetSnapshotsImpl::PeerData::serializeFrame(uint32_t frame, std::string& str)
     {
         if (m_frames.count(frame) > 0)
         {
@@ -246,7 +251,7 @@ namespace nau
         }
     }
 
-    void NetSnapshotsImpl::PeerData::deserializeFrame(const eastl::string& str)
+    void NetSnapshotsImpl::PeerData::deserializeFrame(const std::string& str)
     {
         FrameSnapshot frameSnapshot;
         auto res = serialization::JsonUtils::parse(frameSnapshot, str.c_str());
@@ -256,7 +261,7 @@ namespace nau
         }
     }
 
-    void NetSnapshotsImpl::PeerData::writeComponent(const eastl::string& sceneName, IComponentNetSync* component)
+    void NetSnapshotsImpl::PeerData::writeComponent(const std::string& sceneName, IComponentNetSync* component)
     {
         if (m_peerScenes.count(sceneName) == 0)
         {
@@ -272,7 +277,7 @@ namespace nau
         component->netWrite(m_data);
     }
 
-    void NetSnapshotsImpl::FrameSnapshot::writeComponent(const eastl::string& sceneName, IComponentNetSync* component)
+    void NetSnapshotsImpl::FrameSnapshot::writeComponent(const std::string& sceneName, IComponentNetSync* component)
     {
         if (m_scenes.count(sceneName) == 0)
         {
@@ -292,7 +297,7 @@ namespace nau
         m_components.emplace(component->getComponentPath().data(), ComponentData(component));
     }
 
-    NetSnapshotsImpl::PeerData* NetSnapshotsImpl::getPeer(const eastl::string& sceneName)
+    NetSnapshotsImpl::PeerData* NetSnapshotsImpl::getPeer(const std::string& sceneName)
     {
         if (m_sceneToPeer.count(sceneName) == 0)
         {

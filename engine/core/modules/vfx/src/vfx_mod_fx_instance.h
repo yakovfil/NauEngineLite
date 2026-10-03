@@ -3,26 +3,24 @@
 
 #pragma once
 
+#include <unordered_set>
+#include <vector>
+
 #include "graphics_assets/material_asset.h"
 #include "graphics_assets/shader_asset.h"
-#include "nau/assets/asset_ref.h"
-
-#include "vfx_instance.h"
-
-#include "modfx/emitter/emitter_state.h"
 #include "modfx/emitter/emitter_data.h"
-
-#include "modfx/settings/fx_spawn.h"
+#include "modfx/emitter/emitter_state.h"
+#include "modfx/settings/fx_color.h"
+#include "modfx/settings/fx_life.h"
 #include "modfx/settings/fx_position.h"
 #include "modfx/settings/fx_radius.h"
-#include "modfx/settings/fx_color.h"
 #include "modfx/settings/fx_rotation.h"
+#include "modfx/settings/fx_spawn.h"
 #include "modfx/settings/fx_texture.h"
-#include "modfx/settings/fx_life.h"
 #include "modfx/settings/fx_velocity.h"
-
+#include "nau/assets/asset_ref.h"
 #include "nau/math/math.h"
-
+#include "vfx_instance.h"
 
 namespace nau::vfx::modfx
 {
@@ -134,9 +132,9 @@ namespace nau::vfx::modfx
         EmitterData m_emitterData;
         EmitterState m_emitterState;
 
-        eastl::vector<ModFxData> m_particlePool;
-        eastl::unordered_set<int> m_freeIndexPool;
-        eastl::vector<InstanceData> m_instanceData;
+        std::vector<ModFxData> m_particlePool;
+        std::unordered_set<int> m_freeIndexPool;
+        std::vector<InstanceData> m_instanceData;
 
     private:
         int m_actualParticlePoolSize;

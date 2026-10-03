@@ -1,10 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
-#include <EASTL/unordered_map.h>
-#include "nau/memory/heap_allocator.h"
 #include "nau/memory/frame_allocator.h"
+
+#include <string>
+
+#include "nau/memory/heap_allocator.h"
 
 namespace nau
 {
@@ -15,18 +16,25 @@ namespace nau
     }
 
     FrameAllocator::FrameAllocator() :
-        m_memSection([](MemSectionPtr& value) {value = HeapAllocator::instance().getSection("FrameAllocator:" + eastl::to_string((size_t)&value)); }),
-        m_numAllocs([](int& value) {value = 0; })
-    {}
+        m_memSection([](MemSectionPtr& value)
+    {
+        value = HeapAllocator::instance().getSection("FrameAllocator:" + std::to_string((size_t)&value));
+    }),
+        m_numAllocs([](int& value)
+    {
+        value = 0;
+    })
+    {
+    }
 
     FrameAllocator::~FrameAllocator()
     {
         int total = 0;
         m_numAllocs.visitAll([&total](int& num)
-            {
-                total += num;
-                num = 0;
-            });
+        {
+            total += num;
+            num = 0;
+        });
         NAU_ASSERT(total == 0, "FrameAllocator not all allocations has been deallocated");
     }
 
@@ -34,13 +42,16 @@ namespace nau
     {
         int total = 0;
         m_numAllocs.visitAll([&total](int& num)
-            {
-                total += num;
-                num = 0;
-            });
+        {
+            total += num;
+            num = 0;
+        });
 
         NAU_ASSERT(total == 0, "FrameAllocator not all allocations has been deallocated");
-        m_memSection.visitAll([](MemSectionPtr& a) { a->reset(); });
+        m_memSection.visitAll([](MemSectionPtr& a)
+        {
+            a->reset();
+        });
         return total == 0;
     }
 
@@ -76,7 +87,7 @@ namespace nau
             --m_numAllocs.value();
     }
 
-    size_t FrameAllocator::getSize(const void* ptr) const 
+    size_t FrameAllocator::getSize(const void* ptr) const
     {
         if (!ptr)
             return 0;
@@ -96,4 +107,4 @@ namespace nau
         return alloc;
     }
 
-}
+}  // namespace nau

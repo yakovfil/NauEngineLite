@@ -1,15 +1,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <stdint.h>
-#include <debug/dag_assert.h>
+#include <daECS/net/netbase.h>
 #include <daNet/daNetPeerInterface.h>
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
-#include <util/dag_hash.h>
+#include <debug/dag_assert.h>
 #include <generic/dag_carray.h>
 #include <osApiWrappers/dag_critSec.h>
-#include <daECS/net/netbase.h>
+#include <stdint.h>
+#include <util/dag_hash.h>
+
+#include <memory>
+#include <vector>
 #if _TARGET_PC_WIN | _TARGET_XBOX
 #include <enet/win32.h> // _EnetBuffer
 #else
@@ -24,7 +25,7 @@ class EncryptionCtx final : public IDaNetTrafficEncoder
 {
   static constexpr size_t KEY_LEN = 16, AUTH_TAG_LEN = 4;
   WinCritSec mutex;
-  eastl::unique_ptr<crypto::ISymmetricCipher> gcmCipherCtx, cfbCipherCtx;
+  std::unique_ptr<crypto::ISymmetricCipher> gcmCipherCtx, cfbCipherCtx;
   uint64_t sessionRand;
   struct PeerRecord
   {
@@ -88,8 +89,8 @@ private:
       else
       {
         cipher = gcmCipherCtx.get();
-        if (EASTL_UNLIKELY(packet_size <= AUTH_TAG_LEN))
-          return nullptr;
+        if (NAU_UNLIKELY(packet_size <= AUTH_TAG_LEN))
+            return nullptr;
         packet_size -= AUTH_TAG_LEN;
       }
     }
@@ -172,8 +173,8 @@ private:
 
     if (gcmCipher)
     {
-      if (EASTL_UNLIKELY(!cipherCtx->finalize(outData + outlen, &outlen))) // check auth tag
-        return 0;
+        if (NAU_UNLIKELY(!cipherCtx->finalize(outData + outlen, &outlen)))  // check auth tag
+            return 0;
     }
     else
       ; // finalize is no-op for CFB cipher

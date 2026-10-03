@@ -3,9 +3,8 @@
 
 #pragma once
 
-#include <EASTL/span.h>
-
 #include <array>
+#include <span>
 #include <type_traits>
 
 #include "nau/kernel/kernel_config.h"
@@ -24,7 +23,7 @@ namespace nau::ser_detail
     public:
         using FieldFactory = RuntimeValue::Ptr (*)(const RuntimeValue& runtimeValue, void* objectPtr, const void* fieldInfoPtr) noexcept;
 
-        RuntimeFieldAccessor(std::string_view name, const void* field, FieldFactory factory):
+        RuntimeFieldAccessor(std::string_view name, const void* field, FieldFactory factory) :
             m_name(name),
             m_fieldMetaInfo(field),
             m_factory(factory)
@@ -65,7 +64,7 @@ namespace nau::ser_detail
         Result<> setFieldValue(const RuntimeValue& parent, const void* obj, std::string_view key, const RuntimeValue::Ptr& value);
 
     protected:
-        virtual eastl::span<RuntimeFieldAccessor> getFields() const = 0;
+        virtual std::span<RuntimeFieldAccessor> getFields() const = 0;
 
     private:
         RuntimeFieldAccessor* findField(std::string_view key) const;
@@ -95,7 +94,7 @@ namespace nau::ser_detail
         }
 
     private:
-        eastl::span<RuntimeFieldAccessor> getFields() const override
+        std::span<RuntimeFieldAccessor> getFields() const override
         {
             return {m_fields.data(), m_fields.size()};
         }
@@ -118,9 +117,9 @@ namespace nau::ser_detail
 
                 auto fieldRuntimeValue = makeValueRef(fieldValue);
 
-                if(auto* const childValue = fieldRuntimeValue->template as<ser_detail::NativeChildValue*>())
+                if (auto* const childValue = fieldRuntimeValue->template as<ser_detail::NativeChildValue*>())
                 {
-                    if(auto* const parentValue = parent.template as<const NativeParentValue*>())
+                    if (auto* const parentValue = parent.template as<const NativeParentValue*>())
                     {
                         childValue->setParent(parentValue->getThisMutabilityGuard());
                     }
@@ -210,7 +209,7 @@ namespace nau::ser_detail
 
         Result<> setValue(std::string_view key, const RuntimeValue::Ptr& value) override
         {
-            if constexpr(!IsMutable)
+            if constexpr (!IsMutable)
             {
                 return NauMakeError("Object is non mutable");
             }
@@ -229,7 +228,7 @@ namespace nau::ser_detail
 
         const rtti::TypeInfo* getValueTypeInfo() const override
         {
-            if constexpr(rtti::HasTypeInfo<ValueType>)
+            if constexpr (rtti::HasTypeInfo<ValueType>)
             {
                 return &rtti::getTypeInfo<ValueType>();
             }
@@ -245,7 +244,7 @@ namespace nau::ser_detail
         void* getValuePtr() override
         {
             NAU_ASSERT(isMutable());
-            if constexpr(IsMutable)
+            if constexpr (IsMutable)
             {
                 return reinterpret_cast<ValueType*>(&m_object);
             }

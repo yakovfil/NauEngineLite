@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // nau/kernel/kernel_config.h
 
-
 #pragma once
-
-#include "EASTL/internal/config.h"
 
 #if !defined(NAU_STATIC_RUNTIME)
 
@@ -70,7 +67,7 @@
 #endif
 
 #ifndef NAU_LIKELY
-    #if(defined(__GNUC__) && (__GNUC__ >= 3)) || defined(__clang__)
+    #if (defined(__GNUC__) && (__GNUC__ >= 3)) || defined(__clang__)
         #if defined(__cplusplus)
             #define NAU_LIKELY(x) __builtin_expect(!!(x), true)
             #define NAU_UNLIKELY(x) __builtin_expect(!!(x), false)
@@ -109,7 +106,13 @@
 #endif
 
 #if !defined(NAU_FORCE_INLINE)
-    #define NAU_FORCE_INLINE EASTL_FORCE_INLINE
+    #if defined(_MSC_VER)
+        #define NAU_FORCE_INLINE __forceinline
+    #elif defined(__GNUC__) || defined(__clang__)
+        #define NAU_FORCE_INLINE inline __attribute__((always_inline))
+    #else
+        #define NAU_FORCE_INLINE inline
+    #endif
 #endif
 
 #if !defined(NAU_UNUSED)

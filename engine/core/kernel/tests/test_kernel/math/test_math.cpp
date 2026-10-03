@@ -3,6 +3,8 @@
 // Copyright (c) N-GINN LLC., 2023-2025. All rights reserved.
 //
 
+#include <vector>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/math.h"
 
@@ -89,7 +91,7 @@ namespace nau::test
     {
         using namespace nau::math;
 
-        eastl::vector<float3> points;
+        std::vector<float3> points;
         generateSpherePoints(points, 10);
 
         ASSERT_EQ(points.size(), 1200);

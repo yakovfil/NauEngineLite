@@ -3,11 +3,10 @@
 
 
 #pragma once
+#include <string_view>
 
-//#include <EASTL/string_view.h>
-
-#include "nau/assets/asset_path.h"
 #include "nau/assets/asset_descriptor.h"
+#include "nau/assets/asset_path.h"
 #include "nau/rtti/rtti_object.h"
 #include "nau/utils/typed_flag.h"
 

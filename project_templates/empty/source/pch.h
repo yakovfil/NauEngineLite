@@ -12,9 +12,6 @@
     #include "nau/platform/windows/windows_headers.h"
 #endif
 
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
-
 #include <atomic>
 #include <iostream>
 

@@ -3,16 +3,16 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/span.h>
-#include <EASTL/string_view.h>
+#include <span>
+#include <string_view>
+#include <utility>
+
+#include "nau/math/math.h"
+#include "render/daBfg/externalState.h"
+#include "render/daBfg/multiplexing.h"
 #include "render/daBfg/nameSpace.h"
 #include "render/daBfg/nodeHandle.h"
 #include "render/daBfg/registry.h"
-#include "render/daBfg/multiplexing.h"
-#include "render/daBfg/externalState.h"
-
-#include "nau/math/math.h"
-
 
 namespace dabfg
 {
@@ -77,7 +77,7 @@ void mark_external_resource_for_validation(const D3dResource* resource);
 template <class F>
 [[nodiscard]] NodeHandle register_node(const char* name, const char* source_location, F&& declaration_callback)
 {
-  return root().registerNode(name, source_location, eastl::forward<F>(declaration_callback));
+    return root().registerNode(name, source_location, std::forward<F>(declaration_callback));
 }
 
 /**
@@ -104,14 +104,14 @@ inline void fill_slot(NamedSlot slot, const char* res_name)
 
 /**
  * \brief Alias for dabfg::root().updateExternallyConsumedResourceSet,
- * see \ref NameSpace::updateExternallyConsumedResourceSet(eastl::span<const char *const> res_names)
+ * see \ref NameSpace::updateExternallyConsumedResourceSet(std::span<const char *const> res_names)
  */
-inline void update_externally_consumed_resource_set(eastl::span<const char *const> res_names)
+inline void update_externally_consumed_resource_set(std::span<const char* const> res_names)
 {
   dabfg::root().updateExternallyConsumedResourceSet(res_names);
 }
 
-/// \copydoc update_externally_consumed_resource_set(eastl::span<const char *const> res_names)
+/// \copydoc update_externally_consumed_resource_set(std::span<const char *const> res_names)
 inline void update_externally_consumed_resource_set(std::initializer_list<const char *> res_names)
 {
   dabfg::root().updateExternallyConsumedResourceSet(res_names);

@@ -1,23 +1,24 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/ui/components/ui_component.h"
-#include "EASTL/vector.h"
+
+#include <vector>
+
+#include "nau/assets/asset_manager.h"
 #include "nau/assets/asset_path.h"
 #include "nau/assets/asset_ref.h"
 #include "nau/async/task_base.h"
 #include "nau/diag/assertion.h"
 #include "nau/diag/logging.h"
 #include "nau/platform/windows/utils/uid.h"
-#include "nau/ui/elements/canvas.h"
+#include "nau/scene/scene_factory.h"
+#include "nau/scene/scene_manager.h"
+#include "nau/service/service_provider.h"
+#include "nau/ui.h"
 #include "nau/ui/assets/ui_asset.h"
 #include "nau/ui/data/ui_canvas_builder.h"
-#include "nau/ui.h"
-#include "nau/service/service_provider.h"
-#include "nau/scene/scene_manager.h"
-#include "nau/assets/asset_manager.h"
-#include "nau/scene/scene_factory.h"
+#include "nau/ui/elements/canvas.h"
 
 namespace nau::ui
 {
@@ -97,7 +98,7 @@ namespace nau::ui
     void UiComponent::clearCanvas()
     {
         NAU_ASSERT(m_canvas);
-        eastl::vector<Node*> children;
+        std::vector<Node*> children;
         m_canvas->getChildren(children);
         for (auto* child : children)
         {

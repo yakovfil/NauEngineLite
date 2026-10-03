@@ -3,8 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
+#include <memory>
+
 #include "drv3d_commonCode/ngx_wrapper_base.h"
-#include <EASTL/unique_ptr.h>
 
 namespace drv3d_dx12
 {
@@ -26,6 +27,6 @@ public:
   ~XessWrapper();
 
 private:
-  eastl::unique_ptr<XessWrapperImpl> pImpl;
+    std::unique_ptr<XessWrapperImpl> pImpl;
 };
 } // namespace drv3d_dx12

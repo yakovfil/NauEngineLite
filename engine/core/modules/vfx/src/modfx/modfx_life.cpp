@@ -2,8 +2,11 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include "modfx_life.h"
-#include "nau/math/math.h"
+
+#include <algorithm>
+
 #include "math/vfx_random.h"
+#include "nau/math/math.h"
 
 namespace nau::vfx::modfx
 {
@@ -11,7 +14,7 @@ namespace nau::vfx::modfx
     {
         if (life.part_life_rnd_offset > 0.05f)
         {
-            life_norm = (eastl::min(life.part_life_rnd_offset, life.part_life_max) / life.part_life_max) * vfx::math::dafx_frnd(rnd_seed);
+            life_norm = (std::min(life.part_life_rnd_offset, life.part_life_max) / life.part_life_max) * vfx::math::dafx_frnd(rnd_seed);
         }
     }
 

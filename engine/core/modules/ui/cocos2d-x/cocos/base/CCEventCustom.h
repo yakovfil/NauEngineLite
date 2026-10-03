@@ -26,7 +26,7 @@
 #ifndef __cocos2d_libs__CCCustomEvent__
 #define __cocos2d_libs__CCCustomEvent__
 
-#include <EASTL/string.h>
+#include <string>
 #include "base/CCEvent.h"
 
 /**
@@ -47,7 +47,7 @@ public:
      * @param eventName A given name of the custom event.
      * @js ctor
      */
-    EventCustom(const eastl::string& eventName);
+    EventCustom(const std::string& eventName);
     
     /** Sets user data.
      *
@@ -65,10 +65,10 @@ public:
      *
      * @return The name of the event.
      */
-    const eastl::string& getEventName() const { return _eventName; }
+    const std::string& getEventName() const { return _eventName; }
 protected:
     void* _userData;       ///< User data
-    eastl::string _eventName;
+    std::string _eventName;
 };
 
 NS_CC_END

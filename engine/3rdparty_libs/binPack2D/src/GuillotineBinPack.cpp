@@ -5,7 +5,9 @@
 
 	This work is released to Public Domain, do whatever you want with it.
 */
-#include <EASTL/algorithm.h>
+#include <algorithm>
+#include <limits>
+#include <utility>
 
 #include <binPack2d/GuillotineBinPack.h>
 
@@ -41,7 +43,7 @@ void GuillotineBinPack::Init(int width, int height)
 	freeRectangles.push_back(n);
 }
 
-void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vector<RectResult> &usedRectangles, bool merge, 
+void GuillotineBinPack::Insert(std::vector<RectSizeRequest> &rects, std::vector<RectResult> &usedRectangles, bool merge,
 	FreeRectChoiceHeuristic rectChoice, GuillotineSplitHeuristic splitMethod, bool allowFlip)
 {
 	// Remember variables about the best packing choice we have made so far during the iteration process.
@@ -54,7 +56,7 @@ void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vec
 	while(rects.size() > 0)
 	{
 		// Stores the penalty score of the best rectangle placement - bigger=worse, smaller=better.
-		int bestScore = eastl::numeric_limits<int>::max();
+		int bestScore = std::numeric_limits<int>::max();
 
 		for(unsigned i = 0; i < freeRectangles.size(); ++i)
 		{
@@ -66,7 +68,7 @@ void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vec
 					bestFreeRect = i;
 					bestRect = j;
 					bestFlipped = false;
-					bestScore = eastl::numeric_limits<int>::min();
+					bestScore = std::numeric_limits<int>::min();
 					i = (unsigned)freeRectangles.size(); // Force a jump out of the outer loop as well - we got an instant fit.
 					break;
 				}
@@ -77,7 +79,7 @@ void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vec
 					bestFreeRect = i;
 					bestRect = j;
 					bestFlipped = true;
-					bestScore = eastl::numeric_limits<int>::min();
+					bestScore = std::numeric_limits<int>::min();
 					i = (unsigned)freeRectangles.size(); // Force a jump out of the outer loop as well - we got an instant fit.
 					break;
 				}
@@ -112,7 +114,7 @@ void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vec
 		}
 
 		// If we didn't manage to find any rectangle to pack, abort.
-		if (bestScore == eastl::numeric_limits<int>::max())
+		if (bestScore == std::numeric_limits<int>::max())
 			return;
 
 		// Otherwise, we're good to go and do the actual packing.
@@ -124,7 +126,7 @@ void GuillotineBinPack::Insert(eastl::vector<RectSizeRequest> &rects, eastl::vec
     	newNode.id = rects[bestRect].id;
 
 		if (bestFlipped)
-			eastl::swap(newNode.width, newNode.height);
+			std::swap(newNode.width, newNode.height);
 
 		// Remove the free space we lost in the bin.
 		SplitFreeRectByHeuristic(freeRectangles[bestFreeRect], newNode, splitMethod);
@@ -165,7 +167,7 @@ Rect GuillotineBinPack::Insert(int width, int height, bool merge, FreeRectChoice
 	GuillotineSplitHeuristic splitMethod, bool allowFlip)
 {
 	// Find where to put the new rectangle.
-    int maxFree = eastl::max(maxFreeW, maxFreeH);
+    int maxFree = std::max(maxFreeW, maxFreeH);
     if ((allowFlip && (width > maxFree || height > maxFree)) || (!allowFlip && (width > maxFreeW || height > maxFreeH)))
     {
        Rect bestNode;
@@ -207,7 +209,7 @@ inline int GuillotineBinPack::ScoreByHeuristic(int width, int height, const Rect
 	case RectWorstAreaFit: return ScoreWorstAreaFit(width, height, freeRect);
 	case RectWorstShortSideFit: return ScoreWorstShortSideFit(width, height, freeRect);
 	case RectWorstLongSideFit: return ScoreWorstLongSideFit(width, height, freeRect);
-	default: rbp_assert(false); return eastl::numeric_limits<int>::max();
+	default: rbp_assert(false); return std::numeric_limits<int>::max();
 	}
 }
 
@@ -220,7 +222,7 @@ inline int GuillotineBinPack::ScoreBestShortSideFit(int width, int height, const
 {
 	int leftoverHoriz = abs(freeRect.width - width);
 	int leftoverVert = abs(freeRect.height - height);
-	int leftover = eastl::min(leftoverHoriz, leftoverVert);
+	int leftover = std::min(leftoverHoriz, leftoverVert);
 	return leftover;
 }
 
@@ -228,7 +230,7 @@ inline int GuillotineBinPack::ScoreBestLongSideFit(int width, int height, const 
 {
 	int leftoverHoriz = abs(freeRect.width - width);
 	int leftoverVert = abs(freeRect.height - height);
-	int leftover = eastl::max(leftoverHoriz, leftoverVert);
+	int leftover = std::max(leftoverHoriz, leftoverVert);
 	return leftover;
 }
 
@@ -252,21 +254,21 @@ Rect GuillotineBinPack::FindPositionForNewNode(int width, int height, FreeRectCh
 	Rect bestNode;
     bestNode.x = bestNode.y = bestNode.width = bestNode.height = 0;
 
-	int bestScore = eastl::numeric_limits<int>::max();
+	int bestScore = std::numeric_limits<int>::max();
     int maxFreeLocalW = 0, maxFreeLocalH = 0;
 
 	/// Try each free rectangle to find the best one for placement.
 	for(unsigned i = 0; i < freeRectangles.size(); ++i)
 	{
 		// If this is a perfect fit upright, choose it immediately.
-        maxFreeLocalW = eastl::max(maxFreeLocalW, freeRectangles[i].width), maxFreeLocalH = eastl::max(maxFreeLocalH, freeRectangles[i].height);
+        maxFreeLocalW = std::max(maxFreeLocalW, freeRectangles[i].width), maxFreeLocalH = std::max(maxFreeLocalH, freeRectangles[i].height);
 		if (width == freeRectangles[i].width && height == freeRectangles[i].height)
 		{
 			bestNode.x = freeRectangles[i].x;
 			bestNode.y = freeRectangles[i].y;
 			bestNode.width = width;
 			bestNode.height = height;
-			bestScore = eastl::numeric_limits<int>::min();
+			bestScore = std::numeric_limits<int>::min();
 			*nodeIndex = i;
 			debug_assert(disjointRects.Disjoint(bestNode));
 			return bestNode;
@@ -279,7 +281,7 @@ Rect GuillotineBinPack::FindPositionForNewNode(int width, int height, FreeRectCh
 			bestNode.y = freeRectangles[i].y;
 			bestNode.width = height;
 			bestNode.height = width;
-			bestScore = eastl::numeric_limits<int>::min();
+			bestScore = std::numeric_limits<int>::min();
 			*nodeIndex = i;
 			debug_assert(disjointRects.Disjoint(bestNode));
 			return bestNode;
@@ -458,8 +460,8 @@ void GuillotineBinPack::MergeFreeList()
 				}
 			}
 		}
-        maxFreeLocalW = eastl::max(freeRectangles[i].width, maxFreeLocalW);
-        maxFreeLocalH = eastl::max(freeRectangles[i].height, maxFreeLocalH);
+        maxFreeLocalW = std::max(freeRectangles[i].width, maxFreeLocalW);
+        maxFreeLocalH = std::max(freeRectangles[i].height, maxFreeLocalH);
     }
     maxFreeW = maxFreeLocalW; maxFreeH = maxFreeLocalH;
 

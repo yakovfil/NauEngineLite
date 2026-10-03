@@ -3,8 +3,8 @@
 // inetworking_transport.h
 
 #pragma once
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
+#include <string>
+#include <vector>
 
 #include "networking_message.h"
 
@@ -23,7 +23,7 @@ namespace nau
          * @param [out] messages    A collection of received message. Empty if no messages.
          * @return                  Number of received messages, i.e. size of **messages**.
          */
-        virtual size_t read(eastl::vector<nau::NetworkingMessage>& messages) = 0;
+        virtual size_t read(std::vector<nau::NetworkingMessage>& messages) = 0;
 
         /**
          * @brief Attempts to send the specified message.
@@ -52,13 +52,13 @@ namespace nau
          * 
          * @return Local endpoint in URI form.
          */
-        virtual const eastl::string& localEndPoint() const = 0;
+        virtual const std::string& localEndPoint() const = 0;
 
         /**
          * @brief Retrieves the remote endpoint as URI.
          * 
          * @return Remote endpoint in URI form.
          */
-        virtual const eastl::string& remoteEndPoint() const = 0;
+        virtual const std::string& remoteEndPoint() const = 0;
     };
 }  // namespace nau

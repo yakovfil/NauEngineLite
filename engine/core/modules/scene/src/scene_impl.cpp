@@ -1,13 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./scene_impl.h"
-#include "./world_impl.h"
 
+#include <string_view>
+
+#include "./world_impl.h"
 #include "nau/scene/scene_factory.h"
 #include "nau/service/service_provider.h"
-
 
 namespace nau::scene
 {
@@ -17,13 +17,12 @@ namespace nau::scene
         m_sceneRoot->setScene(this);
     }
 
-
-    eastl::string_view SceneImpl::getName() const
+    std::string_view SceneImpl::getName() const
     {
         return m_name;
     }
 
-    void SceneImpl::setName(eastl::string_view name)
+    void SceneImpl::setName(std::string_view name)
     {
         m_name = name;
     }

@@ -12,7 +12,10 @@
 #include "nau/service/service_provider.h"
 #include "nau/ui.h"
 
-namespace nau::ui { class nau::ui::Node; }
+namespace nau::ui
+{
+    class Node;
+}
 
 namespace UsdTranslator
 {

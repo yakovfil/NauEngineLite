@@ -2,12 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
+#include <optional>
+#include <string_view>
+#include <variant>
+
 #include "dabfg/frontend/internalRegistry.h"
 #include "dabfg/frontend/nameResolver.h"
 #include "nau/diag/logging.h"
 #include "nau/shaders/dag_shaderVarType.h"
-
-
 
 namespace dabfg
 {
@@ -46,24 +48,24 @@ void validate_global_state(const InternalRegistry &registry, NodeNameId nodeId)
       // and we expect to see BAD_D3DRESID
       if (it != provided.end())
       {
-        if (auto bufPtr = eastl::get_if<ManagedBufView>(&it->second))
-        {
-          expectedId = bufPtr->getBufId();
-        }
-        else if (auto texPtr = eastl::get_if<ManagedTexView>(&it->second))
-        {
-          expectedId = texPtr->getTexId();
-        }
-        else if (auto blobView = eastl::get_if<BlobView>(&it->second))
-        {
-          continue;
-        }
+          if (auto bufPtr = std::get_if<ManagedBufView>(&it->second))
+          {
+              expectedId = bufPtr->getBufId();
+          }
+          else if (auto texPtr = std::get_if<ManagedTexView>(&it->second))
+          {
+              expectedId = texPtr->getTexId();
+          }
+          else if (auto blobView = std::get_if<BlobView>(&it->second))
+          {
+              continue;
+          }
       }
     }
 
     D3DRESID observedId;
     // SV type and resource type mismatch is impossible at this point
-    eastl::string_view resTypeStr;
+    std::string_view resTypeStr;
     //switch (ShaderGlobal::get_var_type(shVar))
     //{
     //  case SHVT_TEXTURE:
@@ -110,51 +112,55 @@ void validate_global_state(const InternalRegistry &registry, NodeNameId nodeId)
     Driver3dRenderTarget observedRts;
     d3d::get_render_target(observedRts);
 
-    const auto validateRt = [&registry, nodeId](const VirtualSubresourceRef &expected,
-                              const eastl::optional<Driver3dRenderTarget::RTState> &maybeObserved, const char *slot_name) {
-      const auto &provided = registry.resourceProviderReference.providedResources;
-      const auto it = provided.find(expected.nameId);
+    const auto validateRt = [&registry, nodeId](const VirtualSubresourceRef& expected,
+                                                const std::optional<Driver3dRenderTarget::RTState>& maybeObserved, const char* slot_name)
+    {
+        const auto& provided = registry.resourceProviderReference.providedResources;
+        const auto it = provided.find(expected.nameId);
 
-      BaseTexture *expectedTex = nullptr;
-      if (it != provided.end())
-        if (auto view = eastl::get_if<ManagedTexView>(&it->second))
-          expectedTex = view->getTex2D();
+        BaseTexture* expectedTex = nullptr;
+        if (it != provided.end())
+            if (auto view = std::get_if<ManagedTexView>(&it->second))
+                expectedTex = view->getTex2D();
 
-      const auto expectedName = expectedTex ? reinterpret_cast<const char*>(expectedTex->getTexName()) : "NULL";
-      const auto observedName = maybeObserved.has_value() && maybeObserved->tex ? reinterpret_cast<const char*>(maybeObserved->tex->getTexName()) : "NULL";
+        const auto expectedName = expectedTex ? reinterpret_cast<const char*>(expectedTex->getTexName()) : "NULL";
+        const auto observedName = maybeObserved.has_value() && maybeObserved->tex ? reinterpret_cast<const char*>(maybeObserved->tex->getTexName()) : "NULL";
 
-      // avoid the checks below for backbuffer
-      if (maybeObserved.has_value() && maybeObserved->tex == nullptr)
-        return;
+        // avoid the checks below for backbuffer
+        if (maybeObserved.has_value() && maybeObserved->tex == nullptr)
+            return;
 
-      auto observed = maybeObserved.value_or(Driver3dRenderTarget::RTState{});
+        auto observed = maybeObserved.value_or(Driver3dRenderTarget::RTState{});
 
-      if (expectedTex != observed.tex)
-      {
-        NAU_LOG_ERROR("Frame graph node {} expected the render target in slot {} to be bound to {}, "
-               "but it was spuriously changed to {} while executing the node! Please remove the spurious "
-               "set, or reset it back to the expected value at the end of the function execution!",
-          registry.knownNames.getName(nodeId), slot_name, expectedName, observedName);
-        return;
-      }
+        if (expectedTex != observed.tex)
+        {
+            NAU_LOG_ERROR(
+                "Frame graph node {} expected the render target in slot {} to be bound to {}, "
+                "but it was spuriously changed to {} while executing the node! Please remove the spurious "
+                "set, or reset it back to the expected value at the end of the function execution!",
+                registry.knownNames.getName(nodeId), slot_name, expectedName, observedName);
+            return;
+        }
 
-      if (expected.layer != observed.layer)
-      {
-        NAU_LOG_ERROR("Frame graph node {} expected the render target in slot {} to be bound to the {} layer of texture {}, "
-               "but it was spuriously changed to the {} layer while executing the node! Please remove the spurious "
-               "set, or reset it back to the expected value at the end of the function execution!",
-          registry.knownNames.getName(nodeId), slot_name, expected.layer, expectedName, observed.layer);
-        return;
-      }
+        if (expected.layer != observed.layer)
+        {
+            NAU_LOG_ERROR(
+                "Frame graph node {} expected the render target in slot {} to be bound to the {} layer of texture {}, "
+                "but it was spuriously changed to the {} layer while executing the node! Please remove the spurious "
+                "set, or reset it back to the expected value at the end of the function execution!",
+                registry.knownNames.getName(nodeId), slot_name, expected.layer, expectedName, observed.layer);
+            return;
+        }
 
-      if (expected.mipLevel != observed.level)
-      {
-        NAU_LOG_ERROR("Frame graph node {} expected the render target in slot {} to be bound to the {} mip level of texture {}, "
-               "but it was spuriously changed to the {} mip level while executing the node! Please remove the spurious "
-               "set, or reset it back to the expected value at the end of the function execution!",
-          registry.knownNames.getName(nodeId), slot_name, expected.mipLevel, expectedName, observed.level);
-        return;
-      }
+        if (expected.mipLevel != observed.level)
+        {
+            NAU_LOG_ERROR(
+                "Frame graph node {} expected the render target in slot {} to be bound to the {} mip level of texture {}, "
+                "but it was spuriously changed to the {} mip level while executing the node! Please remove the spurious "
+                "set, or reset it back to the expected value at the end of the function execution!",
+                registry.knownNames.getName(nodeId), slot_name, expected.mipLevel, expectedName, observed.level);
+            return;
+        }
     };
 
     static constexpr const char *SLOT_NAMES[] = {
@@ -165,17 +171,17 @@ void validate_global_state(const InternalRegistry &registry, NodeNameId nodeId)
       // We must validate that nothing was set into RT slots that were not requested
       VirtualSubresourceRef expectedRt = rtIdx < expectedRts.colorAttachments.size() ? expectedRts.colorAttachments[rtIdx]
                                                                                      : VirtualSubresourceRef{ResNameId::Invalid, 0, 0};
-      eastl::optional<Driver3dRenderTarget::RTState> observedRt{};
+      std::optional<Driver3dRenderTarget::RTState> observedRt{};
       if (observedRts.isColorUsed(rtIdx))
         observedRt = observedRts.getColor(rtIdx);
       validateRt(expectedRt, observedRt, SLOT_NAMES[rtIdx]);
     }
 
     {
-      eastl::optional<Driver3dRenderTarget::RTState> observedDepth{};
-      if (observedRts.isDepthUsed())
-        observedDepth = observedRts.getDepth();
-      validateRt(expectedRts.depthAttachment, observedDepth, "depth");
+        std::optional<Driver3dRenderTarget::RTState> observedDepth{};
+        if (observedRts.isDepthUsed())
+            observedDepth = observedRts.getDepth();
+        validateRt(expectedRts.depthAttachment, observedDepth, "depth");
     }
 
     if (expectedRts.depthAttachment.nameId != ResNameId::Invalid && expectedRts.depthReadOnly != observedRts.isDepthReadOnly())

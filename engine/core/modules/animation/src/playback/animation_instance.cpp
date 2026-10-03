@@ -1,8 +1,9 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/playback/animation_instance.h"
+
+#include <string>
 
 #include "./animation_helper.h"
 #include "nau/animation/assets/animation_asset.h"
@@ -14,9 +15,9 @@
 
 namespace nau::animation
 {
-    AnimationInstance::AnimationInstance(const eastl::string& name, nau::Ptr<Animation> animation, const AnimationInstanceCreationData* creationData)
-        : m_animation(animation)
-        , m_name(name)
+    AnimationInstance::AnimationInstance(const std::string& name, nau::Ptr<Animation> animation, const AnimationInstanceCreationData* creationData) :
+        m_animation(animation),
+        m_name(name)
     {
         if (creationData)
         {
@@ -25,20 +26,20 @@ namespace nau::animation
         }
     }
 
-    AnimationInstance::AnimationInstance(const eastl::string& name, AnimationAssetRef&& assetRef)
-        : m_name(name)
+    AnimationInstance::AnimationInstance(const std::string& name, AnimationAssetRef&& assetRef) :
+        m_name(name)
     {
         m_animationAsset = std::move(assetRef);
     }
 
-    AnimationInstance::AnimationInstance(const eastl::string& name, const AnimationAssetRef& assetRef)
-        : m_name(name)
-        , m_animationAsset(assetRef)
+    AnimationInstance::AnimationInstance(const std::string& name, const AnimationAssetRef& assetRef) :
+        m_name(name),
+        m_animationAsset(assetRef)
     {
     }
 
-    AnimationInstance::AnimationInstance(const eastl::string& name, const AnimationInstance& source)
-        : AnimationInstance(source)
+    AnimationInstance::AnimationInstance(const std::string& name, const AnimationInstance& source) :
+        AnimationInstance(source)
     {
         m_name = name;
     }
@@ -210,7 +211,7 @@ namespace nau::animation
         }
     }
 
-    const eastl::string& AnimationInstance::getName() const
+    const std::string& AnimationInstance::getName() const
     {
         return m_name;
     }

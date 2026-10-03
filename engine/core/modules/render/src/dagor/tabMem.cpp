@@ -2,13 +2,14 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
+
+#include "nau/memory/heap_byte_allocator.h"
 #include "nau/util/dag_tabHlp.h"
 
-void *dag_tab_insert2(void *ptr, uint32_t &total, uint32_t &used, eastl::allocator *mem, intptr_t at, intptr_t n, intptr_t sz, intptr_t step,
-  uint32_t &out_idx)
+void* dag_tab_insert2(void* ptr, uint32_t& total, uint32_t& used, nau::HeapByteAllocator* mem, intptr_t at, intptr_t n, intptr_t sz, intptr_t step, uint32_t& out_idx)
 {
   if (n <= 0)
   {

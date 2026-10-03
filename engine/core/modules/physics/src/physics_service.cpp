@@ -1,8 +1,11 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "physics_service.h"
+
+#include <algorithm>
+#include <optional>
+#include <span>
 
 #include "nau/app/application.h"
 #include "nau/physics/components/rigid_body_component.h"
@@ -70,7 +73,7 @@ namespace nau::physics
         }
     }
 
-    async::Task<> PhysicsService::activateComponentsAsync(Uid worldUid, eastl::span<const scene::Component*> components, async::Task<> barrier)
+    async::Task<> PhysicsService::activateComponentsAsync(Uid worldUid, std::span<const scene::Component*> components, async::Task<> barrier)
     {
         if (!scene::hasAcceptableComponent<RigidBodyComponent>(components))
         {
@@ -84,7 +87,7 @@ namespace nau::physics
         co_await physWorld->activateComponents(components);
     }
 
-    async::Task<> PhysicsService::deactivateComponentsAsync(Uid worldUid, eastl::span<const scene::DeactivatedComponentData> components)
+    async::Task<> PhysicsService::deactivateComponentsAsync(Uid worldUid, std::span<const scene::DeactivatedComponentData> components)
     {
         co_await m_preUpdateWorkQueue;
 
@@ -116,7 +119,7 @@ namespace nau::physics
         co_return true;
     }
 
-    eastl::optional<std::chrono::milliseconds> PhysicsService::getFixedUpdateTimeStep()
+    std::optional<std::chrono::milliseconds> PhysicsService::getFixedUpdateTimeStep()
     {
         // The target refresh rate value can be calculated more intelligently (or at least loaded from global settings)
         constexpr size_t TargetStepsPerSecond = 75;
@@ -160,7 +163,7 @@ namespace nau::physics
 
     PhysicsWorldState* PhysicsService::getPhysicsWorldState(Uid worldUid, bool createOnDemand)
     {
-        auto iter = eastl::find_if(m_physicsWorlds.begin(), m_physicsWorlds.end(), [&worldUid](const PhysicsWorldState& state)
+        auto iter = std::find_if(m_physicsWorlds.begin(), m_physicsWorlds.end(), [&worldUid](const PhysicsWorldState& state)
         {
             return state.getWorldUid() == worldUid;
         });

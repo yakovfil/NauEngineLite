@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <EASTL/map.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "nau/memory/bytes_buffer.h"
 #include "nau/utils/enum/enum_reflection.h"
@@ -211,7 +211,7 @@ namespace nau
      */
     struct SignatureParameterDescription
     {
-        eastl::string semanticName;
+        std::string semanticName;
         uint32_t semanticIndex;
         uint32_t registerIndex;
         RegisterComponentType componentType;
@@ -242,8 +242,8 @@ namespace nau
         uint32_t rows;
         uint32_t columns;
         uint32_t elements;
-        eastl::string name;
-        eastl::map<eastl::string, ShaderVariableTypeDescription> members; ///< A collection of members if the type is a structure (const-buffer), otherwise an empty collection.
+        std::string name;
+        std::map<std::string, ShaderVariableTypeDescription> members;  ///< A collection of members if the type is a structure (const-buffer), otherwise an empty collection.
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(svc),
@@ -263,7 +263,7 @@ namespace nau
      */
     struct ShaderVariableDescription
     {
-        eastl::string name;
+        std::string name;
         ShaderVariableTypeDescription type;
         uint32_t startOffset;
         uint32_t size;
@@ -293,9 +293,9 @@ namespace nau
      */
     struct ShaderBufferDescription
     {
-        eastl::string name;
+        std::string name;
         CBufferType type;
-        eastl::vector<ShaderVariableDescription> variables;
+        std::vector<ShaderVariableDescription> variables;
         uint32_t size;
         uint32_t flags;
 
@@ -315,7 +315,7 @@ namespace nau
      */
     struct ShaderInputBindDescription
     {
-        eastl::string name;
+        std::string name;
         ShaderInputType type;
         uint32_t bindPoint;
         uint32_t bindCount;
@@ -345,8 +345,8 @@ namespace nau
      */
     struct ShaderReflection
     {
-        eastl::vector<SignatureParameterDescription> signatureParams;   ///< A collection of shader input signature parameter descriptions.
-        eastl::vector<ShaderInputBindDescription> inputBinds;           ///< A collection of shader resource binding descriptions. 
+        std::vector<SignatureParameterDescription> signatureParams;  ///< A collection of shader input signature parameter descriptions.
+        std::vector<ShaderInputBindDescription> inputBinds;          ///< A collection of shader resource binding descriptions.
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(signatureParams),
@@ -359,8 +359,8 @@ namespace nau
      */
     struct VertexShaderDeclarationRegister
     {
-        eastl::string semanticName;
-        eastl::string type;
+        std::string semanticName;
+        std::string type;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(semanticName),
@@ -373,9 +373,9 @@ namespace nau
      */
     struct VertexShaderDeclaration
     {
-        eastl::string stream;
+        std::string stream;
         int32_t number;
-        eastl::vector<VertexShaderDeclarationRegister> vsdReg;
+        std::vector<VertexShaderDeclarationRegister> vsdReg;
 
         NAU_CLASS_FIELDS(
             CLASS_FIELD(stream),
@@ -389,11 +389,11 @@ namespace nau
      */
     struct Shader
     {
-        eastl::string name;
-        eastl::string srcName;
+        std::string name;
+        std::string srcName;
         ShaderTarget target;
-        eastl::string entryPoint;
-        eastl::vector<VertexShaderDeclaration> vsd;
+        std::string entryPoint;
+        std::vector<VertexShaderDeclaration> vsd;
         ShaderReflection reflection;
         ReadOnlyBuffer bytecode;
 

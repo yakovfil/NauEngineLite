@@ -1,12 +1,14 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/animation/assets/animation_asset.h"
 
 #include <ozz/animation/runtime/animation.h>
 #include <ozz/base/io/archive.h>
 #include <ozz/base/io/stream.h>
+
+#include <string_view>
+#include <vector>
 
 #include "nau/animation/playback/animation_skeleton.h"
 #include "nau/animation/playback/animation_transforms.h"
@@ -58,8 +60,8 @@ namespace nau::animation::data
             break;
             case AnimationDataDescriptor::DataType::Translation:
             {
-                eastl::vector<float> frameTimes;
-                eastl::vector<math::vec3> translations;
+                std::vector<float> frameTimes;
+                std::vector<math::vec3> translations;
                 co_await animationAccessor.copyVectors(animDescriptor, frameTimes, translations);
                 auto animation = rtti::createInstance<animation::TranslationAnimation>();
 
@@ -80,8 +82,8 @@ namespace nau::animation::data
             break;
             case AnimationDataDescriptor::DataType::Rotation:
             {
-                eastl::vector<float> frameTimes;
-                eastl::vector<math::quat> rotations;
+                std::vector<float> frameTimes;
+                std::vector<math::quat> rotations;
                 co_await animationAccessor.copyRotations(animDescriptor, frameTimes, rotations);
                 auto animation = rtti::createInstance<animation::RotationAnimation>();
 
@@ -102,8 +104,8 @@ namespace nau::animation::data
             break;
             case AnimationDataDescriptor::DataType::Scale:
             {
-                eastl::vector<float> frameTimes;
-                eastl::vector<math::vec3> scales;
+                std::vector<float> frameTimes;
+                std::vector<math::vec3> scales;
                 co_await animationAccessor.copyVectors(animDescriptor, frameTimes, scales);
                 auto animation = rtti::createInstance<animation::ScaleAnimation>();
 
@@ -143,7 +145,7 @@ namespace nau::animation::data
         co_return instancePtr;
     }
 
-    nau::Ptr<AnimationAssetView> AnimationAssetView::createFromOzzPath(eastl::string_view path)
+    nau::Ptr<AnimationAssetView> AnimationAssetView::createFromOzzPath(std::string_view path)
     {
         auto& nauFileSystem = getServiceProvider().get<io::IFileSystem>();
 
@@ -159,7 +161,7 @@ namespace nau::animation::data
 
         const size_t fileSize = file->getSize();
 
-        eastl::vector<std::byte> fileData(fileSize);
+        std::vector<std::byte> fileData(fileSize);
         Result<size_t> readResult = nauFileStreamRead->read(fileData.data(), fileSize);
         if (!readResult)
         {

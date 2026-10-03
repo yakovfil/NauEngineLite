@@ -2,24 +2,29 @@
 
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
-#include "dabfg/backend/resourceScheduling/packer.h"
-#include <EASTL/priority_queue.h>
-#include <EASTL/numeric.h>
-#include <EASTL/map.h>
-#include <EASTL/stack.h>
-#include <EASTL/vector_multiset.h>
-#include "nau/utils/dag_stlqsort.h"
-#include <EASTL/vector_map.h>
-#include "nau/math/dag_bits.h"
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <span>
+#include <stack>
+#include <utility>
+#include <vector>
 
+#include "dabfg/backend/resourceScheduling/packer.h"
+#include "nau/math/dag_bits.h"
+#include "nau/memory/scoped_standard_allocator.h"
+#include "nau/utils/dag_stlqsort.h"
+#include "nau/utils/sorted_vector.h"
 
 #if __has_include(<UnitTest++/UnitTestPP.h>)
 #include <math/random/dag_random.h>
 #include <UnitTest++/UnitTestPP.h>
 #define ENABLE_UNIT_TESTS
 #endif
-#include "nau/memory/eastl_aliases.h"
-
+#include "nau/memory/scoped_standard_allocator.h"
 
 // This packer is based on the "OPT versus LOAD in Dynamic Storage Allocation"
 // article by Buchsbaum, Karloff, Kenyon, Reingold and Thorup.
@@ -46,9 +51,9 @@ using BoxIndex = uint32_t;
 using BoxCount = uint32_t;
 
 template <class T>
-using FmemVector = eastl::vector<T, nau::EastlFrameAllocator>;
+using FmemVector = std::vector<T, nau::FrameStdAllocator<T>>;
 template <class K, class V>
-using FmemVectorMap = eastl::vector_map<K, V, eastl::less<K>, nau::EastlFrameAllocator>;
+using FmemVectorMap = nau::SortedVectorMap<K, V, std::less<K>, nau::FrameStdAllocator<std::pair<K, V>>>;
 
 template <class Container>
 struct CleanupReversed : Container
@@ -58,12 +63,12 @@ struct CleanupReversed : Container
   ~CleanupReversed()
   {
     while (!Container::empty())
-      Container::erase(eastl::prev(Container::end()));
+        Container::erase(std::prev(Container::end()));
   }
 };
 
 template <class T>
-using FmemBucketVector = CleanupReversed<eastl::vector<eastl::vector<T, nau::EastlFrameAllocator>, nau::EastlFrameAllocator>>;
+using FmemBucketVector = CleanupReversed<std::vector<std::vector<T, nau::FrameStdAllocator<T>>, nau::FrameStdAllocator<std::vector<T, nau::FrameStdAllocator<T>>>>>;
 
 // Job of height 1 with time interval
 struct Job
@@ -74,14 +79,13 @@ struct Job
 
 constexpr BoxIndex UNRESOLVED_BOX_ID = static_cast<BoxIndex>(-1);
 
-template <class T, class Comp = eastl::less<T>>
-using FmemPrioQueue = eastl::priority_queue<T, FmemVector<T>, Comp>;
-
+template <class T, class Comp = std::less<T>>
+using FmemPrioQueue = std::priority_queue<T, FmemVector<T>, Comp>;
 
 // Transforms the jobs by shifting the coordinate system so that
 // comparing l or r for jobs means comparing how far they are from the
 // time point t.
-FmemVector<Job> transform_jobs_alive_at_t(eastl::span<const Job> jobs, TimePoint t, TimeInterval timepoint_count)
+FmemVector<Job> transform_jobs_alive_at_t(std::span<const Job> jobs, TimePoint t, TimeInterval timepoint_count)
 {
   // Basically, we transform this
   // r
@@ -135,8 +139,7 @@ FmemVector<Job> transform_jobs_alive_at_t(eastl::span<const Job> jobs, TimePoint
 // In other words, the less space you want to waste with this boxing,
 // the more jobs you will have to throw away.
 // TIME COMPLEXITY: O(n log n)
-FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(eastl::span<const Job> jobs, TimePoint t, TimeInterval timepoint_count,
-  MemorySize box_height, MemorySize inv_eps)
+FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(std::span<const Job> jobs, TimePoint t, TimeInterval timepoint_count, MemorySize box_height, MemorySize inv_eps)
 {
   static constexpr BoxIndex UNDETERMINED = static_cast<BoxIndex>(-2);
   FmemVector<BoxIndex> result(jobs.size(), UNDETERMINED);
@@ -172,10 +175,11 @@ FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(eastl::span<const Job> jobs, T
   auto xComp = [&transformedJobs](JobIndex lhs, JobIndex rhs) { return transformedJobs[lhs].left > transformedJobs[rhs].left; };
   auto yComp = [&transformedJobs](JobIndex lhs, JobIndex rhs) { return transformedJobs[lhs].right < transformedJobs[rhs].right; };
 
-  FmemPrioQueue<JobIndex, decltype(xComp)> xHeap(xComp);
-  xHeap.get_container().reserve(jobs.size());
-  FmemPrioQueue<JobIndex, decltype(yComp)> yHeap(yComp);
-  yHeap.get_container().reserve(jobs.size());
+  FmemVector<JobIndex> xStorage, yStorage;
+  xStorage.reserve(jobs.size());
+  yStorage.reserve(jobs.size());
+  FmemPrioQueue<JobIndex, decltype(xComp)> xHeap(xComp, std::move(xStorage));
+  FmemPrioQueue<JobIndex, decltype(yComp)> yHeap(yComp, std::move(yStorage));
 
   for (JobIndex i = 0; i < jobs.size(); ++i)
   {
@@ -209,7 +213,7 @@ FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(eastl::span<const Job> jobs, T
     return result;
   };
 
-  const JobCount toThrowAway = static_cast<JobCount>(eastl::min<MemorySize>(box_height * inv_eps * inv_eps, jobs.size()));
+  const JobCount toThrowAway = static_cast<JobCount>(std::min<MemorySize>(box_height * inv_eps * inv_eps, jobs.size()));
 
   // First H*ceil(1/eps^2) elements by x coord will be unresolved
   // (they are "too far to the left")
@@ -236,7 +240,7 @@ FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(eastl::span<const Job> jobs, T
         result[strip[stripSize - 1 - i - j]] = boxIndexCounter;
   };
 
-  const JobCount stripSize = static_cast<JobCount>(eastl::min<MemorySize>(box_height * inv_eps, jobs.size()));
+  const JobCount stripSize = static_cast<JobCount>(std::min<MemorySize>(box_height * inv_eps, jobs.size()));
   while (!xHeap.empty() || !yHeap.empty())
   {
 
@@ -267,7 +271,7 @@ FmemVector<BoxIndex> box_unit_jobs_all_alive_at_t(eastl::span<const Job> jobs, T
 }
 
 template <class T>
-T size_of_mapping(eastl::span<const T> mapping, T invalid)
+T size_of_mapping(std::span<const T> mapping, T invalid)
 {
   T result = invalid;
   for (auto i : mapping)
@@ -277,12 +281,12 @@ T size_of_mapping(eastl::span<const T> mapping, T invalid)
 }
 
 template <class T>
-static T size_of_mapping(eastl::span<const T> mapping)
+static T size_of_mapping(std::span<const T> mapping)
 {
-  return mapping.empty() ? 0 : 1 + *eastl::max_element(mapping.begin(), mapping.end());
+    return mapping.empty() ? 0 : 1 + *std::max_element(mapping.begin(), mapping.end());
 }
 
-FmemVector<JobCount> calculate_loads(eastl::span<const Job> jobs, TimeInterval timepoint_count)
+FmemVector<JobCount> calculate_loads(std::span<const Job> jobs, TimeInterval timepoint_count)
 {
   JobCount wraparoundCount = 0;
   FmemVector<JobCount> loads(timepoint_count, 0);
@@ -293,14 +297,14 @@ FmemVector<JobCount> calculate_loads(eastl::span<const Job> jobs, TimeInterval t
     if (r <= l)
       ++wraparoundCount;
   }
-  eastl::partial_sum(loads.begin(), loads.end(), loads.begin());
+  std::partial_sum(loads.begin(), loads.end(), loads.begin());
   for (auto &l : loads)
     l += wraparoundCount;
   return loads;
 }
 
 // Reinterprets a boxing as new jobs
-FmemVector<Job> boxes_to_jobs(eastl::span<const Job> jobs, TimeInterval timepoint_count, eastl::span<const BoxIndex> boxing)
+FmemVector<Job> boxes_to_jobs(std::span<const Job> jobs, TimeInterval timepoint_count, std::span<const BoxIndex> boxing)
 {
   const BoxCount boxCount = size_of_mapping(boxing, UNRESOLVED_BOX_ID);
 
@@ -331,27 +335,27 @@ FmemVector<Job> boxes_to_jobs(eastl::span<const Job> jobs, TimeInterval timepoin
     const auto loads = calculate_loads(boxedJobs[box], timepoint_count);
 
     const auto isZero = [](JobCount j) { return j == 0; };
-    const auto firstNonZero = eastl::find_if_not(loads.begin(), loads.end(), isZero);
-    const auto afterLastNonZero = eastl::find_if_not(loads.rbegin(), loads.rend(), isZero).base();
+    const auto firstNonZero = std::find_if_not(loads.begin(), loads.end(), isZero);
+    const auto afterLastNonZero = std::find_if_not(loads.rbegin(), loads.rend(), isZero).base();
 
     result[box] = Job{static_cast<TimePoint>(firstNonZero - loads.begin()),
       afterLastNonZero == loads.end() ? 0 : static_cast<TimePoint>(afterLastNonZero - loads.begin())};
 
     for (auto it = firstNonZero; it != afterLastNonZero;)
     {
-      const auto runStart = eastl::find_if(it, afterLastNonZero, isZero);
-      const auto runEnd = eastl::find_if_not(runStart, afterLastNonZero, isZero);
+        const auto runStart = std::find_if(it, afterLastNonZero, isZero);
+        const auto runEnd = std::find_if_not(runStart, afterLastNonZero, isZero);
 
-      // X stands for non-zero:
-      //   ...contender... )         [  ...contender...
-      // 000 xxxxxxxxxxxxx 000000000 xxxxxxxxxxxxx 00000
-      //     ^             ^         ^             ^
-      // firstNonZero   runStart   runEnd    afterLastNonZero
-      const Job contender{static_cast<TimePoint>(runEnd - loads.begin()), static_cast<TimePoint>(runStart - loads.begin())};
-      if (length(contender) < length(result[box]))
-        result[box] = contender;
+        // X stands for non-zero:
+        //   ...contender... )         [  ...contender...
+        // 000 xxxxxxxxxxxxx 000000000 xxxxxxxxxxxxx 00000
+        //     ^             ^         ^             ^
+        // firstNonZero   runStart   runEnd    afterLastNonZero
+        const Job contender{static_cast<TimePoint>(runEnd - loads.begin()), static_cast<TimePoint>(runStart - loads.begin())};
+        if (length(contender) < length(result[box]))
+            result[box] = contender;
 
-      it = runEnd;
+        it = runEnd;
     }
   }
 
@@ -395,8 +399,8 @@ SUITE(BoxUnitJobsAliveAtT)
     return result;
   }
 
-  void check(const eastl::span<const Job> jobs, const TimeInterval timepoint_count, const eastl::span<const BoxIndex> boxing,
-    const MemorySize box_height, const float eps)
+  void check(const std::span<const Job> jobs, const TimeInterval timepoint_count, const std::span<const BoxIndex> boxing,
+             const MemorySize box_height, const float eps)
   {
     FmemVector<Job> resolvedJobs;
     resolvedJobs.reserve(jobs.size());
@@ -517,7 +521,7 @@ __forceinline bool circular_arcs_intersect(TimePoint l1, TimePoint r1, TimePoint
 // the LOAD is n/2. So a better bound than 2*LOAD is not generally
 // possible.
 // TIME COMPLEXITY: O(n^2)
-FmemVector<MemoryOffset> color_circular_arc_graph(eastl::span<const Job> jobs, TimeInterval timepoint_count, TimePoint max_load_point)
+FmemVector<MemoryOffset> color_circular_arc_graph(std::span<const Job> jobs, TimeInterval timepoint_count, TimePoint max_load_point)
 {
   static constexpr MemoryOffset NO_COLOR = static_cast<MemoryOffset>(-1);
   FmemVector<MemoryOffset> coloring(jobs.size(), NO_COLOR);
@@ -529,7 +533,7 @@ FmemVector<MemoryOffset> color_circular_arc_graph(eastl::span<const Job> jobs, T
   // to force-free the allocated nodes from the framemem stack.
   // No allocations except for node insertion happen below.
   //FRAMEMEM_REGION;
-  eastl::multimap<TimePoint, JobIndex, eastl::less<TimePoint>, nau::EastlFrameAllocator> sortedJobs;
+  std::multimap<TimePoint, JobIndex, std::less<TimePoint>, nau::FrameStdAllocator<std::pair<const TimePoint, JobIndex>>> sortedJobs;
   for (JobIndex i = 0; i < jobs.size(); ++i)
     sortedJobs.emplace(jobs[i].left, i);
 
@@ -543,7 +547,7 @@ FmemVector<MemoryOffset> color_circular_arc_graph(eastl::span<const Job> jobs, T
   // the lest to the left from it.
   {
     auto iter = sortedJobs.upper_bound(max_load_point);
-    iter = eastl::prev(iter == sortedJobs.begin() ? sortedJobs.end() : iter);
+    iter = std::prev(iter == sortedJobs.begin() ? sortedJobs.end() : iter);
     const JobIndex startJob = iter->second;
     sortedJobs.erase(iter);
     coloring[startJob] = currentLayer;
@@ -638,16 +642,16 @@ SUITE(CircularArcGraphColoring)
       const auto jobs = gen_random_cyclic_jobs(jobCount, maxTime);
 
       const auto loads = calculate_loads(jobs, maxTime);
-      const TimePoint maxLoadPoint = eastl::max_element(loads.begin(), loads.end()) - loads.begin();
+      const TimePoint maxLoadPoint = std::max_element(loads.begin(), loads.end()) - loads.begin();
       const auto coloring = color_circular_arc_graph(jobs, maxTime, maxLoadPoint);
 
       MemoryOffset colorCount = 0;
       for (JobIndex i = 0; i < jobs.size(); ++i)
       {
-        colorCount = eastl::max(colorCount, coloring[i]);
-        for (JobIndex j = i + 1; j < jobs.size(); ++j)
-          if (coloring[i] == coloring[j])
-            CHECK(!circular_arcs_intersect(jobs[i].left, jobs[i].right, jobs[j].left, jobs[j].right, maxTime));
+          colorCount = std::max(colorCount, coloring[i]);
+          for (JobIndex j = i + 1; j < jobs.size(); ++j)
+              if (coloring[i] == coloring[j])
+                  CHECK(!circular_arcs_intersect(jobs[i].left, jobs[i].right, jobs[j].left, jobs[j].right, maxTime));
       }
       if (!coloring.empty())
         ++colorCount;
@@ -669,7 +673,7 @@ namespace
 // that is not intersected by any arc, making the intersection graph an
 // interval one.
 // TIME COMPLEXITY: O(n log Chi), where n is job count and Chi is color count
-FmemVector<MemoryOffset> color_interval_graph(eastl::span<const Job> jobs, TimeInterval timepoint_count, TimePoint zero_load_point)
+FmemVector<MemoryOffset> color_interval_graph(std::span<const Job> jobs, TimeInterval timepoint_count, TimePoint zero_load_point)
 {
   static constexpr MemoryOffset NO_COLOR = static_cast<MemoryOffset>(-1);
   FmemVector<MemoryOffset> coloring(jobs.size(), NO_COLOR);
@@ -677,12 +681,15 @@ FmemVector<MemoryOffset> color_interval_graph(eastl::span<const Job> jobs, TimeI
   //FRAMEMEM_VALIDATE;
 
   FmemVector<JobIndex> sortedJobs(jobs.size());
-  eastl::iota(sortedJobs.begin(), sortedJobs.end(), 0);
+  std::iota(sortedJobs.begin(), sortedJobs.end(), 0);
   stlsort::sort(sortedJobs.begin(), sortedJobs.end(), //
     [&jobs](JobIndex fst, JobIndex snd) { return jobs[fst].left < jobs[snd].left; });
-  const auto startIt = eastl::upper_bound(sortedJobs.begin(), sortedJobs.end(), zero_load_point,
-    [&jobs](TimePoint s, JobIndex idx) { return s < jobs[idx].left; });
-  eastl::rotate(sortedJobs.begin(), startIt, sortedJobs.end());
+  const auto startIt = std::upper_bound(sortedJobs.begin(), sortedJobs.end(), zero_load_point,
+                                        [&jobs](TimePoint s, JobIndex idx)
+  {
+      return s < jobs[idx].left;
+  });
+  std::rotate(sortedJobs.begin(), startIt, sortedJobs.end());
 
   const auto fixLeft = [zero_load_point, timepoint_count, &jobs](JobIndex i) -> TimePoint //
   { return (jobs[i].left < zero_load_point) * timepoint_count + jobs[i].left - zero_load_point; };
@@ -690,7 +697,7 @@ FmemVector<MemoryOffset> color_interval_graph(eastl::span<const Job> jobs, TimeI
   { return (jobs[i].right <= zero_load_point) * timepoint_count + jobs[i].right - zero_load_point; };
 
   // Stays on top of framemem stack, so will be blazingly fast
-  FmemPrioQueue<eastl::pair<TimePoint, MemoryOffset>, eastl::greater<>> currentColoring;
+  FmemPrioQueue<std::pair<TimePoint, MemoryOffset>, std::greater<>> currentColoring;
   for (const auto jobIdx : sortedJobs)
   {
     // Try to use the color that hasn't been used for the longest, i.e. top of the heap
@@ -745,21 +752,21 @@ SUITE(IntervalGraphColoring)
       const auto jobs = gen_random_separable_jobs(jobCount, maxTime);
 
       const auto loads = calculate_loads(jobs, maxTime);
-      const auto zeroLoadPoint = eastl::find(loads.begin(), loads.end(), 0) - loads.begin();
+      const auto zeroLoadPoint = std::find(loads.begin(), loads.end(), 0) - loads.begin();
       NAU_ASSERT(zeroLoadPoint != maxTime);
       const auto coloring = color_interval_graph(jobs, maxTime, zeroLoadPoint);
 
       MemoryOffset colorCount = 0;
       for (JobIndex i = 0; i < jobs.size(); ++i)
       {
-        colorCount = eastl::max(colorCount, coloring[i]);
-        for (JobIndex j = i + 1; j < jobs.size(); ++j)
-          if (coloring[i] == coloring[j])
-            CHECK(!circular_arcs_intersect(jobs[i].left, jobs[i].right, jobs[j].left, jobs[j].right, maxTime));
+          colorCount = std::max(colorCount, coloring[i]);
+          for (JobIndex j = i + 1; j < jobs.size(); ++j)
+              if (coloring[i] == coloring[j])
+                  CHECK(!circular_arcs_intersect(jobs[i].left, jobs[i].right, jobs[j].left, jobs[j].right, maxTime));
       }
       ++colorCount;
 
-      const auto load = *eastl::max_element(loads.begin(), loads.end());
+      const auto load = *std::max_element(loads.begin(), loads.end());
       // Resulting coloring should be optimal
       CHECK_EQUAL(load, colorCount);
     }
@@ -790,27 +797,26 @@ struct BoxEmbedding
 // this way.
 class UnitJobBoxer
 {
-  const eastl::span<const Job> jobs;
-  const TimeInterval timepointCount;
-  const MemorySize boxHeight;
-  const MemorySize invEps;
+    const std::span<const Job> jobs;
+    const TimeInterval timepointCount;
+    const MemorySize boxHeight;
+    const MemorySize invEps;
 
-  FmemVector<BoxEmbedding> boxing;
-  BoxIndex boxCounter = 0;
+    FmemVector<BoxEmbedding> boxing;
+    BoxIndex boxCounter = 0;
 
-
-  static constexpr BoxIndex NOT_YET_BOXED = static_cast<BoxIndex>(-1);
+    static constexpr BoxIndex NOT_YET_BOXED = static_cast<BoxIndex>(-1);
 
 public:
-  UnitJobBoxer(eastl::span<const Job> in_jobs, TimeInterval in_timepoint_count, MemorySize in_box_height, MemorySize in_inv_eps) :
-    jobs{in_jobs},
-    timepointCount{in_timepoint_count},
-    boxHeight{in_box_height},
-    invEps{in_inv_eps},
-    boxing(jobs.size(), {NOT_YET_BOXED, 0})
-  {
-    NAU_ASSERT(boxHeight > 0 && invEps > 0, "Precondition failed! World is broken!");
-  }
+    UnitJobBoxer(std::span<const Job> in_jobs, TimeInterval in_timepoint_count, MemorySize in_box_height, MemorySize in_inv_eps) :
+        jobs{in_jobs},
+        timepointCount{in_timepoint_count},
+        boxHeight{in_box_height},
+        invEps{in_inv_eps},
+        boxing(jobs.size(), {NOT_YET_BOXED, 0})
+    {
+        NAU_ASSERT(boxHeight > 0 && invEps > 0, "Precondition failed! World is broken!");
+    }
 
 
 private:
@@ -822,16 +828,16 @@ private:
   // There cannot be more crit points than job endpoint count + 2.
   // The constant 3 is taken from corollary 4 in the article, which proves
   // that crit points count <= 3*PBound by induction.
-  const uint32_t boundForCritPoints = static_cast<uint32_t>(eastl::min<uint64_t>(3 * PBound, 2 * jobCount + 2));
+  const uint32_t boundForCritPoints = static_cast<uint32_t>(std::min<uint64_t>(3 * PBound, 2 * jobCount + 2));
   // There cannot be more free spaces than job count times 3, as worst
   // case is 1 job per 1 box, which will lead to 3 holes in each box.
   // The constant 6 here is taken from lemma 7 in the article:
   // 2 from proposition (1) plus 4 from proposition (2).
-  const uint32_t boundForFreeSpaces = static_cast<uint32_t>(eastl::min<uint64_t>(6 * PBound, 3 * jobCount));
+  const uint32_t boundForFreeSpaces = static_cast<uint32_t>(std::min<uint64_t>(6 * PBound, 3 * jobCount));
   // Unresolved job count is bounded by job count, as well as
   // the other peculiar expression (explicitly proven in lemma 5).
-  const uint32_t boundForUnresolvedJobs = //
-    static_cast<uint32_t>(eastl::min<uint64_t>(2 * boxHeight * invEps * invEps, jobCount));
+  const uint32_t boundForUnresolvedJobs =  //
+      static_cast<uint32_t>(std::min<uint64_t>(2 * boxHeight * invEps * invEps, jobCount));
 
   // General segment, not necessarily a job
   struct Segment
@@ -874,7 +880,7 @@ private:
     FmemVector<JobIndex> jobIdxs;
   };
 
-  auto choseJobs(eastl::span<const JobIndex> which) const
+  auto choseJobs(std::span<const JobIndex> which) const
   {
     FmemVector<Job> result;
     result.reserve(which.size());
@@ -910,12 +916,13 @@ private:
       const auto leftPadding = circular_length(args.workArea.left, realStart, timepointCount);
       const auto rightPadding = circular_length(realEnd, args.workArea.right, timepointCount);
       // Holes that are completely outside the new work are need to be thrown out
-      args.freeSpaces.erase(eastl::remove_if(args.freeSpaces.begin(), args.freeSpaces.end(),
-                              [&](const Hole &hole) {
-                                return circular_distance(args.workArea.left, hole.area.right, timepointCount) <= leftPadding ||
-                                       circular_distance(hole.area.left, args.workArea.right, timepointCount) <= rightPadding;
-                              }),
-        args.freeSpaces.end());
+      args.freeSpaces.erase(std::remove_if(args.freeSpaces.begin(), args.freeSpaces.end(),
+                                           [&](const Hole& hole)
+      {
+          return circular_distance(args.workArea.left, hole.area.right, timepointCount) <= leftPadding ||
+                 circular_distance(hole.area.left, args.workArea.right, timepointCount) <= rightPadding;
+      }),
+                            args.freeSpaces.end());
       for (auto &hole : args.freeSpaces)
       {
         if (circular_distance(args.workArea.left, hole.area.left, timepointCount) <= leftPadding)
@@ -953,10 +960,12 @@ private:
     }
 
     stlsort::sort(result.begin(), result.end());
-    result.erase(eastl::unique(result.begin(), result.end()), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
 
-    const auto start = eastl::binary_search_i(result.begin(), result.end(), args.workArea.left);
-    eastl::rotate(result.begin(), start, result.end());
+    auto start = std::lower_bound(result.begin(), result.end(), args.workArea.left);
+    if (start != result.end() && *start != args.workArea.left)
+        start = result.end();
+    std::rotate(result.begin(), start, result.end());
 
     // Edge-case on the very first iteration when we've broken the circle
     if (args.workArea.left == args.workArea.right)
@@ -970,7 +979,7 @@ private:
     return (job.left <= x && x < job.right) || (job.left >= job.right && (x < job.right || job.left <= x));
   }
 
-  void boxAliveAtT(const eastl::span<const JobIndex> alive_job_idxs, const TimePoint crit_point, FmemVector<JobIndex> &out_unresolved)
+  void boxAliveAtT(const std::span<const JobIndex> alive_job_idxs, const TimePoint crit_point, FmemVector<JobIndex>& out_unresolved)
   {
     const auto alive = choseJobs(alive_job_idxs);
     const auto subBoxing = box_unit_jobs_all_alive_at_t(alive, crit_point, timepointCount, boxHeight, invEps);
@@ -989,8 +998,7 @@ private:
   // Resolves most jobs that intersect the critical points of the current
   // iteration, splitting other jobs between next iteration arguments.
   // Returns the set of unresolved job indices.
-  auto resolveCritPointIntersectors(const eastl::span<const TimePoint> criticalPoints, const IterationArguments &args,
-    const eastl::span<IterationArguments> nextArgs)
+  auto resolveCritPointIntersectors(const std::span<const TimePoint> criticalPoints, const IterationArguments& args, const std::span<IterationArguments> nextArgs)
   {
     NAU_ASSERT(criticalPoints.size() == nextArgs.size() + 1);
 
@@ -1003,7 +1011,7 @@ private:
 
     const auto midpoint = [](auto left, auto right) { return left + (right - left) / 2; };
 
-    FmemVector<eastl::pair<uint32_t, uint32_t>> critPointStack;
+    FmemVector<std::pair<uint32_t, uint32_t>> critPointStack;
     critPointStack.reserve(criticalPoints.size());
     critPointStack.push_back({0, criticalPoints.size() - 1});
     nextArgs[0].jobIdxs.assign(args.jobIdxs.begin(), args.jobIdxs.end());
@@ -1023,29 +1031,34 @@ private:
 
       auto &currJobs = nextArgs[l].jobIdxs;
       {
-        const auto aliveStart = eastl::partition(currJobs.begin(), currJobs.end(),
-          [this, currCritPoint](JobIndex j) { return !jobAliveAt(jobs[j], currCritPoint); });
+          const auto aliveStart = std::partition(currJobs.begin(), currJobs.end(),
+                                                 [this, currCritPoint](JobIndex j)
+          {
+              return !jobAliveAt(jobs[j], currCritPoint);
+          });
 
-        boxAliveAtT({aliveStart, currJobs.end()}, currCritPoint, unresolvedIdxs);
-        currJobs.erase(aliveStart, currJobs.end());
+          boxAliveAtT({aliveStart, currJobs.end()}, currCritPoint, unresolvedIdxs);
+          currJobs.erase(aliveStart, currJobs.end());
       }
 
       const auto distFromL = [this, p1 = criticalPoints[l]](TimePoint p2) { //
         return circular_length(p1, p2, timepointCount);
       };
 
-      const auto rightStart = eastl::partition(currJobs.begin(), currJobs.end(),
-        [this, distFromL, separator = distFromL(currCritPoint)](JobIndex j) { return distFromL(jobs[j].right) <= separator; });
+      const auto rightStart = std::partition(currJobs.begin(), currJobs.end(),
+                                             [this, distFromL, separator = distFromL(currCritPoint)](JobIndex j)
+      {
+          return distFromL(jobs[j].right) <= separator;
+      });
 
-      eastl::move(rightStart, currJobs.end(), eastl::back_insert_iterator(nextArgs[m].jobIdxs));
+      std::move(rightStart, currJobs.end(), std::back_insert_iterator(nextArgs[m].jobIdxs));
       currJobs.erase(rightStart, currJobs.end());
     }
 
     return unresolvedIdxs;
   }
 
-  auto boxUnresolvedJobs(FmemVector<Hole> &free_spaces, Segment work_area, const eastl::span<const JobIndex> unresolved_idxs,
-    const eastl::span<const MemoryOffset> coloring)
+  auto boxUnresolvedJobs(FmemVector<Hole>& free_spaces, Segment work_area, const std::span<const JobIndex> unresolved_idxs, const std::span<const MemoryOffset> coloring)
   {
     const MemorySize colorCount = size_of_mapping<MemoryOffset>(coloring);
 
@@ -1073,9 +1086,12 @@ private:
     {
       stlsort::sort(bucket.begin(), bucket.end(), //
         [this](JobIndex fst, JobIndex snd) { return jobs[fst].left < jobs[snd].left; });
-      const auto firstIt = eastl::lower_bound(bucket.begin(), bucket.end(), work_area.left, //
-        [this](JobIndex j, TimePoint t) { return jobs[j].left < t; });
-      eastl::rotate(bucket.begin(), firstIt, bucket.end());
+      const auto firstIt = std::lower_bound(bucket.begin(), bucket.end(), work_area.left,  //
+                                            [this](JobIndex j, TimePoint t)
+      {
+          return jobs[j].left < t;
+      });
+      std::rotate(bucket.begin(), firstIt, bucket.end());
     }
 
     const auto packLayerIntoBox =                        //
@@ -1100,16 +1116,19 @@ private:
     const auto isNotSpanning = [work_area](const Hole &hole) { //
       return hole.area != work_area;
     };
-    const auto startOfSpanningHoles = eastl::partition(free_spaces.begin(), free_spaces.end(), isNotSpanning);
+    const auto startOfSpanningHoles = std::partition(free_spaces.begin(), free_spaces.end(), isNotSpanning);
 
     // Prioritize placing unresolved jobs at low offsets. Holes that span
     // an entire box will be discarded later, this ensures that they stay box-spanning.
     stlsort::sort(startOfSpanningHoles, free_spaces.end(),
       [](const Hole &fst, const Hole &snd) { return fst.where.offset > snd.where.offset; });
 
-    const MemorySize spanningHoleCount = eastl::accumulate(startOfSpanningHoles, free_spaces.end(), MemorySize{0},
-      [](MemorySize curr, const Hole &hole) { return curr + hole.height; });
-    const MemorySize layersToPackIntoHoles = eastl::min(colorCount, spanningHoleCount);
+    const MemorySize spanningHoleCount = std::accumulate(startOfSpanningHoles, free_spaces.end(), MemorySize{0},
+                                                         [](MemorySize curr, const Hole& hole)
+    {
+        return curr + hole.height;
+    });
+    const MemorySize layersToPackIntoHoles = std::min(colorCount, spanningHoleCount);
 
     for (uint32_t color = 0; color < layersToPackIntoHoles; ++color)
     {
@@ -1143,20 +1162,21 @@ private:
     return holes;
   }
 
-  void distributeHolesToNextIterations(const eastl::span<const TimePoint> criticalPoints,
-    const eastl::span<IterationArguments> nextArgs, FmemVector<Hole> &&holes) const // taking holes by ref is
-                                                                                    // important here
+  void distributeHolesToNextIterations(const std::span<const TimePoint> criticalPoints,
+                                       const std::span<IterationArguments> nextArgs,
+                                       FmemVector<Hole>&& holes) const  // taking holes by ref is
+                                                                        // important here
   {
     //FRAMEMEM_VALIDATE;
 
     const bool critsAreCyclic = criticalPoints.front() == criticalPoints.back();
-    eastl::span<const TimePoint> crits(criticalPoints.data(), criticalPoints.size() - (critsAreCyclic ? 1 : 0));
+    std::span<const TimePoint> crits(criticalPoints.data(), criticalPoints.size() - (critsAreCyclic ? 1 : 0));
 
-    FmemVectorMap<TimePoint, decltype(crits)::const_iterator> critPointLookup;
+    FmemVectorMap<TimePoint, decltype(crits)::iterator> critPointLookup;
     critPointLookup.reserve(crits.size() + 1);
     for (auto it = crits.begin(); it != crits.end(); ++it)
       critPointLookup.emplace(*it, it);
-    critPointLookup.emplace(timepointCount, eastl::min_element(crits.begin(), crits.end()));
+    critPointLookup.emplace(timepointCount, std::min_element(crits.begin(), crits.end()));
     const auto lookup = [&critPointLookup](TimePoint t) { return critPointLookup.upper_bound(t)->second; };
 
     const auto nextIt = [&crits, critsAreCyclic](auto it) {
@@ -1179,10 +1199,13 @@ private:
       auto it = lookup(hole.area.left);
       while (hole.area.openIntervalContains(*it))
       {
-        nextArgs[prevIt(it) - crits.begin()].freeSpaces.push_back(
-          Hole{Segment{eastl::exchange(hole.area.left, *it), *it}, hole.where, hole.height});
+          nextArgs[prevIt(it) - crits.begin()].freeSpaces.push_back(
+              Hole{
+                  Segment{std::exchange(hole.area.left, *it), *it},
+                  hole.where, hole.height
+          });
 
-        it = nextIt(it);
+          it = nextIt(it);
       }
       nextArgs[prevIt(it) - crits.begin()].freeSpaces.push_back(hole);
 
@@ -1190,154 +1213,165 @@ private:
     }
   }
 
-  TimePoint minLoadPoint(const eastl::span<const Job> chosen_jobs) const
+  TimePoint minLoadPoint(const std::span<const Job> chosen_jobs) const
   {
     const auto loads = calculate_loads(chosen_jobs, timepointCount);
-    return static_cast<TimePoint>(eastl::min_element(loads.begin(), loads.end()) - loads.begin());
+    return static_cast<TimePoint>(std::min_element(loads.begin(), loads.end()) - loads.begin());
   }
 
-  TimePoint maxLoadPoint(const eastl::span<const Job> chosen_jobs) const
+  TimePoint maxLoadPoint(const std::span<const Job> chosen_jobs) const
   {
     const auto loads = calculate_loads(chosen_jobs, timepointCount);
-    return static_cast<TimePoint>(eastl::max_element(loads.begin(), loads.end()) - loads.begin());
+    return static_cast<TimePoint>(std::max_element(loads.begin(), loads.end()) - loads.begin());
   }
 
 public:
-  eastl::span<const BoxEmbedding> operator()()
-  {
-    //FRAMEMEM_VALIDATE;
-
-    // This is an damn fine hack that allows to preserve framemem_allocator
-    // state between iterations and not thrash that stack. The invariant
-    // here is that allocations inside iteration arguments for the "next"
-    // iteration are always at the top of the framemem stack.
-    IterationArguments args;
-    args.freeSpaces.reserve(boundForFreeSpaces);
-    args.jobIdxs.reserve(jobs.size());
-    FmemVector<TimePoint> criticalPoints;
-    criticalPoints.reserve(boundForCritPoints);
-
-    eastl::stack<IterationArguments, FmemVector<IterationArguments>> iterationStack;
-    // Reserve absolute worst case amount of space in the stack -- guarantees no relocations
-    iterationStack.get_container().reserve(2 * jobCount);
-
-    // First iteration of the algorithm is manual and special, it splits the circle.
+    std::span<const BoxEmbedding> operator()()
     {
-      // If it turns out that load is 0 at this point, we won't do anything
-      // in this 0th iteration and simply go on to work exactly as described
-      // in the article.
-      const auto initialCritPoint = minLoadPoint(jobs);
+        // FRAMEMEM_VALIDATE;
 
-      auto &initialArgs = iterationStack.emplace();
-      // reserved data should be on top of the framemem stack when iterations start
-      initialArgs.freeSpaces.reserve(boundForFreeSpaces);
-      initialArgs.jobIdxs.reserve(jobs.size());
+        // This is an damn fine hack that allows to preserve framemem_allocator
+        // state between iterations and not thrash that stack. The invariant
+        // here is that allocations inside iteration arguments for the "next"
+        // iteration are always at the top of the framemem stack.
+        IterationArguments args;
+        args.freeSpaces.reserve(boundForFreeSpaces);
+        args.jobIdxs.reserve(jobs.size());
+        FmemVector<TimePoint> criticalPoints;
+        criticalPoints.reserve(boundForCritPoints);
 
-      //FRAMEMEM_VALIDATE;
+        FmemVector<IterationArguments> iterationStack;
+        // Reserve absolute worst case amount of space in the stack -- guarantees no relocations
+        iterationStack.reserve(2 * jobCount);
 
-      initialArgs.workArea = Segment{initialCritPoint, initialCritPoint};
-
-      initialArgs.jobIdxs.resize(jobs.size());
-      eastl::iota(initialArgs.jobIdxs.begin(), initialArgs.jobIdxs.end(), 0);
-
-      const auto startOfAlive = eastl::partition(initialArgs.jobIdxs.begin(), initialArgs.jobIdxs.end(),
-        [this, initialCritPoint](JobIndex j) { return !jobAliveAt(jobs[j], initialCritPoint); });
-
-      FmemVector<JobIndex> unresolvedIdxs;
-      unresolvedIdxs.reserve(eastl::distance(startOfAlive, initialArgs.jobIdxs.end()));
-      boxAliveAtT({startOfAlive, initialArgs.jobIdxs.end()}, initialCritPoint, unresolvedIdxs);
-      initialArgs.jobIdxs.erase(startOfAlive, initialArgs.jobIdxs.end());
-
-      // We repeat logic of boxUnresolvedJobs a little bit here, as it's different
-      // enough that trying to generalize will only make it worse
-      MemorySize lastBoxFullness = 0;
-      for (JobIndex i : unresolvedIdxs)
-      {
-        boxing[i] = {boxCounter, lastBoxFullness};
-        if (jobs[i].right != jobs[i].left)
-          initialArgs.freeSpaces.push_back(Hole{{jobs[i].right, jobs[i].left}, {boxCounter, lastBoxFullness}, 1});
-
-        if (++lastBoxFullness >= boxHeight)
+        // First iteration of the algorithm is manual and special, it splits the circle.
         {
-          lastBoxFullness = 0;
-          ++boxCounter;
+            // If it turns out that load is 0 at this point, we won't do anything
+            // in this 0th iteration and simply go on to work exactly as described
+            // in the article.
+            const auto initialCritPoint = minLoadPoint(jobs);
+
+            auto& initialArgs = iterationStack.emplace_back();
+            // reserved data should be on top of the framemem stack when iterations start
+            initialArgs.freeSpaces.reserve(boundForFreeSpaces);
+            initialArgs.jobIdxs.reserve(jobs.size());
+
+            // FRAMEMEM_VALIDATE;
+
+            initialArgs.workArea = Segment{initialCritPoint, initialCritPoint};
+
+            initialArgs.jobIdxs.resize(jobs.size());
+            std::iota(initialArgs.jobIdxs.begin(), initialArgs.jobIdxs.end(), 0);
+
+            const auto startOfAlive = std::partition(initialArgs.jobIdxs.begin(), initialArgs.jobIdxs.end(),
+                                                     [this, initialCritPoint](JobIndex j)
+            {
+                return !jobAliveAt(jobs[j], initialCritPoint);
+            });
+
+            FmemVector<JobIndex> unresolvedIdxs;
+            unresolvedIdxs.reserve(std::distance(startOfAlive, initialArgs.jobIdxs.end()));
+            boxAliveAtT({startOfAlive, initialArgs.jobIdxs.end()}, initialCritPoint, unresolvedIdxs);
+            initialArgs.jobIdxs.erase(startOfAlive, initialArgs.jobIdxs.end());
+
+            // We repeat logic of boxUnresolvedJobs a little bit here, as it's different
+            // enough that trying to generalize will only make it worse
+            MemorySize lastBoxFullness = 0;
+            for (JobIndex i : unresolvedIdxs)
+            {
+                boxing[i] = {boxCounter, lastBoxFullness};
+                if (jobs[i].right != jobs[i].left)
+                    initialArgs.freeSpaces.push_back(Hole{
+                        {jobs[i].right,    jobs[i].left},
+                        {   boxCounter, lastBoxFullness},
+                        1
+                    });
+
+                if (++lastBoxFullness >= boxHeight)
+                {
+                    lastBoxFullness = 0;
+                    ++boxCounter;
+                }
+            }
+
+            if (0 < lastBoxFullness)
+            {
+                initialArgs.freeSpaces.push_back(Hole{
+                    initialArgs.workArea,
+                    {boxCounter, lastBoxFullness},
+                    boxHeight - lastBoxFullness
+                });
+                ++boxCounter;
+            }
         }
-      }
 
-      if (0 < lastBoxFullness)
-      {
-        initialArgs.freeSpaces.push_back(Hole{initialArgs.workArea, {boxCounter, lastBoxFullness}, boxHeight - lastBoxFullness});
-        ++boxCounter;
-      }
+        while (!iterationStack.empty())
+        {
+            // Yes, copy, this is intentional.
+            args = iterationStack.back();
+            // Here, we destroy the allocations inside the iterationStack.back(),
+            // which is at the top of the framemem_stack currently.
+            iterationStack.pop_back();
+
+            if (args.jobIdxs.empty())
+                continue;
+
+            {
+                const auto cps = reconstructCriticalPoints(args);
+                criticalPoints.assign(cps.begin(), cps.end());
+            }
+
+            // Edge-case: after reconstructing CPs, we might have sub-iterations
+            // where there are no intermediate crit points. Need to find a new
+            // intermediate crit point in such a case. Note that the way we
+            // reconstruct CPs guarantees that the midpoint will be contained
+            // in a job.
+            if (criticalPoints.size() == 2)
+                criticalPoints.insert(criticalPoints.begin() + 1, circular_midpoint(args.workArea.left, args.workArea.right, timepointCount));
+
+            // We now put preemptively reserve data for new iterations on top
+            // of the framemem_stack. After this iteration completes, the data
+            // for the new iteration will be at the top of the stack, preserving
+            // the invariant.
+            const uint32_t iterationsToLaunch = criticalPoints.size() - 1;
+            for (uint32_t i = 0; i < iterationsToLaunch; ++i)
+            {
+                auto& nextArgs = iterationStack.emplace_back();
+                nextArgs.workArea = Segment{criticalPoints[i], criticalPoints[i + 1]};
+                nextArgs.freeSpaces.reserve(boundForFreeSpaces);
+                nextArgs.jobIdxs.reserve(args.jobIdxs.size());
+            }
+
+            // FRAMEMEM_VALIDATE;
+
+            const std::span<IterationArguments> nextArgs(iterationStack.end() - iterationsToLaunch,
+                                                         iterationStack.end());
+
+            // Step 1: box most jobs that cross critical points using a simple algorithm,
+            // but do it in a binary search fashion. What couldn't be boxed is called "unresolved"
+            const auto unresolvedIdxs = resolveCritPointIntersectors(criticalPoints, args, nextArgs);
+
+            // Step 2: color jobs that couldn't be boxed on the previous iteration with IGC.
+            const auto unresolved = choseJobs(unresolvedIdxs);
+            const auto coloring = color_interval_graph(unresolved, timepointCount, minLoadPoint(unresolved));
+
+            // Step 3: box the unresolved jobs into spanning freeSpaces that come from previous
+            // iterations. If we don't have enough spanning free spaces, we create brand-new boxes
+            // and split them into spanning free spaces for use here.
+            // This results in some new holes, as the packing into free is not necessarily tight.
+            auto holes = boxUnresolvedJobs(args.freeSpaces, args.workArea, unresolvedIdxs, coloring);
+
+            // If any free space remains, we forward it to next iteration as holes.
+            holes.insert(holes.end(), args.freeSpaces.begin(), args.freeSpaces.end());
+
+            // Step 4: "cut" holes up using critical points as delimiters and
+            // distribute them to next iterations, who's work areas will be delimited
+            // exactly by the current critical points.
+            distributeHolesToNextIterations(criticalPoints, nextArgs, std::move(holes));
+        }
+
+        return boxing;
     }
-
-    while (!iterationStack.empty())
-    {
-      // Yes, copy, this is intentional.
-      args = iterationStack.top();
-      // Here, we destroy the allocations inside the iterationStack.top(),
-      // which is at the top of the framemem_stack currently.
-      iterationStack.pop();
-
-      if (args.jobIdxs.empty())
-        continue;
-
-      {
-        const auto cps = reconstructCriticalPoints(args);
-        criticalPoints.assign(cps.begin(), cps.end());
-      }
-
-      // Edge-case: after reconstructing CPs, we might have sub-iterations
-      // where there are no intermediate crit points. Need to find a new
-      // intermediate crit point in such a case. Note that the way we
-      // reconstruct CPs guarantees that the midpoint will be contained
-      // in a job.
-      if (criticalPoints.size() == 2)
-        criticalPoints.insert(criticalPoints.begin() + 1, circular_midpoint(args.workArea.left, args.workArea.right, timepointCount));
-
-      // We now put preemptively reserve data for new iterations on top
-      // of the framemem_stack. After this iteration completes, the data
-      // for the new iteration will be at the top of the stack, preserving
-      // the invariant.
-      const uint32_t iterationsToLaunch = criticalPoints.size() - 1;
-      for (uint32_t i = 0; i < iterationsToLaunch; ++i)
-      {
-        auto &nextArgs = iterationStack.emplace();
-        nextArgs.workArea = Segment{criticalPoints[i], criticalPoints[i + 1]};
-        nextArgs.freeSpaces.reserve(boundForFreeSpaces);
-        nextArgs.jobIdxs.reserve(args.jobIdxs.size());
-      }
-
-      //FRAMEMEM_VALIDATE;
-
-      const eastl::span<IterationArguments> nextArgs(iterationStack.get_container().end() - iterationsToLaunch,
-        iterationStack.get_container().end());
-
-      // Step 1: box most jobs that cross critical points using a simple algorithm,
-      // but do it in a binary search fashion. What couldn't be boxed is called "unresolved"
-      const auto unresolvedIdxs = resolveCritPointIntersectors(criticalPoints, args, nextArgs);
-
-      // Step 2: color jobs that couldn't be boxed on the previous iteration with IGC.
-      const auto unresolved = choseJobs(unresolvedIdxs);
-      const auto coloring = color_interval_graph(unresolved, timepointCount, minLoadPoint(unresolved));
-
-      // Step 3: box the unresolved jobs into spanning freeSpaces that come from previous
-      // iterations. If we don't have enough spanning free spaces, we create brand-new boxes
-      // and split them into spanning free spaces for use here.
-      // This results in some new holes, as the packing into free is not necessarily tight.
-      auto holes = boxUnresolvedJobs(args.freeSpaces, args.workArea, unresolvedIdxs, coloring);
-
-      // If any free space remains, we forward it to next iteration as holes.
-      holes.insert(holes.end(), args.freeSpaces.begin(), args.freeSpaces.end());
-
-      // Step 4: "cut" holes up using critical points as delimiters and
-      // distribute them to next iterations, who's work areas will be delimited
-      // exactly by the current critical points.
-      distributeHolesToNextIterations(criticalPoints, nextArgs, std::move(holes));
-    }
-
-    return boxing;
-  }
 };
 
 } // namespace
@@ -1346,53 +1380,53 @@ public:
 
 SUITE(BoxUnitJobs)
 {
-  void check(eastl::span<const Job> jobs, TimeInterval timepoint_count, eastl::span<const BoxEmbedding> boxing, MemorySize box_height,
-    float eps)
-  {
-    for (const auto &emb : boxing)
+    void check(std::span<const Job> jobs, TimeInterval timepoint_count, std::span<const BoxEmbedding> boxing, MemorySize box_height,
+               float eps)
     {
-      REQUIRE CHECK(emb.box != UNRESOLVED_BOX_ID);
-      CHECK(emb.offset < box_height);
-    }
+        for (const auto& emb : boxing)
+        {
+            REQUIRE CHECK(emb.box != UNRESOLVED_BOX_ID);
+            CHECK(emb.offset < box_height);
+        }
 
-    FmemVector<BoxIndex> onlyBoxIndices;
-    onlyBoxIndices.reserve(boxing.size());
-    for (const auto &emb : boxing)
-      onlyBoxIndices.push_back(emb.box);
-    const auto boxJobs = boxes_to_jobs(jobs, timepoint_count, onlyBoxIndices);
+        FmemVector<BoxIndex> onlyBoxIndices;
+        onlyBoxIndices.reserve(boxing.size());
+        for (const auto& emb : boxing)
+            onlyBoxIndices.push_back(emb.box);
+        const auto boxJobs = boxes_to_jobs(jobs, timepoint_count, onlyBoxIndices);
 
-    const auto boxLoads = calculate_loads(boxJobs, timepoint_count);
-    const auto initialLoads = calculate_loads(jobs, timepoint_count);
+        const auto boxLoads = calculate_loads(boxJobs, timepoint_count);
+        const auto initialLoads = calculate_loads(jobs, timepoint_count);
 
-    // Per theorem 2, resulting box load should not at any time exceed
-    // (1+ 4*eps)*L + O(H lg H * 1/eps^2 * lg 1/eps),
-    // where H is box_height and L is the original load at the same point.
-    // The constant inside O should be somewhere around 6, I think.
-    const float error = box_height * log2(box_height + 1) / (eps * eps) * log2(1.f / eps);
-    const float constant = 6;
-    for (TimePoint t = 0; t < timepoint_count; ++t)
-      CHECK(boxLoads[t] <= (1 + 4 * eps) * initialLoads[t] + constant * error);
+        // Per theorem 2, resulting box load should not at any time exceed
+        // (1+ 4*eps)*L + O(H lg H * 1/eps^2 * lg 1/eps),
+        // where H is box_height and L is the original load at the same point.
+        // The constant inside O should be somewhere around 6, I think.
+        const float error = box_height * log2(box_height + 1) / (eps * eps) * log2(1.f / eps);
+        const float constant = 6;
+        for (TimePoint t = 0; t < timepoint_count; ++t)
+            CHECK(boxLoads[t] <= (1 + 4 * eps) * initialLoads[t] + constant * error);
 
-    FmemVector<JobCount> boxSizes(boxJobs.size(), 0);
-    for (JobIndex job = 0; job < jobs.size(); ++job)
-      ++boxSizes[boxing[job].box];
+        FmemVector<JobCount> boxSizes(boxJobs.size(), 0);
+        for (JobIndex job = 0; job < jobs.size(); ++job)
+            ++boxSizes[boxing[job].box];
 
-    FmemBucketVector<JobIndex> boxedJobs(boxJobs.size());
-    for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
-      boxedJobs[box].reserve(boxSizes[box]);
-    for (JobIndex job = 0; job < jobs.size(); ++job)
-      boxedJobs[boxing[job].box].push_back(job);
+        FmemBucketVector<JobIndex> boxedJobs(boxJobs.size());
+        for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
+            boxedJobs[box].reserve(boxSizes[box]);
+        for (JobIndex job = 0; job < jobs.size(); ++job)
+            boxedJobs[boxing[job].box].push_back(job);
 
-    for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
-    {
-      const auto &jobsInBox = boxedJobs[box];
+        for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
+        {
+            const auto& jobsInBox = boxedJobs[box];
 
-      // Check that the chosen offsets within each box lead to a proper coloring within the box
-      for (auto i = jobsInBox.begin(); i != jobsInBox.end(); ++i)
-        for (auto j = i + 1; j != jobsInBox.end(); ++j)
-          if (boxing[*i].offset == boxing[*j].offset)
-            CHECK(!circular_arcs_intersect(jobs[*i].left, jobs[*i].right, jobs[*j].left, jobs[*j].right, timepoint_count));
-    }
+            // Check that the chosen offsets within each box lead to a proper coloring within the box
+            for (auto i = jobsInBox.begin(); i != jobsInBox.end(); ++i)
+                for (auto j = i + 1; j != jobsInBox.end(); ++j)
+                    if (boxing[*i].offset == boxing[*j].offset)
+                        CHECK(!circular_arcs_intersect(jobs[*i].left, jobs[*i].right, jobs[*j].left, jobs[*j].right, timepoint_count));
+        }
   }
 
   TEST(SameJobsSmallEps)
@@ -1511,8 +1545,7 @@ namespace
 // <= 9 * eps * LOAD(jobs, u)
 //    + O( box_height * log2(box_height/min(job_heights))^2 / eps^4 )
 // space at each time moment u.
-FmemVector<BoxEmbedding> box_jobs(eastl::span<const Job> jobs, eastl::span<const MemorySize> job_heights, TimeInterval timepoint_count,
-  MemorySize box_height, MemorySize inv_eps)
+FmemVector<BoxEmbedding> box_jobs(std::span<const Job> jobs, std::span<const MemorySize> job_heights, TimeInterval timepoint_count, MemorySize box_height, MemorySize inv_eps)
 {
   NAU_ASSERT(jobs.size() == job_heights.size());
   FmemVector<BoxEmbedding> result(jobs.size());
@@ -1522,7 +1555,7 @@ FmemVector<BoxEmbedding> box_jobs(eastl::span<const Job> jobs, eastl::span<const
   // We bucket the jobs by the integer part of their height logarithm base (1+eps)
 
   FmemVector<JobIndex> sortedJobs(jobs.size());
-  eastl::iota(sortedJobs.begin(), sortedJobs.end(), 0);
+  std::iota(sortedJobs.begin(), sortedJobs.end(), 0);
   stlsort::sort(sortedJobs.begin(), sortedJobs.end(),
     [&job_heights](JobIndex fst, JobIndex snd) { return job_heights[fst] < job_heights[snd]; });
 
@@ -1570,12 +1603,13 @@ FmemVector<BoxEmbedding> box_jobs(eastl::span<const Job> jobs, eastl::span<const
     }
   }
 
-  const auto choseJobs = [&jobs](eastl::span<const JobIndex> which) {
-    FmemVector<Job> result;
-    result.reserve(which.size());
-    for (auto idx : which)
-      result.push_back(jobs[idx]);
-    return result;
+  const auto choseJobs = [&jobs](std::span<const JobIndex> which)
+  {
+      FmemVector<Job> result;
+      result.reserve(which.size());
+      for (auto idx : which)
+          result.push_back(jobs[idx]);
+      return result;
   };
 
   BoxIndex boxCounter = 0;
@@ -1599,7 +1633,7 @@ FmemVector<BoxEmbedding> box_jobs(eastl::span<const Job> jobs, eastl::span<const
 
     BoxCount count = 0;
     for (auto [box, _] : bucketBoxing)
-      count = eastl::max(count, box);
+        count = std::max(count, box);
     if (!bucketBoxing.empty())
       ++count;
 
@@ -1616,61 +1650,61 @@ FmemVector<BoxEmbedding> box_jobs(eastl::span<const Job> jobs, eastl::span<const
 
 SUITE(BoxJobs)
 {
-  void check(eastl::span<const Job> jobs, eastl::span<const MemorySize> job_heights, TimeInterval timepoint_count,
-    eastl::span<const BoxEmbedding> boxing, MemorySize box_height, float eps)
-  {
-    for (const auto &emb : boxing)
-      REQUIRE CHECK(emb.box != UNRESOLVED_BOX_ID);
-
-    for (JobIndex i = 0; i < jobs.size(); ++i)
-      CHECK(boxing[i].offset + job_heights[i] <= box_height);
-
-    FmemVector<BoxIndex> onlyBoxIndices;
-    onlyBoxIndices.reserve(boxing.size());
-    for (const auto &emb : boxing)
-      onlyBoxIndices.push_back(emb.box);
-    const auto boxJobs = boxes_to_jobs(jobs, timepoint_count, onlyBoxIndices);
-
-    const auto boxLoads = calculate_loads(boxJobs, timepoint_count);
-    const auto initialLoads = calculate_loads(jobs, timepoint_count);
-
-    // Per corollary 15, resulting box load should not at any time exceed
-    // (1 + 9*eps)*L + O(H lg^2 (H/h_min) / eps^4),
-    // where H is box_height, L is the original load at the same point,
-    // and h_min is the minimal job height.
-    // The constant inside O should be the same as in unit job boxing, but maybe a bit bigger?
-    const float min_h = static_cast<float>(*eastl::min_element(job_heights.begin(), job_heights.end()));
-    const float invEps = 1.f / eps;
-    const float epsToMinus4Power = invEps * invEps * invEps * invEps;
-    const float logTerm = log2(box_height / min_h);
-    const float error = box_height * logTerm * logTerm * epsToMinus4Power;
-    const float constant = 6;
-    for (TimePoint t = 0; t < timepoint_count; ++t)
-      CHECK(boxLoads[t] <= (1 + 9 * eps) * initialLoads[t] + constant * error);
-
-    FmemVector<JobCount> boxSizes(boxJobs.size(), 0);
-    for (JobIndex job = 0; job < jobs.size(); ++job)
-      ++boxSizes[boxing[job].box];
-
-    FmemBucketVector<JobIndex> boxedJobs(boxJobs.size());
-    for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
-      boxedJobs[box].reserve(boxSizes[box]);
-    for (JobIndex job = 0; job < jobs.size(); ++job)
-      boxedJobs[boxing[job].box].push_back(job);
-
-    for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
+    void check(std::span<const Job> jobs, std::span<const MemorySize> job_heights, TimeInterval timepoint_count,
+               std::span<const BoxEmbedding> boxing, MemorySize box_height, float eps)
     {
-      const auto &jobsInBox = boxedJobs[box];
+        for (const auto& emb : boxing)
+            REQUIRE CHECK(emb.box != UNRESOLVED_BOX_ID);
 
-      REQUIRE CHECK(!jobsInBox.empty());
+        for (JobIndex i = 0; i < jobs.size(); ++i)
+            CHECK(boxing[i].offset + job_heights[i] <= box_height);
 
-      // Check that the chosen offsets within each box lead to a proper coloring within the box
-      for (auto i = jobsInBox.begin(); i != jobsInBox.end(); ++i)
-        for (auto j = i + 1; j != jobsInBox.end(); ++j)
-          if (boxing[*j].offset <= boxing[*i].offset && boxing[*i].offset < boxing[*j].offset + job_heights[*j] ||
-              boxing[*i].offset <= boxing[*j].offset && boxing[*j].offset < boxing[*i].offset + job_heights[*i])
-            CHECK(!circular_arcs_intersect(jobs[*i].left, jobs[*i].right, jobs[*j].left, jobs[*j].right, timepoint_count));
-    }
+        FmemVector<BoxIndex> onlyBoxIndices;
+        onlyBoxIndices.reserve(boxing.size());
+        for (const auto& emb : boxing)
+            onlyBoxIndices.push_back(emb.box);
+        const auto boxJobs = boxes_to_jobs(jobs, timepoint_count, onlyBoxIndices);
+
+        const auto boxLoads = calculate_loads(boxJobs, timepoint_count);
+        const auto initialLoads = calculate_loads(jobs, timepoint_count);
+
+        // Per corollary 15, resulting box load should not at any time exceed
+        // (1 + 9*eps)*L + O(H lg^2 (H/h_min) / eps^4),
+        // where H is box_height, L is the original load at the same point,
+        // and h_min is the minimal job height.
+        // The constant inside O should be the same as in unit job boxing, but maybe a bit bigger?
+        const float min_h = static_cast<float>(*std::min_element(job_heights.begin(), job_heights.end()));
+        const float invEps = 1.f / eps;
+        const float epsToMinus4Power = invEps * invEps * invEps * invEps;
+        const float logTerm = log2(box_height / min_h);
+        const float error = box_height * logTerm * logTerm * epsToMinus4Power;
+        const float constant = 6;
+        for (TimePoint t = 0; t < timepoint_count; ++t)
+            CHECK(boxLoads[t] <= (1 + 9 * eps) * initialLoads[t] + constant * error);
+
+        FmemVector<JobCount> boxSizes(boxJobs.size(), 0);
+        for (JobIndex job = 0; job < jobs.size(); ++job)
+            ++boxSizes[boxing[job].box];
+
+        FmemBucketVector<JobIndex> boxedJobs(boxJobs.size());
+        for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
+            boxedJobs[box].reserve(boxSizes[box]);
+        for (JobIndex job = 0; job < jobs.size(); ++job)
+            boxedJobs[boxing[job].box].push_back(job);
+
+        for (BoxIndex box = 0; box < boxedJobs.size(); ++box)
+        {
+            const auto& jobsInBox = boxedJobs[box];
+
+            REQUIRE CHECK(!jobsInBox.empty());
+
+            // Check that the chosen offsets within each box lead to a proper coloring within the box
+            for (auto i = jobsInBox.begin(); i != jobsInBox.end(); ++i)
+                for (auto j = i + 1; j != jobsInBox.end(); ++j)
+                    if (boxing[*j].offset <= boxing[*i].offset && boxing[*i].offset < boxing[*j].offset + job_heights[*j] ||
+                        boxing[*i].offset <= boxing[*j].offset && boxing[*j].offset < boxing[*i].offset + job_heights[*i])
+                        CHECK(!circular_arcs_intersect(jobs[*i].left, jobs[*i].right, jobs[*j].left, jobs[*j].right, timepoint_count));
+        }
   }
 
   FmemVector<MemorySize> gen_random_heights(JobCount count, MemorySize min, MemorySize max)
@@ -1714,8 +1748,7 @@ SUITE(BoxJobs)
 // cyclic dynamic storage allocation problem, such that the resulting
 // memory used is
 // <= (1.5 + c*eps) * L + O(h_max / eps^6)
-FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const MemorySize> in_job_heights,
-  TimeInterval timepoint_count, float in_eps)
+FmemVector<MemoryOffset> cdsa(std::span<const Job> in_jobs, std::span<const MemorySize> in_job_heights, TimeInterval timepoint_count, float in_eps)
 {
   NAU_ASSERT(in_jobs.size() == in_job_heights.size());
   FmemVector<MemoryOffset> result(in_jobs.size(), 0);
@@ -1744,25 +1777,33 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
   // We will need to keep track of new job-node dimensions
   FmemVector<Job> jobs;
   jobs.reserve(maximumTreeNodeCount);
-  jobs.assign(in_jobs.begin(), in_jobs.end());
+  if (in_jobs.empty())
+      jobs.clear();
+  else
+      jobs.assign(in_jobs.data(), in_jobs.data() + in_jobs.size());
   FmemVector<MemorySize> jobHeights;
   jobHeights.reserve(maximumTreeNodeCount);
-  jobHeights.assign(in_job_heights.begin(), in_job_heights.end());
+  if (in_job_heights.empty())
+      jobHeights.clear();
+  else
+      jobHeights.assign(in_job_heights.data(), in_job_heights.data() + in_job_heights.size());
 
-  const auto choseJobs = [&jobs](eastl::span<const JobIndex> which) {
-    FmemVector<Job> result;
-    result.reserve(which.size());
+  const auto choseJobs = [&jobs](std::span<const JobIndex> which)
+  {
+      FmemVector<Job> result;
+      result.reserve(which.size());
 
-    for (auto idx : which)
-      result.push_back(jobs[idx]);
-    return result;
+      for (auto idx : which)
+          result.push_back(jobs[idx]);
+      return result;
   };
-  const auto choseHeights = [&jobHeights](eastl::span<const JobIndex> which) {
-    FmemVector<MemorySize> result;
-    result.reserve(which.size());
-    for (auto idx : which)
-      result.push_back(jobHeights[idx]);
-    return result;
+  const auto choseHeights = [&jobHeights](std::span<const JobIndex> which)
+  {
+      FmemVector<MemorySize> result;
+      result.reserve(which.size());
+      for (auto idx : which)
+          result.push_back(jobHeights[idx]);
+      return result;
   };
 
   static constexpr JobIndex ROOT = static_cast<JobIndex>(-1);
@@ -1779,7 +1820,7 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
 
   const auto comp = [&jobHeights](JobIndex fst, JobIndex snd) { return jobHeights[fst] > jobHeights[snd]; };
   using ForestRootStorage =
-    eastl::vector_multiset<JobIndex, decltype(comp), nau::EastlFrameAllocator, eastl::vector<JobIndex, nau::EastlFrameAllocator>>;
+      nau::SortedVectorMultiSet<JobIndex, decltype(comp), nau::FrameStdAllocator<JobIndex>>;
   ForestRootStorage forestRoots(comp);
   // Will never expand past in_jobs.size()
   forestRoots.reserve(in_jobs.size());
@@ -1820,10 +1861,11 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
     }
 
     const auto smallJobsBegin =
-      eastl::upper_bound(forestRoots.rbegin(), forestRoots.rend(), jobCutoff, [&jobHeights](MemorySize v, JobIndex j) {
+        std::upper_bound(forestRoots.rbegin(), forestRoots.rend(), jobCutoff, [&jobHeights](MemorySize v, JobIndex j)
+    {
         return v < jobHeights[j];
-      }).base();
-    eastl::span<const JobIndex> smallJobIdxs(smallJobsBegin, forestRoots.end());
+    }).base();
+    std::span<const JobIndex> smallJobIdxs(forestRoots.data() + (smallJobsBegin - forestRoots.begin()), forestRoots.end() - smallJobsBegin);
     const auto smallJobs = choseJobs(smallJobIdxs);
     const auto smallHeights = choseHeights(smallJobIdxs);
 
@@ -1837,8 +1879,11 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
       // TODO: this is ugly, boxes_to_jobs should work with embeddings too
       FmemVector<BoxIndex> onlyBoxIndices;
       onlyBoxIndices.reserve(boxing.size());
-      eastl::transform(boxing.begin(), boxing.end(), eastl::back_inserter(onlyBoxIndices),
-        [](const BoxEmbedding &e) { return e.box; });
+      std::transform(boxing.begin(), boxing.end(), std::back_inserter(onlyBoxIndices),
+                     [](const BoxEmbedding& e)
+      {
+          return e.box;
+      });
       const auto boxJobs = boxes_to_jobs(smallJobs, timepoint_count, onlyBoxIndices);
       jobs.insert(jobs.end(), boxJobs.begin(), boxJobs.end());
       boxCount = boxJobs.size();
@@ -1850,7 +1895,7 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
       {
         auto [box, offset] = boxing[inSmallIdx];
         auto &boxHeight = boxJobHeights[box];
-        boxHeight = eastl::max(boxHeight, offset + smallHeights[inSmallIdx]);
+        boxHeight = std::max(boxHeight, offset + smallHeights[inSmallIdx]);
       }
       jobHeights.insert(jobHeights.end(), boxJobHeights.begin(), boxJobHeights.end());
     }
@@ -1873,7 +1918,7 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
 
   const auto rootJobs = choseJobs(forestRoots);
   const auto rootLoads = calculate_loads(rootJobs, timepoint_count);
-  const TimePoint rootLoadMaxTime = static_cast<TimePoint>(eastl::max_element(rootLoads.begin(), rootLoads.end()) - rootLoads.begin());
+  const TimePoint rootLoadMaxTime = static_cast<TimePoint>(std::max_element(rootLoads.begin(), rootLoads.end()) - rootLoads.begin());
   const auto rootColoring = color_circular_arc_graph(rootJobs, timepoint_count, rootLoadMaxTime);
 
   {
@@ -1883,12 +1928,12 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
     for (JobIndex inRootsIdx = 0; inRootsIdx < forestRoots.size(); ++inRootsIdx)
     {
       auto &rootHeight = rootColorHeights[rootColoring[inRootsIdx]];
-      rootHeight = eastl::max(rootHeight, jobHeights[forestRoots[inRootsIdx]]);
+      rootHeight = std::max(rootHeight, jobHeights[forestRoots[inRootsIdx]]);
     }
     FmemVector<MemorySize> rootColorOffsets;
     rootColorOffsets.reserve(colorCount + 1);
     rootColorOffsets.push_back(0);
-    eastl::partial_sum(rootColorHeights.begin(), rootColorHeights.end(), eastl::back_inserter(rootColorOffsets));
+    std::partial_sum(rootColorHeights.begin(), rootColorHeights.end(), std::back_inserter(rootColorOffsets));
 
     for (JobIndex inRootsIdx = 0; inRootsIdx < forestRoots.size(); ++inRootsIdx)
       parents[forestRoots[inRootsIdx]].offset = rootColorOffsets[rootColoring[inRootsIdx]];
@@ -1906,8 +1951,7 @@ FmemVector<MemoryOffset> cdsa(eastl::span<const Job> in_jobs, eastl::span<const 
   return result;
 }
 
-FmemVector<MemorySize> calculate_loads(eastl::span<const Job> jobs, eastl::span<const MemorySize> job_heights,
-  TimeInterval timepoint_count)
+FmemVector<MemorySize> calculate_loads(std::span<const Job> jobs, std::span<const MemorySize> job_heights, TimeInterval timepoint_count)
 {
   MemorySize wraparoundLoad = 0;
   FmemVector<MemorySize> loads(timepoint_count, 0);
@@ -1918,7 +1962,7 @@ FmemVector<MemorySize> calculate_loads(eastl::span<const Job> jobs, eastl::span<
     if (jobs[i].right <= jobs[i].left)
       wraparoundLoad += job_heights[i];
   }
-  eastl::partial_sum(loads.begin(), loads.end(), loads.begin());
+  std::partial_sum(loads.begin(), loads.end(), loads.begin());
   for (auto &l : loads)
     l += wraparoundLoad;
   return loads;
@@ -1939,7 +1983,7 @@ class TopProfileTracker
 
   static TimeInterval calcLogSize(TimeInterval v) { return v < 2 ? 0 : nau::math::__bsr_unsafe(v - 1) + 1; }
 
-  eastl::pair<TimePoint, TimePoint> segmentForNode(NodeIdx2 v) const
+  std::pair<TimePoint, TimePoint> segmentForNode(NodeIdx2 v) const
   {
     const auto k = nau::math::__bsr_unsafe(v);
     const auto u = v - (1 << k);
@@ -1951,16 +1995,16 @@ class TopProfileTracker
 
   void pushDefer(NodeIdx2 node)
   {
-    const auto defer = eastl::exchange(deferred[node], UP_TO_DATE);
-    if (defer == UP_TO_DATE)
-      return;
+      const auto defer = std::exchange(deferred[node], UP_TO_DATE);
+      if (defer == UP_TO_DATE)
+          return;
 
-    current[node] = defer;
-    if (!isLeaf(node))
-    {
-      deferred[leftChild(node)] = defer;
-      deferred[rightChild(node)] = defer;
-    }
+      current[node] = defer;
+      if (!isLeaf(node))
+      {
+          deferred[leftChild(node)] = defer;
+          deferred[rightChild(node)] = defer;
+      }
   }
 
 public:
@@ -1975,7 +2019,7 @@ public:
     //FRAMEMEM_VALIDATE;
 
     if (r <= l)
-      return eastl::max(l != size ? rangeMax(l, size) : 0, 0 != r ? rangeMax(0, r) : 0);
+        return std::max(l != size ? rangeMax(l, size) : 0, 0 != r ? rangeMax(0, r) : 0);
 
     MemoryOffset result = {};
 
@@ -1990,7 +2034,7 @@ public:
 
       const auto [cl, cr] = segmentForNode(node);
       if (l <= cl && cr <= r)
-        result = eastl::max(current[node], result);
+          result = std::max(current[node], result);
       else
       {
         TimePoint center = cl + (cr - cl) / 2;
@@ -2032,12 +2076,12 @@ public:
         deferred[node] = value;
       else
       {
-        current[node] = eastl::max(current[node], value);
-        TimePoint center = cl + (cr - cl) / 2;
-        if (l < center)
-          stack.push_back(leftChild(node));
-        if (center < r)
-          stack.push_back(rightChild(node));
+          current[node] = std::max(current[node], value);
+          TimePoint center = cl + (cr - cl) / 2;
+          if (l < center)
+              stack.push_back(leftChild(node));
+          if (center < r)
+              stack.push_back(rightChild(node));
       }
     }
   }
@@ -2085,16 +2129,17 @@ SUITE(TopProfileTracking)
     TopProfileTracker tracker(TIMELINE_SIZE);
     FmemVector<MemoryOffset> naive(TIMELINE_SIZE, 0);
 
-    const auto checkRangeMax = [&](TimePoint l, TimePoint r) {
-      const auto expected = *eastl::max_element(naive.begin() + l, naive.begin() + r);
-      const auto actual = tracker.rangeMax(l, r);
-      CHECK_EQUAL(expected, actual);
+    const auto checkRangeMax = [&](TimePoint l, TimePoint r)
+    {
+        const auto expected = *std::max_element(naive.begin() + l, naive.begin() + r);
+        const auto actual = tracker.rangeMax(l, r);
+        CHECK_EQUAL(expected, actual);
     };
 
     const auto rangeUpdate = [&](TimePoint l, TimePoint r, MemoryOffset value) {
       tracker.rangeUpdate(l, r, value);
       for (; l != r; ++l)
-        naive[l] = eastl::max(naive[l], value);
+          naive[l] = std::max(naive[l], value);
     };
 
     for (int i = 0; i < 5; ++i)
@@ -2149,8 +2194,8 @@ struct BoxingPacker
       return PackerOutput{calculatedOffsets, 0};
 
     const auto loads = calculate_loads(jobs, jobHeights, timepointCount);
-    const auto maxLoad = *eastl::max_element(loads.begin(), loads.end());
-    const auto maxHeight = *eastl::max_element(jobHeights.begin(), jobHeights.end());
+    const auto maxLoad = *std::max_element(loads.begin(), loads.end());
+    const auto maxHeight = *std::max_element(jobHeights.begin(), jobHeights.end());
     const auto eps = pow(static_cast<float>(maxHeight) / static_cast<float>(maxLoad), 1.f / 7.f);
     const auto rawResult = cdsa(jobs, jobHeights, timepointCount, eps);
 
@@ -2158,8 +2203,11 @@ struct BoxingPacker
       //FRAMEMEM_VALIDATE;
 
       FmemVector<JobIndex> sorted(rawResult.size());
-      eastl::iota(sorted.begin(), sorted.end(), 0);
-      eastl::sort(sorted.begin(), sorted.end(), [&rawResult](JobIndex fst, JobIndex snd) { return rawResult[fst] < rawResult[snd]; });
+      std::iota(sorted.begin(), sorted.end(), 0);
+      std::sort(sorted.begin(), sorted.end(), [&rawResult](JobIndex fst, JobIndex snd)
+      {
+          return rawResult[fst] < rawResult[snd];
+      });
 
       TopProfileTracker tracker(timepointCount);
       for (auto idx : sorted)
@@ -2183,12 +2231,12 @@ struct BoxingPacker
     output.heapSize = 0;
     for (uint32_t i = 0; i < input.resources.size(); ++i)
       if (calculatedOffsets[i] != PackerOutput::NOT_SCHEDULED && calculatedOffsets[i] != PackerOutput::NOT_ALLOCATED)
-        output.heapSize = eastl::max(output.heapSize, calculatedOffsets[i] + input.resources[i].size);
+          output.heapSize = std::max(output.heapSize, calculatedOffsets[i] + input.resources[i].size);
     output.offsets = calculatedOffsets;
     return output;
   }
 
-  eastl::vector<uint64_t> calculatedOffsets;
+  std::vector<uint64_t> calculatedOffsets;
 };
 
 
@@ -2198,8 +2246,7 @@ Packer make_boxing_packer() { return BoxingPacker{}; }
 
 // AD-HOC EXPERIMENTS
 
-FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<const MemorySize> in_job_heights,
-  TimeInterval timepoint_count)
+FmemVector<MemoryOffset> adhoc_cdsa(std::span<const Job> in_jobs, std::span<const MemorySize> in_job_heights, TimeInterval timepoint_count)
 {
   NAU_ASSERT(in_jobs.size() == in_job_heights.size());
   FmemVector<MemoryOffset> result(in_jobs.size(), 0);
@@ -2211,18 +2258,25 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
   // We will need to keep track of new job-node dimensions
   FmemVector<Job> jobs;
   jobs.reserve(maximumTreeNodeCount);
-  jobs.assign(in_jobs.begin(), in_jobs.end());
+  if (in_jobs.empty())
+      jobs.clear();
+  else
+      jobs.assign(in_jobs.data(), in_jobs.data() + in_jobs.size());
   FmemVector<MemorySize> jobHeights;
   jobHeights.reserve(maximumTreeNodeCount);
-  jobHeights.assign(in_job_heights.begin(), in_job_heights.end());
+  if (in_job_heights.empty())
+      jobHeights.clear();
+  else
+      jobHeights.assign(in_job_heights.data(), in_job_heights.data() + in_job_heights.size());
 
-  const auto choseJobs = [&jobs](eastl::span<const JobIndex> which) {
-    FmemVector<Job> result;
-    result.reserve(which.size());
+  const auto choseJobs = [&jobs](std::span<const JobIndex> which)
+  {
+      FmemVector<Job> result;
+      result.reserve(which.size());
 
-    for (auto idx : which)
-      result.push_back(jobs[idx]);
-    return result;
+      for (auto idx : which)
+          result.push_back(jobs[idx]);
+      return result;
   };
 
   static constexpr JobIndex ROOT = static_cast<JobIndex>(-1);
@@ -2240,7 +2294,7 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
   // Will never expand past in_jobs.size()
   const auto comp = [&jobHeights](JobIndex fst, JobIndex snd) { return jobHeights[fst] > jobHeights[snd]; };
   using ForestRootStorage =
-    eastl::vector_multiset<JobIndex, decltype(comp), nau::EastlFrameAllocator, eastl::vector<JobIndex, nau::EastlFrameAllocator>>;
+      nau::SortedVectorMultiSet<JobIndex, decltype(comp), nau::FrameStdAllocator<JobIndex>>;
   ForestRootStorage forestRoots(comp);
   forestRoots.reserve(in_jobs.size());
   for (JobIndex i = 0; i < in_jobs.size(); ++i)
@@ -2253,12 +2307,15 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
     //FRAMEMEM_VALIDATE;
 
     const auto [smallBeg, smallEnd] = forestRoots.equal_range(forestRoots.back());
-    eastl::span<const JobIndex> smallJobIdxs(smallBeg, smallEnd);
+    std::span<const JobIndex> smallJobIdxs(forestRoots.data() + (smallBeg - forestRoots.begin()), smallEnd - smallBeg);
     const auto smallJobs = choseJobs(smallJobIdxs);
 
     const auto currHeight = jobHeights[forestRoots.back()];
-    const auto targetJobIt = eastl::lower_bound(forestRoots.rbegin(), forestRoots.rend(), 2 * currHeight,
-      [&jobHeights](JobIndex idx, MemorySize sz) { return jobHeights[idx] < sz; });
+    const auto targetJobIt = std::lower_bound(forestRoots.rbegin(), forestRoots.rend(), 2 * currHeight,
+                                              [&jobHeights](JobIndex idx, MemorySize sz)
+    {
+        return jobHeights[idx] < sz;
+    });
     const auto boxHeight = targetJobIt != forestRoots.rend() ? jobHeights[*targetJobIt] : jobHeights[forestRoots.front()];
 
     // MemorySize invEps;
@@ -2269,7 +2326,7 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
     //   MemorySize r = 1000;
 
     //   const auto b = 6 * boxHeight * log2(static_cast<double>(boxHeight));
-    //   const auto a = *eastl::max_element(loads.begin(), loads.end());
+    //   const auto a = *std::max_element(loads.begin(), loads.end());
     //   while (r - l > 1)
     //   {
     //     invEps = l + (r - l)/2;
@@ -2294,8 +2351,11 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
       // TODO: this is ugly, boxes_to_jobs should work with embeddings too
       FmemVector<BoxIndex> onlyBoxIndices;
       onlyBoxIndices.reserve(boxing.size());
-      eastl::transform(boxing.begin(), boxing.end(), eastl::back_inserter(onlyBoxIndices),
-        [](const BoxEmbedding &e) { return e.box; });
+      std::transform(boxing.begin(), boxing.end(), std::back_inserter(onlyBoxIndices),
+                     [](const BoxEmbedding& e)
+      {
+          return e.box;
+      });
       const auto boxJobs = boxes_to_jobs(smallJobs, timepoint_count, onlyBoxIndices);
       jobs.insert(jobs.end(), boxJobs.begin(), boxJobs.end());
       boxCount = boxJobs.size();
@@ -2303,12 +2363,12 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
 
     {
       NAU_ASSERT(smallBeg != forestRoots.begin()); // sanity check
-      FmemVector<MemorySize> boxJobHeights(boxCount, jobHeights[*eastl::prev(smallBeg)]);
+      FmemVector<MemorySize> boxJobHeights(boxCount, jobHeights[*std::prev(smallBeg)]);
       for (JobIndex inSmallIdx = 0; inSmallIdx < smallJobIdxs.size(); ++inSmallIdx)
       {
         auto [box, offset] = boxing[inSmallIdx];
         auto &boxHeight = boxJobHeights[box];
-        boxHeight = eastl::max(boxHeight, (offset + 1) * currHeight);
+        boxHeight = std::max(boxHeight, (offset + 1) * currHeight);
       }
       jobHeights.insert(jobHeights.end(), boxJobHeights.begin(), boxJobHeights.end());
     }
@@ -2335,7 +2395,7 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
 
   const auto rootJobs = choseJobs(forestRoots);
   const auto rootLoads = calculate_loads(rootJobs, timepoint_count);
-  const TimePoint rootLoadMaxTime = static_cast<TimePoint>(eastl::max_element(rootLoads.begin(), rootLoads.end()) - rootLoads.begin());
+  const TimePoint rootLoadMaxTime = static_cast<TimePoint>(std::max_element(rootLoads.begin(), rootLoads.end()) - rootLoads.begin());
   const auto rootColoring = color_circular_arc_graph(rootJobs, timepoint_count, rootLoadMaxTime);
 
   {
@@ -2345,12 +2405,12 @@ FmemVector<MemoryOffset> adhoc_cdsa(eastl::span<const Job> in_jobs, eastl::span<
     for (JobIndex inRootsIdx = 0; inRootsIdx < forestRoots.size(); ++inRootsIdx)
     {
       auto &rootHeight = rootColorHeights[rootColoring[inRootsIdx]];
-      rootHeight = eastl::max(rootHeight, jobHeights[forestRoots[inRootsIdx]]);
+      rootHeight = std::max(rootHeight, jobHeights[forestRoots[inRootsIdx]]);
     }
     FmemVector<MemorySize> rootColorOffsets;
     rootColorOffsets.reserve(colorCount + 1);
     rootColorOffsets.push_back(0);
-    eastl::partial_sum(rootColorHeights.begin(), rootColorHeights.end(), eastl::back_inserter(rootColorOffsets));
+    std::partial_sum(rootColorHeights.begin(), rootColorHeights.end(), std::back_inserter(rootColorOffsets));
 
     for (JobIndex inRootsIdx = 0; inRootsIdx < forestRoots.size(); ++inRootsIdx)
       parents[forestRoots[inRootsIdx]].offset = rootColorOffsets[rootColoring[inRootsIdx]];
@@ -2424,8 +2484,11 @@ struct AdhocBoxingPacker
       //FRAMEMEM_VALIDATE;
 
       FmemVector<JobIndex> sorted(rawResult.size());
-      eastl::iota(sorted.begin(), sorted.end(), 0);
-      eastl::sort(sorted.begin(), sorted.end(), [&rawResult](JobIndex fst, JobIndex snd) { return rawResult[fst] < rawResult[snd]; });
+      std::iota(sorted.begin(), sorted.end(), 0);
+      std::sort(sorted.begin(), sorted.end(), [&rawResult](JobIndex fst, JobIndex snd)
+      {
+          return rawResult[fst] < rawResult[snd];
+      });
 
       TopProfileTracker tracker(timepointCount);
       for (auto idx : sorted)
@@ -2449,12 +2512,12 @@ struct AdhocBoxingPacker
     output.heapSize = 0;
     for (uint32_t i = 0; i < input.resources.size(); ++i)
       if (calculatedOffsets[i] != PackerOutput::NOT_SCHEDULED && calculatedOffsets[i] != PackerOutput::NOT_ALLOCATED)
-        output.heapSize = eastl::max(output.heapSize, calculatedOffsets[i] + input.resources[i].size);
+          output.heapSize = std::max(output.heapSize, calculatedOffsets[i] + input.resources[i].size);
     output.offsets = calculatedOffsets;
     return output;
   }
 
-  eastl::vector<uint64_t> calculatedOffsets;
+  std::vector<uint64_t> calculatedOffsets;
 };
 
 

@@ -1,8 +1,12 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "dds_asset_container.h"
+
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "nau/service/service_provider.h"
 
@@ -13,12 +17,12 @@ namespace nau
     {
     }
 
-    nau::Ptr<> DDSAssetContainer::getAsset([[maybe_unused]] eastl::string_view path)
+    nau::Ptr<> DDSAssetContainer::getAsset([[maybe_unused]] std::string_view path)
     {
         return rtti::staticCast<IRefCounted*>(this);
     }
 
-    eastl::vector<eastl::string> DDSAssetContainer::getContent() const
+    std::vector<std::string> DDSAssetContainer::getContent() const
     {
         return {};
     }
@@ -38,13 +42,13 @@ namespace nau
         return texDescription;
     }
 
-    void DDSAssetContainer::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, eastl::span<DestTextureData> destination)
+    void DDSAssetContainer::copyTextureData(size_t mipLevelStart, size_t mipLevelsCount, std::span<DestTextureData> destination)
     {
         NAU_ASSERT(destination.size() == mipLevelsCount);
         m_textureData.copyTextureData(mipLevelStart, mipLevelsCount, destination);
     }
 
-    eastl::vector<eastl::string_view> DDSAssetContainerLoader::getSupportedAssetKind() const
+    std::vector<std::string_view> DDSAssetContainerLoader::getSupportedAssetKind() const
     {
         return {"texture/dds", "dds"};
     }

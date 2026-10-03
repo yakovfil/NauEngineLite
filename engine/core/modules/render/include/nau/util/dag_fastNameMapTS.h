@@ -3,9 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/utils/dag_oaHashNameMap.h"
+#include <utility>
+
 #include "nau/osApiWrappers/dag_rwLock.h"
 #include "nau/threading/dag_atomic.h"
+#include "nau/utils/dag_oaHashNameMap.h"
 
 // thread safe FastNameMap (with read-write lock)
 template <bool case_insensitive = false>
@@ -58,7 +60,7 @@ public:
             if(foundCollision)
                 BaseNameMap::noCollisions() = 0;
             uint32_t id = BaseNameMap::addString(name, name_len);
-            BaseNameMap::hashToStringId.emplace(hash, eastl::move(id));
+            BaseNameMap::hashToStringId.emplace(hash, std::move(id));
             interlocked_increment(namesCount);
             unlockWr();
             return (int)id;
@@ -107,7 +109,7 @@ public:
             if(foundCollision)
                 BaseNameMap::noCollisions() = 0;
             uint32_t id = BaseNameMap::addString(name, name_len);
-            BaseNameMap::hashToStringId.emplace(hash, eastl::move(id));
+            BaseNameMap::hashToStringId.emplace(hash, std::move(id));
             name = BaseNameMap::getName(id);
             interlocked_increment(namesCount);
             unlockWr();

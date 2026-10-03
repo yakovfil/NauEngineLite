@@ -3,12 +3,11 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include "nau/math/math.h"
-#include <EASTL/variant.h>
+#include <variant>
+
 #include "nau/3d/dag_drv3d_buffers.h"
-
+#include "nau/math/math.h"
 #include "render/daBfg/autoResolutionRequest.h"
-
 
 namespace dabfg
 {
@@ -43,7 +42,7 @@ struct Texture2dCreateInfo
   /// Use TEXCF_ prefixed flags
   uint32_t creationFlags = 0;
   /// Resolution for this texture. May either be hard-coded or automatic, see \ref AutoResolutionRequest
-  eastl::variant<nau::math::IVector2, AutoResolutionRequest> resolution;
+  std::variant<nau::math::IVector2, AutoResolutionRequest> resolution;
   /// Use 0 for automatic mip levels
   uint32_t mipLevels = 1;
 };

@@ -1,15 +1,18 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "nau/app/application_init_delegate.h"
+
+#include <optional>
+#include <string>
+#include <vector>
 
 #include "./logging_service.h"
 #include "nau/app/global_properties.h"
+#include "nau/assets/asset_db.h"
 #include "nau/io/asset_pack_file_system.h"
 #include "nau/io/virtual_file_system.h"
 #include "nau/string/string_conv.h"
-#include "nau/assets/asset_db.h"
 
 namespace nau
 {
@@ -19,9 +22,9 @@ namespace nau
          */
         struct LogFileEntry
         {
-            eastl::string contentType;
-            eastl::string location;
-            eastl::string fileNamePrefix;
+            std::string contentType;
+            std::string location;
+            std::string fileNamePrefix;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(contentType),
@@ -33,7 +36,7 @@ namespace nau
          */
         struct LogConfig
         {
-            eastl::vector<RuntimeValue::Ptr> files;
+            std::vector<RuntimeValue::Ptr> files;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(files))
@@ -43,10 +46,10 @@ namespace nau
          **/
         struct VfsMountPoint
         {
-            eastl::string mountPoint;
-            eastl::string kind;
-            eastl::string entryPoint;
-            eastl::string path;
+            std::string mountPoint;
+            std::string kind;
+            std::string entryPoint;
+            std::string path;
             bool readOnly = true;
             bool forceCreate = false;
             bool isOptional = false;
@@ -67,7 +70,7 @@ namespace nau
          */
         struct VfsConfig
         {
-            eastl::vector<VfsMountPoint> mounts;
+            std::vector<VfsMountPoint> mounts;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(mounts))
@@ -77,7 +80,7 @@ namespace nau
          */
         struct AssetDbConfig
         {
-            eastl::vector<VfsMountPoint> mounts;
+            std::vector<VfsMountPoint> mounts;
 
             NAU_CLASS_FIELDS(
                 CLASS_FIELD(mounts))
@@ -87,8 +90,8 @@ namespace nau
          */
         struct AppConfig
         {
-            eastl::string name;
-            eastl::string author;
+            std::string name;
+            std::string author;
             LogConfig log;
             VfsConfig vfs;
             AssetDbConfig asset_db;
@@ -114,7 +117,7 @@ namespace nau
 
                 if (const RuntimeStringValue* const str = entry->as<const RuntimeStringValue*>())
                 {
-                    const eastl::string logFilePath{toStringView(str->getString())};
+                    const std::string logFilePath{toStringView(str->getString())};
                     loggingService.addFileOutput(logFilePath);
                 }
                 else if (entry->is<RuntimeReadonlyDictionary>())
@@ -131,7 +134,7 @@ namespace nau
                         const fs::path location{toStringView(utf8ToWString(fileEntry->location))};
                         NAU_ASSERT(!fs::exists(location) || fs::is_directory(location));
                         const fs::path filePath = location / toStringView(utf8ToWString(fileEntry->fileNamePrefix));
-                        const eastl::u8string utf8FilePath = wstringToUtf8(toStringView(filePath.wstring()));
+                        const std::u8string utf8FilePath = wstringToUtf8(toStringView(filePath.wstring()));
                         loggingService.addFileOutput(toStringView(utf8FilePath));
                     }
                 }
@@ -178,7 +181,7 @@ namespace nau
                 }
 
                 mountPath.make_preferred();
-                const eastl::u8string utf8Path = wstringToUtf8(toStringView(mountPath.wstring()));
+                const std::u8string utf8Path = wstringToUtf8(toStringView(mountPath.wstring()));
 
                 if (fs::is_directory(mountPath))
                 {
@@ -216,25 +219,25 @@ namespace nau
                 if (!fileSystem.exists(mount.entryPoint))
                 {
                     NAU_LOG_WARNING("Asset database not found: {}", mount.entryPoint);
-					continue;
+                    continue;
                 }
 
                 NAU_ASSERT(mount.kind == "asset_db", "Invalid mount kind!");
-                
+
                 assetDb.addAssetDB(mount.entryPoint);
 
                 NAU_LOG("Mounted asset database: {}", mount.entryPoint);
             }
 
-			return ResultSuccess;
+            return ResultSuccess;
         }
 
     }  // namespace
 
     Result<> applyDefaultAppConfiguration()
     {
-        const eastl::optional<AppConfig> appConfig = getServiceProvider().get<GlobalProperties>().getValue<AppConfig>("/app");
-        
+        const std::optional<AppConfig> appConfig = getServiceProvider().get<GlobalProperties>().getValue<AppConfig>("/app");
+
         if (!appConfig)
         {
             return ResultSuccess;
@@ -248,8 +251,8 @@ namespace nau
 
     Result<> initializeDefaultApplication()
     {
-        const eastl::optional<AppConfig> appConfig = getServiceProvider().get<GlobalProperties>().getValue<AppConfig>("/app");
-       
+        const std::optional<AppConfig> appConfig = getServiceProvider().get<GlobalProperties>().getValue<AppConfig>("/app");
+
         if (!appConfig)
         {
             return ResultSuccess;

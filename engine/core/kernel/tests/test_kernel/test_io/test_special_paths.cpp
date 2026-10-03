@@ -1,6 +1,7 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <string>
 
 #include "nau/io/special_paths.h"
 
@@ -8,20 +9,20 @@ namespace nau::test
 {
     TEST(TestSpecialPaths, NotEmptyWithDefaultPrefixFileName)
     {
-        eastl::u8string tempFileName = io::getNativeTempFilePath();
+        std::u8string tempFileName = io::getNativeTempFilePath();
         ASSERT_FALSE(tempFileName.empty());
     }
 
     TEST(TestSpecialPaths, NotEmptyWithPrefixFileName)
     {
-        eastl::u8string tempFileName = io::getNativeTempFilePath(u8"TES");
+        std::u8string tempFileName = io::getNativeTempFilePath(u8"TES");
         ASSERT_FALSE(tempFileName.empty());
     }
 
     TEST(TestSpecialPaths, CorrectPrefixFileName)
     {
-        eastl::u8string tempFileName = io::getNativeTempFilePath(u8"TMP");
-        ASSERT_FALSE(tempFileName.find(u8"TMP") == eastl::string::npos);
+        std::u8string tempFileName = io::getNativeTempFilePath(u8"TMP");
+        ASSERT_FALSE(tempFileName.find(u8"TMP") == std::string::npos);
     }
 
     TEST(TestSpecialPaths, KnownFolder_UserDocuments)

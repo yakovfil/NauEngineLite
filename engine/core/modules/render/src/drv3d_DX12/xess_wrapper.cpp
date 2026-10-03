@@ -3,6 +3,9 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include "xess_wrapper.h"
+
+#include <memory>
+
 #include "device.h"
 
 #if 0
@@ -46,7 +49,7 @@ static xess_quality_settings_t toXeSSQuality(int quality)
   static constexpr xess_quality_settings_t xessQualities[] = {
     XESS_QUALITY_SETTING_PERFORMANCE, XESS_QUALITY_SETTING_BALANCED, XESS_QUALITY_SETTING_QUALITY, XESS_QUALITY_SETTING_ULTRA_QUALITY};
 
-  NAU_ASSERT(quality < eastl::extent<decltype(xessQualities)>::value);
+  NAU_ASSERT(quality < std::extent<decltype(xessQualities)>::value);
   return xessQualities[quality];
 }
 
@@ -214,7 +217,7 @@ private:
   xess_2d_t m_renderResolution = {0, 0};
   XessState m_state = XessState::DISABLED;
 
-  eastl::unique_ptr<void, DagorDllCloser> libxess;
+  std::unique_ptr<void, DagorDllCloser> libxess;
   decltype(::xessD3D12CreateContext) *xessD3D12CreateContext;
   decltype(::xessGetProperties) *xessGetProperties;
   decltype(::xessD3D12Init) *xessD3D12Init;

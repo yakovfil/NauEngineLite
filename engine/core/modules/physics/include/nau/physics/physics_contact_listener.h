@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <vector>
+
 #include "nau/physics/components/rigid_body_component.h"
 #include "nau/physics/physics_material.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/scene/scene_object.h"
-
 
 namespace nau::physics
 {
@@ -49,7 +50,7 @@ namespace nau::physics
          * @param [in] data1, data2         Keep information about the contacting bodies.
          * @param [in] collisionWorldPoints Array of contact points (in world coordinates).
          */
-        virtual void onContactAdded(const ContactManifold& data1, const ContactManifold& data2, const eastl::vector<math::vec3>& collisionWorldPoints) = 0;
+        virtual void onContactAdded(const ContactManifold& data1, const ContactManifold& data2, const std::vector<math::vec3>& collisionWorldPoints) = 0;
 
         /**
          * @brief Called each frame while two bodies continue contacting.
@@ -57,7 +58,7 @@ namespace nau::physics
          * @param [in] data1, data2         Keep information about the contacting bodies.
          * @param [in] collisionWorldPoints Array of contact points (in world coordinates).
          */
-        virtual void onContactContinued(const ContactManifold& data1, const ContactManifold& data2, const eastl::vector<math::vec3>& collisionWorldPoints) = 0;
+        virtual void onContactContinued(const ContactManifold& data1, const ContactManifold& data2, const std::vector<math::vec3>& collisionWorldPoints) = 0;
 
         /**
          * @brief Called when a contact between two bodies ceases.

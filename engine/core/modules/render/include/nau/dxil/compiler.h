@@ -3,19 +3,19 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #pragma once
 
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/span.h>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace dxil
 {
 struct CompileResult
 {
-  eastl::vector<uint8_t> byteCode;
-  // with the version 3 interface of DXC we can extract reflection data as separate blob
-  eastl::vector<uint8_t> reflectionData;
-  eastl::string logMessage;
+    std::vector<uint8_t> byteCode;
+    // with the version 3 interface of DXC we can extract reflection data as separate blob
+    std::vector<uint8_t> reflectionData;
+    std::string logMessage;
 };
 enum class PDBMode
 {
@@ -54,10 +54,9 @@ struct DXCSettings
   // 0 (disable) - 3 (best)
   uint32_t optimizeLevel = 3;
   PDBMode pdbMode = PDBMode::NONE;
-  eastl::wstring_view PDBBasePath;
-  eastl::string_view rootSignatureDefine;
+  std::wstring_view PDBBasePath;
+  std::string_view rootSignatureDefine;
 };
-CompileResult compileHLSLWithDXC(eastl::span<const char> src, const char *entry, const char *profile, DXCSettings settings, void *dxc_lib,
-  DXCVersion dxc_version);
-eastl::string disassemble(eastl::span<const uint8_t> data, void *dxc_lib);
+CompileResult compileHLSLWithDXC(std::span<const char> src, const char* entry, const char* profile, DXCSettings settings, void* dxc_lib, DXCVersion dxc_version);
+std::string disassemble(std::span<const uint8_t> data, void* dxc_lib);
 } // namespace dxil

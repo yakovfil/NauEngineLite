@@ -3,13 +3,14 @@
 
 
 #pragma once
+#include <string_view>
 
 namespace nau::shader_globals
 {
-    NAU_RENDER_EXPORT bool containsName(eastl::string_view name);
+    NAU_RENDER_EXPORT bool containsName(std::string_view name);
 
-    NAU_RENDER_EXPORT void addVariable(eastl::string_view name, size_t size, const void* defaultValue = nullptr);
+    NAU_RENDER_EXPORT void addVariable(std::string_view name, size_t size, const void* defaultValue = nullptr);
 
-    NAU_RENDER_EXPORT void setVariable(eastl::string_view name, const void* value);
-    NAU_RENDER_EXPORT void getVariable(eastl::string_view name, size_t* size, void** value);
+    NAU_RENDER_EXPORT void setVariable(std::string_view name, const void* value);
+    NAU_RENDER_EXPORT void getVariable(std::string_view name, size_t* size, void** value);
 } // namespace nau::shaderGlobals
