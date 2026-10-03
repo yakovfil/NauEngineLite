@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Nau Engine Lite is a C++20 kernel project. `engine/core/kernel/` contains foundational APIs and implementations. Shared build logic lives in `cmake/`, and bundled dependencies in `engine/3rdparty_libs/`. Optional consumers register through `CMAKE_PROJECT_NauEngine_INCLUDE` and `NAU_EXTERNAL_PROJECT_DIRS`.
+Nau Engine Lite is a C++20 kernel project. `engine/core/kernel/` contains foundational APIs and implementations. `engine/core/app_framework/` contains the application framework and module-neutral tests; its build is enabled by the external modules project after module targets are defined. Shared build logic lives in `cmake/`, and bundled dependencies in `engine/3rdparty_libs/`. Optional consumers register through `CMAKE_PROJECT_NauEngine_INCLUDE` and `NAU_EXTERNAL_PROJECT_DIRS`.
 
 ## Build, Test, and Development Commands
 
@@ -22,7 +22,7 @@ Follow `doc/coding_style_guide.md` and `.clang-format`: four spaces, no tabs, Al
 
 ## Testing Guidelines
 
-The module repository owns the GoogleTest targets and shared test helpers. Keep regression tests beside the relevant subsystem under `tests/`, using `test_*.cpp` filenames and descriptive `TEST`/`TEST_F` cases. `NAU_CORE_TESTS` defaults to `ON` when the modules hook is attached. Build before running CTest; use `-R <regex>` to focus on relevant cases. No numerical coverage threshold is documented; cover changed behavior and failure paths.
+The engine owns kernel/runtime GoogleTest targets, framework test sources, and shared test helpers. External consumers can supply `NAU_TEST_MODULES` and `NAU_TEST_PROJECT_SOURCE_DIR` when enabling framework tests. Keep regression tests beside the relevant subsystem under `tests/`, using `test_*.cpp` filenames and descriptive `TEST`/`TEST_F` cases. Build before running CTest; use `-R <regex>` to focus on relevant cases. No numerical coverage threshold is documented; cover changed behavior and failure paths.
 
 ## Commit & Pull Request Guidelines
 

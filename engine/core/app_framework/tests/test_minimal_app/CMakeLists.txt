@@ -1,0 +1,16 @@
+if(NOT NAU_RUNTIME_PROFILE STREQUAL "minimal")
+  return()
+endif()
+
+add_executable(NauMinimalLifecycleTests test_minimal_app.cpp test_service_failures.cpp test_application_failures.cpp)
+target_sources(NauMinimalLifecycleTests PRIVATE
+  "${NAU_ENGINE_SOURCE_DIR}/engine/core/kernel/tests/test_kernel/test_service_dependencies.cpp"
+  "${NAU_ENGINE_SOURCE_DIR}/engine/core/kernel/tests/test_kernel/test_service_init_proxy.cpp")
+target_precompile_headers(NauMinimalLifecycleTests PRIVATE <gtest/gtest.h>)
+target_include_directories(NauMinimalLifecycleTests PRIVATE "${NAU_ENGINE_SOURCE_DIR}/engine/core/app_framework/src")
+target_compile_definitions(NauMinimalLifecycleTests PRIVATE NAU_MINIMAL_RUNTIME)
+target_link_libraries(NauMinimalLifecycleTests PRIVATE ${NAU_FRAMEWORK_TARGET} gtest_main)
+nau_target_link_modules(NauMinimalLifecycleTests ${NAU_TEST_MODULES})
+nau_add_compile_options(NauMinimalLifecycleTests)
+add_test(NAME MinimalRuntime.Lifecycle COMMAND NauMinimalLifecycleTests)
+set_tests_properties(MinimalRuntime.Lifecycle PROPERTIES TIMEOUT 30)
