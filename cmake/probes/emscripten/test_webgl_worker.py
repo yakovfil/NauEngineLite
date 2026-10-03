@@ -1,4 +1,4 @@
-"""Pinned-SDK worker/canvas feasibility; deliberately not NauDemo acceptance."""
+"""Pinned-SDK worker/canvas feasibility for the engine browser runtime."""
 import functools
 import argparse
 import http.server

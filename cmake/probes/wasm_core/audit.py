@@ -23,14 +23,14 @@ native_graphs = graph(args.native)
 native_sources = sources(native_graphs[0]["NauKernel"])
 native_common = {s for s in native_sources if "/windows/" not in s}
 for native in native_graphs:
-    assert not {"PlatformApp", "Graphics", "CoreScene", "MinimalAppSample", "NauMinimalLifecycleTests"} & native.keys()
+    assert not {"PlatformApp", "Graphics", "CoreScene", "NauMinimalLifecycleTests"} & native.keys()
     assert sources(native["NauKernel"]) == native_sources
     assert "-pthread" not in str(native["NauKernel"].get("compileGroups"))
     assert "_TARGET_PC_WIN=1" in str(native["NauKernel"].get("compileGroups"))
 for build in args.wasm:
     wasm = graph(build)[0]
     assert {"NauKernel", "NauFrameworkMinimal", "NauCorePortabilityTests"} <= wasm.keys()
-    assert not {"PlatformApp", "Graphics", "CoreScene", "MinimalAppSample", "NauMinimalLifecycleTests"} & wasm.keys()
+    assert not {"PlatformApp", "Graphics", "CoreScene", "NauMinimalLifecycleTests"} & wasm.keys()
     wasm_sources = sources(wasm["NauKernel"])
     assert not any("/windows/" in s for s in wasm_sources)
     assert {s for s in wasm_sources if "/emscripten/" not in s} == native_common

@@ -107,16 +107,12 @@ configuration once to populate that query before running the graph audit:
 python cmake/probes/wasm_core/audit.py --native build/core-native-debug --wasm build/wasm-core-debug --wasm build/wasm-core-release
 python cmake/probes/wasm_core/audit.py --native build/core-native-release --wasm build/wasm-core-debug --wasm build/wasm-core-release
 python cmake/probes/wasm_core/verify_configuration.py
-python cmake/probes/test_minimal_runtime.py --minimal build/native-minimal-debug --minimal build/native-minimal-release --desktop build/desktop-platform-after
 ```
 
-Run `verify_configuration.py` with the SDK active. The final audit needs the
-previously configured native lifecycle/desktop directories described in
-[minimal_runtime_profile.md](minimal_runtime_profile.md). Audits confirm common
-source parity, 98 Wasm compile commands, no Windows definitions/native compiler
-flags, missing-SDK/C++17 rejection, and minimal graphs reduced to 18 targets.
+Run `verify_configuration.py` with the SDK active. Audits confirm common
+source parity, Wasm compile commands, no Windows definitions/native compiler
+flags, and missing-SDK/C++17 rejection.
 
-The browser presets now build the [actual minimal sample](minimal_app_web.md)
-with production platform services and the shared worker lifecycle. Sample Chrome
+The browser runtime uses production platform services and the shared worker lifecycle. Sample Chrome
 acceptance is recorded separately; runtime staging, relocation and fresh-checkout
 delivery reproduction remain pending in `emscripten-build` and delivery work.

@@ -20,7 +20,7 @@
                 "NAU_CORE_TOOLS": false,
                 "NAU_CORE_TESTS": false,
                 "NAU_MINIMAL_TESTS": true,
-                "NAU_CORE_SAMPLES": true
+                "NAU_CORE_SAMPLES": false
             }
         },
         {
@@ -56,7 +56,7 @@
                 "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
                 "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
                 "NAU_BUILD_BROWSER": true,
-                "NAU_CORE_SAMPLES": true,
+                "NAU_CORE_SAMPLES": false,
                 "NAU_MINIMAL_TESTS": false,
                 "NAU_RUNTIME_PROFILE": "minimal",
                 "BUILD_SHARED_LIBS": false,
@@ -69,7 +69,7 @@
             "name": "web-minimal-debug",
             "inherits": "web_minimal_base",
             "displayName": "Minimal browser runtime (Debug)",
-            "description": "Emscripten/Ninja; real non-rendering MinimalAppSample with worker lifecycle",
+            "description": "Emscripten/Ninja; non-rendering application worker runtime",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
@@ -78,7 +78,7 @@
             "name": "web-minimal-release",
             "inherits": "web_minimal_base",
             "displayName": "Minimal browser runtime (Release)",
-            "description": "Emscripten/Ninja; real non-rendering MinimalAppSample with worker lifecycle",
+            "description": "Emscripten/Ninja; non-rendering application worker runtime",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -263,26 +263,6 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "BUILD_SHARED_LIBS": true
             }
-        },
-        {
-            "name": "web-demo-debug",
-            "inherits": "web_minimal_base",
-            "displayName": "NauDemo browser (Debug)",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "NAU_RUNTIME_PROFILE": "demo",
-                "NAU_DEMO_SOURCE_DIR": "${sourceDir}/../NauDemo"
-            }
-        },
-        {
-            "name": "web-demo-release",
-            "inherits": "web_minimal_base",
-            "displayName": "NauDemo browser (Release)",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "NAU_RUNTIME_PROFILE": "demo",
-                "NAU_DEMO_SOURCE_DIR": "${sourceDir}/../NauDemo"
-            }
         }
     ],
     "buildPresets": [
@@ -291,7 +271,6 @@
             "configurePreset": "native-minimal-debug",
             "configuration": "Debug",
             "targets": [
-                "MinimalAppSample",
                 "NauMinimalLifecycleTests"
             ]
         },
@@ -300,7 +279,6 @@
             "configurePreset": "native-minimal-release",
             "configuration": "Release",
             "targets": [
-                "MinimalAppSample",
                 "NauMinimalLifecycleTests"
             ]
         },
@@ -383,20 +361,6 @@
             "displayName": "Ninja ClangCl (Release)",
             "configurePreset": "win_ninja_clangcl",
             "configuration": "Release"
-        },
-        {
-            "name": "web-demo-debug",
-            "configurePreset": "web-demo-debug",
-            "targets": [
-                "NauDemoWebPackage"
-            ]
-        },
-        {
-            "name": "web-demo-release",
-            "configurePreset": "web-demo-release",
-            "targets": [
-                "NauDemoWebPackage"
-            ]
         }
     ]
 }

@@ -3,7 +3,7 @@
 The production PlatformApp module now supplies a non-rendering browser window
 manager. SDK 6.0.9 and Chrome 153.0.8010.52 pass the focused platform tests in
 Debug and Release on Windows. The [browser lifecycle driver](browser_runtime_lifecycle.md)
-now provides application cadence, checked startup and Stop controls. The [actual sample](minimal_app_web.md) now consumes that driver;
+now provides application cadence, checked startup and Stop controls. External applications can consume that driver;
 relocatable application delivery remains separate work.
 
 ## Build and test
@@ -106,6 +106,6 @@ source-selection fix removes Emscripten sources from the Windows graph; the full
 affected scene tests now pass in both configurations. Full desktop applications
 are outside this boundary. Wasm core tests pass under SDK Node 24.19.0.
 
-Browser application presets now build the [actual sample](minimal_app_web.md).
+Browser runtime presets build the engine runtime; applications attach through their own CMake hooks.
 Runtime staging and delivery relocation remain pending. This platform fixture proves production module and
 service behavior, not application stepping or package relocation.

@@ -153,7 +153,9 @@ try_inc(cmake/core/ScriptsLua/ScriptsLua-config.cmake)
 
 try_inc(cmake/tools/ShaderCompilerTool/ShaderCompilerTool-config.cmake)
 
-set(NAU_CORE_SAMPLES ON)
 set(NAU_FRAMEWORK_TARGET NauFramework)
-set(NAU_SAMPLES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/samples")
-add_subdirectory(samples)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/samples/CMakeLists.txt")
+  set(NAU_CORE_SAMPLES ON)
+  set(NAU_SAMPLES_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/samples")
+  add_subdirectory(samples)
+endif()

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Nau Engine is a C++20 game engine. `engine/core/kernel/` contains foundational APIs, implementations, and tests in `include/`, `src/`, and `tests/`. Feature systems live in `engine/core/modules/`; application support lives in `engine/core/app_framework/`. `tools/` contains asset, shader, project, and build utilities. The sibling `NauSamples/` checkout contains example applications selected through `NAU_SAMPLES_SOURCE_DIR`; `project_templates/` contains starter projects and resources. Shared build logic lives in `cmake/`, documentation in `doc/`, and bundled dependencies in `engine/3rdparty_libs/`.
+Nau Engine is a C++20 game engine. `engine/core/kernel/` contains foundational APIs, implementations, and tests in `include/`, `src/`, and `tests/`. Feature systems live in `engine/core/modules/`; application support lives in `engine/core/app_framework/`. `tools/` contains asset, shader, project, and build utilities. Optional consumers register through `CMAKE_PROJECT_NauEngine_INCLUDE` and `NAU_EXTERNAL_PROJECT_DIRS`; `project_templates/` contains starter projects and resources. Shared build logic lives in `cmake/`, documentation in `doc/`, and bundled dependencies in `engine/3rdparty_libs/`.
 
 ## Build, Test, and Development Commands
 
@@ -10,11 +10,11 @@ For the standard Windows build, install Visual Studio 2026 with C++ tools, Pytho
 
 - `git submodule update --init --recursive`: initialize dependencies.
 - `cmake --preset win_vs2026_x64`: configure into `build/win_vs2026_x64/`.
-- `cmake --build --preset "VS Debug"`: build the Debug configuration, including enabled tools, samples, and tests.
+- `cmake --build --preset "VS Debug"`: build the Debug configuration, including enabled tools and tests.
 - `ctest --test-dir build/win_vs2026_x64 -C Debug --output-on-failure`: run registered tests.
 - `cmake --install build/win_vs2026_x64 --config Debug`: install the SDK into `output/`.
 
-Use the generated Visual Studio solution to select and launch a sample. The optional `win_ninja_clangcl-debug` preset supports Ninja with clang-cl.
+The optional `win_ninja_clangcl-debug` preset supports Ninja with clang-cl.
 
 ## Coding Style & Naming Conventions
 

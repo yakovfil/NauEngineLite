@@ -3,8 +3,7 @@
 `runBrowserApplication()` owns the real shared application on the Emscripten
 application pthread. It links `NauFrameworkMinimal`, the production static
 `PlatformApp` module and the minimal kernel. The independent acceptance target
-remains a lifecycle fixture. The [actual sample](minimal_app_web.md) now adapts
-`../NauSamples/minimalApp/app_sample_main_min.cpp`; runtime packaging remains separate.
+remains a lifecycle fixture. External applications can use this driver through their own entry points and packaging.
 
 ## Build and test on Windows
 
@@ -126,4 +125,4 @@ token, not a monotonic task count. Only `Application::stop()` is cross-thread;
 other lifecycle calls belong to the application's owning thread.
 
 The parent change's `validation.md` records browser/native results and the
-remaining sample, preset, packaging and relocation boundary.
+remaining application packaging and relocation boundary.

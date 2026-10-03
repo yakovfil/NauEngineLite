@@ -1,6 +1,6 @@
 set(FolderName "${NauEngineFolder}/3rdparty")
 
-if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|demo)$")
+if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
   foreach(libDir IN LISTS NAU_MINIMAL_DEPENDENCY_DIRS)
     add_subdirectory(${libDir})
   endforeach()

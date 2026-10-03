@@ -58,7 +58,7 @@ try {
             throw 'CMake 3.24 or newer is required for the probe and preset schema version 5.'
         }
     }
-    Write-Host "SDK preflight passed. Use the web-minimal presets to build the sample; preflight alone does not validate application execution."
+    Write-Host "SDK preflight passed. Attach an application project to build browser output; preflight alone does not validate application execution."
     if ($Probe) {
         $engine = Split-Path $PSScriptRoot
         $build = Join-Path $engine "build/emscripten-probe-$($Configuration.ToLowerInvariant())"

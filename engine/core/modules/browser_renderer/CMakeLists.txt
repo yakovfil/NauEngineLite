@@ -1,4 +1,4 @@
-if(NOT EMSCRIPTEN OR NOT NAU_RUNTIME_PROFILE STREQUAL "demo")
+if(NOT EMSCRIPTEN OR NOT NAU_RUNTIME_PROFILE STREQUAL "scene")
   return()
 endif()
 add_library(NauBrowserRenderer STATIC src/browser_renderer.cpp)

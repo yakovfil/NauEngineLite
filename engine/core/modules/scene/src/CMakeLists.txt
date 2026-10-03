@@ -22,8 +22,8 @@ nau_collect_files(PublicHeaders
 )
 
 
-if(NAU_RUNTIME_PROFILE STREQUAL "demo")
-  set(Sources ${NAU_DEMO_CoreScene_SOURCES})
+if(NAU_RUNTIME_PROFILE STREQUAL "scene")
+  set(Sources ${NAU_SCENE_CoreScene_SOURCES})
 endif()
 
 nau_add_module(${TargetName}
