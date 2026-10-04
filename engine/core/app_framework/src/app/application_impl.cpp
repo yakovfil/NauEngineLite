@@ -9,9 +9,6 @@
 #include "nau/diag/device_error.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service_provider.h"
-#ifndef NAU_MINIMAL_RUNTIME
-    #include "nau/ui.h"
-#endif
 
 namespace nau
 {
@@ -105,11 +102,6 @@ namespace nau
         m_mainLoop = &serviceProvider.get<MainLoopService>();
 
 #ifndef NAU_MINIMAL_RUNTIME
-        if (getServiceProvider().has<ui::UiManager>())
-        {
-            m_uiManager = &getServiceProvider().get<ui::UiManager>();
-        }
-
         if (getServiceProvider().has<vfx::VFXManager>())
         {
             m_vfxManager = &getServiceProvider().get<vfx::VFXManager>();
@@ -338,11 +330,6 @@ namespace nau
         NAU_FATAL(m_mainLoop);
 
 #ifndef NAU_MINIMAL_RUNTIME
-        if (m_uiManager)
-        {
-            m_uiManager->update(dt);
-        }
-
         if (m_vfxManager)
         {
             m_vfxManager->update(dt);

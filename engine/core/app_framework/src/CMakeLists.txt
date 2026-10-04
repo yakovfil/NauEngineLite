@@ -61,7 +61,7 @@ if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
     target_link_libraries(${TargetName} PUBLIC CoreScene)
   endif()
 else()
-  target_link_libraries(${TargetName} PUBLIC CoreScene Graphics ui VFX)
+  target_link_libraries(${TargetName} PUBLIC CoreScene Graphics VFX)
 endif()
 
 nau_add_compile_options(${TargetName})

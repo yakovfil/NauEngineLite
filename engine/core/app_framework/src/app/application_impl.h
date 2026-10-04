@@ -23,11 +23,6 @@
 namespace nau
 {
 
-    namespace ui
-    {
-        struct UiManager;
-    }
-
     /**
      */
     class ApplicationImpl final : public Application,
@@ -99,7 +94,6 @@ namespace nau
         MainLoopService* m_mainLoop = nullptr;
 
 #ifndef NAU_MINIMAL_RUNTIME
-        ui::UiManager* m_uiManager = nullptr;
         vfx::VFXManager* m_vfxManager = nullptr;
 #endif
 
