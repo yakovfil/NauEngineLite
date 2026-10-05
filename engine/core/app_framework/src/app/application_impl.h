@@ -62,6 +62,7 @@ namespace nau
             Created,
             PreInitializing,
             Initializing,
+            StartingApplication,
             Active,
             ShutdownRequested,
             GameShutdownProcessed,

@@ -4,6 +4,8 @@ cmake_path(GET CMAKE_CURRENT_SOURCE_DIR PARENT_PATH moduleRoot)
 
 if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
   set(Sources
+    app/application_delegate.cpp
+    app/run_application.cpp
     app/application_impl.cpp
     app/application_setup.cpp
     app/background_work_service.cpp
@@ -32,6 +34,9 @@ nau_collect_files(Headers
   PREPEND "../"
 )
 
+if(EMSCRIPTEN)
+  list(FILTER Sources EXCLUDE REGEX "(^|/)app/run_application\\.cpp$")
+endif()
 add_library(${TargetName} STATIC ${Sources} ${PublicHeaders})
 if(EMSCRIPTEN)
   target_sources(${TargetName} PRIVATE platform/emscripten/browser_runtime.cpp)

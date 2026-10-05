@@ -34,6 +34,11 @@ namespace nau
          */
         virtual async::Task<> startupApplication() = 0;
 
+        // These callbacks surround the scene manager update call, not GPU completion.
+        virtual void onApplicationPreUpdate(std::chrono::milliseconds dt);
+        virtual void onApplicationPostUpdate(std::chrono::milliseconds dt);
+
+        // Compatibility callback: the default post-update implementation forwards here.
         virtual void onApplicationStep(std::chrono::milliseconds dt);
 
     protected:

@@ -15,6 +15,7 @@
 #include "nau/app/application_services.h"
 #include "nau/app/browser_runtime_timing.h"
 #include "nau/app/platform_window_status.h"
+#include "nau/app/run_application.h"
 #include "nau/async/work_queue.h"
 #include "nau/service/service_provider.h"
 
@@ -129,6 +130,7 @@ namespace
 {
     struct BrowserLoop
     {
+        ApplicationDelegate::Ptr owner;
         std::unique_ptr<Application> app;
         ApplicationLifecycle& lifecycle;
         WorkQueue* queue;
@@ -145,7 +147,8 @@ namespace
         uint64_t previousProgress;
         bool wasVisible = true, alive = true;
 
-        BrowserLoop(std::unique_ptr<Application> application, int timeoutMs, bool yield, bool frameUpdates = false) :
+        BrowserLoop(std::unique_ptr<Application> application, int timeoutMs, bool yield, bool frameUpdates = false, ApplicationDelegate::Ptr delegate = nullptr) :
+            owner(std::move(delegate)),
             app(std::move(application)),
             lifecycle(app->as<ApplicationLifecycle&>()),
             queue(nullptr),
@@ -249,10 +252,10 @@ namespace
                     lastProgress = now;
                 }
             }
-            const char* state = !failure.empty() ? "Failed" : !alive                                                      ? "Stopped"
-                                                          : (stopRequested.load() || phase == ApplicationPhase::Stopping) ? "Stopping"
-                                                          : phase == ApplicationPhase::Running                            ? "Running"
-                                                                                                                          : "Starting";
+            const char* state = !failure.empty() ? "Failed" : !alive                                                                          ? "Stopped"
+                                                          : (stopRequested.load() || app->isClosing() || phase == ApplicationPhase::Stopping) ? "Stopping"
+                                                          : phase == ApplicationPhase::Running                                                ? "Running"
+                                                                                                                                              : "Starting";
             if (!alive || stepped || phase != previousPhase || now - lastPublish >= 50 || !failure.empty())
             {
                 // Publish final cleanup only after Application and RuntimeState destruction.
@@ -260,6 +263,7 @@ namespace
                 {
                     queue->setWakeCallback(nullptr);
                     app.reset();
+                    owner.reset();
                 }
                 publish(state, failurePhase ? failurePhase : phaseName(phase), failure, steps, ++sequence, !alive);
                 lastPublish = now;
@@ -274,7 +278,7 @@ namespace
     };
 }
 
-int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptions options)
+static int runBrowserApplicationImpl(ApplicationInitDelegate& delegate, BrowserRuntimeOptions options, ApplicationDelegate::Ptr owner)
 {
     if (emscripten_is_main_browser_thread() || started.exchange(true))
         return 1;
@@ -292,7 +296,7 @@ int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptio
         // A heap-owned loop survives returning to the worker's JavaScript event
         // loop. Chrome presents OffscreenCanvas frames there. No Asyncify and no
         // additional game steps unless the caller requests frame-driven updates.
-        auto* loop = new BrowserLoop(std::move(*creation), timeout, true, options.frameDrivenUpdates);
+        auto* loop = new BrowserLoop(std::move(*creation), timeout, true, options.frameDrivenUpdates, std::move(owner));
         emscripten_set_main_loop_arg([](void* argument)
         {
             auto* loop = static_cast<BrowserLoop*>(argument);
@@ -307,9 +311,31 @@ int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptio
         }, loop, options.frameDrivenUpdates ? 0 : 200, true);
         return 1;  // simulate_infinite_loop unwinds to the worker scheduler.
     }
-    BrowserLoop loop(std::move(*creation), timeout, false);
+    BrowserLoop loop(std::move(*creation), timeout, false, false, std::move(owner));
     while (loop.alive)
         loop.tick();
     return loop.failure.empty() ? 0 : 1;
+}
+
+int runBrowserApplication(ApplicationInitDelegate& delegate, BrowserRuntimeOptions options)
+{
+    return runBrowserApplicationImpl(delegate, options, nullptr);
+}
+
+int runApplication(ApplicationDelegate::Ptr delegate)
+{
+    return runApplication(std::move(delegate), {});
+}
+
+int runApplication(ApplicationDelegate::Ptr delegate, ApplicationHostOptions options)
+{
+    if (!delegate)
+        return 1;
+    auto& reference = *delegate;
+    return runBrowserApplicationImpl(reference,
+                                     {.foregroundProgressTimeoutMs = options.foregroundProgressTimeoutMs,
+                                      .cooperativePresentation = true,
+                                      .frameDrivenUpdates = options.scheduling == ApplicationScheduling::Presentation},
+                                     std::move(delegate));
 }
 }

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <string>
 
+#include "application_host.h"
 #include "nau/diag/device_error.h"
 #include "nau/service/internal/service_provider_initialization.h"
 #include "nau/service/service_provider.h"
@@ -159,6 +160,7 @@ namespace nau
             case AppState::PreInitializing:
                 return ApplicationPhase::PreInitializing;
             case AppState::Initializing:
+            case AppState::StartingApplication:
                 return ApplicationPhase::Initializing;
             case AppState::Active:
                 return ApplicationPhase::Running;
@@ -233,14 +235,18 @@ namespace nau
 
         m_appWorkQueue->poll();
 
-        if (m_appState == AppState::PreInitializing || m_appState == AppState::Initializing)
+        if (m_appState == AppState::PreInitializing || m_appState == AppState::Initializing || m_appState == AppState::StartingApplication)
         {
             if (!m_startupTask.isReady())
             {
+                if (m_appState == AppState::StartingApplication && m_mainLoop)
+                    m_mainLoop->pollShutdown();
                 return true;
             }
+            const bool applicationStartup = m_appState == AppState::StartingApplication;
             const bool preInit = m_appState == AppState::PreInitializing;
-            recordError(m_startupTask, preInit ? "Pre-initialization" : "Initialization");
+            recordError(m_startupTask, applicationStartup ? "Application startup" : preInit ? "Pre-initialization"
+                                                                                            : "Initialization");
             m_startupTask = nullptr;
             if (m_lifecycleError || m_stopRequested)
             {
@@ -250,6 +256,12 @@ namespace nau
             {
                 m_appState = AppState::Initializing;
                 m_startupTask = getServiceProvider().as<core_detail::IServiceProviderInitialization&>().initServices();
+            }
+            else if (!applicationStartup && getServiceProvider().has<IApplicationHostStartup>())
+            {
+                m_mainLoop = &getServiceProvider().get<MainLoopService>();
+                m_appState = AppState::StartingApplication;
+                m_startupTask = getServiceProvider().get<IApplicationHostStartup>().startupApplicationHost();
             }
             else
             {
