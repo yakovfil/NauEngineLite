@@ -9,6 +9,7 @@ nau_collect_files(SOURCES
 
 
 add_executable(${TargetName} ${SOURCES})
+target_compile_definitions(${TargetName} PRIVATE NAU_PACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/test_io/fixtures")
 # TODO NAU-2089
 # add_test(NAME Kernel COMMAND ${TargetName})
 

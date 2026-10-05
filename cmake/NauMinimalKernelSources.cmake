@@ -15,6 +15,7 @@ set(NAU_MINIMAL_KERNEL_COMMON_SOURCES
   diag/log_subscribers.cpp
   diag/logging.cpp
   io/directory_iterator.cpp
+  io/asset_pack_file_system.cpp
   io/fs_path.cpp
   io/memory_stream.cpp
   io/stream.cpp

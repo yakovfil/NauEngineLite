@@ -146,9 +146,9 @@ namespace nau::diag
                 auto writeToFile = [](spdlog::details::file_helper* file, std::vector<LoggerMessage> messages) -> nau::async::Task<>
                 {
                     BackgroundWorkService* const workService = hasServiceProvider() ? getServiceProvider().find<BackgroundWorkService>() : nullptr;
-                    if (workService)
+                    if (auto executor = workService ? workService->getExecutor() : nullptr)
                     {
-                        co_await workService->getExecutor();
+                        co_await executor;
                     }
                     for (auto& message : messages)
                     {
@@ -157,22 +157,26 @@ namespace nau::diag
                     file->flush();
                 };
 
-                m_fileWriteTasks.push(writeToFile(&m_file, std::move(m_pendingMessages)));
+                auto write = writeToFile(&m_file, std::move(m_pendingMessages));
+                write.setContinueOnCapturedExecutor(false);
+                m_fileWriteTasks.push(std::move(write));
             }
             else
             {
                 auto writeToFile = [](spdlog::details::file_helper* file, LoggerMessage message) -> async::Task<>
                 {
                     BackgroundWorkService* const workService = hasServiceProvider() ? getServiceProvider().find<BackgroundWorkService>() : nullptr;
-                    if (workService)
+                    if (auto executor = workService ? workService->getExecutor() : nullptr)
                     {
-                        co_await workService->getExecutor();
+                        co_await executor;
                     }
                     file->write(DefaultMessageFormatter::format(message));
                     file->flush();
                 };
 
-                m_fileWriteTasks.push(writeToFile(&m_file, message));
+                auto write = writeToFile(&m_file, message);
+                write.setContinueOnCapturedExecutor(false);
+                m_fileWriteTasks.push(std::move(write));
             }
         }
         ~FileLogSubscriber() override
