@@ -363,8 +363,8 @@ macro(nau_add_default_shaders target_name content_dir shader_dir)
     add_custom_command(OUTPUT ${workingDir}/${shader_dir}/cache/shader_cache.nsbc
         DEPENDS ${ShadersSources} ${ShadersMeta} ${ShadersIncludes} ShaderCompilerTool
         COMMAND ${CMAKE_COMMAND} -E env
-        "PYTHONPATH=${PXR_CMAKE_DIR}/lib/release/python;"
-        "PATH=${PXR_CMAKE_DIR}/bin;${PXR_CMAKE_DIR}/lib;${PXR_CMAKE_DIR}/lib/release;${PXR_CMAKE_DIR}/python;${PXR_CMAKE_DIR}/plugin/usd;${PROJECT_SOURCE_DIR}/engine/3rdparty_libs/dxil/bin/x64"        
+        "PYTHONPATH=${NAU_USD_PYTHONPATH}"
+        "PATH=${NAU_USD_TOOL_PATH};${NAU_ENGINE_SOURCE_DIR}/engine/3rdparty_libs/dxil/bin/x64;$ENV{PATH}"
         $<TARGET_FILE:ShaderCompilerTool>
         -c shader_cache.nsbc
         -o ${shader_dir}/cache

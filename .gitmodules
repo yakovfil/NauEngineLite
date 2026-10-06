@@ -13,3 +13,9 @@
 [submodule "tools/3rd_party/json"]
 	path = tools/3rd_party/json
 	url = https://github.com/nlohmann/json.git
+[submodule "engine/3rdparty_libs/OpenUSD"]
+	path = engine/3rdparty_libs/OpenUSD
+	url = https://github.com/PixarAnimationStudios/OpenUSD.git
+[submodule "engine/3rdparty_libs/USD-Fileformat-plugins"]
+	path = engine/3rdparty_libs/USD-Fileformat-plugins
+	url = https://github.com/adobe/USD-Fileformat-plugins.git
