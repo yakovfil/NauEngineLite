@@ -3,6 +3,7 @@
 
 #include "nau/io/nau_container.h"
 
+#include <charconv>
 #include <span>
 #include <string>
 #include <string_view>
@@ -36,18 +37,17 @@ namespace nau::io
             httpHeaderStringify.reserve(256);
             while ((httpHeaderStringify.find("\n\n") == std::string::npos))
             {
+                if (httpHeaderStringify.size() >= 16384)
+                    return NauMakeError("Container HTTP header exceeds 16 KiB");
                 char buffer[1] = "";
-                const size_t actualRead = *stream->read(reinterpret_cast<std::byte*>(buffer), 1);
-                if (actualRead == 0)
-                {
-                    NAU_ASSERT(false);
-                    break;
-                }
+                auto read = stream->read(reinterpret_cast<std::byte*>(buffer), 1);
+                if (!read)
+                    return read.getError();
+                if (*read != 1)
+                    return NauMakeError("Truncated container HTTP header");
 
                 httpHeaderStringify.append(buffer, 1);
             }
-
-            NAU_ASSERT(httpHeaderStringify.find("\n\n") != std::string::npos);
 
             auto httpHeaderLineSequence = strings::split(httpHeaderStringify, std::string_view{"\n"});
             for (std::string_view headerLine : httpHeaderLineSequence)
@@ -81,23 +81,41 @@ namespace nau::io
 
     Result<std::tuple<RuntimeValue::Ptr, size_t>> readContainerHeader(IStreamReader::Ptr stream)
     {
+        if (!stream)
+            return NauMakeError("Missing container stream");
         std::vector<std::tuple<std::string, std::string>> httpHeader;
-        const size_t headerLength = *readHttpHeader(stream, httpHeader);
+        auto headerResult = readHttpHeader(stream, httpHeader);
+        NauCheckResult(headerResult);
+        const size_t headerLength = *headerResult;
         size_t contentLength = 0;
         for (const auto& [name, value] : httpHeader)
         {
             if (name == "Content-Length")
             {
-                contentLength = std::stoi(value.data()) + 1;
-                break;
+                if (contentLength != 0)
+                    return NauMakeError("Duplicate container Content-Length");
+                auto parsed = std::from_chars(value.data(), value.data() + value.size(), contentLength);
+                if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() ||
+                    contentLength == 0 || contentLength > 16 * 1024 * 1024)
+                    return NauMakeError("Invalid container Content-Length");
             }
         }
-        NAU_ASSERT(contentLength != 0);
+        if (contentLength == 0)
+            return NauMakeError("Missing container Content-Length");
+
+        // Existing Nau writers emit three line breaks after the HTTP fields.
+        // readHttpHeader consumes two; the remaining separator is part of this
+        // read, preserving the established payload offset.
+        ++contentLength;
 
         BytesBuffer buffer(contentLength);
-        NAU_VERIFY(*stream->read(buffer.data(), contentLength) == contentLength);
-        RuntimeValue::Ptr result = *serialization::jsonParseString(strings::toU8StringView(asStringView(buffer)));
+        auto read = stream->read(buffer.data(), contentLength);
+        NauCheckResult(read);
+        if (*read != contentLength)
+            return NauMakeError("Truncated container JSON header");
+        auto parsed = serialization::jsonParseString(strings::toU8StringView(asStringView(buffer)));
+        NauCheckResult(parsed);
 
-        return std::make_tuple(result, contentLength + headerLength);
+        return std::make_tuple(*parsed, contentLength + headerLength);
     }
 }  // namespace nau::io

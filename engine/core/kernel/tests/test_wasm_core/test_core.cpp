@@ -20,6 +20,7 @@
 #include "nau/memory/general_allocator.h"
 #include "nau/module/module.h"
 #include "nau/module/module_manager.h"
+#include "nau/rtti/rtti_impl.h"
 #include "nau/runtime/internal/runtime_state.h"
 #include "nau/serialization/json_utils.h"
 #include "nau/threading/critical_section.h"
@@ -45,6 +46,30 @@ TEST(CorePortability, GlobalPropertiesAndVirtualFileSystem)
 
 namespace
 {
+    class InplaceAlignmentProbe final : public nau::IRefCounted
+    {
+        NAU_CLASS_(InplaceAlignmentProbe, nau::IRefCounted)
+    public:
+        uint32_t value = 42;
+    };
+
+    TEST(CorePortability, EmbeddedInplaceStorageAlignsSharedState)
+    {
+        using Storage = nau::rtti_detail::RttiClassStorage<typename InplaceAlignmentProbe::ClassPolicy::RC>;
+        static_assert(alignof(nau::rtti::InstanceInplaceStorage<InplaceAlignmentProbe>) >= alignof(typename Storage::SharedState));
+        struct Embedded
+        {
+            uint32_t prefix = 0;
+            nau::rtti::InstanceInplaceStorage<InplaceAlignmentProbe> storage;
+        } embedded;
+        auto object = nau::rtti::createInstanceInplace<InplaceAlignmentProbe>(embedded.storage);
+        ASSERT_TRUE(object);
+        EXPECT_EQ(object->value, 42);
+        nau::WeakPtr<InplaceAlignmentProbe> weak{object};
+        object = nullptr;
+        EXPECT_TRUE(weak.isDead());
+    }
+
     int moduleInitialized = 0, modulePostInitialized = 0, moduleCleaned = 0;
     class CoreTestModule final : public nau::DefaultModuleImpl
     {

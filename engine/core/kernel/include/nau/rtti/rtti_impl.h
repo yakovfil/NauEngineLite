@@ -229,7 +229,7 @@ namespace nau::rtti_detail
         static constexpr size_t InstanceStorageSize = SharedStateSize + sizeof(ValueStorage<T>) + alignof(T);
 
         template <typename T>
-        using InstanceInplaceStorage = AlignedStorage<InstanceStorageSize<T>, alignof(T)>;
+        using InstanceInplaceStorage = AlignedStorage<InstanceStorageSize<T>, std::max(alignof(T), alignof(SharedState))>;
 
         template <typename T>
         static SharedState& getSharedState(const T& instance)
