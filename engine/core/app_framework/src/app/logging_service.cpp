@@ -24,7 +24,9 @@ namespace nau
 
         m_logSubscriptions.reserve(2);
 
+#ifndef __EMSCRIPTEN__
         m_logSubscriptions.push_back(getLogger().subscribe(createDebugOutputLogSubscriber()));
+#endif
         m_logSubscriptions.push_back(getLogger().subscribe(createConioOutputLogSubscriber()));
     }
 

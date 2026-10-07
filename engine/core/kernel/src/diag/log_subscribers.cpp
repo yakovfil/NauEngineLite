@@ -10,6 +10,10 @@
 #include <string_view>
 #include <vector>
 
+#ifdef __EMSCRIPTEN__
+    #include <emscripten/console.h>
+#endif
+
 // #include "nau/diag/assertion.h"
 #include "file_helper.h"
 #include "nau/app/background_work_service.h"
@@ -94,9 +98,27 @@ namespace nau::diag
     public:
         void processMessage(const LoggerMessage& message) override
         {
+#ifdef __EMSCRIPTEN__
+            auto text = DefaultMessageFormatter::format(message);
+            text.pop_back();  // The browser console supplies the line ending.
+            switch (message.level)
+            {
+                case LogLevel::Warning:
+                    emscripten_console_warn(text.c_str());
+                    break;
+                case LogLevel::Error:
+                case LogLevel::Critical:
+                    emscripten_console_error(text.c_str());
+                    break;
+                default:
+                    emscripten_console_log(text.c_str());
+                    break;
+            }
+#else
             std::cout
                 << DefaultMessageFormatter::format(message).c_str()
                 << std::endl;
+#endif
         }
     };
 

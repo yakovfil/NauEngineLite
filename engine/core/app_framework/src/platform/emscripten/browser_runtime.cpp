@@ -69,7 +69,7 @@ namespace nau
             MAIN_THREAD_EM_ASM({ (() => {
                 const stop = $0 >> 2, wake = $1 >> 2, failed = $2 >> 2;
                 const bridge = {
-                    status: null, history: [], lastWorkerSequence: 0, sequence: 0,
+                    status: null, history: [], lastWorkerSequence: 0, sequence: 0, lastLog: '',
                     failed: false, aborted: false, lastHeartbeat: performance.now(),
                     stop() { Atomics.store(HEAP32, stop, 1); Atomics.add(HEAP32, wake, 1); Atomics.notify(HEAP32, wake); },
                     start() { return {accepted:false, message:'Reload the page to retry'}; },
@@ -80,10 +80,21 @@ namespace nau
                         if (this.failed) snapshot = {...snapshot, state:'Failed', message:snapshot.message || this.status.message};
                         if (snapshot.state === 'Failed') this.failed = true;
                         this.status = Object.freeze({...snapshot, sequence:++this.sequence});
+                        this.logStatus();
                         this.history.push(this.status);
                         if (this.history.length > 1024) this.history.shift();
                         if (this.status.cleanupComplete) this.detach();
                         return true;
+                    },
+                    logStatus() {
+                        const status = this.status;
+                        const text = '[Nau] ' + status.state + ' (' + status.phase + ')' +
+                            (status.message ? ': ' + status.message : '') +
+                            (status.cleanupComplete ? ' — cleanup complete' : '');
+                        if (text === this.lastLog) return;
+                        this.lastLog = text;
+                        if (status.state === 'Failed') console.error(text);
+                        else console.info(text);
                     },
                     detach() { clearInterval(this.watchdog); document.removeEventListener('visibilitychange', this.visibility); }
                 };
@@ -102,6 +113,7 @@ namespace nau
                     bridge.status = Object.freeze({...bridge.status, state:'Failed', cleanupComplete:false,
                         message:'Foreground worker progress deadline expired', sequence:++bridge.sequence});
                     bridge.history.push(bridge.status);
+                    bridge.logStatus();
                     Atomics.store(HEAP32, failed, 1); bridge.stop();
                 }, Math.min(100, $3));
                 const previousAbort = Module.onAbort;
@@ -110,6 +122,7 @@ namespace nau
                     bridge.status = Object.freeze({...bridge.status, state:'Failed', cleanupComplete:false,
                         phase:'Fatal abort', message:String(reason), sequence:++bridge.sequence});
                     bridge.history.push(bridge.status); bridge.detach();
+                    bridge.logStatus();
                     if (previousAbort) previousAbort(reason);
                 };
             })(); }, &stopRequested, &wakeSequence, &watchdogFailed, timeout, &documentVisible);
