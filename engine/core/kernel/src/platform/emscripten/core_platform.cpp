@@ -84,6 +84,10 @@ namespace nau::io
 
     std::filesystem::path getKnownFolderPath(KnownFolder folder)
     {
+        if (folder == KnownFolder::ExecutableLocation)
+        {
+            return "/project-package";
+        }
         if (folder == KnownFolder::Current)
         {
             return std::filesystem::current_path();
