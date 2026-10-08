@@ -60,7 +60,7 @@ namespace nau
 
         nau::Result<> parseAppConfigs(const std::string& dir)
         {
-            auto projectRootDir = std::filesystem::path{dir};
+            auto projectRootDir = std::filesystem::u8path(dir);
 
             if (projectRootDir.empty())
             {

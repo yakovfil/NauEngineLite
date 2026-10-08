@@ -6,6 +6,7 @@
 #include <string>
 
 #include "nau/platform/windows/diag/win_error.h"
+#include "nau/string/string_conv.h"
 
 namespace nau::io
 {
@@ -178,13 +179,20 @@ namespace nau::io
             return nullptr;
         }
 
-        std::array<char, 1024> path;
-
-        [[maybe_unused]]
-        const DWORD pathLen = ::GetFinalPathNameByHandleA(m_fileHandle, path.data(), static_cast<DWORD>(path.size()), FILE_NAME_NORMALIZED);
-        NAU_ASSERT(::GetLastError() == 0);
-
-        return createNativeFileStream(path.data(), m_accessMode, OpenFileMode::OpenExisting);
+        const DWORD capacity = ::GetFinalPathNameByHandleW(m_fileHandle, nullptr, 0, FILE_NAME_NORMALIZED);
+        if (capacity == 0)
+        {
+            return nullptr;
+        }
+        std::wstring path(capacity, L'\0');
+        const DWORD length = ::GetFinalPathNameByHandleW(m_fileHandle, path.data(), capacity, FILE_NAME_NORMALIZED);
+        if (length == 0 || length >= capacity)
+        {
+            return nullptr;
+        }
+        path.resize(length);
+        const auto utf8 = strings::wstringToUtf8(path);
+        return createNativeFileStream(reinterpret_cast<const char*>(utf8.c_str()), m_accessMode, OpenFileMode::OpenExisting);
     }
 
     void* WinFile::memMap([[maybe_unused]] size_t offset, [[maybe_unused]] size_t count)

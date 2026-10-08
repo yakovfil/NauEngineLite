@@ -1,7 +1,6 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-
 #include "./win_native_file_system.h"
 
 #include "./win_file.h"
@@ -34,13 +33,11 @@ namespace nau::io
         {
             const std::array namesToSkip = {
                 std::wstring_view{L"."},
-                std::wstring_view{L".."}
-            };
-
+                std::wstring_view{L".."}};
 
             do
             {
-                const std::wstring_view fileName {findData.cFileName, ::wcslen(findData.cFileName)};
+                const std::wstring_view fileName{findData.cFileName, ::wcslen(findData.cFileName)};
                 if (std::find(namesToSkip.begin(), namesToSkip.end(), fileName) == namesToSkip.end())
                 {
                     break;
@@ -50,9 +47,7 @@ namespace nau::io
                 {
                     return false;
                 }
-            }
-            while (true);
-
+            } while (true);
 
             return true;
         }
@@ -73,18 +68,18 @@ namespace nau::io
     bool WinNativeFileSystem::exists(const FsPath& path, std::optional<FsEntryKind> kind)
     {
         auto fullPath = resolveToNativePathNoCheck(path);
-        if(fullPath.empty())
+        if (fullPath.empty())
         {
             return false;
         }
 
         const DWORD attributes = GetFileAttributesW(fullPath.c_str());
-        if(attributes == INVALID_FILE_ATTRIBUTES)
+        if (attributes == INVALID_FILE_ATTRIBUTES)
         {
             return false;
         }
 
-        if(!kind)
+        if (!kind)
         {
             return true;
         }
@@ -101,15 +96,15 @@ namespace nau::io
     IFile::Ptr WinNativeFileSystem::openFile(const FsPath& vfsPath, AccessModeFlag accessMode, OpenFileMode openMode)
     {
         auto fullPath = resolveToNativePathNoCheck(vfsPath);
-        if(fullPath.empty())
+        if (fullPath.empty())
         {
             return nullptr;
         }
 
-        if(!accessMode.has(AccessMode::Write) || openMode == OpenFileMode::OpenExisting)
+        if (!accessMode.has(AccessMode::Write) || openMode == OpenFileMode::OpenExisting)
         {
             const DWORD attributes = GetFileAttributesW(fullPath.c_str());
-            if(attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+            if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
             {
                 return nullptr;
             }
@@ -121,13 +116,13 @@ namespace nau::io
     IFileSystem::OpenDirResult WinNativeFileSystem::openDirIterator(const FsPath& path)
     {
         auto searchPath = resolveToNativePathNoCheck(path);
-        if(searchPath.empty())
+        if (searchPath.empty())
         {
             return {};
         }
 
         const DWORD attributes = ::GetFileAttributesW(searchPath.c_str());
-        if((attributes == INVALID_FILE_ATTRIBUTES) || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+        if ((attributes == INVALID_FILE_ATTRIBUTES) || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
         {
             return {};
         }
@@ -136,7 +131,7 @@ namespace nau::io
         searchPath.append("\\*");
 
         const HANDLE hFind = ::FindFirstFileW(searchPath.c_str(), &findData);
-        if(hFind == INVALID_HANDLE_VALUE)
+        if (hFind == INVALID_HANDLE_VALUE)
         {
             return {};
         }
@@ -147,12 +142,15 @@ namespace nau::io
             return {};
         }
 
-        return {new DirIteratorData {hFind, path}, win32FindDataToFsEntry(path, findData)};
+        return {
+            new DirIteratorData{hFind, path},
+             win32FindDataToFsEntry(path, findData)
+        };
     }
 
     void WinNativeFileSystem::closeDirIterator(void* ptr)
     {
-        if(!ptr)
+        if (!ptr)
         {
             return;
         }
@@ -167,7 +165,7 @@ namespace nau::io
 
     FsEntry WinNativeFileSystem::incrementDirIterator(void* ptr)
     {
-        if(!ptr)
+        if (!ptr)
         {
             return {};
         }
@@ -196,15 +194,15 @@ namespace nau::io
     {
         namespace fs = std::filesystem;
 
-        fs::path fullPath = m_basePath;
+        fs::path fullPath = fs::u8path(m_basePath);
 
-        if(!path.isEmpty())
+        if (!path.isEmpty())
         {
-            fullPath /= path.getString();
+            fullPath /= fs::u8path(path.getString());
         }
 
         fullPath.make_preferred();
-        if(!fs::exists(fullPath))
+        if (!fs::exists(fullPath))
         {
             return {};
         }
@@ -216,11 +214,11 @@ namespace nau::io
     {
         namespace fs = std::filesystem;
 
-        fs::path fullPath = m_basePath;
+        fs::path fullPath = fs::u8path(m_basePath);
 
-        if(!path.isEmpty())
+        if (!path.isEmpty())
         {
-            fullPath /= path.getString();
+            fullPath /= fs::u8path(path.getString());
         }
 
         return fullPath.make_preferred();
@@ -231,19 +229,18 @@ namespace nau::io
         using namespace nau::strings;
 
         NAU_ASSERT(!basePath.empty());
-        if(basePath.empty())
+        if (basePath.empty())
         {
             return nullptr;
         }
 
         auto wcsBasePath = utf8ToWString(toStringView(basePath));
 
-
         const DWORD attributes = GetFileAttributesW(wcsBasePath.c_str());
         NAU_ASSERT(attributes != INVALID_FILE_ATTRIBUTES, "Path ({}) does not exists", basePath);
         NAU_ASSERT((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0, "Path ({}) expected to be directory", basePath);
 
-        if(attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+        if (attributes == INVALID_FILE_ATTRIBUTES || (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
         {
             return nullptr;
         }
