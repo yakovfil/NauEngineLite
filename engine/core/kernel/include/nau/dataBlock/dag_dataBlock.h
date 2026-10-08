@@ -4,16 +4,19 @@
 
 #include <nau/math/dag_e3dColor.h>
 #include <nau/math/math.h>
-#include <nau/string/string.h>
 #include <nau/utils/dag_bitFlagsMask.h>
 #include <nau/utils/dag_relocatable.h>
 #include <nau/utils/dag_stdint.h>
 
 #include <cstddef>
 #include <span>
+#include <string>
+#include <string_view>
 
 #include "nau/dag_ioSys/dag_genIo.h"
 #include "nau/memory/mem_allocator.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 struct ZSTD_CDict_s;
 struct ZSTD_DDict_s;
@@ -129,7 +132,7 @@ namespace nau
         };
         struct NAU_KERNEL_EXPORT IIncludeFileResolver
         {
-            virtual bool resolveIncludeFile(nau::string& inout_fname) = 0;
+            virtual bool resolveIncludeFile(std::string& inout_fname) = 0;
         };
 
         //! installs custom include resolver

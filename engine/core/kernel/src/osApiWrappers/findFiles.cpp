@@ -11,9 +11,13 @@
 #include <nau/osApiWrappers/dag_direct.h>
 #include <nau/osApiWrappers/dag_localConv.h>
 
+#include <string>
+#include <string_view>
+
 #include "file_list_utils.h"
 #include "nau/diag/logging.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 namespace nau::iosys
 {
     using namespace nau::hal;
@@ -59,7 +63,7 @@ namespace nau::iosys
           const char *base_path_prefix = "";
           if (bpi >= 0)
           {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"df_base_path[{}]={} df_base_path_vrom_mounted={}"), bpi, nau::string(df_base_path[bpi]), df_base_path_vrom_mounted[bpi]));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"df_base_path[{}]={} df_base_path_vrom_mounted={}"), bpi, std::string(df_base_path[bpi]), df_base_path_vrom_mounted[bpi]));
             if (!df_base_path[bpi])
               break;
             if (!df_base_path_vrom_mounted[bpi] || !*df_base_path[bpi])
@@ -112,7 +116,7 @@ namespace nau::iosys
             file_suffix_to_match++;
         if (strchr(file_suffix_to_match, '*') || strchr(file_suffix_to_match, '?'))
         {
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"{}: bad file_suffix_to_match=\"{}\", no wildcard matching allowed!"), nau::string(__FUNCTION__), nau::string(file_suffix_to_match)));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"{}: bad file_suffix_to_match=\"{}\", no wildcard matching allowed!"), std::string(__FUNCTION__), std::string(file_suffix_to_match)));
             return 0;
         }
 

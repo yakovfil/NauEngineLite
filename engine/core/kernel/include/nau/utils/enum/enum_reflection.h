@@ -5,12 +5,14 @@
 #pragma once
 
 #include <span>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
 #include "nau/kernel/kernel_config.h"
 #include "nau/rtti/type_info.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/string/string_utils.h"
 #include "nau/utils/dag_hash.h"
 #include "nau/utils/for_each_with_arg.h"
@@ -50,15 +52,6 @@
         }                                                                \
     }                                                                    \
     inline bool str_to_enum(const std::u8string_view& str, Enum& retval) \
-    {                                                                    \
-        switch (mem_hash_fnv1(str.data(), str.size()))                   \
-        {                                                                \
-            NAU_FOR_EACH_WITH_ARG(__STR_TO_ENUM, Enum, __VA_ARGS__)      \
-            default:                                                     \
-                return false;                                            \
-        }                                                                \
-    }                                                                    \
-    inline bool str_to_enum(const nau::string_view& str, Enum& retval)   \
     {                                                                    \
         switch (mem_hash_fnv1(str.data(), str.size()))                   \
         {                                                                \

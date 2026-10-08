@@ -83,12 +83,12 @@ namespace nau::diag
     {
         static std::string format(const LoggerMessage& message)
         {
-            return (const char*)nau::string::format(u8"[{}][{}][{}][{}]: {}\n",
-                                                    message.index,
-                                                    timeToString(message.time),
-                                                    message.level,
-                                                    tagsToString(message.tags),
-                                                    message.data.data())
+            return (const char*)nau::utils::format(u8"[{}][{}][{}][{}]: {}\n",
+                                                   message.index,
+                                                   timeToString(message.time),
+                                                   message.level,
+                                                   tagsToString(message.tags),
+                                                   message.data.data())
                 .c_str();
         }
     };
@@ -135,7 +135,7 @@ namespace nau::diag
             time_t time = std::time({});
             dateString.resize(strftime(dateString.data(), dateString.size(), "%F.%H-%M-%S", std::localtime(&time)));
 
-            return std::string((const char*)nau::string::format(u8"{}.{}.log", filename, dateString.data()).c_str());
+            return std::string((const char*)nau::utils::format(u8"{}.{}.log", filename, dateString.data()).c_str());
         }
 
     public:

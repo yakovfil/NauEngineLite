@@ -18,6 +18,7 @@
 #include <limits>
 #include <span>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -25,7 +26,8 @@
 #include "nau/debug/dag_except.h"
 #include "nau/diag/logging.h"
 #include "nau/memory/mem_allocator.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/utils/dag_globDef.h"
 #include "vectormath/vec2d.hpp"
 
@@ -36,15 +38,15 @@
 
 namespace
 {
-    nau::string make_substring(const char* begin, const char* end)
+    std::string make_substring(const char* begin, const char* end)
     {
         const size_t size = end - begin;
-        nau::string s{size};
+        std::string s(size, '\0');
         memcpy(s.data(), begin, size);
         return s;
     }
 
-    void erase_items(nau::string& str, nau::string::size_type at, nau::string::size_type c)
+    void erase_items(std::string& str, std::string::size_type at, std::string::size_type c)
     {
         str.erase(at, c);
     }
@@ -57,18 +59,18 @@ namespace nau
     class GenericRootIncludeFileResolver : public DataBlock::IIncludeFileResolver
     {
     public:
-        virtual bool resolveIncludeFile(nau::string& inout_fname) override
+        virtual bool resolveIncludeFile(std::string& inout_fname) override
         {
             if (!inout_fname.empty() && inout_fname[0] == '#')
             {
-                inout_fname.format("{}/{}", root, inout_fname.c_str()[1]);
+                inout_fname = nau::utils::format("{}/{}", root, inout_fname.c_str()[1]);
                 return true;
             }
             if (!inout_fname.empty() && inout_fname[0] == '%')
                 return true;
             return false;
         }
-        nau::string root;
+        std::string root;
     };
     static GenericRootIncludeFileResolver gen_root_inc_resv;
 
@@ -90,7 +92,7 @@ namespace nau
         const char* fileName;
         int curLine;
         const char* curLineP;
-        std::vector<nau::string> includeStack;
+        std::vector<std::string> includeStack;
         DataBlock* blkRef = nullptr;
         bool robustParsing;
         bool wasNewlineAfterStatement = false;
@@ -118,7 +120,7 @@ namespace nau
             for (char* c = buf.data(); c < textend; ++c)
                 if (*c == EOF_CHAR)
                     *c = ' ';
-            includeStack.push_back(fileName);
+            includeStack.push_back(nau::strings::toUtf8(fileName));
             fileName = reinterpret_cast<const char*>(includeStack.back().c_str());
         }
 
@@ -653,7 +655,7 @@ namespace nau
         return atoi(p + 1) - 1;
     }
 
-    static void makeFullPathFromRelative(nau::string& path, const char* base_filename)
+    static void makeFullPathFromRelative(std::string& path, const char* base_filename)
     {
         if (!path.length() || !base_filename)
             return;
@@ -675,7 +677,7 @@ namespace nau
         int baseLen = i + 1;
 
         if (baseLen > 0)
-            path = nau::string(base_filename, baseLen) + path;
+            path = std::string(base_filename, baseLen) + path;
     }
 
 #define ADD_PARAM_CHECKED(NAME, TYPE, VALUE)                                                                                    \
@@ -929,7 +931,7 @@ namespace nau
 
 #define PARSING_VALUE_SYNTAX_ERROR(msg)                                                           \
     {                                                                                             \
-        auto message = nau::string::format("{} (type {}) value {}", name, type, value);           \
+        auto message = nau::utils::format("{} (type {}) value {}", name, type, value);            \
         issue_error_parsing(filename, line, msg, reinterpret_cast<const char*>(message.c_str())); \
         return -1;                                                                                \
     }
@@ -1047,7 +1049,7 @@ namespace nau
         TempString name;
         TempString typeName;
         TempString value;
-        nau::string valueStr;
+        std::string valueStr;
         for (;;)
         {
             if (!skipWhite(true, DataBlock::parseCommentsAsParams))
@@ -1537,7 +1539,7 @@ namespace nau
             {
                 // We have to cache 'filename' here because 'getValue()' might incorrectly change it
                 // in case when this include is last one in file (which breaks relative pathes)
-                nau::string cachedFileName(fileName);
+                std::string cachedFileName = nau::strings::toUtf8(fileName);
                 value.clear();
                 if (!getValue(value))
                     return false;
@@ -1721,11 +1723,11 @@ namespace nau
         }
 
         nau::iosys::FullFileLoadCB crd(reinterpret_cast<const char*>(fname), nau::hal::DF_READ | nau::hal::DF_IGNORE_MISSING);
-        nau::string fileName_stor;
+        std::string fileName_stor;
 
         if (!crd.fileHandle && !nau::hal::dd_get_fname_ext(reinterpret_cast<const char*>(fname)))
         {
-            fileName_stor.format("{}{}", fname, ".blk");
+            fileName_stor = nau::utils::format("{}{}", fname, ".blk");
             if (crd.open(reinterpret_cast<const char*>(fileName_stor.c_str()), nau::hal::DF_READ | nau::hal::DF_IGNORE_MISSING))
                 fname = reinterpret_cast<const char*>(fileName_stor.c_str());
         }
@@ -1798,7 +1800,7 @@ namespace nau
               {
                 shared->setBlkValid(true);
                 issue_error_load_failed(fname,
-                  nau::string::format(u8"bad ROM data for file: rom=({},{}) crd.tell()={})", rom_file_data.data(), rom_file_data.size(), crd.tell()).c_str());
+                  nau::utils::format(u8"bad ROM data for file: rom=({},{}) crd.tell()={})", rom_file_data.data(), rom_file_data.size(), crd.tell()).c_str());
                 return false;
               }
 

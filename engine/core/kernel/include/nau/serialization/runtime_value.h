@@ -14,7 +14,8 @@
 #include "nau/memory/mem_allocator.h"
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_object.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/utils/result.h"
 #include "nau/utils/typed_flag.h"
 

@@ -17,7 +17,8 @@
 
 #include "nau/diag/assertion.h"
 #include "nau/kernel/kernel_config.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 namespace nau::str_detail
 {
@@ -48,14 +49,12 @@ namespace nau::str_detail
         }
     }
 
-    NAU_KERNEL_EXPORT
-    std::string_view splitNext(std::string_view str, std::string_view current, std::string_view separators);
 
     NAU_KERNEL_EXPORT
     std::wstring_view splitNext(std::wstring_view str, std::wstring_view current, std::wstring_view separators);
 
     NAU_KERNEL_EXPORT
-    nau::string_view splitNext(nau::string_view str, nau::string_view current, nau::string_view separators);
+    std::string_view splitNext(std::string_view str, std::string_view current, std::string_view separators);
 
     // template <typename C>
     // auto splitImpl(std::basic_string_view<C> text, std::basic_string_view<C> separators)
@@ -70,8 +69,7 @@ namespace nau::strings
     template <typename T>
     concept KnownStringView =
         std::is_same_v<std::string_view, T> ||
-        std::is_same_v<std::wstring_view, T> ||
-        std::is_same_v<nau::string_view, T>;
+        std::is_same_v<std::wstring_view, T>;
 
     template <KnownStringView StringView>
     struct SplitSequence
@@ -171,8 +169,6 @@ namespace nau::strings
 
     SplitSequence(std::string_view, std::string_view) -> SplitSequence<std::string_view>;
 
-    SplitSequence(nau::string_view, nau::string_view) -> SplitSequence<nau::string_view>;
-
     inline char lower(char ch)
     {
         const auto res = tolower(static_cast<unsigned char>(ch));
@@ -228,14 +224,6 @@ namespace nau::strings
 
     inline auto split(std::string_view str, std::string_view separators)
     {
-        return SplitSequence{str, separators};
-    }
-
-    inline auto split(nau::string_view str, nau::string_view separators)
-    {
-        // auto inStr = std::basic_string_view{text};
-        // auto inSeparators = std::basic_string_view{separators};
-
         return SplitSequence{str, separators};
     }
 

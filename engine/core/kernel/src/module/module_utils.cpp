@@ -165,7 +165,7 @@ namespace nau
 
             const std::wstring wcsFullPath = moduleFullPath.wstring();
 
-            if (auto loadResult = getModuleManager().loadModule(moduleName, wcsFullPath); !loadResult)
+            if (auto loadResult = getModuleManager().loadModule(std::string{moduleName}, strings::toUtf8(wcsFullPath)); !loadResult)
             {
                 if (!isOptionalModule(moduleName))
                 {

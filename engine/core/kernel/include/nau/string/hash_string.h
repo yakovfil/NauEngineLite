@@ -4,28 +4,33 @@
 
 #pragma once
 #include <functional>
+#include <string>
+#include <string_view>
 
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 namespace nau
 {
     struct hash_string
     {
     private:
-        string m_data;
+        std::string m_data;
         size_t m_stringHash;
 
     public:
-        static constexpr size_t constHash(const char8_t* input, size_t len)
+        template <typename Char>
+        static constexpr size_t constHash(const Char* input, size_t len)
         {
-            size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
-            const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
+            size_t hash = sizeof(size_t) == 8 ? static_cast<size_t>(0xcbf29ce484222325ull) : size_t{0x811c9dc5};
+            const size_t prime = sizeof(size_t) == 8 ? static_cast<size_t>(0x00000100000001b3ull) : size_t{0x01000193};
 
-            while (*input && (len--))
+            while (len != 0 && *input)
             {
-                hash ^= static_cast<size_t>(*input);
+                hash ^= static_cast<size_t>(static_cast<unsigned char>(*input));
                 hash *= prime;
                 ++input;
+                --len;
             }
 
             return hash;
@@ -37,7 +42,7 @@ namespace nau
 
             };
 
-        hash_string(string other) :
+        hash_string(std::string other) :
             m_data(std::move(other)),
             m_stringHash(constHash(m_data.c_str(), m_data.size())) {
 
@@ -65,7 +70,7 @@ namespace nau
             m_stringHash = rhs.m_stringHash;
         };
 
-        string toString() const
+        std::string toString() const
         {
             return m_data;
         }
@@ -79,7 +84,7 @@ namespace nau
         {
             return m_stringHash == rhs.m_stringHash;
         };
-        inline bool operator!=(const string& rhs) const
+        inline bool operator!=(const std::string& rhs) const
         {
             return !(*this == rhs);
         };

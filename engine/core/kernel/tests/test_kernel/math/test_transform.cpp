@@ -1873,7 +1873,7 @@ namespace nau::test
             {100.f, -100.f, 10.f},
             { 10.f,   -1.f, 0.1f}
         };
-        auto testString = nau::string::format("{}", testTransform);
+        auto testString = nau::utils::format("{}", testTransform);
         EXPECT_EQ(testString,
                   "translate: (100, -100, 10)\n"
                   "rotation: (-1.0000001, 1.0000026, 58.000004)\n"

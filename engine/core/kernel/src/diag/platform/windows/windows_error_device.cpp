@@ -21,7 +21,7 @@ namespace nau::diag
 
         FailureActionFlag handleFailure(const FailureData& data) override
         {
-            nau::string message;
+            std::string message;
 
             if (!data.message.empty())
             {
@@ -35,12 +35,12 @@ namespace nau::diag
             }
             else
             {
-                message = nau::string::format(u8"Failed \"{}\". At [{}] {}({}). Error: {}.",
-                                              (const char8_t*)data.condition.data(),
-                                              (const char8_t*)data.source.functionName.data(),
-                                              (const char8_t*)data.source.filePath.data(),
-                                              data.source.line.value_or(0),
-                                              data.error);
+                message = nau::utils::format(u8"Failed \"{}\". At [{}] {}({}). Error: {}.",
+                                             (const char8_t*)data.condition.data(),
+                                             (const char8_t*)data.source.functionName.data(),
+                                             (const char8_t*)data.source.filePath.data(),
+                                             data.source.line.value_or(0),
+                                             data.error);
             }
 
             if (hasLogger())

@@ -266,18 +266,18 @@ namespace nau::test
     */
     TEST(TestEnumReflection, BaseOld)
     {
-        EXPECT_EQ(nau::string("Value0"), enum_to_str(TestEnumOld::Value0));
-        EXPECT_EQ(nau::string("Value1"), enum_to_str(TestEnumOld::Value1));
-        EXPECT_EQ(nau::string("Value2"), enum_to_str(TestEnumOld::Value2));
-        EXPECT_EQ(nau::string("Value3"), enum_to_str(TestEnumOld::Value3));
+        EXPECT_EQ(std::string("Value0"), enum_to_str(TestEnumOld::Value0));
+        EXPECT_EQ(std::string("Value1"), enum_to_str(TestEnumOld::Value1));
+        EXPECT_EQ(std::string("Value2"), enum_to_str(TestEnumOld::Value2));
+        EXPECT_EQ(std::string("Value3"), enum_to_str(TestEnumOld::Value3));
 
         // TODO: Dubious operation: should return an error, not a string:
-        EXPECT_EQ(nau::string("Unknown value for Enum: TestEnumOld"), enum_to_str(TestEnumOld::NoValue));
+        EXPECT_EQ(std::string("Unknown value for Enum: TestEnumOld"), enum_to_str(TestEnumOld::NoValue));
 
-        EXPECT_EQ(nau::string::format(u8"{}", TestEnumOld::Value0), u8"Value0");
-        EXPECT_EQ(nau::string::format(u8"{}", TestEnumOld::Value1), u8"Value1");
-        EXPECT_EQ(nau::string::format(u8"{}", TestEnumOld::Value2), u8"Value2");
-        EXPECT_EQ(nau::string::format(u8"{}", TestEnumOld::Value3), u8"Value3");
+        EXPECT_EQ(nau::utils::format(u8"{}", TestEnumOld::Value0), "Value0");
+        EXPECT_EQ(nau::utils::format(u8"{}", TestEnumOld::Value1), "Value1");
+        EXPECT_EQ(nau::utils::format(u8"{}", TestEnumOld::Value2), "Value2");
+        EXPECT_EQ(nau::utils::format(u8"{}", TestEnumOld::Value3), "Value3");
 
         TestEnumOld retVal;
         EXPECT_TRUE(str_to_enum(u8"Value0", retVal));

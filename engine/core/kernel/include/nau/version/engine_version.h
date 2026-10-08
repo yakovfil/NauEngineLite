@@ -4,7 +4,11 @@
 
 #pragma once
 
-#include "nau/string/string.h"
+#include <string>
+#include <string_view>
+
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 namespace nau
 {
@@ -34,7 +38,7 @@ namespace nau
         {
         }
 
-        EngineVersion(uint16_t major, uint16_t minor, uint16_t patch, const nau::string& commit = "", const nau::string& branch = "");
+        EngineVersion(uint16_t major, uint16_t minor, uint16_t patch, const std::string& commit = "", const std::string& branch = "");
 
         uint16_t getMajor() const
         {
@@ -51,12 +55,12 @@ namespace nau
             return m_patch;
         }
 
-        const nau::string getCommit() const
+        const std::string getCommit() const
         {
             return m_commit;
         }
 
-        const nau::string getBranch() const
+        const std::string getBranch() const
         {
             return m_branch;
         }
@@ -81,13 +85,13 @@ namespace nau
             @brief To string conversion
             @returns string in "1.2.3" format or "1.2.3-commit+branch" when VCS info is set
         */
-        nau::string toString() const;
+        std::string toString() const;
 
     private:
         uint16_t m_major;
         uint16_t m_minor;
         uint16_t m_patch;
-        nau::string m_commit;
-        nau::string m_branch;
+        std::string m_commit;
+        std::string m_branch;
     };
 }  // namespace nau

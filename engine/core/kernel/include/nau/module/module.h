@@ -8,15 +8,17 @@
     #error "module.h must be used only for module build"
 #endif
 
-#include <nau/string/string.h>
-
 #include <memory>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "nau/kernel/kernel_config.h"
 #include "nau/rtti/ptr.h"
 #include "nau/rtti/rtti_impl.h"
 #include "nau/service/service_provider.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/utils/functor.h"
 
 namespace nau
@@ -24,7 +26,7 @@ namespace nau
 
     struct IModule
     {
-        virtual string getModuleName() = 0;  // could be usefull for Editor
+        virtual std::string getModuleName() = 0;  // could be usefull for Editor
 
         virtual void initialize() = 0;
 
@@ -55,7 +57,7 @@ namespace nau
 
     struct DefaultModuleImpl : public IModule
     {
-        string getModuleName() override
+        std::string getModuleName() override
         {
             return "DefaultModuleImpl";
         }

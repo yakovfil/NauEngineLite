@@ -64,7 +64,7 @@ namespace nau
             const int oldNameId = bucketsNames[hash] * bucketsCnt + hash;
             if (conv.size() <= oldNameId)
                 conv.resize(oldNameId + 1, -1);
-            nau::string tempStr = str;
+            std::string tempStr = nau::strings::toUtf8(str);
             conv[oldNameId] = len ? nameMap.addNameId(reinterpret_cast<const char*>(tempStr.c_str()), len) : -1;
             bucketsNames[hash]++;
         }
@@ -201,7 +201,7 @@ namespace nau
                         s_idx = readInt32(crd, load_le);
                         if (s_idx < strings.strings.size())
                         {
-                            nau::string s = strings.getStringDataUnsafe(s_idx);
+                            std::string s = nau::strings::toUtf8(strings.getStringDataUnsafe(s_idx));
                             p.v = insertNewString(reinterpret_cast<const char*>(s.c_str()), s.size());
                         }
                         else

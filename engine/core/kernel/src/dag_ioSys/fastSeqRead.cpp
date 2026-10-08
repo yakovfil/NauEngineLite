@@ -12,11 +12,14 @@
 #include <nau/utils/dag_globDef.h>
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 #include "nau/diag/assertion.h"
 #include "nau/diag/logging.h"
 #include "nau/memory/mem_allocator.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 // #include <osApiWrappers/dag_dbgStr.h>
 namespace nau::iosys
 {
@@ -160,8 +163,8 @@ void sleep_msec_ex(int ms)
         {
             if(cBuf && file.pos >= cBuf->ea)
             {
-                NAU_LOG_INFO(nau::string::format(nau::string(u8"{} {} reset cBuf due to file.pos {} cBuf->sa={} cBuf->ea={} i={}"), nau::string(__FILE__), nau::string(__LINE__), file.pos, cBuf->sa, cBuf->ea,
-                                                 cBuf - buf));
+                NAU_LOG_INFO(nau::utils::format(nau::strings::toUtf8(u8"{} {} reset cBuf due to file.pos {} cBuf->sa={} cBuf->ea={} i={}"), std::string(__FILE__), __LINE__, file.pos, cBuf->sa, cBuf->ea,
+                                                cBuf - buf));
                 cBuf = nullptr;
             }
             if(doneMask)
@@ -184,8 +187,8 @@ void sleep_msec_ex(int ms)
                 int sz = cBuf->ea - file.pos;
                 if(!(file.pos >= cBuf->sa && sz <= size && file.pos + sz <= cBuf->ea && cBuf->ea - cBuf->sa <= BUF_SZ))
                 {
-                    NAU_LOG_INFO(nau::string::format(nau::string(u8"{} {} file.pos={:#x} sz={} size={} cBuf->sa={} cBuf->ea={} BUF_SZ={} i={} doneMask={:#x} pendMask={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__),
-                                                     file.pos, sz, size, cBuf->sa, cBuf->ea, static_cast<int>(BUF_SZ), cBuf - buf, doneMask, pendMask, nau::string{targetFilename.c_str()}));
+                    NAU_LOG_INFO(nau::utils::format(nau::strings::toUtf8(u8"{} {} file.pos={:#x} sz={} size={} cBuf->sa={} cBuf->ea={} BUF_SZ={} i={} doneMask={:#x} pendMask={:#x} {}"), std::string(__FILE__), __LINE__,
+                                                    file.pos, sz, size, cBuf->sa, cBuf->ea, static_cast<int>(BUF_SZ), cBuf - buf, doneMask, pendMask, std::string{targetFilename.c_str()}));
                     return p - (char*)ptr;
                 }
                 if(!(cBuf >= buf && cBuf < buf + BUF_CNT && cBuf->data
@@ -194,11 +197,11 @@ void sleep_msec_ex(int ms)
 #endif
                          ))
                 {
-                    NAU_LOG_INFO(nau::string::format(nau::string(u8"{} {} cBuf={:#x} [{:#x}] cBuf->data={:#x} file.pos={} sz={} doneMask={:#x} pendMask={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__),
-                                                     intptr_t(cBuf),
-                                                     intptr_t(cBuf - buf),
-                                                     intptr_t(cBuf ? cBuf->data : nullptr),
-                                                     file.pos, sz, doneMask, pendMask, nau::string{targetFilename.c_str()}));
+                    NAU_LOG_INFO(nau::utils::format(nau::strings::toUtf8(u8"{} {} cBuf={:#x} [{:#x}] cBuf->data={:#x} file.pos={} sz={} doneMask={:#x} pendMask={:#x} {}"), std::string(__FILE__), __LINE__,
+                                                    intptr_t(cBuf),
+                                                    intptr_t(cBuf - buf),
+                                                    intptr_t(cBuf ? cBuf->data : nullptr),
+                                                    file.pos, sz, doneMask, pendMask, std::string{targetFilename.c_str()}));
                     return p - (char*)ptr;
                 }
 
@@ -220,8 +223,8 @@ void sleep_msec_ex(int ms)
                             cBuf = buf + i;
                         else if(buf[i].ea > buf[i].sa)  // report only non-empty blocks (and just ignore empty ones)
                         {
-                            NAU_LOG_INFO(nau::string::format(nau::string(u8"{} {} wait done mismatch: file.pos={} file.size={} buf[{}].sa={} buf[{}].ea={} {}"), nau::string(__FILE__), nau::string(__LINE__), file.pos,
-                                                             file.size, i, buf[i].sa, i, buf[i].ea, nau::string{targetFilename.c_str()}));
+                            NAU_LOG_INFO(nau::utils::format(nau::strings::toUtf8(u8"{} {} wait done mismatch: file.pos={} file.size={} buf[{}].sa={} buf[{}].ea={} {}"), std::string(__FILE__), __LINE__, file.pos,
+                                                            file.size, i, buf[i].sa, i, buf[i].ea, std::string{targetFilename.c_str()}));
                         }
                         break;
                     }

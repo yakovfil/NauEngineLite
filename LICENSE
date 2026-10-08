@@ -137,10 +137,6 @@ stb
 Upstream: https://github.com/nothings/stb.git
 License: MIT
 
-tiny-utf8
-Upstream: https://github.com/DuffsDevice/tiny-utf8.git
-License: BSD 3-Clause License
-
 tinygltf
 Upstream: https://github.com/syoyo/tinygltf.git
 License: MIT

@@ -23,7 +23,6 @@ set (3rdPartyLibDirs
 #  GameNetworkingSockets
   lua
   DirectX-Headers
-  tiny-utf8
   fmt
   utfcpp
   ModifiedSonyMath
@@ -59,7 +58,6 @@ set (3rdPartyLibTargets
   lua
   DirectX-Headers
   DirectX-Guids
-  tinyutf8
   fmt
 #  webrtc-lite
 #  steamwebrtc

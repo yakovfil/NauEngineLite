@@ -8,10 +8,14 @@
 // #include <debug/dag_debug.h>
 #include <stdio.h>
 
+#include <string>
+#include <string_view>
+
 #include "nau/debug/dag_except.h"
 #include "nau/diag/logging.h"
 #include "nau/memory/mem_allocator.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 namespace nau::iosys
 {
     extern void sleep_msec_ex(int ms);
@@ -27,7 +31,7 @@ namespace nau::iosys
         buf.size = 64 << 10;
 
         file.pos = 0;
-        // NAU_CORE_DEBUG_LF(nau::string::format(nau::string(u8"load: {}"), nau::string(fpath));
+        // NAU_CORE_DEBUG_LF(nau::utils::format(nau::strings::toUtf8(u8"load: {}"), std::string(fpath));
         buf.minimumChunk = nau::hal::dfa_chunk_size(realname);
         if(buf.minimumChunk)
         {
@@ -86,7 +90,7 @@ namespace nau::iosys
             return;
         if(file.pos + size > file.size)
         {
-            NAU_LOG_DEBUG(u8"{} {} read({},{}), file.size={}, file.pos={}", nau::string(__FILE__), nau::string(__LINE__), ptr, size, file.size, file.pos);
+            NAU_LOG_DEBUG(u8"{} {} read({},{}), file.size={}, file.pos={}", std::string(__FILE__), __LINE__, ptr, size, file.size, file.pos);
             NAU_THROW(LoadException("eof", file.pos));
         }
         if(file.pos >= buf.pos && file.pos < buf.pos + buf.used)
@@ -137,7 +141,7 @@ namespace nau::iosys
 
             if(lres != size)
             {
-                NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), ptr, size, file.size, file.pos));
+                NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, ptr, size, file.size, file.pos));
                 NAU_THROW(LoadException("incomplete read", file.pos));
             }
 
@@ -196,7 +200,7 @@ namespace nau::iosys
         }
         if(file.pos + size > file.size)
         {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), ptr, size, file.size, file.pos));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, ptr, size, file.size, file.pos));
             NAU_THROW(LoadException("eof", file.pos));
         }
 
@@ -252,7 +256,7 @@ namespace nau::iosys
 
             if(lres != buf.size)
             {
-                NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({:p},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), ptr, buf.size, file.size, file.pos));
+                NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({:p},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, ptr, buf.size, file.size, file.pos));
                 NAU_THROW(LoadException("incomplete read", file.pos));
             }
 
@@ -298,8 +302,8 @@ namespace nau::iosys
 
         if(lres != sizeLeft && lres != file.size - posStart)
         {  // readSize - useLessData
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} {} read({}, size={} readSize={}), file.size={}, file.pos={} posStart={}"), nau::string(__FILE__), nau::string(__LINE__), lres, ptr, size, sizeLeft, file.size,
-                                              file.pos, posStart));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} {} read({}, size={} readSize={}), file.size={}, file.pos={} posStart={}"), std::string(__FILE__), __LINE__, lres, ptr, size, sizeLeft, file.size,
+                                             file.pos, posStart));
             NAU_THROW(LoadException("incomplete read", file.pos));
         }
         buf.pos = posStart;
@@ -337,7 +341,7 @@ namespace nau::iosys
     {
         if(pos < 0 || pos > file.size)
         {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} seekto({}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), pos, file.size, file.pos));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} seekto({}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, pos, file.size, file.pos));
             NAU_THROW(LoadException("seek out of range", file.pos));
         }
         // NAU_CORE_DEBUG_FI_LF ( "seekto(%d), file.size=%d, file.pos=%d", pos, file.size, file.pos );

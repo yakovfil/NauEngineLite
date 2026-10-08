@@ -23,7 +23,7 @@ namespace nau::iosys
 {
 #define CHECK_ERROR(enc_size) \
     if (ZSTD_isError(enc_sz)) \
-        NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} err={:#x} {} srcSz={}"), nau::string(__FUNCTION__), enc_sz, nau::string(ZSTD_getErrorName(enc_sz)), srcSize));
+        NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"{} err={:#x} {} srcSz={}"), std::string(__FUNCTION__), enc_sz, std::string(ZSTD_getErrorName(enc_sz)), srcSize));
 
 // Both compression & decompression on higher clevels require huge amount of memory
 #define PHYS_MEM_THRESHOLD_SIZE (24 << 20)
@@ -151,7 +151,7 @@ namespace nau::iosys
             }
             if (ZSTD_isError(ret))
             {
-                NAU_LOG_ERROR(nau::string::format(nau::string(u8"err={:#x} "), ret, nau::string(ZSTD_getErrorName(ret))));
+                NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"err={:#x} "), ret, std::string(ZSTD_getErrorName(ret))));
                 ZSTD_freeCStream(strm);
                 return -1;
             }
@@ -204,7 +204,7 @@ namespace nau::iosys
         {
             if (ZSTD_isError(ret))
             {
-                NAU_LOG_ERROR(nau::string::format(nau::string(u8"err={:#x} "), ret, nau::string(ZSTD_getErrorName(ret))));
+                NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"err={:#x} "), ret, std::string(ZSTD_getErrorName(ret))));
                 ZSTD_freeDStream(dstrm);
                 return -1;
             }
@@ -240,7 +240,7 @@ namespace nau::iosys
     {
         if (compr_sz == 0)
         {
-            NAU_LOG_ERROR(nau::string(u8"compressed size can not be zero, that's an error"));
+            NAU_LOG_ERROR(nau::strings::toUtf8(u8"compressed size can not be zero, that's an error"));
             return -1;
         }
         return zstd_stream_decompress_data_base(dest, src, compr_sz);
@@ -396,8 +396,8 @@ namespace nau::iosys
 
         if (rd_sz != size)
         {
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"Zstd read error: rd_sz={} != size={}, encDataBuf={},{} encDataPos={}"), rd_sz, size, reinterpret_cast<intptr_t>(encDataBuf.data()), encDataBuf.size(),
-                                              encDataPos));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"Zstd read error: rd_sz={} != size={}, encDataBuf={},{} encDataPos={}"), rd_sz, size, reinterpret_cast<intptr_t>(encDataBuf.data()), encDataBuf.size(),
+                                             encDataPos));
             termDecoder();
             NAU_THROW(LoadException("Zstd read error", -1));
         }
@@ -521,7 +521,7 @@ namespace nau::iosys
             size_t ret = ZSTD_compressStream(zstdStream, &outBuf, &inBuf);
             if (ZSTD_isError(ret))
             {
-                NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} {} err={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__), ret, nau::string(ZSTD_getErrorName(ret))));
+                NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"{} {} err={:#x} {}"), std::string(__FILE__), __LINE__, ret, std::string(ZSTD_getErrorName(ret))));
                 NAU_THROW(SaveException("ZSTD_compressStream error", (int)ret));
                 return;
             }
@@ -553,7 +553,7 @@ namespace nau::iosys
             }
             if (ZSTD_isError(ret))
             {
-                NAU_LOG_ERROR(nau::string::format(nau::string(u8"{} {} err={:#x} {}"), nau::string(__FILE__), nau::string(__LINE__), ret, nau::string(ZSTD_getErrorName(ret))));
+                NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"{} {} err={:#x} {}"), std::string(__FILE__), __LINE__, ret, std::string(ZSTD_getErrorName(ret))));
                 NAU_THROW(SaveException("ZSTD_endStream error", (int)ret));
                 return;
             }

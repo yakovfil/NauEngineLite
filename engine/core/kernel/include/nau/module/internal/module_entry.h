@@ -16,7 +16,7 @@ namespace nau
 {
     struct ModuleEntry
     {
-        nau::string name;
+        std::string name;
         std::shared_ptr<::nau::IModule> iModule = nullptr;
         bool isModuleInitialized = false;
 

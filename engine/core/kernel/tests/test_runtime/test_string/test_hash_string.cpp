@@ -6,15 +6,16 @@
 
 #include "nau/string/hash_string.h"
 
+using namespace std::string_literals;
 using namespace nau::string_literals;  // Necessary for operator "s"
 
 namespace nau::test
 {
     TEST(NauHashString, baseConstructors)
     {
-        nau::string string1{u8"TEST: русские, 🤝  и ツ♫你好 symbols"};
-        nau::string string2{u8"TEST: русские, 🤝  и ツ♫你好 symbols."};
-        nau::string string3{u8"TEST: русские, 🤝  и ツ♫你好 symb0ls."};
+        std::string string1{nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symbols")};
+        std::string string2{nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symbols.")};
+        std::string string3{nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symb0ls.")};
         nau::hash_string hashed_string1 = string1;
         nau::hash_string hashed_string2 = string2;
         nau::hash_string hashed_string3 = string3;
@@ -36,7 +37,7 @@ namespace nau::test
 
         EXPECT_EQ(hashed_string1, hashed_string1c);
 
-        switch (nau::hash_string(u8"TEST: русские, 🤝  и ツ♫你好 symb0ls."))
+        switch (nau::hash_string(nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symb0ls.")))
         {
             case u8"TEST: русские, 🤝  и ツ♫你好 symbols"_sh:
             {
@@ -65,21 +66,21 @@ namespace nau::test
     {
         std::unordered_map<nau::hash_string, int> stlMap =
             {
-                {      u8"T"_ns, 1},
-                {u8"русские"_ns, 2},
-                {     u8"🤝"_ns, 3},
-                {   u8"你好"_ns, 4},
+                {      nau::strings::toUtf8(u8"T"), 1},
+                {nau::strings::toUtf8(u8"русские"), 2},
+                {     nau::strings::toUtf8(u8"🤝"), 3},
+                {   nau::strings::toUtf8(u8"你好"), 4},
         };
         std::unordered_map<nau::hash_string, int> eastlMap =
             {
-                {      u8"T"_ns, 1},
-                {u8"русские"_ns, 2},
-                {     u8"🤝"_ns, 3},
-                {   u8"你好"_ns, 4},
+                {      nau::strings::toUtf8(u8"T"), 1},
+                {nau::strings::toUtf8(u8"русские"), 2},
+                {     nau::strings::toUtf8(u8"🤝"), 3},
+                {   nau::strings::toUtf8(u8"你好"), 4},
         };
 
-        stlMap.insert({u8"TEST: русские, 🤝  и ツ♫你好 symbols"_ns, 5});
-        eastlMap.insert({u8"TEST: русские, 🤝  и ツ♫你好 symbols"_ns, 5});
+        stlMap.insert({nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symbols"), 5});
+        eastlMap.insert({nau::strings::toUtf8(u8"TEST: русские, 🤝  и ツ♫你好 symbols"), 5});
 
         EXPECT_EQ(stlMap[u8"T"_sh], 1);
         EXPECT_EQ(stlMap[u8"русские"_sh], 2);

@@ -129,55 +129,6 @@ namespace nau::str_detail
         return splitNextImpl(str, current, separators);
     }
 
-    nau::string_view splitNext(nau::string_view str, nau::string_view current, nau::string_view separators)
-    {
-        if (str.empty() || separators.empty())
-        {
-            return {};
-        }
-
-        NAU_ASSERT(separators.size() == 1, "Currently multiply separators is not implemented");
-
-        size_t offset = current.empty() ? 0 : (current.data() - str.data()) + current.size();
-
-        if (offset == str.size())
-        {
-            return {};
-        }
-
-        const auto findSeparatorPos = [&, strSize = str.size(), separator = separators[0]](size_t offset)
-        {
-            for (size_t i = offset; i < strSize; ++i)
-            {
-                if (str[i] == separator)
-                {
-                    return i;
-                }
-            }
-
-            return nau::string_view::npos;
-        };
-
-        do
-        {
-            const auto pos = findSeparatorPos(offset);
-
-            if (pos == nau::string_view::npos)
-            {
-                break;
-            }
-
-            if (pos != offset)
-            {
-                return nau::string_view{str, pos - offset, offset};
-            }
-
-            ++offset;
-        } while (offset < str.size());
-
-        return offset == str.size() ? nau::string_view{} : nau::string_view{str, str.size() - offset, offset};
-    }
-
 }  // namespace nau::str_detail
 
 namespace nau::strings

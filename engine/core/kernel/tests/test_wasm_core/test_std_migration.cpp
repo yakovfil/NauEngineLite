@@ -6,37 +6,38 @@
 #include <unordered_set>
 
 #include "nau/serialization/json_utils.h"
+#include "nau/string/format.h"
 #include "nau/string/hash_string.h"
-#include "nau/string/string.h"
+#include "nau/string/string_conv.h"
 
 TEST(StandardMigration, SizedStringsAndFormatters)
 {
     const char exact[] = {'a', 'b'};
-    EXPECT_EQ(nau::string(std::string_view(exact, 2)).tostring(), "ab");
+    EXPECT_EQ(std::string(std::string_view(exact, 2)), "ab");
     EXPECT_EQ(nau::utils::format("{}", std::string_view(exact, 2)), "ab");
     const std::string bytes("a\0b", 3);
     const std::u8string utf8(u8"a\0b", 3);
-    const nau::string value(bytes);
-    EXPECT_EQ(value.tostring(), bytes);
-    EXPECT_EQ(value.tou8string(), utf8);
-    EXPECT_EQ(fmt::format(u8"{}", value), utf8);
+    const std::string value(bytes);
+    EXPECT_EQ(value, bytes);
+    EXPECT_EQ(std::u8string(nau::strings::toU8StringView(value)), utf8);
+    EXPECT_EQ(std::u8string(nau::strings::toU8StringView(nau::utils::format("{}", value))), utf8);
     EXPECT_EQ(nau::strings::wstringToUtf8(nau::strings::utf8ToWString(utf8)), utf8);
-    EXPECT_EQ(value.tou16string(), std::u16string(u"a\0b", 3));
-    EXPECT_EQ(value.tou32string(), std::u32string(U"a\0b", 3));
-    EXPECT_EQ(nau::string(std::u16string(u"a\0b", 3)).tostring(), bytes);
-    EXPECT_EQ(nau::string(std::u32string(U"a\0b", 3)).tostring(), bytes);
+    EXPECT_EQ(nau::strings::utf8ToUtf16(value), std::u16string(u"a\0b", 3));
+    EXPECT_EQ(nau::strings::utf8ToUtf32(value), std::u32string(U"a\0b", 3));
+    EXPECT_EQ(nau::strings::toUtf8(std::u16string(u"a\0b", 3)), bytes);
+    EXPECT_EQ(nau::strings::toUtf8(std::u32string(U"a\0b", 3)), bytes);
     EXPECT_EQ(nau::utils::format("{}", value), bytes);
-    EXPECT_EQ(nau::string::format("{}", value).tostring(), bytes);
+    EXPECT_EQ(nau::utils::format("{}", value), bytes);
     EXPECT_EQ(nau::utils::format("{}", std::u8string_view(utf8)), bytes);
     EXPECT_EQ(nau::diag_detail::makeFailureMessage("{}", std::string_view(bytes)), bytes);
     EXPECT_EQ(nau::diag_detail::makeFailureMessage(std::u8string_view(utf8)), bytes);
     EXPECT_EQ(nau::diag_detail::makeFailureMessage("{}", static_cast<const char*>(nullptr)), "NULLPTR");
     EXPECT_EQ(nau::utils::format("[{}]", std::string_view{}), "[]");
     const std::string pattern("{}\0{}", 5);
-    EXPECT_EQ(nau::string::format(pattern, 'a', 'b').tostring(), bytes);
+    EXPECT_EQ(nau::utils::format(pattern, 'a', 'b'), bytes);
     EXPECT_EQ(nau::diag_detail::makeFailureMessage(std::string_view(pattern), 'a', 'b'), bytes);
-    EXPECT_EQ(std::hash<nau::string>{}(value), std::hash<std::u8string_view>{}(utf8));
-    const std::unordered_set<nau::string> distinct{value, nau::string("a")};
+    EXPECT_EQ(std::hash<std::string>{}(value), std::hash<std::string>{}(bytes));
+    const std::unordered_set<std::string> distinct{value, std::string("a")};
     EXPECT_EQ(distinct.size(), 2u);
 }
 
@@ -45,13 +46,13 @@ TEST(StandardMigration, UnicodeConversions)
     const std::u8string utf8 = u8"A\u0416\U0001f680";
     const std::u16string utf16 = u"A\u0416\U0001f680";
     const std::u32string utf32 = U"A\u0416\U0001f680";
-    for (const auto& value : {nau::string(utf8), nau::string(utf16), nau::string(utf32)})
+    for (const auto& value : {nau::strings::toUtf8(utf8), nau::strings::toUtf8(utf16), nau::strings::toUtf8(utf32)})
     {
-        EXPECT_EQ(value.tou8string(), utf8);
-        EXPECT_EQ(fmt::format(u8"{}", value), utf8);
+        EXPECT_EQ(std::u8string(nau::strings::toU8StringView(value)), utf8);
+        EXPECT_EQ(std::u8string(nau::strings::toU8StringView(nau::utils::format("{}", value))), utf8);
         EXPECT_EQ(nau::strings::wstringToUtf8(nau::strings::utf8ToWString(utf8)), utf8);
-        EXPECT_EQ(value.tou16string(), utf16);
-        EXPECT_EQ(value.tou32string(), utf32);
+        EXPECT_EQ(nau::strings::utf8ToUtf16(value), utf16);
+        EXPECT_EQ(nau::strings::utf8ToUtf32(value), utf32);
     }
 }
 
@@ -59,7 +60,7 @@ TEST(StandardMigration, PersistentHashAndJsonFixtures)
 {
     constexpr size_t expected = sizeof(size_t) == 8 ? static_cast<size_t>(0xe71fa2190541574bull) : size_t{0x1a47e90bu};
     EXPECT_EQ(nau::hash_string::constHash(u8"abc", 3), expected);
-    EXPECT_EQ(std::hash<nau::hash_string>{}(nau::hash_string(nau::string("abc"))), expected);
+    EXPECT_EQ(std::hash<nau::hash_string>{}(nau::hash_string(std::string("abc"))), expected);
     const std::vector<std::string> values{"alpha", std::string("a\0b", 3), "omega"};
     using nau::serialization::JsonUtils;
     const auto encoded = JsonUtils::stringify(values);
@@ -76,9 +77,9 @@ TEST(StdMigration, NullableCharacterPointersRemainEmpty)
     const char16_t* utf16 = nullptr;
     const char32_t* utf32 = nullptr;
     const wchar_t* wide = nullptr;
-    EXPECT_TRUE(nau::string(narrow).empty());
-    EXPECT_TRUE(nau::string(utf8).empty());
-    EXPECT_TRUE(nau::string(utf16).empty());
-    EXPECT_TRUE(nau::string(utf32).empty());
-    EXPECT_TRUE(nau::string(wide).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(narrow).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(utf8).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(utf16).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(utf32).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(wide).empty());
 }

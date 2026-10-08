@@ -218,12 +218,12 @@ namespace nau
         uint32_t roDataBlocks = 0;
         uint32_t blocksStartsAt = 0;
 
-        nau::string srcFilename;  // src filename
+        std::string srcFilename;  // src filename
         void setSrc(const char* src)
         {
-            srcFilename = src;
+            srcFilename = nau::strings::toUtf8(src);
         }
-        const char8_t* getSrc() const
+        const char* getSrc() const
         {
             return !srcFilename.empty() ? srcFilename.c_str() : nullptr;
         }

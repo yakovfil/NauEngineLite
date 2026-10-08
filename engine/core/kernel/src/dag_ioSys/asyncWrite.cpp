@@ -9,8 +9,12 @@
 // #include <nau/osApiWrappers/dag_unicode.h>
 // #include <memory/dag_framemem.h>
 
+#include <string>
+#include <string_view>
+
 #include "nau/core_defines.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "utf8/checked.h"
 
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
@@ -155,7 +159,7 @@ namespace nau::iosys
 #if NAU_PLATFORM_APPLE | NAU_PLATFORM_LINUX
         fileHandle = ::open(fname, O_WRONLY | O_CREAT | (mode == AsyncWriterMode::TRUNC ? O_TRUNC : O_APPEND), 0666);
 #elif NAU_PLATFORM_WIN32 | _TARGET_XBOX
-        fileHandle = CreateFileW(reinterpret_cast<const wchar_t*>(nau::string(fname).tou16string().c_str()), (mode == AsyncWriterMode::TRUNC ? GENERIC_WRITE : FILE_APPEND_DATA),
+        fileHandle = CreateFileW(reinterpret_cast<const wchar_t*>(nau::strings::utf8ToUtf16(fname).c_str()), (mode == AsyncWriterMode::TRUNC ? GENERIC_WRITE : FILE_APPEND_DATA),
                                  FILE_SHARE_READ, NULL, (mode == AsyncWriterMode::TRUNC ? CREATE_ALWAYS : OPEN_EXISTING), FILE_FLAG_OVERLAPPED, NULL);
 #else
         G_UNUSED(fname);
@@ -170,7 +174,7 @@ namespace nau::iosys
         fileHandle = mkstemp(fname);
 #elif NAU_PLATFORM_WIN32 | _TARGET_XBOX
         if (_mktemp_s(fname, DAGOR_MAX_PATH) == 0)
-            fileHandle = CreateFileW(reinterpret_cast<const wchar_t*>(nau::string(fname).tou16string().c_str()), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS,
+            fileHandle = CreateFileW(reinterpret_cast<const wchar_t*>(nau::strings::utf8ToUtf16(fname).c_str()), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS,
                                      FILE_FLAG_OVERLAPPED, NULL);
 #else
         G_UNUSED(fname);

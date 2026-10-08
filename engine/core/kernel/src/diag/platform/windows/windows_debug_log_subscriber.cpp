@@ -1,13 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
-#include <nau/string/string.h>
-
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include "nau/diag/log_subscribers.h"
 #include "nau/diag/logging.h"
+#include "nau/string/format.h"
 #include "nau/string/string_conv.h"
 
 namespace nau::diag
@@ -51,11 +51,11 @@ namespace nau::diag
         void processMessage(const LoggerMessage& message) override;
     };
 
-    static nau::string timeToString(time_t time)
+    static std::string timeToString(time_t time)
     {
         // TODO use format
-        nau::string timeString{64};
-        strftime((char*)timeString.data(), 64, "[%F %H:%M:%S]", std::localtime(&time));
+        std::string timeString(64, '\0');
+        timeString.resize(strftime(timeString.data(), timeString.size(), "[%F %H:%M:%S]", std::localtime(&time)));
         return timeString;
     }
 
@@ -67,12 +67,12 @@ namespace nau::diag
         }
 
         const auto fullMessage =
-            nau::string::format(u8"{}({}):\n{}{}: {}. \n",
-                                nau::string{data.source.filePath},
-                                data.source.line.value_or(-1),
-                                levelToStr(data.level),
-                                timeToString(data.time),
-                                data.data);
+            nau::utils::format(u8"{}({}):\n{}{}: {}. \n",
+                               std::string{data.source.filePath},
+                               data.source.line.value_or(-1),
+                               levelToStr(data.level),
+                               timeToString(data.time),
+                               data.data);
 
         const auto debugText = strings::utf8ToWString(fullMessage);
 

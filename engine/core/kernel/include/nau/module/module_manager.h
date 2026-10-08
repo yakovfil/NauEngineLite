@@ -55,7 +55,7 @@ namespace nau
 
 #if !NAU_STATIC_RUNTIME
         // For runtime module loading
-        virtual Result<> loadModule(const nau::string& name, const nau::string& dllPath) = 0;
+        virtual Result<> loadModule(const std::string& name, const std::string& dllPath) = 0;
 #endif
     };
 

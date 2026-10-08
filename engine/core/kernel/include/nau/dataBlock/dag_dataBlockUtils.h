@@ -1022,13 +1022,13 @@ namespace nau
         return true;
     }
     /* TODO: base64 support (if needed)
-    inline nau::string pack_blk_to_base64(const DataBlock& input_blk)
+    inline std::string pack_blk_to_base64(const DataBlock& input_blk)
     {
         DynamicMemGeneralSaveCB dump(nau::getDefaultAllocator() *framemem_ptr()*;
         input_blk.saveToStream(dump);
         dag::Base64 b64Coder;
         b64Coder.encode(dump.data(), dump.size());
-        return nau::string(512, b64Coder.c_str());
+        return std::string(b64Coder.c_str());
     }
 
     inline bool unpack_blk_from_base64(const char* input_base64, DataBlock& output_blk, dblk::ReadFlags flg = dblk::ReadFlags())
@@ -1335,8 +1335,8 @@ namespace nau
         out_interpolator.clear();
         for (int i = 0; i < max_params; ++i)
         {
-            nau::string paramNameIndexed{/*TODO: Allocators framemem_ptr()*/};
-            paramNameIndexed.format("{}{}", param_name, i);
+            std::string paramNameIndexed{/*TODO: Allocators framemem_ptr()*/};
+            paramNameIndexed = nau::utils::format("{}{}", param_name, i);
             const int paramNum = blk.findParam(reinterpret_cast<const char*>(paramNameIndexed.c_str()));
             if (paramNum >= 0)
                 loader.loadRecord(out_interpolator, blk, paramNum);
@@ -1373,8 +1373,8 @@ namespace nau
             const int paramNameLen = (int)strlen(param_name) + 2;
             for (int i = 0; i < interpolator.size(); ++i)
             {
-                nau::string paramNameIndexed{} /*(framemem_ptr())*/;
-                paramNameIndexed.format("{}{}", param_name, i);
+                std::string paramNameIndexed{} /*(framemem_ptr())*/;
+                paramNameIndexed = nau::utils::format("{}{}", param_name, i);
                 saver.saveRecord(interpolator[i], blk, reinterpret_cast<const char*>(paramNameIndexed.c_str()));
             }
         }
@@ -1439,8 +1439,8 @@ namespace nau
         out_interpolator_2d.clear();
         for (int i = 0; i < max_params.getX(); ++i)
         {
-            nau::string paramNameIndexed{/*TODO: Allocators framemem_ptr()*/};
-            paramNameIndexed.format("{}{}", param_name, i);
+            std::string paramNameIndexed{/*TODO: Allocators framemem_ptr()*/};
+            paramNameIndexed = nau::utils::format("{}{}", param_name, i);
             const int argParamNum = blk.findParam(reinterpret_cast<const char*>(paramNameIndexed.c_str()));
             if (argParamNum >= 0)
             {
@@ -1474,8 +1474,8 @@ namespace nau
         {
             for (int i = 0; i < interpolator_2d.getRoot().size(); ++i)
             {
-                nau::string paramNameIndexed{} /*framemem_ptr()*/;
-                paramNameIndexed.format("{}{}", param_name, i);
+                std::string paramNameIndexed{} /*framemem_ptr()*/;
+                paramNameIndexed = nau::utils::format("{}{}", param_name, i);
                 arg_saver(interpolator_2d.getRoot()[i].getX(), blk, reinterpret_cast<const char*>(paramNameIndexed.c_str()));
                 save_interpolate_table_custom(interpolator_2d.getRoot()[i].getY(), blk, reinterpret_cast<const char*>(paramNameIndexed.c_str()), saver_2l);
             }

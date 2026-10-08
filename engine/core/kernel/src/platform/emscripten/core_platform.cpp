@@ -51,29 +51,6 @@ namespace nau::diag
     }
 }  // namespace nau::diag
 
-namespace nau::strings
-{
-    std::wstring utf8ToWString(std::u8string_view text)
-    {
-        static_assert(sizeof(wchar_t) == 4);
-        std::wstring result;
-        nau_utf8::utf8to32(text.begin(), text.end(), std::back_inserter(result));
-        return result;
-    }
-
-    std::u8string wstringToUtf8(std::wstring_view text)
-    {
-        std::u32string decoded;
-        nau_utf8::utf16to32(text.begin(), text.end(), std::back_inserter(decoded));
-        std::u8string result;
-        for (char32_t cp : decoded)
-        {
-            utf8::internal::append(static_cast<utf8::utfchar32_t>(cp), std::back_inserter(result));
-        }
-        return result;
-    }
-}  // namespace nau::strings
-
 namespace nau::io
 {
     IStreamBase::Ptr createNativeFileStream(const char*, AccessModeFlag, OpenFileMode)

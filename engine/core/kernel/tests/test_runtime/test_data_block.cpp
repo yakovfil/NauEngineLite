@@ -2,21 +2,52 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 // test_error.cpp
 
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+
 #include "nau/dataBlock/dag_dataBlock.h"
 #include "nau/math/math.h"
+#include "nau/string/format.h"
 
 namespace nau::test
 {
+    TEST(DataBlock, TextWithoutSourceFilename)
+    {
+        DataBlock block;
+        constexpr char text[] = "value:t=\"text\"";
+        ASSERT_TRUE(block.loadText(text, sizeof(text) - 1));
+        EXPECT_STREQ(block.getStr("value"), "text");
+        DataBlock copied;
+        copied.setFrom(&block);
+        EXPECT_STREQ(copied.getStr("value"), "text");
+    }
+
+    TEST(DataBlock, IncludeWithoutSourceFilename)
+    {
+        const auto filename = nau::utils::format("nau-string-migration-include-{}.blk", std::chrono::steady_clock::now().time_since_epoch().count());
+        const auto file = std::filesystem::temp_directory_path() / filename;
+        {
+            std::ofstream output(file);
+            output << "value:t=\"included\"";
+        }
+        const auto text = nau::utils::format("include \"{}\"", file.generic_string());
+        DataBlock block;
+        const bool loaded = block.loadText(text.data(), static_cast<int>(text.size()));
+        std::filesystem::remove(file);
+        ASSERT_TRUE(loaded);
+        EXPECT_STREQ(block.getStr("value"), "included");
+    }
+
     void TestTypes(DataBlock& block)
     {
-
         using namespace nau::math;
 #define TEST_TYPE_FUNCTION(CppType, ApiName, testValue) \
-    block.set##ApiName(#CppType, testValue);\
-    EXPECT_TRUE(block.get##ApiName(#CppType) == testValue);\
+    block.set##ApiName(#CppType, testValue);            \
+    EXPECT_TRUE(block.get##ApiName(#CppType) == testValue);
 
         block.setStr("string_t", "testValue");
-        EXPECT_TRUE(nau::string(block.getStr("string_t")) == "testValue");
+        EXPECT_TRUE(std::string(block.getStr("string_t")) == "testValue");
 
         block.setReal("float", 9.87);
         EXPECT_TRUE(abs(block.getReal("float") - 9.87) < 0.00001);
@@ -38,7 +69,6 @@ namespace nau::test
         TEST_TYPE_FUNCTION(IVector3, IPoint3,testIVector3)
         Vectormath::Matrix4 testMatrix4 = Vectormath::Matrix4::rotation(1,{1,0,0});
         TEST_TYPE_FUNCTION(Matrix4, Tm,testMatrix4)
-
     }
 
     TEST(TestDataBlock, BaseTypes)

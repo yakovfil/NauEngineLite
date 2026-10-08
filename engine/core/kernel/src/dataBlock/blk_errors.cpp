@@ -3,11 +3,13 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include "blk_shared.h"
 #include "nau/diag/assertion.h"
 #include "nau/diag/logging.h"
-#include "nau/string/string.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/utils/dag_globDef.h"
 
 namespace nau
@@ -31,11 +33,11 @@ namespace nau
     static thread_local DataBlock::IErrorReporterPipe* tls_reporter = nullptr;
     static void issue_error_unhappy_path(bool do_fatal, int line, const char* errText);
 
-#define issue_error(robust_load, do_fatal, line, ...)                                                                          \
-    do                                                                                                                         \
-    {                                                                                                                          \
-        if (!robust_load || tls_reporter) [[unlikely]]                                                                         \
-            issue_error_unhappy_path(do_fatal, line, reinterpret_cast<const char*>(nau::string::format(__VA_ARGS__).c_str())); \
+#define issue_error(robust_load, do_fatal, line, ...)                                                                         \
+    do                                                                                                                        \
+    {                                                                                                                         \
+        if (!robust_load || tls_reporter) [[unlikely]]                                                                        \
+            issue_error_unhappy_path(do_fatal, line, reinterpret_cast<const char*>(nau::utils::format(__VA_ARGS__).c_str())); \
     } while (0)
 
     void DataBlock::issue_error_missing_param(const char* pname, int type) const

@@ -120,7 +120,11 @@ TEST(CorePortability, StringUidJsonRoundTrips)
     EXPECT_FALSE(JsonUtils::parse<int>(std::string_view{"{"}));
 }
 
-#include "nau/string/string.h"
+#include <string>
+#include <string_view>
+
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 #include "nau/threading/event.h"
 
 #ifdef __EMSCRIPTEN__
@@ -163,13 +167,13 @@ TEST(CorePortability, InvalidUtfIsEmptyAndDiagnostic)
              std::u16string{0xd800,   u'B'}
     })
     {
-        EXPECT_TRUE(nau::string(input).empty());
+        EXPECT_TRUE(nau::strings::toUtf8(input).empty());
     }
-    EXPECT_TRUE(nau::string(std::wstring{L'A', 0x110000}).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(std::wstring{L'A', 0x110000}).empty());
     EXPECT_TRUE(nau::strings::wstringToUtf8(std::wstring{L'A', 0xd800}).empty());
     EXPECT_TRUE(nau::strings::utf8ToWString(std::u8string_view{u8"A\xc0\xaf"}).empty());
-    EXPECT_TRUE(nau::string(std::u8string_view{u8"A\xc0\xaf"}).empty());
-    EXPECT_TRUE(nau::string(std::string_view{"A\xc0\xaf"}).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(std::u8string_view{u8"A\xc0\xaf"}).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(std::string_view{"A\xc0\xaf"}).empty());
     EXPECT_EQ(observed->count, 8u);
     nau::diag::setDeviceError(std::move(previous));
 }
@@ -178,11 +182,11 @@ TEST(CorePortability, InvalidUtfIsEmptyAndDiagnostic)
 TEST(CorePortability, ValidUtfRoundTrip)
 {
     const std::u16string input = u"A\u0416\U0001f680";
-    const nau::string value(input);
-    EXPECT_EQ(value.tou16string(), input);
+    const auto value = nau::strings::toUtf8(input);
+    EXPECT_EQ(nau::strings::utf8ToUtf16(value), input);
     const auto wide = nau::strings::utf8ToWString(u8"A\u0416\U0001f680");
     EXPECT_EQ(nau::strings::wstringToUtf8(wide), u8"A\u0416\U0001f680");
-    EXPECT_TRUE(nau::string(std::u16string{}).empty());
+    EXPECT_TRUE(nau::strings::toUtf8(std::u16string{}).empty());
 }
 
 TEST(CorePortability, EventReset)

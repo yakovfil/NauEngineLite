@@ -5,7 +5,7 @@
 #include "nau/version/engine_version.h"
 namespace nau
 {
-    EngineVersion::EngineVersion(uint16_t major, uint16_t minor, uint16_t patch, const nau::string& commit, const nau::string& branch) :
+    EngineVersion::EngineVersion(uint16_t major, uint16_t minor, uint16_t patch, const std::string& commit, const std::string& branch) :
         m_major(major),
         m_minor(minor),
         m_patch(patch),
@@ -53,17 +53,16 @@ namespace nau
         return true;
     }
 
-
-    nau::string EngineVersion::toString() const
+    std::string EngineVersion::toString() const
     {
         if (!m_commit.empty() || !m_branch.empty())
         {
-            return nau::string::format("{}.{}.{}-{}+{}", m_major, m_minor, m_patch, m_commit, m_branch);
+            return nau::utils::format("{}.{}.{}-{}+{}", m_major, m_minor, m_patch, m_commit, m_branch);
         }
-        return nau::string::format("{}.{}.{}", m_major, m_minor, m_patch);
+        return nau::utils::format("{}.{}.{}", m_major, m_minor, m_patch);
     }
 
-    // TODO - used std::string for numeric conversions, check, if nau::string can be used here ?
+    // TODO - used std::string for numeric conversions, check, if std::string can be used here ?
     bool EngineVersion::parse(const std::string& engineVersionString, EngineVersion& out)
     {
         const char* startPtr;

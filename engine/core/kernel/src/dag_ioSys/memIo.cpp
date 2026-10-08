@@ -3,11 +3,15 @@
 // Copyright (C) 2024  Gaijin Games KFT.  All rights reserved
 
 #include <nau/dag_ioSys/dag_memIo.h>
-#include <nau/string/string.h>
 #include <nau/utils/dag_baseDef.h>
+
+#include <string>
+#include <string_view>
 
 #include "nau/diag/logging.h"
 #include "nau/memory/mem_allocator.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 namespace nau::iosys
 {
@@ -79,7 +83,7 @@ namespace nau::iosys
             if(sz <= data_avail)
                 return;
 
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"{}: cannot resize from data_avail={} to {} due to realloc prohibited"), nau::string(__FUNCTION__), data_avail, sz));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"{}: cannot resize from data_avail={} to {} due to realloc prohibited"), std::string(__FUNCTION__), data_avail, sz));
             NAU_THROW(SaveException("cannot enlarge dest data size", tell()));
             return;
         }

@@ -99,7 +99,6 @@ if(NAU_RUNTIME_PROFILE MATCHES "^(minimal|scene)$")
   target_link_libraries(${TargetName} PUBLIC ${NAU_MINIMAL_DEPENDENCY_TARGETS})
 else()
 target_link_libraries(${TargetName} PUBLIC
-  tinyutf8
   fmt
   utf8cpp
   vectormath

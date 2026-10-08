@@ -1,6 +1,7 @@
 # Explicit implementation sources shared by minimal native and Wasm builds.
 # See doc/minimal_kernel_sources.md for dependency/exclusion evidence.
 set(NAU_MINIMAL_KERNEL_COMMON_SOURCES
+  string/unicode.cpp
   app/application.cpp
   async/core_task_impl.cpp
   async/executor.cpp
@@ -50,7 +51,7 @@ set(NAU_MINIMAL_KERNEL_COMMON_SOURCES
   serialization/type_info_value.cpp
   service/service_provider_impl.cpp
   string/hash_string.cpp
-  string/string.cpp
+
   string/string_utils.cpp
   threading/barrier.cpp
   threading/critsec.cpp

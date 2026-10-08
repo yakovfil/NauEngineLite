@@ -4,10 +4,14 @@
 
 #include <LzmaEnc.h>
 #include <nau/dag_ioSys/dag_lzmaIo.h>
-#include <nau/string/string.h>
+
+#include <string>
+#include <string_view>
 
 #include "nau/diag/logging.h"
 #include "nau/memory/mem_allocator.h"
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 
 namespace nau::iosys
 {
@@ -74,7 +78,7 @@ namespace nau::iosys
         if(res != SZ_OK)
         {
             LzmaEnc_Destroy(enc, &g_Alloc, &g_Alloc);
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"7zip error {} in LzmaEnc_SetProps\nsource: '{}'\n"), res, nau::string(dest.getTargetName())));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"7zip error {} in LzmaEnc_SetProps\nsource: '{}'\n"), res, std::string(dest.getTargetName())));
             return -1;
         }
 
@@ -86,7 +90,7 @@ namespace nau::iosys
         {
             LzmaEnc_Destroy(enc, &g_Alloc, &g_Alloc);
             enc = NULL;
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"7zip error {} in LzmaEnc_WriteProperties\nsource: '{}'\n"), res, nau::string(dest.getTargetName())));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"7zip error {} in LzmaEnc_WriteProperties\nsource: '{}'\n"), res, std::string(dest.getTargetName())));
             return -1;
         }
 
@@ -99,7 +103,7 @@ namespace nau::iosys
         LzmaEnc_Destroy(enc, &g_Alloc, &g_Alloc);
         if(res != SZ_OK)
         {
-            NAU_LOG_ERROR(nau::string::format(nau::string(u8"7zip error {} in {}\nsource: 'LzmaEnc_Encode'\n"), res, nau::string(dest.getTargetName())));
+            NAU_LOG_ERROR(nau::utils::format(nau::strings::toUtf8(u8"7zip error {} in {}\nsource: 'LzmaEnc_Encode'\n"), res, std::string(dest.getTargetName())));
         }
 
         return dest.tell() - st_ofs;

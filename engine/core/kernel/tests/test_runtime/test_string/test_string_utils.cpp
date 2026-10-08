@@ -24,20 +24,20 @@ namespace nau::test
 
     TEST(TestStringUtils, Split)
     {
-        nau::string str(u8"one;two;;three;");
-        nau::string sep(u8";");
+        std::string str("one;two;;three;");
+        std::string sep(";");
 
-        std::vector<nau::string> strings;
+        std::vector<std::string> strings;
 
-        for (auto elem : strings::split(nau::string_view{str}, nau::string_view{sep}))
+        for (auto elem : strings::split(std::string_view{str}, std::string_view{sep}))
         {
             strings.emplace_back(elem);
         }
 
         ASSERT_EQ(strings.size(), 3);
-        ASSERT_EQ(strings[0], u8"one");
-        ASSERT_EQ(strings[1], u8"two");
-        ASSERT_EQ(strings[2], u8"three");
+        ASSERT_EQ(strings[0], "one");
+        ASSERT_EQ(strings[1], "two");
+        ASSERT_EQ(strings[2], "three");
     }
 
 }  // namespace nau::test

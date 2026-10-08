@@ -68,20 +68,20 @@ namespace nau
         {
             lock_(m_mutex);
 
-            nau::string moduleNameString = moduleName;  // TODO: too many memory allocation
+            std::string moduleNameString = strings::toUtf8(moduleName);  // TODO: too many memory allocation
             nau::hash_string hName = moduleNameString;
 
             NAU_ASSERT(!moduleRegistry.count(hName), u8"Module already registered");
 
             moduleRegistry[hName] = nau::ModuleEntry{
-                .name = nau::string(moduleName),
+                .name = moduleNameString,
                 .iModule = inModule,
                 .isModuleInitialized = false};
         }
 
         bool isModuleLoaded(const char* moduleName) override
         {
-            nau::string moduleNameString = moduleName;  // TODO: too many memory allocation
+            std::string moduleNameString = strings::toUtf8(moduleName);  // TODO: too many memory allocation
             nau::hash_string hName = moduleNameString;
 
             return isModuleLoaded(hName);
@@ -122,7 +122,7 @@ namespace nau
         }
 
 #if !defined(NAU_STATIC_RUNTIME)
-        Result<> loadModule(const nau::string& name, const nau::string& dllPath) override
+        Result<> loadModule(const std::string& name, const std::string& dllPath) override
         {
             namespace fs = std::filesystem;
 
@@ -146,7 +146,7 @@ namespace nau
                 {
                     const auto errCode = diag::getAndResetLastErrorCode();
                     NAU_LOG_ERROR("Fail to load library ({}) with error:()", dllPath, diag::getWinErrorMessageA(errCode));
-                    return NauMakeError("Fail to load library ({})({}):({})", dllPath.tostring(), errCode, diag::getWinErrorMessageA(errCode));
+                    return NauMakeError("Fail to load library ({})({}):({})", dllPath, errCode, diag::getWinErrorMessageA(errCode));
                 }
             }
 

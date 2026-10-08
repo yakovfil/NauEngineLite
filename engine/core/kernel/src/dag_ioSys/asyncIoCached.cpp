@@ -8,8 +8,13 @@
 // #include <debug/dag_debug.h>
 #include <nau/diag/logging.h>
 #include <nau/memory/mem_allocator.h>
-#include <nau/string/string.h>
 #include <stdio.h>
+
+#include <string>
+#include <string_view>
+
+#include "nau/string/format.h"
+#include "nau/string/string_conv.h"
 namespace nau::iosys
 {
     extern void sleep_msec_ex(int ms);
@@ -63,7 +68,7 @@ namespace nau::iosys
             return;
         if(file.pos + size > file.size)
         {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__)), ptr, size, file.size, file.pos);
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__), ptr, size, file.size, file.pos);
             NAU_THROW(LoadException("eof", file.pos));
         }
 
@@ -75,7 +80,7 @@ namespace nau::iosys
                 sz = size;
             else
                 sz = buf.pos + buf.used - file.pos;
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"read to {}  sz={} (from {})"), ptr, sz, file.pos));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"read to {}  sz={} (from {})"), ptr, sz, file.pos));
             memcpy(ptr, buf.data + file.pos - buf.pos, sz);
 
             file.pos += sz;
@@ -111,7 +116,7 @@ namespace nau::iosys
 
             if(lres != size)
             {
-                NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), ptr, size, file.size, file.pos));
+                NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, ptr, size, file.size, file.pos));
                 NAU_THROW(LoadException("incomplete read", file.pos));
             }
 
@@ -148,11 +153,11 @@ namespace nau::iosys
         nau::hal::dfa_free_asyncdata(asyncdata_handle);
         if(lres != buf.used)
         {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} read({},{}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), ptr, size, file.size, file.pos));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} read({},{}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, ptr, size, file.size, file.pos));
             NAU_THROW(LoadException("incomplete read", file.pos));
         }
 
-        NAU_LOG_DEBUG(nau::string::format(nau::string(u8"read to {}  sz={} (from {})"), ptr, size, file.pos));
+        NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"read to {}  sz={} (from {})"), ptr, size, file.pos));
         memcpy(ptr, buf.data, size);
         file.pos += size;
     }
@@ -181,7 +186,7 @@ namespace nau::iosys
     {
         if(pos < 0 || pos > file.size)
         {
-            NAU_LOG_DEBUG(nau::string::format(nau::string(u8"{} {} seekto({}), file.size={}, file.pos={}"), nau::string(__FILE__), nau::string(__LINE__), pos, file.size, file.pos));
+            NAU_LOG_DEBUG(nau::utils::format(nau::strings::toUtf8(u8"{} {} seekto({}), file.size={}, file.pos={}"), std::string(__FILE__), __LINE__, pos, file.size, file.pos));
             NAU_THROW(LoadException("seek out of range", file.pos));
         }
         file.pos = pos;
