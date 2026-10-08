@@ -235,6 +235,24 @@ namespace nau
 
         m_appWorkQueue->poll();
 
+        if (m_appState != AppState::Created && hasServiceProvider())
+        {
+            for (auto* service : getServiceProvider().getAll<IApplicationRuntimeService>())
+            {
+                auto result = service->pollApplicationRuntime();
+                if (!result)
+                {
+                    if (m_failedRuntimeServices.insert(service).second)
+                    {
+                        std::string message = m_lifecycleError ? m_lifecycleError->getDiagMessage() + "\n" : std::string{};
+                        message += "Runtime service: " + result.getError()->getDiagMessage();
+                        m_lifecycleError = NauMakeError(message);
+                    }
+                    stop();
+                }
+            }
+        }
+
         if (m_appState == AppState::PreInitializing || m_appState == AppState::Initializing || m_appState == AppState::StartingApplication)
         {
             if (!m_startupTask.isReady())

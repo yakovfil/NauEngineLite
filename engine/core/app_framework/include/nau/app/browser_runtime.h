@@ -4,16 +4,22 @@
 #pragma once
 
 #include "nau/app/application_init_delegate.h"
+#include "nau/app/application_runtime_service.h"
 
 namespace nau
 {
     // Optional owner-thread services (for example graphics) polled at bounded
     // lifecycle intervals, including startup and cleanup, without game steps.
-    struct IBrowserRuntimeService
+    struct IBrowserRuntimeService : IApplicationRuntimeService
     {
         NAU_TYPEID(nau::IBrowserRuntimeService)
+        NAU_CLASS_BASE(IApplicationRuntimeService)
         virtual ~IBrowserRuntimeService() = default;
         virtual Result<> pollBrowserRuntime() = 0;
+        Result<> pollApplicationRuntime() final
+        {
+            return pollBrowserRuntime();
+        }
     };
 
     struct BrowserRuntimeOptions

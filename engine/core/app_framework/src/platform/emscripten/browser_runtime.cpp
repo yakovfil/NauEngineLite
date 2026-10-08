@@ -186,12 +186,6 @@ namespace
             bool visible = documentVisible.load() != 0;
             if (stopRequested.load())
                 app->stop();
-            for (auto* service : getServiceProvider().getAll<IBrowserRuntimeService>())
-            {
-                auto result = service->pollBrowserRuntime();
-                if (!result && failure.empty())
-                    failure = result.getError()->getDiagMessage();
-            }
             if (auto* window = getServiceProvider().find<IBrowserWindowStatus>())
             {
                 if (window->getBrowserState() == BrowserWindowState::Ready)

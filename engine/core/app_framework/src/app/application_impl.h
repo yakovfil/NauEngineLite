@@ -1,10 +1,13 @@
 // Copyright 2024 N-GINN LLC. All rights reserved.
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 
+#include <unordered_set>
+
 #include "./logging_service.h"
 #include "./main_loop/main_loop_service.h"
 #include "nau/app/application.h"
 #include "nau/app/application_lifecycle.h"
+#include "nau/app/application_runtime_service.h"
 #include "nau/app/main_loop/game_system.h"
 #include "nau/async/work_queue.h"
 #include "nau/memory/singleton_memop.h"
@@ -91,6 +94,7 @@ namespace nau
         std::atomic<bool> m_stopRequested = false;
         async::Task<> m_startupTask;
         Error::Ptr m_lifecycleError;
+        std::unordered_set<IApplicationRuntimeService*> m_failedRuntimeServices;
 
         MainLoopService* m_mainLoop = nullptr;
 

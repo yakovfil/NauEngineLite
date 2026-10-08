@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-3 Clause license that can be found in the LICENSE file.
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <string>
 
 #include "nau/app/application.h"
+#include "nau/app/browser_runtime.h"
 #include "nau/app/run_application.h"
+#include "nau/async/task.h"
 #include "nau/module/module_manager.h"
 #include "nau/service/service.h"
 #include "nau/service/service_provider.h"
@@ -20,6 +23,13 @@ namespace
     int pre = 0, post = 0, legacy = 0, initialized = 0, startup = 0;
     int servicesDestroyed = 0, delegatesDestroyed = 0;
     bool ordered = true;
+    int runtimePolls = 0, compatibilityPolls = 0, cleanupPolls = 0;
+    bool runtimeFailure = false, startupFinished = false, runtimeCleanupFinished = false;
+    std::optional<async::TaskSource<>> startupGate, cleanupGate;
+    bool runtimeScenario()
+    {
+        return scenario.starts_with("runtime");
+    }
     std::chrono::milliseconds elapsed{0};
     class Resource final : public IServiceInitialization,
                            public IServiceShutdown
@@ -41,13 +51,93 @@ namespace
                 co_await Result<>{NauMakeError("host cleanup failure")};
         }
     };
+    class RuntimeResource final : public IServiceInitialization,
+                                  public IServiceShutdown,
+                                  public IApplicationRuntimeService
+    {
+        NAU_RTTI_CLASS(RuntimeResource, IServiceInitialization, IServiceShutdown, IApplicationRuntimeService)
+    public:
+        ~RuntimeResource()
+        {
+            ++servicesDestroyed;
+        }
+        Result<> pollApplicationRuntime() override
+        {
+            ++runtimePolls;
+            ordered = ordered && getApplication().isMainThread();
+            if (startupGate && !startupFinished)
+            {
+                ordered = ordered && pre == 0 && post == 0;
+                if (runtimePolls >= 3)
+                {
+                    auto gate = std::move(*startupGate);
+                    startupGate.reset();
+                    gate.resolve();
+                    if (scenario == "runtime-startup-error" && !runtimeFailure)
+                    {
+                        runtimeFailure = true;
+                        return NauMakeError("host runtime startup polling failure");
+                    }
+                }
+            }
+            if (cleanupGate)
+            {
+                ++cleanupPolls;
+                if (cleanupPolls >= 3)
+                {
+                    auto gate = std::move(*cleanupGate);
+                    cleanupGate.reset();
+                    gate.resolve();
+                }
+                if (scenario == "runtime-cleanup-error" && !runtimeFailure)
+                {
+                    runtimeFailure = true;
+                    return NauMakeError("host runtime cleanup polling failure");
+                }
+            }
+            if (scenario == "runtime-error" && post == 2 && !runtimeFailure)
+            {
+                runtimeFailure = true;
+                return NauMakeError("host runtime polling failure");
+            }
+            return {};
+        }
+        async::Task<> shutdownService() override
+        {
+            cleanupGate.emplace();
+            co_await cleanupGate->getTask();
+            runtimeCleanupFinished = true;
+        }
+    };
+    class CompatibilityResource final : public IServiceInitialization,
+                                        public IServiceShutdown,
+                                        public IBrowserRuntimeService
+    {
+        NAU_RTTI_CLASS(CompatibilityResource, IServiceInitialization, IServiceShutdown, IBrowserRuntimeService)
+    public:
+        ~CompatibilityResource()
+        {
+            ++servicesDestroyed;
+        }
+        Result<> pollBrowserRuntime() override
+        {
+            ++compatibilityPolls;
+            ordered = ordered && getApplication().isMainThread();
+            return {};
+        }
+        async::Task<> shutdownService() override
+        {
+            co_return;
+        }
+    };
     class Delegate : public ApplicationDelegate
     {
     public:
         ~Delegate()
         {
             ++delegatesDestroyed;
-            const bool valid = ordered && delegatesDestroyed == 1 && !applicationExists() && !hasServiceProvider() && (scenario == "configfail" || servicesDestroyed == 1);
+            const bool valid = ordered && delegatesDestroyed == 1 && !applicationExists() && !hasServiceProvider() && (scenario == "configfail" || servicesDestroyed == (runtimeScenario() ? 3 : 1)) &&
+                               (!runtimeScenario() || (runtimePolls > 0 && runtimePolls == compatibilityPolls && cleanupPolls >= 3 && runtimeCleanupFinished && startupFinished));
             char json[512];
             std::snprintf(json, sizeof(json), "{\"valid\":%s,\"pre\":%d,\"post\":%d,\"legacy\":%d,\"initialized\":%d,\"startup\":%d,\"servicesDestroyed\":%d,\"delegatesDestroyed\":%d}",
                           valid ? "true" : "false", pre, post, legacy, initialized, startup, servicesDestroyed, delegatesDestroyed);
@@ -67,6 +157,11 @@ namespace
         Result<> initializeServices() override
         {
             getServiceProvider().addService(std::make_unique<Resource>());
+            if (runtimeScenario())
+            {
+                getServiceProvider().addService(std::make_unique<RuntimeResource>());
+                getServiceProvider().addService(std::make_unique<CompatibilityResource>());
+            }
             return scenario == "setupfail" ? Result<>{NauMakeError("host setup failure")} : Result<>{};
         }
         void onApplicationInitialized() override
@@ -76,6 +171,12 @@ namespace
         async::Task<> startupApplication() override
         {
             ++startup;
+            if (runtimeScenario())
+            {
+                startupGate.emplace();
+                co_await startupGate->getTask();
+                startupFinished = true;
+            }
             if (scenario == "immediate")
                 co_await Result<>{NauMakeError("host startup failure")};
             if (scenario == "deferred")
