@@ -39,6 +39,15 @@ namespace nau
      */
     NAU_DEFINE_ATTRIBUTE_(GameSystemName)
 
+    /** Samples platform input once on the application owner thread, before game updates. */
+    struct NAU_ABSTRACT_TYPE IGameInputUpdate
+    {
+        NAU_TYPEID(nau::IGameInputUpdate)
+
+        virtual ~IGameInputUpdate() = default;
+        virtual void gameInputUpdate(std::chrono::milliseconds dt) = 0;
+    };
+
     struct NAU_ABSTRACT_TYPE IGamePreUpdate
     {
         NAU_TYPEID(nau::IGamePreUpdate)

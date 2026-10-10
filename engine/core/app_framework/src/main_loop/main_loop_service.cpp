@@ -77,6 +77,11 @@ namespace nau
             m_sceneUpdate.push_back(sceneUpdate);
         }
 
+        if (auto* const inputUpdate = systemInstance->as<IGameInputUpdate*>())
+        {
+            m_inputUpdate.push_back(inputUpdate);
+        }
+
         if (auto* const preUpdate = systemInstance->as<IGamePreUpdate*>())
         {
             m_preUpdate.push_back(preUpdate);
@@ -95,21 +100,23 @@ namespace nau
 
     async::Task<> MainLoopService::preInitService()
     {
+        m_inputUpdate = getServiceProvider().getAll<IGameInputUpdate>();
+
         if (auto serviceWithPreUpdate = getServiceProvider().getAll<IGamePreUpdate>(); !serviceWithPreUpdate.empty())
         {
             const auto offset = m_preUpdate.size();
-            m_preUpdate.resize(serviceWithPreUpdate.size());
+            m_preUpdate.resize(offset + serviceWithPreUpdate.size());
             std::copy(serviceWithPreUpdate.begin(), serviceWithPreUpdate.end(), m_preUpdate.begin() + offset);
         }
 
         if (auto serviceWithPostUpdate = getServiceProvider().getAll<IGamePostUpdate>(); !serviceWithPostUpdate.empty())
         {
             const auto offset = m_postUpdate.size();
-            m_postUpdate.resize(serviceWithPostUpdate.size());
+            m_postUpdate.resize(offset + serviceWithPostUpdate.size());
             std::copy(serviceWithPostUpdate.begin(), serviceWithPostUpdate.end(), m_postUpdate.begin() + offset);
         }
 
-        std::vector<IClassDescriptor::Ptr> allSystems = getServiceProvider().findClasses<IGamePreUpdate, IGamePostUpdate, IGameSceneUpdate>();
+        std::vector<IClassDescriptor::Ptr> allSystems = getServiceProvider().findClasses<IGameInputUpdate, IGamePreUpdate, IGamePostUpdate, IGameSceneUpdate>();
         std::list<SystemEntry> orderedSystems;
 
         for (const IClassDescriptor::Ptr& systemClass : allSystems)
@@ -192,6 +199,11 @@ namespace nau
         using namespace std::chrono;
 
         const milliseconds msDt{static_cast<milliseconds::rep>(1000.f * dt)};
+
+        for (IGameInputUpdate* const inputUpdate : m_inputUpdate)
+        {
+            inputUpdate->gameInputUpdate(msDt);
+        }
 
         for (IGamePreUpdate* const preUpdate : m_preUpdate)
         {

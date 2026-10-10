@@ -44,6 +44,7 @@ namespace nau
         }
         async::Task<> shutdownService() override;
 
+        std::vector<IGameInputUpdate*> m_inputUpdate;
         std::vector<IGamePreUpdate*> m_preUpdate;
         async::Task<> m_applicationStartupTask;
         std::vector<IGamePostUpdate*> m_postUpdate;

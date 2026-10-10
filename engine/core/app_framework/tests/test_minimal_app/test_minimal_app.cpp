@@ -21,6 +21,7 @@ namespace nau::test
     struct LifecycleState
     {
         int preUpdates = 0;
+        int inputUpdates = 0;
         int postUpdates = 0;
         bool initialized = false;
         bool shutdown = false;
@@ -29,10 +30,11 @@ namespace nau::test
 
     class LifecycleObserver final : public IServiceInitialization,
                                     public IServiceShutdown,
+                                    public IGameInputUpdate,
                                     public IGamePreUpdate,
                                     public IGamePostUpdate
     {
-        NAU_RTTI_CLASS(nau::test::LifecycleObserver, IServiceInitialization, IServiceShutdown, IGamePreUpdate, IGamePostUpdate)
+        NAU_RTTI_CLASS(nau::test::LifecycleObserver, IServiceInitialization, IServiceShutdown, IGameInputUpdate, IGamePreUpdate, IGamePostUpdate)
 
     public:
         explicit LifecycleObserver(LifecycleState& state) :
@@ -57,8 +59,15 @@ namespace nau::test
             return async::makeResolvedTask();
         }
 
+        void gameInputUpdate(std::chrono::milliseconds) override
+        {
+            EXPECT_EQ(m_state.inputUpdates, m_state.preUpdates);
+            ++m_state.inputUpdates;
+        }
+
         void gamePreUpdate(std::chrono::milliseconds) override
         {
+            EXPECT_EQ(m_state.inputUpdates, m_state.preUpdates + 1);
             ++m_state.preUpdates;
         }
 
@@ -95,6 +104,7 @@ namespace nau::test
             EXPECT_TRUE(app->step());
         }
         EXPECT_EQ(state.preUpdates, 5);
+        EXPECT_EQ(state.inputUpdates, 5);
         EXPECT_EQ(state.postUpdates, 5);
 
         app->stop();
