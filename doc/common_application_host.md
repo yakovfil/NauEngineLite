@@ -52,8 +52,12 @@ does not dispatch the application's post-update callback.
 
 ## Scheduling, ownership and errors
 
-`ApplicationScheduling::Default` retains native timing and the browser runtime's
-nominal 100 ms cadence. `Presentation` retains the native loop policy and selects
+`ApplicationScheduling::Default` retains native timing and runs browser updates
+as fast as the worker event loop permits, yielding between iterations without an
+engine-imposed delay. Hidden documents pause updates and poll lifecycle work every
+50 ms. Browser scheduling and GPU backpressure can still limit throughput; the
+submission rate is not necessarily the display refresh rate.
+`Presentation` retains the native loop policy and selects
 cooperative frame-driven browser scheduling. Browser resume uses bounded elapsed
 time and discards missed presentation opportunities. The native mode does not
 promise display synchronization or a fixed frame rate.
@@ -61,7 +65,8 @@ promise display synchronization or a fixed frame rate.
 The runner owns the delegate until safe application/service teardown. Browser
 applications do not need a static delegate: ownership moves into the persistent
 host session before scheduler handoff. The existing borrowed low-level browser
-runner remains available and retains its caller-managed lifetime requirements.
+runner remains available and retains its caller-managed lifetime requirements
+and legacy fixed cadence unless cooperative frame-driven or uncapped updates are requested.
 
 Native execution returns zero after an orderly stop and nonzero after a checked
 creation, startup or cleanup failure. Cooperative browser execution hands control

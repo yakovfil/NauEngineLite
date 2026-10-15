@@ -31,6 +31,9 @@ namespace nau
         // Step the application on each presentation callback using elapsed time.
         // Requires cooperativePresentation; other callers keep the fixed cadence.
         bool frameDrivenUpdates = false;
+        // Cooperative updates without an engine-imposed frame delay. The owning
+        // application host uses this for ApplicationScheduling::Default.
+        bool uncappedUpdates = false;
     };
 
     // Call once on the PROXY_TO_PTHREAD application worker. The page receives

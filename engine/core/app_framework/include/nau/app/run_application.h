@@ -8,6 +8,7 @@ namespace nau
 {
     enum class ApplicationScheduling
     {
+        // Native loop policy; browser updates as fast as its event loop allows.
         Default,
         Presentation
     };

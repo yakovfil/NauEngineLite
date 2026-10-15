@@ -150,6 +150,7 @@ namespace
         int timeout;
         bool cooperative;
         bool frameDriven;
+        bool uncapped = false, immediateScheduling = false;
         int sequence = 1, steps = 0;
         std::string failure;
         const char* failurePhase = nullptr;
@@ -301,9 +302,10 @@ static int runBrowserApplicationImpl(ApplicationInitDelegate& delegate, BrowserR
     if (options.cooperativePresentation)
     {
         // A heap-owned loop survives returning to the worker's JavaScript event
-        // loop. Chrome presents OffscreenCanvas frames there. No Asyncify and no
-        // additional game steps unless the caller requests frame-driven updates.
-        auto* loop = new BrowserLoop(std::move(*creation), timeout, true, options.frameDrivenUpdates, std::move(owner));
+        // loop. Chrome presents OffscreenCanvas frames there. No Asyncify is needed.
+        // Each callback yields so input, Stop and canvas presentation can proceed.
+        auto* loop = new BrowserLoop(std::move(*creation), timeout, true, options.frameDrivenUpdates || options.uncappedUpdates, std::move(owner));
+        loop->uncapped = options.uncappedUpdates && !options.frameDrivenUpdates;
         emscripten_set_main_loop_arg([](void* argument)
         {
             auto* loop = static_cast<BrowserLoop*>(argument);
@@ -315,8 +317,20 @@ static int runBrowserApplicationImpl(ApplicationInitDelegate& delegate, BrowserR
                 delete loop;
                 emscripten_force_exit(code);
             }
-        }, loop, options.frameDrivenUpdates ? 0 : 200, true);
-        return 1;  // simulate_infinite_loop unwinds to the worker scheduler.
+            else if (loop->uncapped && loop->immediateScheduling != loop->wasVisible)
+            {
+                loop->immediateScheduling = loop->wasVisible;
+                emscripten_set_main_loop_timing(loop->immediateScheduling ? EM_TIMING_SETIMMEDIATE : EM_TIMING_SETTIMEOUT,
+                                                loop->immediateScheduling ? 1 : 50);
+            }
+        }, loop, options.frameDrivenUpdates ? 0 : 200, false);
+        if (loop->uncapped)
+        {
+            loop->immediateScheduling = true;
+            emscripten_set_main_loop_timing(EM_TIMING_SETIMMEDIATE, 1);
+        }
+        emscripten_exit_with_live_runtime();
+        return 1;  // exit_with_live_runtime unwinds to the worker scheduler.
     }
     BrowserLoop loop(std::move(*creation), timeout, false, false, std::move(owner));
     while (loop.alive)
@@ -342,7 +356,8 @@ int runApplication(ApplicationDelegate::Ptr delegate, ApplicationHostOptions opt
     return runBrowserApplicationImpl(reference,
                                      {.foregroundProgressTimeoutMs = options.foregroundProgressTimeoutMs,
                                       .cooperativePresentation = true,
-                                      .frameDrivenUpdates = options.scheduling == ApplicationScheduling::Presentation},
+                                      .frameDrivenUpdates = options.scheduling == ApplicationScheduling::Presentation,
+                                      .uncappedUpdates = options.scheduling == ApplicationScheduling::Default},
                                      std::move(delegate));
 }
 }
